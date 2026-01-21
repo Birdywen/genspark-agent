@@ -5,7 +5,7 @@
   const CONFIG = {
     SCAN_INTERVAL: 500,
     TIMEOUT_MS: 30000,
-    MAX_RESULT_LENGTH: 12000,
+    MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false
   };
@@ -16,7 +16,8 @@
     availableTools: [],
     executedCalls: new Set(),
     pendingCalls: new Map(),
-    lastMessageText: ''
+    lastMessageText: '',
+    lastStableTime: 0
   };
 
   function log(...args) {
@@ -406,11 +407,13 @@ return params;
     }
     
     // 检查消息是否还在变化（流式输出）
-    if (state.lastMessageText === text) {
-      // 消息稳定了，可以处理
-    } else {
-      // 消息还在变化，记录并等待下一次扫描
+    if (state.lastMessageText !== text) {
       state.lastMessageText = text;
+      state.lastStableTime = Date.now();
+      return;
+    }
+    // 等待 150ms 稳定期，确保流式输出完成
+    if (Date.now() - state.lastStableTime < 150) {
       return;
     }
     
