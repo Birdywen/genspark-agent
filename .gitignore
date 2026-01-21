@@ -1,10 +1,13 @@
 # Dependencies
 node_modules/
 .DS_Store
-logs/*.log
+logs/.log
 .env
 .vscode/
 .idea/
-*.backup
+.backup
 *.new.js
 备用*
+
+# Trash
+_trash/
