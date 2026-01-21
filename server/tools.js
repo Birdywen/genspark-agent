@@ -72,6 +72,41 @@ class Tools {
         name: 'edit_file',
         description: '搜索并替换文件中的内容',
         params: { path: 'string', search: 'string', replace: 'string' }
+      },
+      {
+        name: 'browser_navigate',
+        description: '打开网页URL',
+        params: { url: 'string (网址)' }
+      },
+      {
+        name: 'browser_click',
+        description: '点击页面元素',
+        params: { element: 'string (元素描述)', ref: 'string (元素引用)' }
+      },
+      {
+        name: 'browser_type',
+        description: '在输入框中输入文字',
+        params: { element: 'string', ref: 'string', text: 'string' }
+      },
+      {
+        name: 'browser_evaluate',
+        description: '在页面中执行JavaScript代码',
+        params: { function: 'string (JS代码)' }
+      },
+      {
+        name: 'browser_snapshot',
+        description: '获取页面快照',
+        params: {}
+      },
+      {
+        name: 'browser_take_screenshot',
+        description: '截取页面截图',
+        params: { filename: 'string (可选)' }
+      },
+      {
+        name: 'browser_close',
+        description: '关闭浏览器',
+        params: {}
       }
     ];
   }

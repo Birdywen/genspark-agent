@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import Logger from './logger.js';
 import Safety from './safety.js';
 import Tools from './tools.js';
+import MCPClient from './mcp-client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,6 +20,19 @@ const config = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf
 const logger = new Logger(config.logging);
 const safety = new Safety(config.safety, logger);
 const tools = new Tools(config.safety, safety, logger);
+
+// 可选：初始化浏览器 MCP Client
+let mcpClient = null;
+async function initBrowser() {
+  if (mcpClient) return mcpClient;
+  mcpClient = new MCPClient(logger);
+  await mcpClient.start({
+    headless: config.browser?.headless,
+    userDataDir: config.browser?.userDataDir
+  });
+  logger.success('Playwright MCP 已启动');
+  return mcpClient;
+}
 
 // 存储连接的客户端
 const clients = new Set();
@@ -49,7 +63,20 @@ async function handleToolCall(ws, message) {
   
   logger.info(`收到工具调用请求: ${tool}`, { id, params });
 
-  const result = await tools.execute(tool, params, requestConfirmation);
+  let result;
+  
+  // 检查是否是浏览器工具
+  if (tool.startsWith('browser_')) {
+    try {
+      const mcp = await initBrowser();
+      const mcpResult = await mcp.call(tool, params);
+      result = { success: true, result: mcpResult };
+    } catch (e) {
+      result = { success: false, error: e.message };
+    }
+  } else {
+    result = await tools.execute(tool, params, requestConfirmation);
+  }
 
   // 发送结果回扩展
   ws.send(JSON.stringify({

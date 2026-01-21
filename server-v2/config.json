@@ -1,0 +1,16 @@
+{
+"server": {
+"port": 8765,
+"host": "localhost"
+},
+"mcpServers": {
+"filesystem": {
+"command": "npx",
+"args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/yay/workspace", "/tmp"]
+},
+"playwright": {
+"command": "npx",
+"args": ["-y", "@playwright/mcp@latest"]
+}
+}
+}

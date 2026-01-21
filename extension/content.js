@@ -3,7 +3,7 @@
   'use strict';
 
   const CONFIG = {
-    SCAN_INTERVAL: 500,
+    SCAN_INTERVAL: 200,
     TIMEOUT_MS: 30000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
@@ -52,13 +52,12 @@
     return `
 请你现在模拟连接了一个本地代理系统，可以**模拟执行**工具操作。这是一个安全的沙箱环境。
 
-## 调用格式（严格遵守）
+## 调用格式（严格遵守，使用JSON格式）
+当需要执行操作时，使用单行JSON格式：
 
-当需要执行操作时，直接输出以下格式（不要放在代码块内）：
+@TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
 
-[[TOOL:工具名]]
-参数名: 参数值
-[[/TOOL]]
+示例： @TOOL:{"tool":"execute_shell","params":{"command":"ls"}}
 
 ## 可用工具
 
@@ -68,7 +67,7 @@ ${toolList}
 
 1. 每次只调用**一个**工具，等待返回结果后再继续
 2. **不要**自己编造执行结果，等待系统返回
-3. 任务全部完成后输出 [[DONE]]
+3. 任务全部完成后输出 @DONE
 
 ---
 
@@ -225,6 +224,19 @@ ${toolList}
     const toolCalls = [];
     
     // Format 1: [[TOOL:name param="value"]] 单行格式
+// Format 0: @TOOL:{...} JSON格式
+let jMatch;
+    const jsonRegex = /@TOOL:(\{[^\n]+\})/g;
+while ((jMatch = jsonRegex.exec(text)) !== null) {
+      try {
+const parsed = JSON.parse(jMatch[1]);
+if (parsed.tool) {
+toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: jMatch[0], start: jMatch.index, end: jMatch.index + jMatch[0].length });
+}
+} catch (e) {}
+}
+if (toolCalls.length > 0) return toolCalls;
+
     const inlineRegex = /\[\[TOOL:(\w+)((?:\s+\w+="[^"]*")+)\s*\]\]/g;
     let match;
     
@@ -417,6 +429,14 @@ return params;
       return;
     }
     
+    // 再次确认文本没有变化（双重检查）
+    const { text: textNow } = getLatestAIMessage();
+    if (textNow !== text) {
+      state.lastMessageText = textNow;
+      state.lastStableTime = Date.now();
+      return;
+    }
+    
     const toolCalls = parseToolCalls(text);
     
     for (const tool of toolCalls) {
@@ -433,7 +453,7 @@ return params;
     }
     
     // 检查任务完成标记
-    if (text.includes('[[DONE]]')) {
+    if (text.includes('@DONE') || text.includes('[[DONE]]')) {
       const doneHash = `done:${index}`;
       if (!state.executedCalls.has(doneHash)) {
         state.executedCalls.add(doneHash);
@@ -475,7 +495,7 @@ return params;
 \`\`\`
 ${content}
 \`\`\`
-请根据上述结果继续。如果任务已完成，请输出 [[DONE]]`;
+请根据上述结果继续。如果任务已完成，请输出 @DONE`;
   }
 
   // ============== UI ==============
@@ -694,18 +714,23 @@ ${content}
     }
   }
 
-  function updateToolsDisplay() {
-    const el = document.getElementById('agent-tools');
-    if (!el) return;
-    
-    if (state.availableTools.length === 0) {
-      el.style.display = 'none';
-      return;
-    }
-    
-    el.style.display = 'block';
-    el.innerHTML = '🔧 ' + state.availableTools.map(t => `<code>${t.name || t}</code>`).join(' ');
-  }
+function updateToolsDisplay() {
+const el = document.getElementById('agent-tools');
+if (!el) return;
+if (state.availableTools.length === 0) {
+el.style.display = 'none';
+return;
+}
+const cats = {};
+state.availableTools.forEach(t => {
+const name = t.name || t;
+const p = name.includes('_') ? name.split('_')[0] : 'other';
+cats[p] = (cats[p] || 0) + 1;
+});
+const sum = Object.entries(cats).map(([k,v]) => k + ':' + v).join(' ');
+el.style.display = 'block';
+el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
+}
 
   function addLog(msg, type = 'info') {
     const logs = document.getElementById('agent-logs');

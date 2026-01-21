@@ -3,6 +3,11 @@
     "port": 8765,
     "host": "localhost"
   },
+  "browser": {
+    "enabled": false,
+    "headless": false,
+    "userDataDir": ""
+  },
   "safety": {
     "allowedPaths": [
       "/Users/yay/workspace",
