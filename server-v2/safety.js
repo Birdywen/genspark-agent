@@ -1,15 +1,19 @@
-// Safety 模块 - 安全检查和权限控制 v2
+// Safety 模块 - 安全检查和权限控制
 
 import path from 'path';
 
 class Safety {
   constructor(config, logger) {
-    this.config = config;
+    this.config = config || {};
     this.logger = logger;
     this.pendingConfirmations = new Map();
   }
 
   isPathAllowed(targetPath) {
+    if (!this.config.allowedPaths || this.config.allowedPaths.length === 0) {
+      return { allowed: true };
+    }
+    
     const normalizedPath = path.resolve(targetPath);
     
     for (const allowedPath of this.config.allowedPaths) {
@@ -26,21 +30,31 @@ class Safety {
   }
 
   isCommandSafe(command) {
+    if (!this.config.blockedCommands && !this.config.allowedCommands) {
+      return { safe: true };
+    }
+    
     const cmd = command.toLowerCase().trim();
 
-    for (const blocked of this.config.blockedCommands) {
-      if (cmd.includes(blocked.toLowerCase())) {
-        return { safe: false, reason: `命令被阻止: ${blocked}` };
+    // 检查黑名单
+    if (this.config.blockedCommands) {
+      for (const blocked of this.config.blockedCommands) {
+        if (cmd.includes(blocked.toLowerCase())) {
+          return { safe: false, reason: `命令被阻止: ${blocked}` };
+        }
       }
     }
 
-    const baseCmd = cmd.split(' ')[0];
-    const isAllowed = this.config.allowedCommands.some(
-      allowed => baseCmd === allowed || baseCmd.endsWith('/' + allowed)
-    );
+    // 检查白名单
+    if (this.config.allowedCommands) {
+      const baseCmd = cmd.split(' ')[0];
+      const isAllowed = this.config.allowedCommands.some(
+        allowed => baseCmd === allowed || baseCmd.endsWith('/' + allowed)
+      );
 
-    if (!isAllowed) {
-      return { safe: false, reason: `命令不在白名单: ${baseCmd}` };
+      if (!isAllowed) {
+        return { safe: false, reason: `命令不在白名单: ${baseCmd}` };
+      }
     }
 
     return { safe: true };
@@ -50,7 +64,7 @@ class Safety {
     if (!this.config.requireConfirmation) {
       return false;
     }
-    return this.config.dangerousOperations.includes(operation);
+    return this.config.dangerousOperations?.includes(operation) || false;
   }
 
   createConfirmationRequest(id, operation, params) {
@@ -78,11 +92,9 @@ class Safety {
   handleConfirmation(id, approved) {
     this.logger.info(`收到确认结果: ${id}, approved: ${approved}`);
     
-    // 尝试多种 ID 格式匹配
     let pending = this.pendingConfirmations.get(id);
     
     if (!pending) {
-      // 尝试查找任何待确认的请求
       for (const [key, value] of this.pendingConfirmations.entries()) {
         pending = value;
         this.pendingConfirmations.delete(key);
@@ -111,7 +123,7 @@ class Safety {
       }
     }
 
-    // 命令检查
+    // 命令检查 (针对 shell/command 类工具)
     if (params.command) {
       const cmdCheck = this.isCommandSafe(params.command);
       if (!cmdCheck.safe) {
@@ -120,12 +132,11 @@ class Safety {
     }
 
     // 确认检查
-    if (this.requiresConfirmation(operation)) {
+    if (this.requiresConfirmation(operation) && broadcastConfirmRequest) {
       const confirmId = Date.now().toString();
       
       this.logger.info(`请求用户确认: ${operation}`);
       
-      // 发送确认请求到扩展
       broadcastConfirmRequest({
         type: 'confirm_operation',
         id: confirmId,
@@ -133,7 +144,6 @@ class Safety {
         params
       });
       
-      // 等待确认
       const result = await this.createConfirmationRequest(confirmId, operation, params);
       
       if (!result.approved) {

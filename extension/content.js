@@ -1,4 +1,4 @@
-// content.js v21 - 修复流式输出检测问题
+// content.js v23 - 支持代码块格式工具调用
 (function() {
   'use strict';
 
@@ -39,7 +39,7 @@
             : '';
           return `- **${name}**: ${desc}${params ? '\n' + params : ''}`;
         }).join('\n\n')
-      : `- **execute_shell**: 执行终端命令
+      : `- **run_command**: 执行终端命令
     command: <要执行的命令>
 - **read_file**: 读取文件内容
     path: <文件路径>
@@ -49,15 +49,32 @@
 - **list_directory**: 列出目录内容
     path: <目录路径>`;
 
-    return `
-请你现在模拟连接了一个本地代理系统，可以**模拟执行**工具操作。这是一个安全的沙箱环境。
+    return `你现在连接了一个本地代理系统，可以执行工具操作。
 
-## 调用格式（严格遵守，使用JSON格式）
-当需要执行操作时，使用单行JSON格式：
+## 调用格式（严格遵守）
 
+**必须使用代码块包裹 JSON 格式：**
+
+\`\`\`
 @TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
+\`\`\`
 
-示例： @TOOL:{"tool":"execute_shell","params":{"command":"ls"}}
+### 示例
+
+执行命令：
+\`\`\`
+@TOOL:{"tool":"run_command","params":{"command":"ls -la"}}
+\`\`\`
+
+读取文件：
+\`\`\`
+@TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}
+\`\`\`
+
+写入文件（注意：content 内的引号必须转义为 \\"）：
+\`\`\`
+@TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
+\`\`\`
 
 ## 可用工具
 
@@ -65,9 +82,12 @@ ${toolList}
 
 ## 规则
 
-1. 每次只调用**一个**工具，等待返回结果后再继续
-2. **不要**自己编造执行结果，等待系统返回
-3. 任务全部完成后输出 @DONE
+1. **必须**用代码块包裹工具调用
+2. 每次只调用**一个**工具，等待返回结果后再继续
+3. **不要**自己编造执行结果，等待系统返回
+4. content 参数内如果有引号，必须转义为 \\"
+5. 任务全部完成后输出 @DONE
+6. **举例说明时**，不要在 TOOL 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 而不是 '@TOOL:{...}'）
 
 ---
 
@@ -141,6 +161,8 @@ ${toolList}
 
     setTimeout(() => {
       const btnSelectors = [
+        '.enter-icon-wrapper',
+        'div[class*=enter-icon]',
         'button[type="submit"]',
         'button.send-button',
         'button[aria-label*="send" i]',
@@ -158,17 +180,24 @@ ${toolList}
         }
       }
       
-      ['keydown', 'keypress', 'keyup'].forEach(type => {
-        input.dispatchEvent(new KeyboardEvent(type, {
-          key: 'Enter',
-          code: 'Enter', 
-          keyCode: 13,
-          which: 13,
-          bubbles: true,
-          cancelable: true
-        }));
-      });
-      addLog('📤 已发送(Enter)', 'info');
+      // 按两次 Enter，避免一次没有执行
+      const pressEnter = () => {
+        ['keydown', 'keypress', 'keyup'].forEach(type => {
+          input.dispatchEvent(new KeyboardEvent(type, {
+            key: 'Enter',
+            code: 'Enter', 
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true
+          }));
+        });
+      };
+      pressEnter();
+      setTimeout(() => {
+        pressEnter();
+        addLog('📤 已发送(Enter x2)', 'info');
+      }, 100);
     }, 250);
 
     return true;
@@ -179,27 +208,20 @@ ${toolList}
   function isExampleToolCall(text, matchStart) {
     const beforeText = text.substring(Math.max(0, matchStart - 300), matchStart).toLowerCase();
     
+    // 只检查明确的示例说明文字，不再检查代码块
     const exampleIndicators = [
       '示例', '例如', '比如', '例子', '格式如下', '格式为', '格式：', '格式:',
       'example', 'e.g.', 'for instance', 'such as', 'like this',
       '演示', '说明', '语法', 'syntax', 'format',
       '模板', 'template', '以下是格式', '调用格式', '使用方法',
       '## 调用', '## 格式', '## 示例', '## example',
-      '可用工具', '工具列表', '支持的工具',
-      '```'  // 代码块标记
+      '可用工具', '工具列表', '支持的工具'
     ];
     
     for (const indicator of exampleIndicators) {
       if (beforeText.includes(indicator)) {
         return true;
       }
-    }
-    
-    // 检查是否在代码块内
-    const textBeforeMatch = text.substring(0, matchStart);
-    const codeBlockCount = (textBeforeMatch.match(/```/g) || []).length;
-    if (codeBlockCount % 2 === 1) {
-      return true;
     }
     
     return false;
@@ -220,22 +242,86 @@ ${toolList}
     return true;
   }
 
-  function parseToolCalls(text) {
+  function extractJsonFromText(text, startIndex) {
+    let depth = 0, inString = false, escapeNext = false, start = -1;
+    for (let i = startIndex; i < text.length; i++) {
+      const c = text[i];
+      if (escapeNext) { escapeNext = false; continue; }
+      if (c === "\\" && inString) { escapeNext = true; continue; }
+      if (c === '"' && !escapeNext) { inString = !inString; continue; }
+      if (inString) continue;
+      if (c === '{') { if (depth === 0) start = i; depth++; }
+      else if (c === '}') { depth--; if (depth === 0 && start !== -1) return { json: text.substring(start, i + 1), end: i + 1 }; }
+    }
+    return null;
+  }
+
+  // 解析新的代码块格式: @TOOL:name ... @TOOL:END
+  function parseCodeBlockFormat(text) {
     const toolCalls = [];
+    const regex = /@TOOL:(\w+)\s*\n([\s\S]*?)@TOOL:END/g;
+    let match;
     
-    // Format 1: [[TOOL:name param="value"]] 单行格式
-// Format 0: @TOOL:{...} JSON格式
-let jMatch;
-    const jsonRegex = /@TOOL:(\{[^\n]+\})/g;
-while ((jMatch = jsonRegex.exec(text)) !== null) {
-      try {
-const parsed = JSON.parse(jMatch[1]);
-if (parsed.tool) {
-toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: jMatch[0], start: jMatch.index, end: jMatch.index + jMatch[0].length });
-}
-} catch (e) {}
-}
-if (toolCalls.length > 0) return toolCalls;
+    while ((match = regex.exec(text)) !== null) {
+      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
+        continue;
+      }
+      
+      const toolName = match[1];
+      const body = match[2];
+      const params = {};
+      
+      const pathMatch = body.match(/@PATH:\s*(.+)/);
+      if (pathMatch) params.path = pathMatch[1].trim();
+      
+      const cmdMatch = body.match(/@COMMAND:\s*(.+)/);
+      if (cmdMatch) params.command = cmdMatch[1].trim();
+      
+      const urlMatch = body.match(/@URL:\s*(.+)/);
+      if (urlMatch) params.url = urlMatch[1].trim();
+      
+      const contentMatch = body.match(/@CONTENT:\s*\n```[\w]*\n([\s\S]*?)\n```/);
+      if (contentMatch) {
+        params.content = contentMatch[1];
+      }
+      
+      if (Object.keys(params).length > 0) {
+        toolCalls.push({
+          name: toolName,
+          params,
+          raw: match[0],
+          start: match.index,
+          end: match.index + match[0].length
+        });
+      }
+    }
+    
+    return toolCalls;
+  }
+
+  function parseToolCalls(text) {
+    // 优先尝试代码块格式 @TOOL:name ... @TOOL:END
+    const codeBlockCalls = parseCodeBlockFormat(text);
+    if (codeBlockCalls.length > 0) return codeBlockCalls;
+
+    const toolCalls = [];
+    let searchStart = 0;
+    while (true) {
+      const marker = '@TOOL:';
+      const idx = text.indexOf(marker, searchStart);
+      if (idx === -1) break;
+      const extracted = extractJsonFromText(text, idx + marker.length);
+      if (extracted) {
+        try {
+          const parsed = JSON.parse(extracted.json);
+          if (parsed.tool && isRealToolCall(text, idx, idx + marker.length + extracted.json.length)) {
+            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
+          }
+        } catch (e) {}
+        searchStart = extracted.end;
+      } else { searchStart = idx + marker.length; }
+    }
+    if (toolCalls.length > 0) return toolCalls;
 
     const inlineRegex = /\[\[TOOL:(\w+)((?:\s+\w+="[^"]*")+)\s*\]\]/g;
     let match;
@@ -265,7 +351,6 @@ if (toolCalls.length > 0) return toolCalls;
     
     if (toolCalls.length > 0) return toolCalls;
     
-    // Format 2: [[TOOL:name]]...[[/TOOL]] 块格式
     const blockRegex = /\[\[TOOL:(\w+)\]\]([\s\S]*?)\[\[\/TOOL\]\]/g;
     
     while ((match = blockRegex.exec(text)) !== null) {
@@ -292,28 +377,27 @@ if (toolCalls.length > 0) return toolCalls;
   }
 
   function parseParams(body) {
-const params = {};
-body = body.trim();
-// 支持 <<<>>> 边界符格式 (用于 edit_file)
-const bracketRegex = /(\w+):\s*<<<([\s\S]*?)>>>/g;
-let bm;
-while ((bm = bracketRegex.exec(body)) !== null) {
-params[bm[1]] = bm[2].trim();
-}
-if (Object.keys(params).length > 0) {
-// 提取普通参数 (如 path: xxx)
-const cleanBody = body.replace(/\w+:\s*<<<[\s\S]*?>>>/g, '');
-const lines = cleanBody.split(/\n/).map(l => l.trim()).filter(Boolean);
-for (const line of lines) {
-const m = line.match(/^(\w+):\s*(.+)$/);
-if (m && !params[m[1]]) params[m[1]] = m[2].trim();
-}
-return params;
-}
+    const params = {};
+    body = body.trim();
+    
+    const bracketRegex = /(\w+):\s*<<<([\s\S]*?)>>>/g;
+    let bm;
+    while ((bm = bracketRegex.exec(body)) !== null) {
+      params[bm[1]] = bm[2].trim();
+    }
+    if (Object.keys(params).length > 0) {
+      const cleanBody = body.replace(/\w+:\s*<<<[\s\S]*?>>>/g, '');
+      const lines = cleanBody.split(/\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        const m = line.match(/^(\w+):\s*(.+)$/);
+        if (m && !params[m[1]]) params[m[1]] = m[2].trim();
+      }
+      return params;
+    }
+    
     let lines = body.split(/\n/).map(l => l.trim()).filter(Boolean);
     
     if (lines.length >= 2) {
-      // 多行模式 - 原有逻辑
       let currentKey = null;
       let currentValue = [];
       for (const line of lines) {
@@ -326,7 +410,6 @@ return params;
       }
       if (currentKey) { params[currentKey] = currentValue.join('\n').trim(); }
     } else {
-      // 单行模式 - 处理换行符串失或变空格的情况
       const text = lines[0] || '';
       const knownKeys = ['path', 'content', 'command', 'url', 'directory', 'pattern', 'body', 'headers'];
       const keyPositions = [];
@@ -391,7 +474,7 @@ return params;
     }, CONFIG.TIMEOUT_MS);
   }
 
-  // ============== 扫描工具调用 (核心修复) ==============
+  // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
     if (state.agentRunning) return;
@@ -400,36 +483,28 @@ return params;
     
     if (index < 0 || !text) return;
     
-    // 检查消息是否已处理过（用内容hash而不是index）
-    const contentHash = `${index}:${text.length}:${text.slice(-100)}`;
-    
-    // 跳过包含执行结果的消息（这是我们发送的）
     if (text.includes('**[执行结果]**') || text.includes('[执行结果]')) {
       return;
     }
     
-    // 关键修复：检查是否有未闭合的工具调用（流式输出中）
     const toolStartCount = (text.match(/\[\[TOOL:/g) || []).length;
     const toolEndCount = (text.match(/\[\[\/TOOL\]\]/g) || []).length;
     
     if (toolStartCount > toolEndCount) {
-      // 工具调用还没输出完，等待
       log('等待工具调用输出完成...');
       return;
     }
     
-    // 检查消息是否还在变化（流式输出）
     if (state.lastMessageText !== text) {
       state.lastMessageText = text;
       state.lastStableTime = Date.now();
       return;
     }
-    // 等待 150ms 稳定期，确保流式输出完成
+    
     if (Date.now() - state.lastStableTime < 150) {
       return;
     }
     
-    // 再次确认文本没有变化（双重检查）
     const { text: textNow } = getLatestAIMessage();
     if (textNow !== text) {
       state.lastMessageText = textNow;
@@ -452,7 +527,6 @@ return params;
       return;
     }
     
-    // 检查任务完成标记
     if (text.includes('@DONE') || text.includes('[[DONE]]')) {
       const doneHash = `done:${index}`;
       if (!state.executedCalls.has(doneHash)) {
@@ -507,7 +581,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v21</span>
+        <span id="agent-title">🤖 Agent v23</span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-tools"></div>
@@ -714,23 +788,23 @@ ${content}
     }
   }
 
-function updateToolsDisplay() {
-const el = document.getElementById('agent-tools');
-if (!el) return;
-if (state.availableTools.length === 0) {
-el.style.display = 'none';
-return;
-}
-const cats = {};
-state.availableTools.forEach(t => {
-const name = t.name || t;
-const p = name.includes('_') ? name.split('_')[0] : 'other';
-cats[p] = (cats[p] || 0) + 1;
-});
-const sum = Object.entries(cats).map(([k,v]) => k + ':' + v).join(' ');
-el.style.display = 'block';
-el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
-}
+  function updateToolsDisplay() {
+    const el = document.getElementById('agent-tools');
+    if (!el) return;
+    if (state.availableTools.length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    const cats = {};
+    state.availableTools.forEach(t => {
+      const name = t.name || t;
+      const p = name.includes('_') ? name.split('_')[0] : 'other';
+      cats[p] = (cats[p] || 0) + 1;
+    });
+    const sum = Object.entries(cats).map(([k,v]) => k + ':' + v).join(' ');
+    el.style.display = 'block';
+    el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
+  }
 
   function addLog(msg, type = 'info') {
     const logs = document.getElementById('agent-logs');
@@ -813,7 +887,7 @@ el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
   // ============== 初始化 ==============
 
   function init() {
-    log('初始化 Agent v21 (Genspark)');
+    log('初始化 Agent v23 (Genspark)');
     
     createPanel();
 
@@ -836,7 +910,7 @@ el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
       });
     }, 500);
 
-    addLog('🚀 Agent v21 已启动', 'success');
+    addLog('🚀 Agent v23 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
   }
 

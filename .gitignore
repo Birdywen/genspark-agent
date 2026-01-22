@@ -1,13 +1,27 @@
 # Dependencies
 node_modules/
 .DS_Store
-logs/.log
+
+# Logs
+logs/
+*.log
+
+# Environment
 .env
+
+# IDE
 .vscode/
 .idea/
-.backup
+
+# Backup files
+*.backup
+*.bak
 *.new.js
 备用*
+content copy.js
+fix-parser.js
+fix.js
 
 # Trash
 _trash/
+test/
