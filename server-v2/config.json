@@ -15,6 +15,11 @@
     "shell": {
       "command": "npx",
       "args": ["-y", "mcp-server-commands"]
+    },
+    "chart": {
+      "command": "npx",
+      "args": ["-y", "@antv/mcp-server-chart"],
+      "startupTimeout": 10000
     }
   },
   "safety": {

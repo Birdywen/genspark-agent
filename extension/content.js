@@ -1,4 +1,4 @@
-// content.js v23 - 支持代码块格式工具调用
+// content.js v24 - 支持 Skills 系统 - 支持代码块格式工具调用
 (function() {
   'use strict';
 
@@ -14,6 +14,8 @@
     wsConnected: false,
     agentRunning: false,
     availableTools: [],
+    availableSkills: [],
+    skillsPrompt: "",
     executedCalls: new Set(),
     pendingCalls: new Map(),
     lastMessageText: '',
@@ -92,6 +94,12 @@ ${toolList}
 ---
 
 请告诉我你的任务。`;
+
+    // 如果有 Skills 提示词，附加到末尾
+    if (state.skillsPrompt) {
+      return prompt + "\n\n---\n\n" + state.skillsPrompt;
+    }
+    return prompt;
   }
 
   // ============== DOM 操作 (Genspark 专用) ==============
@@ -581,7 +589,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v23</span>
+        <span id="agent-title">🤖 Agent v24</span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-tools"></div>
@@ -846,6 +854,8 @@ ${content}
         }
         updateStatus();
         addLog('✓ 连接成功', 'success');
+        if (msg.skills) { state.availableSkills = msg.skills; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
         break;
 
       case 'update_tools':
@@ -854,6 +864,8 @@ ${content}
           updateToolsDisplay();
           addLog(`📦 加载了 ${msg.tools.length} 个工具`, 'info');
         }
+        if (msg.skills) { state.availableSkills = msg.skills; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
         break;
 
       case 'tool_result':
@@ -905,12 +917,14 @@ ${content}
             state.availableTools = resp.tools;
             updateToolsDisplay();
           }
+          if (resp.skills) { state.availableSkills = resp.skills; }
+          if (resp.skillsPrompt) { state.skillsPrompt = resp.skillsPrompt; }
           updateStatus();
         }
       });
     }, 500);
 
-    addLog('🚀 Agent v23 已启动', 'success');
+    addLog('🚀 Agent v24 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
   }
 

@@ -1,5 +1,5 @@
 // Genspark Agent Server v2 - 整合版
-// MCP Hub + 安全检查 + 日志记录
+// MCP Hub + 安全检查 + 日志记录 + Skills 系统
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import Logger from './logger.js';
 import Safety from './safety.js';
+import SkillsManager from './skills.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
@@ -15,6 +16,10 @@ const config = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf
 // 初始化日志和安全模块
 const logger = new Logger(config.logging);
 const safety = new Safety(config.safety, logger);
+
+// 初始化 Skills 管理器
+const skillsManager = new SkillsManager();
+skillsManager.load();
 
 // 存储连接的客户端
 const clients = new Set();
@@ -236,11 +241,13 @@ async function main() {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
 
-    // 发送连接信息和工具列表
+    // 发送连接信息、工具列表和 Skills 系统提示
     ws.send(JSON.stringify({
       type: 'connected',
       message: 'Genspark Agent Server v2 已连接',
-      tools: hub.tools
+      tools: hub.tools,
+      skills: skillsManager.getSkillsList(),
+      skillsPrompt: skillsManager.getSystemPrompt()
     }));
 
     ws.on('message', async data => {
@@ -263,6 +270,40 @@ async function main() {
           case 'list_tools':
             ws.send(JSON.stringify({ type: 'tools_list', tools: hub.tools }));
             break;
+          
+          // 新增: Skills 相关消息处理
+          case 'list_skills':
+            ws.send(JSON.stringify({ 
+              type: 'skills_list', 
+              skills: skillsManager.getSkillsList() 
+            }));
+            break;
+            
+          case 'get_skills_prompt':
+            ws.send(JSON.stringify({ 
+              type: 'skills_prompt', 
+              prompt: skillsManager.getSystemPrompt() 
+            }));
+            break;
+            
+          case 'get_skill_reference':
+            const ref = skillsManager.getReference(msg.skill, msg.reference);
+            ws.send(JSON.stringify({ 
+              type: 'skill_reference', 
+              skill: msg.skill,
+              reference: msg.reference,
+              content: ref 
+            }));
+            break;
+            
+          case 'list_skill_references':
+            const refs = skillsManager.listReferences(msg.skill);
+            ws.send(JSON.stringify({ 
+              type: 'skill_references_list', 
+              skill: msg.skill,
+              references: refs 
+            }));
+            break;
             
           default:
             logger.warning(`未知消息类型: ${msg.type}`);
@@ -280,6 +321,8 @@ async function main() {
     ws.on('error', e => logger.error('WebSocket 错误', { error: e.message }));
   });
 
+  const skillsCount = skillsManager.getSkillsList().length;
+  
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
@@ -287,6 +330,7 @@ async function main() {
 ║                                                           ║
 ║   WebSocket: ws://${config.server.host}:${config.server.port}                     ║
 ║   工具数量: ${hub.tools.length.toString().padEnd(3)} 个                                  ║
+║   Skills:   ${skillsCount.toString().padEnd(3)} 个                                  ║
 ║   安全检查: ${config.safety ? '✅ 已启用' : '❌ 未启用'}                              ║
 ║   日志记录: ${config.logging?.enabled ? '✅ 已启用' : '❌ 未启用'}                              ║
 ║                                                           ║

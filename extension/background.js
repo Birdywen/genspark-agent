@@ -1,9 +1,11 @@
-// Genspark Agent Bridge - Background Service Worker v2
+// Genspark Agent Bridge - Background Service Worker v3 (支持 Skills)
 
 let socket = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 let cachedTools = [];
+let cachedSkills = [];
+let cachedSkillsPrompt = '';
 
 const WS_URL = 'ws://localhost:8765';
 
@@ -48,6 +50,18 @@ function connectWebSocket() {
       if (data.tools) {
         cachedTools = data.tools;
         console.log('[BG] 缓存工具:', cachedTools.length);
+      }
+      
+      // 缓存 Skills 列表
+      if (data.skills) {
+        cachedSkills = data.skills;
+        console.log('[BG] 缓存 Skills:', cachedSkills.length);
+      }
+      
+      // 缓存 Skills 系统提示
+      if (data.skillsPrompt) {
+        cachedSkillsPrompt = data.skillsPrompt;
+        console.log('[BG] 缓存 Skills 提示词, 长度:', cachedSkillsPrompt.length);
       }
       
       if (data.type === 'pong') return;
@@ -122,16 +136,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'GET_WS_STATUS':
       const connected = socket && socket.readyState === WebSocket.OPEN;
-      console.log('[BG] 状态查询, connected:', connected, 'tools:', cachedTools.length);
-      sendResponse({ connected, tools: cachedTools });
+      console.log('[BG] 状态查询, connected:', connected, 'tools:', cachedTools.length, 'skills:', cachedSkills.length);
+      sendResponse({ 
+        connected, 
+        tools: cachedTools,
+        skills: cachedSkills,
+        skillsPrompt: cachedSkillsPrompt
+      });
       
-      // 如果有缓存的工具，也发送一次
-      if (cachedTools.length > 0) {
+      // 如果有缓存的数据，也发送一次
+      if (cachedTools.length > 0 || cachedSkills.length > 0) {
         chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
           tabs.forEach((tab) => {
             chrome.tabs.sendMessage(tab.id, { 
               type: 'update_tools', 
-              tools: cachedTools 
+              tools: cachedTools,
+              skills: cachedSkills,
+              skillsPrompt: cachedSkillsPrompt
             }).catch(() => {});
           });
         });
