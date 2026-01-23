@@ -53,7 +53,7 @@
       "wget | bash"
     ],
     "allowedCommands": [
-      "cd", "ls", "cat", "head", "tail", "echo", "pwd", "date", "whoami", "which",
+      "cd", "ls", "cat", "rg", "fd", "bat", "eza", "http", "sqlite3", "wkhtmltopdf", "convert", "file", "du", "df", "tree", "env", "xargs", "tee", "realpath", "dirname", "basename", "&&", "head", "tail", "echo", "pwd", "date", "whoami", "which",
       "grep", "sed", "awk", "find", "wc", "sort", "uniq", "cut", "diff",
       "python", "python3", "node", "npm", "npx",
       "curl", "wget", "git",
