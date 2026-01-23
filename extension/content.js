@@ -1,4 +1,4 @@
-// content.js v24 - 支持 Skills 系统 - 支持代码块格式工具调用
+// content.js v25 - 修复 prompt 变量 + 改进消息发送 - 支持 Skills 系统 - 支持代码块格式工具调用
 (function() {
   'use strict';
 
@@ -51,7 +51,7 @@
 - **list_directory**: 列出目录内容
     path: <目录路径>`;
 
-    return `你现在连接了一个本地代理系统，可以执行工具操作。
+    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。
 
 ## 调用格式（严格遵守）
 
@@ -151,11 +151,11 @@ ${toolList}
     input.focus();
     
     if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
-      input.value = '';
-      input.value = text;
-      ['input', 'change', 'keyup'].forEach(evt => {
-        input.dispatchEvent(new Event(evt, { bubbles: true, composed: true }));
-      });
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      input.value = "";
+      if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     } else {
       input.innerHTML = '';
       input.innerText = text;
@@ -206,7 +206,7 @@ ${toolList}
         pressEnter();
         addLog('📤 已发送(Enter x2)', 'info');
       }, 100);
-    }, 250);
+    }, 350);
 
     return true;
   }
