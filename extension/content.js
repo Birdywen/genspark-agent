@@ -1,4 +1,4 @@
-// content.js v26 - 优化示例检测 + 增强发送重试机制
+// content.js v27 - 添加执行进度指示器 - 优化示例检测 + 增强发送重试机制
 (function() {
   'use strict';
 
@@ -19,7 +19,9 @@
     executedCalls: new Set(),
     pendingCalls: new Map(),
     lastMessageText: '',
-    lastStableTime: 0
+    lastStableTime: 0,
+    execTimer: null,
+    execStartTime: 0
   };
 
   function log(...args) {
@@ -453,6 +455,30 @@ ${toolList}
     return params;
   }
 
+  // ============== 执行指示器 ==============
+
+  function showExecutingIndicator(toolName) {
+    const el = document.getElementById("agent-executing");
+    if (!el) return;
+    state.execStartTime = Date.now();
+    el.querySelector(".exec-tool").textContent = toolName;
+    el.querySelector(".exec-time").textContent = "0.0s";
+    el.classList.add("active");
+    if (state.execTimer) clearInterval(state.execTimer);
+    state.execTimer = setInterval(() => {
+      const elapsed = ((Date.now() - state.execStartTime) / 1000).toFixed(1);
+      const timeEl = document.querySelector("#agent-executing .exec-time");
+      if (timeEl) timeEl.textContent = elapsed + "s";
+    }, 100);
+  }
+
+  function hideExecutingIndicator() {
+    const el = document.getElementById("agent-executing");
+    if (el) el.classList.remove("active");
+    if (state.execTimer) { clearInterval(state.execTimer); state.execTimer = null; }
+  
+  }
+
   // ============== 工具执行 ==============
 
   function executeToolCall(tool, callHash) {
@@ -467,6 +493,7 @@ ${toolList}
     
     state.agentRunning = true;
     state.executedCalls.add(callHash);
+    showExecutingIndicator(tool.name);
     updateStatus();
     
     chrome.runtime.sendMessage({
@@ -485,8 +512,10 @@ ${toolList}
       if (state.pendingCalls.has(callId)) {
         state.pendingCalls.delete(callId);
         state.agentRunning = false;
+        hideExecutingIndicator();
         updateStatus();
-        addLog(`⏱️ ${tool.name} 超时`, 'error');
+        hideExecutingIndicator();
+        addLog(`⏱️ ${tool.name} 超时`, "error");
         
         const timeoutResult = formatToolResult({
           tool: tool.name,
@@ -556,6 +585,7 @@ ${toolList}
       if (!state.executedCalls.has(doneHash)) {
         state.executedCalls.add(doneHash);
         state.agentRunning = false;
+        hideExecutingIndicator();
         state.pendingCalls.clear();
         updateStatus();
         addLog('✅ 任务完成', 'success');
@@ -605,9 +635,10 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v24</span>
+        <span id="agent-title">🤖 Agent v27</span>
         <span id="agent-status">初始化</span>
       </div>
+      <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
       <div id="agent-tools"></div>
       <div id="agent-logs"></div>
       <div id="agent-actions">
@@ -668,6 +699,13 @@ ${content}
       #agent-status.running { background: #f59e0b; animation: pulse 1.5s infinite; }
       #agent-status.disconnected { background: #ef4444; }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      #agent-executing { display: none; padding: 10px 12px; margin-bottom: 10px; background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6f 50%, #1e3a5f 100%); background-size: 200% 100%; animation: shimmer 2s infinite linear; border-radius: 8px; font-size: 12px; color: #93c5fd; border: 1px solid #3b82f6; }
+      #agent-executing.active { display: flex; align-items: center; gap: 8px; }
+      #agent-executing .exec-spinner { animation: spin 1s linear infinite; font-size: 14px; }
+      #agent-executing .exec-tool { flex: 1; font-weight: 600; color: #60a5fa; }
+      #agent-executing .exec-time { font-family: monospace; color: #fbbf24; font-weight: 600; font-size: 13px; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       #agent-tools {
         font-size: 11px;
         color: #9ca3af;
@@ -732,6 +770,7 @@ ${content}
       state.executedCalls.clear();
       state.pendingCalls.clear();
       state.agentRunning = false;
+        hideExecutingIndicator();
       state.lastMessageText = '';
       updateStatus();
       addLog('🗑️ 已重置', 'info');
@@ -895,6 +934,7 @@ ${content}
         addLog(`📥 ${msg.tool}: ${msg.success ? '成功' : '失败'}`, msg.success ? 'result' : 'error');
         
         state.agentRunning = false;
+        hideExecutingIndicator();
         updateStatus();
         
         const resultText = formatToolResult(msg);
@@ -904,6 +944,7 @@ ${content}
       case 'error':
         addLog(`❌ ${msg.message || '未知错误'}`, 'error');
         state.agentRunning = false;
+        hideExecutingIndicator();
         updateStatus();
         break;
     }
@@ -940,7 +981,7 @@ ${content}
       });
     }, 500);
 
-    addLog('🚀 Agent v24 已启动', 'success');
+    addLog('🚀 Agent v27 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
   }
 
