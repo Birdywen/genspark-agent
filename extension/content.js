@@ -1,4 +1,4 @@
-// content.js v25 - 修复 prompt 变量 + 改进消息发送 - 支持 Skills 系统 - 支持代码块格式工具调用
+// content.js v26 - 优化示例检测 + 增强发送重试机制
 (function() {
   'use strict';
 
@@ -32,15 +32,10 @@
     const toolList = state.availableTools.length > 0 
       ? state.availableTools.map(t => {
           const name = t.name || t;
-          const desc = t.description || '';
-          const params = t.params 
-            ? Object.entries(t.params).map(([k, v]) => {
-                const paramDesc = typeof v === 'string' ? v.replace(/^string\s*/, '').replace(/[()]/g, '') : '';
-                return `    ${k}: <${paramDesc || '值'}>`;
-              }).join('\n')
-            : '';
-          return `- **${name}**: ${desc}${params ? '\n' + params : ''}`;
-        }).join('\n\n')
+          // 只取描述的第一句话
+          const desc = (t.description || '').split('.')[0];
+          return `- **${name}**: ${desc}`;
+        }).join('\n')
       : `- **run_command**: 执行终端命令
     command: <要执行的命令>
 - **read_file**: 读取文件内容
@@ -167,7 +162,7 @@ ${toolList}
       }));
     }
 
-    setTimeout(() => {
+    const trySend = (attempt = 1) => {
       const btnSelectors = [
         '.enter-icon-wrapper',
         'div[class*=enter-icon]',
@@ -183,12 +178,12 @@ ${toolList}
         const btn = document.querySelector(sel);
         if (btn && !btn.disabled && btn.offsetParent !== null) {
           btn.click();
-          addLog('📤 已发送', 'info');
-          return;
+          addLog('📤 已发送(按钮)', 'info');
+          return true;
         }
       }
       
-      // 按两次 Enter，避免一次没有执行
+      // 按 Enter 发送
       const pressEnter = () => {
         ['keydown', 'keypress', 'keyup'].forEach(type => {
           input.dispatchEvent(new KeyboardEvent(type, {
@@ -202,11 +197,34 @@ ${toolList}
         });
       };
       pressEnter();
-      setTimeout(() => {
-        pressEnter();
-        addLog('📤 已发送(Enter x2)', 'info');
-      }, 100);
-    }, 350);
+      return false;
+    };
+
+    // 第一次尝试发送（延迟 800ms 等待页面就绪）
+    setTimeout(() => {
+      const sent = trySend(1);
+      if (!sent) {
+        // 800ms 后检查输入框是否还有内容，有则重试
+        setTimeout(() => {
+          const currentInput = getInputBox();
+          if (currentInput && currentInput.value && currentInput.value.length > 10) {
+            addLog('🔄 重试发送...', 'info');
+            trySend(2);
+            // 再次检查
+            setTimeout(() => {
+              const inp = getInputBox();
+              if (inp && inp.value && inp.value.length > 10) {
+                addLog('⚠️ 请手动点击发送', 'error');
+              } else {
+                addLog('📤 已发送', 'info');
+              }
+            }, 500);
+          } else {
+            addLog('📤 已发送(Enter)', 'info');
+          }
+        }, 800);
+      }
+    }, 800);
 
     return true;
   }
@@ -214,16 +232,14 @@ ${toolList}
   // ============== 工具调用解析 ==============
 
   function isExampleToolCall(text, matchStart) {
-    const beforeText = text.substring(Math.max(0, matchStart - 300), matchStart).toLowerCase();
+    // 只检查工具调用前 50 个字符，避免误判
+    const beforeText = text.substring(Math.max(0, matchStart - 50), matchStart).toLowerCase();
     
-    // 只检查明确的示例说明文字，不再检查代码块
+    // 精简关键词，只保留最明确的示例标识
     const exampleIndicators = [
-      '示例', '例如', '比如', '例子', '格式如下', '格式为', '格式：', '格式:',
-      'example', 'e.g.', 'for instance', 'such as', 'like this',
-      '演示', '说明', '语法', 'syntax', 'format',
-      '模板', 'template', '以下是格式', '调用格式', '使用方法',
-      '## 调用', '## 格式', '## 示例', '## example',
-      '可用工具', '工具列表', '支持的工具'
+      '示例：', '示例:', '例如：', '例如:',
+      'example:', 'e.g.:', 'e.g.：',
+      '格式如下', '格式为：', '格式为:'
     ];
     
     for (const indicator of exampleIndicators) {
@@ -509,7 +525,7 @@ ${toolList}
       return;
     }
     
-    if (Date.now() - state.lastStableTime < 150) {
+    if (Date.now() - state.lastStableTime < 500) {
       return;
     }
     

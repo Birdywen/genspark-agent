@@ -15,11 +15,6 @@
     "shell": {
       "command": "npx",
       "args": ["-y", "mcp-server-commands"]
-    },
-    "chart": {
-      "command": "npx",
-      "args": ["-y", "@antv/mcp-server-chart"],
-      "startupTimeout": 10000
     }
   },
   "safety": {
@@ -66,7 +61,10 @@
       "tar", "zip", "unzip",
       "open", "pbcopy", "pbpaste", "code",
       "ffmpeg", "ffprobe",
-      "pandoc"
+      "pandoc",
+      "bash", "sh", "zsh",
+      "uname", "sw_vers", "system_profiler",
+      "chmod", "jq", "docker", "brew"
     ],
     "dangerousOperations": [
       "write_file",

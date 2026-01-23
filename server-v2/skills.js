@@ -51,29 +51,39 @@ class SkillsManager {
    * 生成系统提示
    */
   _generateSystemPrompt() {
+    let envInfo = '';
+    
+    // 尝试读取本地环境信息
+    const envPath = path.join(__dirname, '..', '..', '.ai-env.md');
+    console.log('🔍 检查环境文件:', envPath, '存在:', existsSync(envPath));
+    if (existsSync(envPath)) {
+      envInfo = readFileSync(envPath, 'utf-8') + '\n\n---\n\n';
+      console.log('✅ 已加载本地环境信息 (.ai-env.md), 长度:', envInfo.length);
+    } else {
+      console.log('⚠️ 环境文件不存在');
+    }
+    
     // 尝试读取预生成的系统提示
     const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');
     if (existsSync(promptPath)) {
-      return readFileSync(promptPath, 'utf-8');
+      return envInfo + readFileSync(promptPath, 'utf-8');
     }
 
-    // 否则动态生成
+    // 动态生成简短摘要（详细文档按需加载）
     let prompt = '# 已加载的 Skills\n\n';
+    prompt += '以下 Skills 可用。需要详细参数时，读取对应的参考文档。\n\n';
     
     for (const skill of this.skills) {
-      prompt += `## ${skill.name}\n`;
-      prompt += `${skill.description}\n\n`;
-      
-      // 尝试读取 SKILL.md
-      const skillPath = path.join(SKILLS_DIR, skill.path, skill.skillFile || 'SKILL.md');
-      if (existsSync(skillPath)) {
-        prompt += readFileSync(skillPath, 'utf-8') + '\n\n';
+      prompt += `- **${skill.name}**: ${skill.description}`;
+      if (skill.tools && skill.tools.length > 0) {
+        prompt += ` (${skill.tools.length} 个工具)`;
       }
-      
-      prompt += '---\n\n';
+      prompt += '\n';
     }
     
-    return prompt;
+    prompt += '\n如需使用 Skill，可读取 `skills/<skill-name>/SKILL.md` 获取详细指南。\n';
+    
+    return envInfo + prompt;
   }
 
   /**
