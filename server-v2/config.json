@@ -8,9 +8,9 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/yay/workspace", "/private/tmp"]
     },
-    "playwright": {
+    "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     },
     "shell": {
       "command": "npx",
@@ -53,7 +53,7 @@
       "wget | bash"
     ],
     "allowedCommands": [
-      "ls", "cat", "head", "tail", "echo", "pwd", "date", "whoami", "which",
+      "cd", "ls", "cat", "head", "tail", "echo", "pwd", "date", "whoami", "which",
       "grep", "sed", "awk", "find", "wc", "sort", "uniq", "cut", "diff",
       "python", "python3", "node", "npm", "npx",
       "curl", "wget", "git",
@@ -64,7 +64,7 @@
       "pandoc",
       "bash", "sh", "zsh",
       "uname", "sw_vers", "system_profiler",
-      "chmod", "jq", "docker", "brew"
+      "chmod", "jq", "docker", "brew", "osascript"
     ],
     "dangerousOperations": [
       "write_file",
