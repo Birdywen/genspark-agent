@@ -1061,7 +1061,21 @@ ${content}
       
       // 跨 Tab 消息
       case 'CROSS_TAB_MESSAGE':
+        // 检查是否是回执消息（不注入聊天框，只显示日志）
+        if (msg.message && msg.message.startsWith('✅ [回执]')) {
+          addLog(`📬 ${msg.message}`, 'success');
+          break;
+        }
+        
         addLog(`📩 收到来自 ${msg.from} 的消息`, 'success');
+        
+        // 发送回执给发送方
+        chrome.runtime.sendMessage({
+          type: 'CROSS_TAB_SEND',
+          to: msg.from,
+          message: `✅ [回执] ${agentId || '对方'} 已收到消息，正在处理...`
+        });
+        
         const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
         // 直接发送，不管 Tab 是否可见
         setTimeout(() => {
