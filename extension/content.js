@@ -1074,8 +1074,9 @@ ${content}
     agentId = id;
     CONFIG.AGENT_ID = id;
     
-    // 保存到 chrome.storage 持久化
-    chrome.storage.local.set({ agentId: id }, () => {
+    // 保存到 sessionStorage（每个 Tab 独立）和 chrome.storage（持久化备份）
+    sessionStorage.setItem('agentId', id);
+    chrome.storage.local.set({ ['agentId_' + id]: true }, () => {
       console.log('[Agent] 身份已保存:', id);
     });
     
@@ -1093,18 +1094,18 @@ ${content}
 
   // 从 storage 恢复 Agent ID
   function restoreAgentId() {
-    chrome.storage.local.get(['agentId'], (result) => {
-      if (result.agentId) {
-        agentId = result.agentId;
-        CONFIG.AGENT_ID = result.agentId;
-        addLog(`🔄 已恢复身份: ${result.agentId}`, 'success');
-        // 重新向 background 注册
-        chrome.runtime.sendMessage({
-          type: 'REGISTER_AGENT',
-          agentId: result.agentId
-        });
-      }
-    });
+    // 优先从 sessionStorage 读取（Tab 独立）
+    const savedId = sessionStorage.getItem('agentId');
+    if (savedId) {
+      agentId = savedId;
+      CONFIG.AGENT_ID = savedId;
+      addLog(`🔄 已恢复身份: ${savedId}`, 'success');
+      // 重新向 background 注册
+      chrome.runtime.sendMessage({
+        type: 'REGISTER_AGENT',
+        agentId: savedId
+      });
+    }
   }
 
   function sendToAgent(toAgentId, message) {
