@@ -10,6 +10,9 @@ let cachedSkillsPrompt = '';
 // 记录每个工具调用来自哪个 Tab
 const pendingCallsByTab = new Map(); // callId -> tabId
 
+// 记录已处理的 tool_result，防止重复
+const processedResults = new Set();
+
 // 记录每个 Agent 对应的 Tab
 const agentTabs = new Map(); // agentId -> tabId
 const tabAgents = new Map(); // tabId -> agentId
@@ -75,6 +78,16 @@ function connectWebSocket() {
       
       // 工具执行结果：只发送给发起调用的 Tab
       if (data.type === 'tool_result' && data.id) {
+        // 去重检查
+        const resultKey = `${data.id}:${data.tool}`;
+        if (processedResults.has(resultKey)) {
+          console.log('[BG] 跳过重复的 tool_result:', resultKey);
+          return;
+        }
+        processedResults.add(resultKey);
+        // 30秒后清理，防止内存泄漏
+        setTimeout(() => processedResults.delete(resultKey), 30000);
+        
         const tabId = pendingCallsByTab.get(data.id);
         if (tabId) {
           console.log('[BG] 发送结果到 Tab:', tabId);
