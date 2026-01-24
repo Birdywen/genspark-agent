@@ -1057,6 +1057,11 @@ ${content}
     agentId = id;
     CONFIG.AGENT_ID = id;
     
+    // 保存到 chrome.storage 持久化
+    chrome.storage.local.set({ agentId: id }, () => {
+      console.log('[Agent] 身份已保存:', id);
+    });
+    
     chrome.runtime.sendMessage({
       type: 'REGISTER_AGENT',
       agentId: id
@@ -1065,6 +1070,22 @@ ${content}
         addLog(`🏷️ 已注册为 ${id}`, 'success');
       } else {
         addLog(`❌ 注册失败: ${resp?.error}`, 'error');
+      }
+    });
+  }
+
+  // 从 storage 恢复 Agent ID
+  function restoreAgentId() {
+    chrome.storage.local.get(['agentId'], (result) => {
+      if (result.agentId) {
+        agentId = result.agentId;
+        CONFIG.AGENT_ID = result.agentId;
+        addLog(`🔄 已恢复身份: ${result.agentId}`, 'success');
+        // 重新向 background 注册
+        chrome.runtime.sendMessage({
+          type: 'REGISTER_AGENT',
+          agentId: result.agentId
+        });
       }
     });
   }
@@ -1166,6 +1187,9 @@ ${content}
 
     addLog('🚀 Agent v29 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
+    
+    // 恢复之前保存的 Agent 身份
+    restoreAgentId();
   }
 
   if (document.readyState === 'loading') {
