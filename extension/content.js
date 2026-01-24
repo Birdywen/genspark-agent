@@ -2,6 +2,13 @@
 (function() {
   'use strict';
 
+  // 防止脚本重复加载
+  if (window.__GENSPARK_AGENT_LOADED__) {
+    console.log('[Agent] 已加载，跳过重复初始化');
+    return;
+  }
+  window.__GENSPARK_AGENT_LOADED__ = true;
+
   const CONFIG = {
     SCAN_INTERVAL: 200,
     TIMEOUT_MS: 30000,
