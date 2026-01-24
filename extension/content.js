@@ -630,8 +630,10 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     }
     
     // 先检查跨 Tab 发送命令 @SEND:agent_id:message
+    // 排除示例、代码块内、引用中的 @SEND
     const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|@TOOL:|@DONE|$)/);
-    if (sendMatch) {
+    const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
+    if (sendMatch && !isExampleSend) {
       const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
       if (!state.executedCalls.has(sendHash)) {
         state.executedCalls.add(sendHash);
