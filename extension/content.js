@@ -348,18 +348,58 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
   // ============== 工具调用解析 ==============
 
   function isExampleToolCall(text, matchStart) {
-    // 只检查工具调用前 50 个字符，避免误判
-    const beforeText = text.substring(Math.max(0, matchStart - 50), matchStart).toLowerCase();
+    // 检查工具调用前 100 个字符
+    const beforeText = text.substring(Math.max(0, matchStart - 100), matchStart).toLowerCase();
+    // 检查工具调用后 50 个字符
+    const afterText = text.substring(matchStart, Math.min(text.length, matchStart + 100)).toLowerCase();
     
-    // 精简关键词，只保留最明确的示例标识
+    // 1. 示例关键词检测
     const exampleIndicators = [
       '示例：', '示例:', '例如：', '例如:',
       'example:', 'e.g.:', 'e.g.：',
-      '格式如下', '格式为：', '格式为:'
+      '格式如下', '格式为：', '格式为:',
+      '比如', '譬如', 'such as', 'like this'
     ];
     
     for (const indicator of exampleIndicators) {
       if (beforeText.includes(indicator)) {
+        return true;
+      }
+    }
+    
+    // 2. 检查是否在行内代码块中（被反引号包裹）
+    // 查找匹配位置前最近的反引号情况
+    const textBeforeMatch = text.substring(0, matchStart);
+    const lastBacktick = textBeforeMatch.lastIndexOf('`');
+    if (lastBacktick !== -1) {
+      // 检查这个反引号后面到 matchStart 之间是否有配对的反引号
+      const betweenText = textBeforeMatch.substring(lastBacktick + 1);
+      // 如果没有配对的反引号，说明我们在代码块内
+      if (!betweenText.includes('`')) {
+        // 但要排除 ``` 代码块的情况（那是真正要执行的）
+        const tripleBacktickBefore = textBeforeMatch.lastIndexOf('```');
+        if (tripleBacktickBefore === -1 || tripleBacktickBefore < lastBacktick - 2) {
+          return true;  // 在单反引号内，是示例
+        }
+      }
+    }
+    
+    // 3. 检查是否是占位符格式（如 xxx, agent_id, 目标agent 等）
+    const placeholderPatterns = [
+      /:xxx:/i, /:agent_id:/i, /:目标/i, /:your/i,
+      /\[.*agent.*\]/i, /<.*agent.*>/i
+    ];
+    for (const pattern of placeholderPatterns) {
+      if (pattern.test(afterText)) {
+        return true;
+      }
+    }
+    
+    // 4. 检查前文是否有解释性文字（通常示例前有冒号或解释）
+    if (beforeText.match(/[：:。.]/)) {
+      // 检查是否像是在解释格式
+      if (beforeText.includes('格式') || beforeText.includes('写法') || 
+          beforeText.includes('语法') || beforeText.includes('format')) {
         return true;
       }
     }
