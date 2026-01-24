@@ -1034,26 +1034,12 @@ ${content}
       // 跨 Tab 消息
       case 'CROSS_TAB_MESSAGE':
         addLog(`📩 收到来自 ${msg.from} 的消息`, 'success');
-        // 保存消息，等用户切换到此 Tab 时自动发送
         const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
-        // 延迟发送，如果 Tab 在后台可能需要用户激活
-        const trySendCrossTab = () => {
-          const input = getInputBox();
-          if (input && document.visibilityState === 'visible') {
-            sendMessage(crossTabMsg);
-          } else {
-            // Tab 不可见，等待激活后再发送
-            addLog('⏳ 等待 Tab 激活后发送...', 'info');
-            const onVisible = () => {
-              if (document.visibilityState === 'visible') {
-                document.removeEventListener('visibilitychange', onVisible);
-                setTimeout(() => sendMessage(crossTabMsg), 300);
-              }
-            };
-            document.addEventListener('visibilitychange', onVisible);
-          }
-        };
-        setTimeout(trySendCrossTab, 500);
+        // 直接发送，不管 Tab 是否可见
+        setTimeout(() => {
+          sendMessage(crossTabMsg);
+          addLog('📤 消息已注入聊天框', 'info');
+        }, 500);
         break;
     }
 
