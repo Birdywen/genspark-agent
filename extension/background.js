@@ -1,4 +1,4 @@
-// Genspark Agent Bridge - Background Service Worker v4 (支持多 Tab 隔离)
+// Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
 let socket = null;
 let reconnectTimer = null;
@@ -9,6 +9,10 @@ let cachedSkillsPrompt = '';
 
 // 记录每个工具调用来自哪个 Tab
 const pendingCallsByTab = new Map(); // callId -> tabId
+
+// 记录每个 Agent 对应的 Tab
+const agentTabs = new Map(); // agentId -> tabId
+const tabAgents = new Map(); // tabId -> agentId
 
 const WS_URL = 'ws://localhost:8765';
 
@@ -162,6 +166,57 @@ function sendToServer(message, tabId) {
   return false;
 }
 
+// ============== 跨 Tab 通信 ==============
+
+// 注册 Agent
+function registerAgent(agentId, tabId) {
+  // 清理旧的映射
+  const oldTabId = agentTabs.get(agentId);
+  if (oldTabId && oldTabId !== tabId) {
+    tabAgents.delete(oldTabId);
+  }
+  const oldAgentId = tabAgents.get(tabId);
+  if (oldAgentId && oldAgentId !== agentId) {
+    agentTabs.delete(oldAgentId);
+  }
+  
+  agentTabs.set(agentId, tabId);
+  tabAgents.set(tabId, agentId);
+  console.log('[BG] 注册 Agent:', agentId, '-> Tab:', tabId);
+  console.log('[BG] 当前 Agents:', Array.from(agentTabs.entries()));
+}
+
+// 发送跨 Tab 消息
+function sendCrossTabMessage(fromAgentId, toAgentId, message) {
+  const targetTabId = agentTabs.get(toAgentId);
+  
+  if (!targetTabId) {
+    console.log('[BG] 目标 Agent 未注册:', toAgentId);
+    return { success: false, error: 'Agent not found: ' + toAgentId };
+  }
+  
+  console.log('[BG] 跨 Tab 消息:', fromAgentId, '->', toAgentId, '(Tab:', targetTabId, ')');
+  
+  sendToTab(targetTabId, {
+    type: 'CROSS_TAB_MESSAGE',
+    from: fromAgentId,
+    to: toAgentId,
+    message: message,
+    timestamp: Date.now()
+  });
+  
+  return { success: true, targetTabId };
+}
+
+// 获取所有已注册的 Agent
+function getRegisteredAgents() {
+  const agents = [];
+  for (const [agentId, tabId] of agentTabs) {
+    agents.push({ agentId, tabId });
+  }
+  return agents;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
 
@@ -203,6 +258,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       connectWebSocket();
       sendResponse({ success: true });
       break;
+    
+    // ===== 跨 Tab 通信 =====
+    
+    case 'REGISTER_AGENT':
+      if (message.agentId && sender.tab?.id) {
+        registerAgent(message.agentId, sender.tab.id);
+        sendResponse({ success: true, tabId: sender.tab.id });
+      } else {
+        sendResponse({ success: false, error: 'Missing agentId or tabId' });
+      }
+      break;
+    
+    case 'CROSS_TAB_SEND':
+      if (message.to && message.message) {
+        const fromAgent = tabAgents.get(sender.tab?.id) || 'unknown';
+        const result = sendCrossTabMessage(fromAgent, message.to, message.message);
+        sendResponse(result);
+      } else {
+        sendResponse({ success: false, error: 'Missing to or message' });
+      }
+      break;
+    
+    case 'GET_REGISTERED_AGENTS':
+      sendResponse({ success: true, agents: getRegisteredAgents() });
+      break;
+    
+    case 'UNREGISTER_AGENT':
+      if (sender.tab?.id) {
+        const agentId = tabAgents.get(sender.tab.id);
+        if (agentId) {
+          agentTabs.delete(agentId);
+          tabAgents.delete(sender.tab.id);
+          console.log('[BG] 注销 Agent:', agentId);
+        }
+        sendResponse({ success: true });
+      }
+      break;
   }
 
   return true;
@@ -220,12 +312,21 @@ setInterval(() => {
   }
 }, 30000);
 
-// 清理关闭的 Tab 的 pending calls
+// 清理关闭的 Tab
 chrome.tabs.onRemoved.addListener((tabId) => {
+  // 清理 pending calls
   for (const [callId, tid] of pendingCallsByTab) {
     if (tid === tabId) {
       pendingCallsByTab.delete(callId);
       console.log('[BG] 清理已关闭 Tab 的调用:', callId);
     }
+  }
+  
+  // 清理 Agent 注册
+  const agentId = tabAgents.get(tabId);
+  if (agentId) {
+    agentTabs.delete(agentId);
+    tabAgents.delete(tabId);
+    console.log('[BG] 清理已关闭 Tab 的 Agent:', agentId);
   }
 });

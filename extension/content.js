@@ -1,4 +1,4 @@
-// content.js v27 - 添加执行进度指示器 - 优化示例检测 + 增强发送重试机制
+// content.js v29 - 跨 Tab 全自动通信
 (function() {
   'use strict';
 
@@ -96,13 +96,30 @@ ${toolList}
 
 ## Agent 协作系统
 
-你是多 Agent 协作网络中的一员。每次对话开始时，**先检查是否有分配给你的任务**：
+你是多 Agent 协作网络中的一员。
 
+### 跨 Tab 直接通信（推荐）
+
+**发送消息给其他 Agent（自动路由到对方聊天框）：**
 \`\`\`
-TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID"}}
+@SEND:目标agent_id:消息内容
 \`\`\`
 
-将 YOUR_AGENT_ID 替换为你的身份标识（如 code_agent、image_agent）。
+示例：
+\`\`\`
+@SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
+\`\`\`
+
+对方会自动收到消息并处理，完成后会回复你。
+
+### 任务队列（持久化存储）
+
+如需持久化任务（即使关闭浏览器也保留），使用任务队列：
+
+**检查任务：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID
+\`\`\`
 
 ### 协作命令
 
@@ -612,6 +629,23 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       return;
     }
     
+    // 先检查跨 Tab 发送命令 @SEND:agent_id:message
+    const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|@TOOL:|@DONE|$)/);
+    if (sendMatch) {
+      const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
+      if (!state.executedCalls.has(sendHash)) {
+        state.executedCalls.add(sendHash);
+        const toAgent = sendMatch[1];
+        const message = sendMatch[2].trim();
+        addLog(`📨 发送给 ${toAgent}...`, 'tool');
+        sendToAgent(toAgent, message);
+        setTimeout(() => {
+          sendMessage(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
+        }, 500);
+        return;
+      }
+    }
+    
     const toolCalls = parseToolCalls(text);
     
     for (const tool of toolCalls) {
@@ -682,7 +716,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v28</span>
+        <span id="agent-title">🤖 Agent v29</span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
@@ -994,6 +1028,14 @@ ${content}
         hideExecutingIndicator();
         updateStatus();
         break;
+      
+      // 跨 Tab 消息
+      case 'CROSS_TAB_MESSAGE':
+        addLog(`📩 收到来自 ${msg.from} 的消息`, 'success');
+        // 自动发送到聊天框，让 AI 处理
+        const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
+        setTimeout(() => sendMessage(crossTabMsg), 500);
+        break;
     }
 
     sendResponse({ ok: true });
@@ -1006,6 +1048,38 @@ ${content}
 
   let autoCheckTimer = null;
   let agentId = null;
+
+  // ============== 跨 Tab 通信 ==============
+
+  function registerAsAgent(id) {
+    agentId = id;
+    CONFIG.AGENT_ID = id;
+    
+    chrome.runtime.sendMessage({
+      type: 'REGISTER_AGENT',
+      agentId: id
+    }, (resp) => {
+      if (resp?.success) {
+        addLog(`🏷️ 已注册为 ${id}`, 'success');
+      } else {
+        addLog(`❌ 注册失败: ${resp?.error}`, 'error');
+      }
+    });
+  }
+
+  function sendToAgent(toAgentId, message) {
+    chrome.runtime.sendMessage({
+      type: 'CROSS_TAB_SEND',
+      to: toAgentId,
+      message: message
+    }, (resp) => {
+      if (resp?.success) {
+        addLog(`📨 已发送给 ${toAgentId}`, 'success');
+      } else {
+        addLog(`❌ 发送失败: ${resp?.error}`, 'error');
+      }
+    });
+  }
 
   function startAutoCheck() {
     if (!CONFIG.AUTO_CHECK_ENABLED) return;
@@ -1027,7 +1101,7 @@ ${content}
   function setAgentId(id) {
     agentId = id;
     CONFIG.AGENT_ID = id;
-    addLog(`🏷️ Agent ID: ${id}`, 'success');
+    registerAsAgent(id);  // 向 background.js 注册
     startAutoCheck();
   }
 
@@ -1053,7 +1127,7 @@ ${content}
   }
 
   function init() {
-    log('初始化 Agent v28 (Genspark)');
+    log('初始化 Agent v29 (Genspark)');
     
     createPanel();
 
@@ -1088,7 +1162,7 @@ ${content}
       });
     }, 500);
 
-    addLog('🚀 Agent v28 已启动', 'success');
+    addLog('🚀 Agent v29 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
   }
 
