@@ -32,7 +32,10 @@
     lastMessageText: '',
     lastStableTime: 0,
     execTimer: null,
-    execStartTime: 0
+    execStartTime: 0,
+    // 消息队列
+    messageQueue: [],
+    isProcessingQueue: false
   };
 
   function log(...args) {
@@ -207,6 +210,32 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       if (el && el.offsetParent !== null) return el;
     }
     return null;
+  }
+
+  // ============== 消息队列处理 ==============
+  
+  function enqueueMessage(msg) {
+    state.messageQueue.push(msg);
+    addLog(`📥 消息入队 (队列长度: ${state.messageQueue.length})`, 'info');
+    processMessageQueue();
+  }
+  
+  function processMessageQueue() {
+    if (state.isProcessingQueue || state.messageQueue.length === 0) {
+      return;
+    }
+    
+    state.isProcessingQueue = true;
+    const msg = state.messageQueue.shift();
+    
+    addLog(`📤 处理队列消息 (剩余: ${state.messageQueue.length})`, 'info');
+    sendMessage(msg);
+    
+    // 等待 3 秒后处理下一条，给 AI 足够时间响应
+    setTimeout(() => {
+      state.isProcessingQueue = false;
+      processMessageQueue();
+    }, 3000);
   }
 
   function sendMessage(text) {
@@ -1077,10 +1106,9 @@ ${content}
         });
         
         const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
-        // 直接发送，不管 Tab 是否可见
+        // 使用消息队列，避免多条消息同时到达时互相覆盖
         setTimeout(() => {
-          sendMessage(crossTabMsg);
-          addLog('📤 消息已注入聊天框', 'info');
+          enqueueMessage(crossTabMsg);
         }, 500);
         break;
     }
