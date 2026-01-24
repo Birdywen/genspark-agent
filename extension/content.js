@@ -1012,6 +1012,14 @@ ${content}
         break;
 
       case 'tool_result':
+        // 去重：用 tool + 结果内容生成 hash
+        const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
+        if (state.executedCalls.has(resultHash)) {
+          log('跳过重复的 tool_result:', msg.tool);
+          break;
+        }
+        state.executedCalls.add(resultHash);
+        
         for (const [id, call] of state.pendingCalls) {
           if (call.tool === msg.tool) {
             state.pendingCalls.delete(id);
