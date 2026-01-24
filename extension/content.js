@@ -1090,11 +1090,17 @@ ${content}
     if (savedId) {
       agentId = savedId;
       CONFIG.AGENT_ID = savedId;
-      addLog(`🔄 已恢复身份: ${savedId}`, 'success');
+      addLog(`🔄 已恢复身份: ${savedId}`, 'info');
       // 重新向 background 注册
       chrome.runtime.sendMessage({
         type: 'REGISTER_AGENT',
         agentId: savedId
+      }, (resp) => {
+        if (resp?.success) {
+          addLog(`🏷️ 已注册为 ${savedId}`, 'success');
+        } else {
+          addLog(`❌ 注册失败: ${resp?.error || '未知错误'}`, 'error');
+        }
       });
     }
   }
