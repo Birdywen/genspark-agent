@@ -1171,13 +1171,18 @@ ${content}
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
     
-    // 监听用户消息，检测 Agent ID
+    // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
+    let lastCheckedUserMsgCount = 0;
     setInterval(() => {
       const userMessages = document.querySelectorAll('.conversation-statement.user');
-      if (userMessages.length > 0) {
+      if (userMessages.length > lastCheckedUserMsgCount) {
         const lastUserMsg = userMessages[userMessages.length - 1];
         const text = lastUserMsg.innerText || '';
-        detectAgentId(text);
+        // 排除跨 Tab 消息的内容
+        if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
+          detectAgentId(text);
+        }
+        lastCheckedUserMsgCount = userMessages.length;
       }
     }, 1000);
 
