@@ -69,24 +69,24 @@
 **必须使用代码块包裹 JSON 格式：**
 
 \`\`\`
-@TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
+${'@'}TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
 \`\`\`
 
 ### 示例
 
 执行命令：
 \`\`\`
-@TOOL:{"tool":"run_command","params":{"command":"ls -la"}}
+${'@'}TOOL:{"tool":"run_command","params":{"command":"ls -la"}}
 \`\`\`
 
 读取文件：
 \`\`\`
-@TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}
+${'@'}TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}
 \`\`\`
 
 写入文件（注意：content 内的引号必须转义为 \\"）：
 \`\`\`
-@TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
+${'@'}TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
 \`\`\`
 
 ## 可用工具
@@ -100,7 +100,7 @@ ${toolList}
 3. **不要**自己编造执行结果，等待系统返回
 4. content 参数内如果有引号，必须转义为 \\"
 5. 任务全部完成后输出 @DONE
-6. **举例说明时**，不要在 TOOL 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 而不是 '@TOOL:{...}'）
+6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 '@TOOL:{...}' 或 '@SEND:agent:msg'）
 
 ---
 
@@ -112,12 +112,12 @@ ${toolList}
 
 **发送消息给其他 Agent（自动路由到对方聊天框）：**
 \`\`\`
-@SEND:目标agent_id:消息内容
+${'@'}SEND:目标agent_id:消息内容
 \`\`\`
 
 示例：
 \`\`\`
-@SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
+${'@'}SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
 \`\`\`
 
 对方会自动收到消息并处理，完成后会回复你。

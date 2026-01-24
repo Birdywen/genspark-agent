@@ -9,6 +9,7 @@ import path from 'path';
 import Logger from './logger.js';
 import Safety from './safety.js';
 import SkillsManager from './skills.js';
+import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
@@ -20,6 +21,31 @@ const safety = new Safety(config.safety, logger);
 // 初始化 Skills 管理器
 const skillsManager = new SkillsManager();
 skillsManager.load();
+
+// 读取 Agents 注册表
+function loadAgents() {
+  const agentsPath = path.join(__dirname, '../.agent_hub/agents.json');
+  // 也尝试 workspace 下的路径
+  const altPath = '/Users/yay/workspace/.agent_hub/agents.json';
+  
+  const filePath = existsSync(agentsPath) ? agentsPath : (existsSync(altPath) ? altPath : null);
+  
+  if (!filePath) {
+    logger.warning('agents.json 未找到');
+    return { agents: {} };
+  }
+  
+  try {
+    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+    logger.info(`加载了 ${Object.keys(data.agents || {}).length} 个 Agent 配置`);
+    return data;
+  } catch (e) {
+    logger.error('读取 agents.json 失败: ' + e.message);
+    return { agents: {} };
+  }
+}
+
+const agentsData = loadAgents();
 
 // 存储连接的客户端
 const clients = new Set();
@@ -241,13 +267,14 @@ async function main() {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
 
-    // 发送连接信息、工具列表和 Skills 系统提示
+    // 发送连接信息、工具列表、Skills 和 Agents 信息
     ws.send(JSON.stringify({
       type: 'connected',
       message: 'Genspark Agent Server v2 已连接',
       tools: hub.tools,
       skills: skillsManager.getSkillsList(),
-      skillsPrompt: skillsManager.getSystemPrompt()
+      skillsPrompt: skillsManager.getSystemPrompt(),
+      agents: agentsData.agents || {}
     }));
 
     ws.on('message', async data => {

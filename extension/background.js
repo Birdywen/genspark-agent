@@ -6,6 +6,7 @@ let reconnectAttempts = 0;
 let cachedTools = [];
 let cachedSkills = [];
 let cachedSkillsPrompt = '';
+let cachedAgents = {};
 
 // 记录每个工具调用来自哪个 Tab
 const pendingCallsByTab = new Map(); // callId -> tabId
@@ -72,6 +73,12 @@ function connectWebSocket() {
       if (data.skillsPrompt) {
         cachedSkillsPrompt = data.skillsPrompt;
         console.log('[BG] 缓存 Skills 提示词, 长度:', cachedSkillsPrompt.length);
+      }
+      
+      // 缓存 Agents 信息
+      if (data.agents) {
+        cachedAgents = data.agents;
+        console.log('[BG] 缓存 Agents:', Object.keys(cachedAgents).length);
       }
       
       if (data.type === 'pong') return;
@@ -242,21 +249,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'GET_WS_STATUS':
       const connected = socket && socket.readyState === WebSocket.OPEN;
-      console.log('[BG] 状态查询, connected:', connected, 'tools:', cachedTools.length, 'skills:', cachedSkills.length);
+      console.log('[BG] 状态查询, connected:', connected, 'tools:', cachedTools.length, 'skills:', cachedSkills.length, 'agents:', Object.keys(cachedAgents).length);
       sendResponse({ 
         connected, 
         tools: cachedTools,
         skills: cachedSkills,
-        skillsPrompt: cachedSkillsPrompt
+        skillsPrompt: cachedSkillsPrompt,
+        agents: cachedAgents
       });
       
       // 如果有缓存的数据，只发送给请求的 Tab
-      if (sender.tab?.id && (cachedTools.length > 0 || cachedSkills.length > 0)) {
+      if (sender.tab?.id && (cachedTools.length > 0 || cachedSkills.length > 0 || Object.keys(cachedAgents).length > 0)) {
         sendToTab(sender.tab.id, { 
           type: 'update_tools', 
           tools: cachedTools,
           skills: cachedSkills,
-          skillsPrompt: cachedSkillsPrompt
+          skillsPrompt: cachedSkillsPrompt,
+          agents: cachedAgents
         });
       }
       
