@@ -266,9 +266,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
         const btn = document.querySelector(sel);
         if (btn && !btn.disabled && btn.offsetParent !== null) {
           btn.click();
-          // 同时也按 Enter，确保后台 Tab 也能发送
-          pressEnter();
-          addLog('📤 已发送(按钮+Enter)', 'info');
+          addLog('📤 已发送(按钮)', 'info');
           return true;
         }
       }
