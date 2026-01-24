@@ -7,7 +7,11 @@
     TIMEOUT_MS: 30000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
-    DEBUG: false
+    DEBUG: false,
+    // Agent 协作：自动检查任务
+    AUTO_CHECK_ENABLED: false,
+    AUTO_CHECK_INTERVAL: 60000,  // 60秒检查一次
+    AGENT_ID: null  // 由用户在对话中设定，如 'code_agent'
   };
 
   const state = {
@@ -87,6 +91,49 @@ ${toolList}
 4. content 参数内如果有引号，必须转义为 \\"
 5. 任务全部完成后输出 @DONE
 6. **举例说明时**，不要在 TOOL 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 而不是 '@TOOL:{...}'）
+
+---
+
+## Agent 协作系统
+
+你是多 Agent 协作网络中的一员。每次对话开始时，**先检查是否有分配给你的任务**：
+
+\`\`\`
+TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID"}}
+\`\`\`
+
+将 YOUR_AGENT_ID 替换为你的身份标识（如 code_agent、image_agent）。
+
+### 协作命令
+
+**创建任务给其他 Agent：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js create <from> <to> <action> '<payload_json>'
+\`\`\`
+
+**完成任务后报告：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js complete <task_id> '<result_json>'
+\`\`\`
+
+**查看你发起的任务结果：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js results YOUR_AGENT_ID
+\`\`\`
+
+### 查看可用 Agent 及其能力
+
+**列出所有 Agent：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js agents
+\`\`\`
+
+**查看特定 Agent 的详细能力（参数、限制）：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
+\`\`\`
+
+派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。
 
 ---
 
@@ -635,7 +682,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v27</span>
+        <span id="agent-title">🤖 Agent v28</span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
@@ -955,12 +1002,72 @@ ${content}
 
   // ============== 初始化 ==============
 
+  // ============== 自动检查任务 ==============
+
+  let autoCheckTimer = null;
+  let agentId = null;
+
+  function startAutoCheck() {
+    if (!CONFIG.AUTO_CHECK_ENABLED) return;
+    if (autoCheckTimer) clearInterval(autoCheckTimer);
+    
+    autoCheckTimer = setInterval(() => {
+      if (state.agentRunning) return;  // 正在执行中，跳过
+      if (!agentId) return;  // 未设置 Agent ID，跳过
+      if (!state.wsConnected) return;  // 未连接，跳过
+      
+      // 检查是否有待处理任务
+      addLog(`🔍 自动检查任务 (${agentId})`, 'info');
+      sendMessage(`检查是否有分配给我的任务：\n\`\`\`\n@TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
+    }, CONFIG.AUTO_CHECK_INTERVAL);
+    
+    addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');
+  }
+
+  function setAgentId(id) {
+    agentId = id;
+    CONFIG.AGENT_ID = id;
+    addLog(`🏷️ Agent ID: ${id}`, 'success');
+    startAutoCheck();
+  }
+
+  // 监听页面内容，检测 Agent ID 设置
+  function detectAgentId(text) {
+    // 匹配 "你是 xxx_agent" 或 "I am xxx_agent" 等模式
+    const patterns = [
+      /你是\s*[`'"]?(\w+_agent)[`'"]?/i,
+      /我是\s*[`'"]?(\w+_agent)[`'"]?/i,
+      /I am\s*[`'"]?(\w+_agent)[`'"]?/i,
+      /agent.?id[：:=]\s*[`'"]?(\w+_agent)[`'"]?/i,
+      /设置.*身份.*[`'"]?(\w+_agent)[`'"]?/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1] && match[1] !== agentId) {
+        setAgentId(match[1]);
+        return true;
+      }
+    }
+    return false;
+  }
+
   function init() {
-    log('初始化 Agent v23 (Genspark)');
+    log('初始化 Agent v28 (Genspark)');
     
     createPanel();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
+    
+    // 监听用户消息，检测 Agent ID
+    setInterval(() => {
+      const userMessages = document.querySelectorAll('.conversation-statement.user');
+      if (userMessages.length > 0) {
+        const lastUserMsg = userMessages[userMessages.length - 1];
+        const text = lastUserMsg.innerText || '';
+        detectAgentId(text);
+      }
+    }, 1000);
 
     setTimeout(() => {
       chrome.runtime.sendMessage({ type: 'GET_WS_STATUS' }, resp => {
@@ -981,7 +1088,7 @@ ${content}
       });
     }, 500);
 
-    addLog('🚀 Agent v27 已启动', 'success');
+    addLog('🚀 Agent v28 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
   }
 

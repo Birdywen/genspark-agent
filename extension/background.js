@@ -1,4 +1,4 @@
-// Genspark Agent Bridge - Background Service Worker v3 (支持 Skills)
+// Genspark Agent Bridge - Background Service Worker v4 (支持多 Tab 隔离)
 
 let socket = null;
 let reconnectTimer = null;
@@ -6,6 +6,9 @@ let reconnectAttempts = 0;
 let cachedTools = [];
 let cachedSkills = [];
 let cachedSkillsPrompt = '';
+
+// 记录每个工具调用来自哪个 Tab
+const pendingCallsByTab = new Map(); // callId -> tabId
 
 const WS_URL = 'ws://localhost:8765';
 
@@ -36,7 +39,7 @@ function connectWebSocket() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    broadcastToTabs({ type: 'WS_STATUS', connected: true });
+    broadcastToAllTabs({ type: 'WS_STATUS', connected: true });
     startPing();
   };
 
@@ -66,7 +69,22 @@ function connectWebSocket() {
       
       if (data.type === 'pong') return;
       
-      broadcastToTabs(data);
+      // 工具执行结果：只发送给发起调用的 Tab
+      if (data.type === 'tool_result' && data.id) {
+        const tabId = pendingCallsByTab.get(data.id);
+        if (tabId) {
+          console.log('[BG] 发送结果到 Tab:', tabId);
+          sendToTab(tabId, data);
+          pendingCallsByTab.delete(data.id);
+        } else {
+          // 找不到对应 Tab，回退到广播（兼容旧版本）
+          console.log('[BG] 未找到 Tab，广播结果');
+          broadcastToAllTabs(data);
+        }
+      } else {
+        // 其他消息广播给所有 Tab
+        broadcastToAllTabs(data);
+      }
     } catch(e) {
       console.error('[BG] 解析失败:', e);
     }
@@ -75,7 +93,7 @@ function connectWebSocket() {
   socket.onclose = () => {
     console.log('[BG] 断开');
     socket = null;
-    broadcastToTabs({ type: 'WS_STATUS', connected: false });
+    broadcastToAllTabs({ type: 'WS_STATUS', connected: false });
     scheduleReconnect();
   };
 
@@ -103,7 +121,15 @@ function startPing() {
   }, 20000);
 }
 
-function broadcastToTabs(message) {
+// 发送消息到指定 Tab
+function sendToTab(tabId, message) {
+  chrome.tabs.sendMessage(tabId, message).catch((e) => {
+    console.log('[BG] 发送失败 tab ' + tabId + ':', e.message);
+  });
+}
+
+// 广播给所有 Genspark Tab
+function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
   chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
@@ -115,8 +141,19 @@ function broadcastToTabs(message) {
   });
 }
 
-function sendToServer(message) {
+function sendToServer(message, tabId) {
   if (socket && socket.readyState === WebSocket.OPEN) {
+    // 记录这个调用来自哪个 Tab
+    if (message.type === 'tool_call' && message.id && tabId) {
+      pendingCallsByTab.set(message.id, tabId);
+      console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
+      
+      // 30秒后清理，防止内存泄漏
+      setTimeout(() => {
+        pendingCallsByTab.delete(message.id);
+      }, 30000);
+    }
+    
     socket.send(JSON.stringify(message));
     console.log('[BG] 发送到服务器:', message.type);
     return true;
@@ -126,11 +163,12 @@ function sendToServer(message) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[BG] 收到请求:', message.type);
+  console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
 
   switch (message.type) {
     case 'SEND_TO_SERVER':
-      const success = sendToServer(message.payload);
+      // 传入 sender.tab.id 以便记录
+      const success = sendToServer(message.payload, sender.tab?.id);
       sendResponse({ success });
       break;
 
@@ -144,17 +182,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         skillsPrompt: cachedSkillsPrompt
       });
       
-      // 如果有缓存的数据，也发送一次
-      if (cachedTools.length > 0 || cachedSkills.length > 0) {
-        chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
-          tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, { 
-              type: 'update_tools', 
-              tools: cachedTools,
-              skills: cachedSkills,
-              skillsPrompt: cachedSkillsPrompt
-            }).catch(() => {});
-          });
+      // 如果有缓存的数据，只发送给请求的 Tab
+      if (sender.tab?.id && (cachedTools.length > 0 || cachedSkills.length > 0)) {
+        sendToTab(sender.tab.id, { 
+          type: 'update_tools', 
+          tools: cachedTools,
+          skills: cachedSkills,
+          skillsPrompt: cachedSkillsPrompt
         });
       }
       
@@ -177,7 +211,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // 启动
 connectWebSocket();
 
-// 定期检查
+// 定期检查连接
 setInterval(() => {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     if (!reconnectTimer) {
@@ -185,3 +219,13 @@ setInterval(() => {
     }
   }
 }, 30000);
+
+// 清理关闭的 Tab 的 pending calls
+chrome.tabs.onRemoved.addListener((tabId) => {
+  for (const [callId, tid] of pendingCallsByTab) {
+    if (tid === tabId) {
+      pendingCallsByTab.delete(callId);
+      console.log('[BG] 清理已关闭 Tab 的调用:', callId);
+    }
+  }
+});

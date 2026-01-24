@@ -15,6 +15,10 @@
     "shell": {
       "command": "npx",
       "args": ["-y", "mcp-server-commands"]
+    },
+    "tree-sitter": {
+      "command": "/Users/yay/.local/bin/mcp-server-tree-sitter",
+      "args": []
     }
   },
   "safety": {
@@ -64,7 +68,23 @@
       "pandoc",
       "bash", "sh", "zsh",
       "uname", "sw_vers", "system_profiler",
-      "chmod", "jq", "docker", "brew", "osascript"
+      "chmod", "jq", "docker", "brew", "osascript",
+      "nohup", "sleep", "killall", "pkill", "ps",
+      "mega-attr", "mega-backup", "mega-cancel", "mega-cat", "mega-cd",
+      "mega-cmd", "mega-confirm", "mega-confirmcancel", "mega-cp", "mega-debug",
+      "mega-deleteversions", "mega-df", "mega-du", "mega-errorcode", "mega-exclude",
+      "mega-exec", "mega-export", "mega-find", "mega-ftp", "mega-fuse-add",
+      "mega-fuse-config", "mega-fuse-disable", "mega-fuse-enable", "mega-fuse-remove",
+      "mega-fuse-show", "mega-get", "mega-graphics", "mega-help", "mega-https",
+      "mega-import", "mega-invite", "mega-ipc", "mega-killsession", "mega-lcd",
+      "mega-log", "mega-login", "mega-logout", "mega-lpwd", "mega-ls",
+      "mega-mediainfo", "mega-mkdir", "mega-mount", "mega-mv", "mega-passwd",
+      "mega-permissions", "mega-preview", "mega-proxy", "mega-put", "mega-pwd",
+      "mega-quit", "mega-reload", "mega-rm", "mega-session", "mega-share",
+      "mega-showpcr", "mega-signup", "mega-speedlimit", "mega-sync", "mega-sync-config",
+      "mega-sync-ignore", "mega-sync-issues", "mega-thumbnail", "mega-transfers",
+      "mega-tree", "mega-userattr", "mega-users", "mega-version", "mega-webdav",
+      "mega-whoami"
     ],
     "dangerousOperations": [
       "write_file",

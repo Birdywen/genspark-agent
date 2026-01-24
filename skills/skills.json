@@ -1,4 +1,21 @@
 {
   "version": "1.0.0",
-  "skills": []
+  "skills": [
+    {
+      "name": "megacmd",
+      "description": "MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享",
+      "source": "local",
+      "path": "./megacmd",
+      "skillFile": "SKILL.md",
+      "references": "references/",
+      "requiredMcp": ["shell"],
+      "tools": [
+        "mega-login", "mega-logout", "mega-whoami", "mega-df",
+        "mega-ls", "mega-cd", "mega-pwd", "mega-tree", "mega-find", "mega-du",
+        "mega-get", "mega-put", "mega-mkdir", "mega-cp", "mega-mv", "mega-rm",
+        "mega-export", "mega-import", "mega-share",
+        "mega-sync", "mega-backup", "mega-transfers", "mega-speedlimit"
+      ]
+    }
+  ]
 }

@@ -81,7 +81,23 @@ class SkillsManager {
       prompt += '\n';
     }
     
-    prompt += '\n如需使用 Skill，可读取 `skills/<skill-name>/SKILL.md` 获取详细指南。\n';
+    prompt += `\n如需使用 Skill，可读取 \`${SKILLS_DIR}/<skill-name>/SKILL.md\` 获取详细指南。\n`;
+
+    // 添加工具选择指南
+    const toolsGuidePath = path.join(__dirname, '..', 'docs', 'TOOLS_GUIDE.md');
+    if (existsSync(toolsGuidePath)) {
+      prompt += '\n---\n\n';
+      prompt += readFileSync(toolsGuidePath, 'utf-8');
+      console.log('✅ 已加载工具使用指南 (TOOLS_GUIDE.md)');
+    }
+
+    // 添加进阶指南（错误处理、超时、权限等）
+    const advancedGuidePath = path.join(__dirname, '..', 'docs', 'ADVANCED_GUIDE.md');
+    if (existsSync(advancedGuidePath)) {
+      prompt += '\n\n---\n\n';
+      prompt += readFileSync(advancedGuidePath, 'utf-8');
+      console.log('✅ 已加载进阶指南 (ADVANCED_GUIDE.md)');
+    }
     
     return envInfo + prompt;
   }
