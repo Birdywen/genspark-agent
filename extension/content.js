@@ -291,18 +291,29 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       };
       
       // 尝试点击按钮
+      let btnClicked = false;
       for (const sel of btnSelectors) {
         const btn = document.querySelector(sel);
         if (btn && !btn.disabled && btn.offsetParent !== null) {
           btn.click();
-          addLog('📤 已发送(按钮)', 'info');
-          return true;
+          btnClicked = true;
+          addLog('📤 点击发送按钮', 'info');
+          break;
         }
       }
       
-      // 没找到按钮，只按 Enter
-      pressEnter();
-      return false;
+      // 无论按钮是否点击成功，都额外按 Enter（后台 Tab 按钮可能无效）
+      // 延迟 100ms 按 Enter，避免重复发送
+      setTimeout(() => {
+        const inp = getInputBox();
+        if (inp && inp.value && inp.value.length > 5) {
+          // 输入框还有内容，说明按钮没发出去，用 Enter
+          pressEnter();
+          addLog('📤 补充 Enter 发送', 'info');
+        }
+      }, 100);
+      
+      return btnClicked;
     };
 
     // 第一次尝试发送（延迟 800ms 等待页面就绪）
