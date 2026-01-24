@@ -1041,6 +1041,16 @@ ${content}
         updateStatus();
         
         const resultText = formatToolResult(msg);
+        // 发送去重：同样内容 5 秒内不重复发送
+        const sendHash = `send:${resultText.slice(0, 100)}`;
+        if (state.executedCalls.has(sendHash)) {
+          log('跳过重复发送');
+          break;
+        }
+        state.executedCalls.add(sendHash);
+        setTimeout(() => {
+          state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
+        }, 5000);
         setTimeout(() => sendMessage(resultText), 300);
         break;
 
