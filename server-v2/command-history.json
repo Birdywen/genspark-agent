@@ -617,7 +617,18 @@
       "success": true,
       "resultPreview": "[main 2257f8b] feat: add command retry feature and fix JSON parsing issues\n 1 file changed, 12 insertions(+), 1 deletion(-)\n",
       "error": null
+    },
+    {
+      "id": 54,
+      "timestamp": "2026-01-25T02:46:34.332Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: add command retry feature and fix JSON parsing issues\n\n- Add command history with [#ID] prefix for each execution\n- Add @RETRY:#ID support to re-execute failed commands\n- Fix pendingCalls matching to use msg.id instead of tool name\n- Fix retry messages not being tracked in pendingCallsByTab\n- Fix Chinese quotes breaking JSON parsing (auto-replace to ASCII)\n- Add JSON parse error logging in content.js\n- Add error response for failed message parsing in server'"
+      },
+      "success": true,
+      "resultPreview": "[main af1ed95] feat: add command retry feature and fix JSON parsing issues\n 1 file changed, 12 insertions(+), 1 deletion(-)\n",
+      "error": null
     }
   ],
-  "nextId": 54
+  "nextId": 55
 }
