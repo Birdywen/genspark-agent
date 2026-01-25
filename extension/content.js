@@ -328,30 +328,47 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
         });
       };
       
-      // v31: 只用 Enter 发送，避免误点击停止按钮
+      // v31.1: 先尝试 Enter，失败后多次重试点击按钮
       pressEnter();
       addLog('📤 Enter 发送', 'info');
       
-      // 200ms 后检查是否发送成功，不成功则尝试点击按钮
-      setTimeout(() => {
+      // 检查并重试发送的函数
+      const checkAndRetry = (retryCount) => {
         const inp = getInputBox();
-        if (inp && inp.value && inp.value.length > 5) {
-          // 输入框还有内容，Enter 没发出去
-          // 只有在非生成状态才点击按钮
-          if (!isAIGenerating()) {
-            for (const sel of btnSelectors) {
-              const btn = document.querySelector(sel);
-              if (btn && !btn.disabled && btn.offsetParent !== null) {
-                btn.click();
-                addLog('📤 补充点击按钮', 'info');
-                break;
-              }
-            }
-          } else {
-            addLog('⏳ AI生成中，等待...', 'info');
+        if (!inp || !inp.value || inp.value.length <= 5) {
+          // 发送成功了
+          return;
+        }
+        
+        if (retryCount <= 0) {
+          addLog('⚠️ 发送失败，请手动点击', 'error');
+          return;
+        }
+        
+        // 尝试点击按钮
+        let clicked = false;
+        for (const sel of btnSelectors) {
+          const btn = document.querySelector(sel);
+          if (btn && !btn.disabled && btn.offsetParent !== null) {
+            btn.click();
+            clicked = true;
+            addLog(`📤 点击按钮 (剩余重试: ${retryCount - 1})`, 'info');
+            break;
           }
         }
-      }, 200);
+        
+        if (!clicked) {
+          // 没找到按钮，再试 Enter
+          pressEnter();
+          addLog(`📤 重试 Enter (剩余: ${retryCount - 1})`, 'info');
+        }
+        
+        // 500ms 后再检查
+        setTimeout(() => checkAndRetry(retryCount - 1), 500);
+      };
+      
+      // 300ms 后开始检查，最多重试 3 次
+      setTimeout(() => checkAndRetry(3), 300);
       
       return true;  // Enter 已发送
     };
