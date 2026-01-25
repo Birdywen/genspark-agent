@@ -1,95 +1,6 @@
 {
   "history": [
     {
-      "id": 27,
-      "timestamp": "2026-01-25T02:35:23.176Z",
-      "tool": "run_command",
-      "params": {
-        "command": "date"
-      },
-      "success": true,
-      "resultPreview": "Sat Jan 24 21:36:05 EST 2026\n",
-      "error": null,
-      "retriedAt": "2026-01-25T02:36:05.189Z"
-    },
-    {
-      "id": 28,
-      "timestamp": "2026-01-25T02:35:31.969Z",
-      "tool": "run_command",
-      "params": {
-        "command": "ls /Users/yay/workspace/genspark-agent/server-v2/"
-      },
-      "success": true,
-      "resultPreview": "command-history.json\nconfig.json\nindex.js\nlogger.js\nlogs\nnode_modules\npackage-lock.json\npackage.json\npage_02.png\npage_03.png\npage_05.png\npage_06.png\npage_08.png\npage_09.png\npage_11.png\npage_12.png\nsafety.js\nskills.js\n",
-      "error": null
-    },
-    {
-      "id": 29,
-      "timestamp": "2026-01-25T02:35:42.608Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat /Users/yay/workspace/genspark-agent/server-v2/command-history.json | head -30"
-      },
-      "success": true,
-      "resultPreview": "{\n  \"history\": [\n    {\n      \"id\": 1,\n      \"timestamp\": \"2026-01-25T02:25:00.301Z\",\n      \"tool\": \"run_command\",\n      \"params\": {\n        \"command\": \"grep -n 'v2.1' /Users/yay/workspace/genspark-agent/server-v2/index.js\"\n      },\n      \"success\": true,\n      \"resultPreview\": \"371:      message: 'Genspark Agent Server v2.1 已连接 (支持命令重试)',\\n500:║   🤖 Genspark Agent Server v2.1 (支持命令重试)            ║\\n\",\n      \"error\": null\n    },\n    {\n      \"id\": 2,\n      \"timestamp\": \"2026-01-25T02:25:09.871Z\",",
-      "error": null
-    },
-    {
-      "id": 30,
-      "timestamp": "2026-01-25T02:39:10.000Z",
-      "tool": "run_command",
-      "params": {
-        "command": "pwd"
-      },
-      "success": true,
-      "resultPreview": "/Users/yay/workspace/genspark-agent/server-v2\n",
-      "error": null
-    },
-    {
-      "id": 31,
-      "timestamp": "2026-01-25T02:39:17.786Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo hello world"
-      },
-      "success": true,
-      "resultPreview": "hello world\n",
-      "error": null
-    },
-    {
-      "id": 32,
-      "timestamp": "2026-01-25T02:39:26.382Z",
-      "tool": "run_command",
-      "params": {
-        "command": "date +%Y-%m-%d"
-      },
-      "success": true,
-      "resultPreview": "2026-01-24\n",
-      "error": null
-    },
-    {
-      "id": 33,
-      "timestamp": "2026-01-25T02:39:34.144Z",
-      "tool": "run_command",
-      "params": {
-        "command": "printf 'hello'"
-      },
-      "success": false,
-      "resultPreview": "",
-      "error": "命令不在白名单: printf"
-    },
-    {
-      "id": 34,
-      "timestamp": "2026-01-25T02:39:41.995Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo 'test'"
-      },
-      "success": true,
-      "resultPreview": "test\n",
-      "error": null
-    },
-    {
       "id": 35,
       "timestamp": "2026-01-25T02:39:49.975Z",
       "tool": "run_command",
@@ -1165,7 +1076,103 @@
       "success": true,
       "resultPreview": "total 56\ndrwxr-xr-x  15 yay  staff    480 Jan 24 23:39 .\ndrwxr-xr-x  12 yay  staff    384 Jan 24 21:54 ..\n-rw-r--r--@  1 yay  staff  14340 Jan 24 22:43 .DS_Store\ndrwxr-xr-x@ 12 yay  staff    384 Jan 24 23:47 .git\n-rw-r--r--@  1 yay  staff    241 Jan 24 21:49 .gitignore\n-rw-r--r--   1 yay  staff     98 Jan 23 05:50 .mcp.json\ndrwxr-xr-x@  5 yay  staff    160 Jan 24 21:59 docs\ndrwxr-xr-x   8 yay  staff    256 Jan 24 23:39 extension\ndrwxr-xr-x@  3 yay  staff     96 Jan 24 23:10 legacy\ndrwxr-xr-x   3",
       "error": null
+    },
+    {
+      "id": 127,
+      "timestamp": "2026-01-25T04:47:49.797Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && rm -rf legacy && git add -A && git commit -m 'chore: remove legacy folder'"
+      },
+      "success": true,
+      "resultPreview": "[main 94b2196] chore: remove legacy folder\n 5 files changed, 23 insertions(+), 755 deletions(-)\n delete mode 100644 legacy/mcp-servers-v1/mcp-server.js\n delete mode 100644 legacy/mcp-servers-v1/package-lock.json\n delete mode 100644 legacy/mcp-servers-v1/package.json\n delete mode 100644 legacy/mcp-servers-v1/webhook-server.js\n",
+      "error": null
+    },
+    {
+      "id": 128,
+      "timestamp": "2026-01-25T04:48:41.055Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && find . -name '*.md' -o -name '*.txt' | grep -v node_modules | grep -v .git | head -30"
+      },
+      "success": true,
+      "resultPreview": "./docs/TOOLS_GUIDE.md\n./docs/MCP_SKILLS_GUIDE.md\n./docs/ADVANCED_GUIDE.md\n./README.md\n./skills/chart-visualization/references/generate_network_graph.md\n./skills/chart-visualization/references/generate_venn_chart.md\n./skills/chart-visualization/references/generate_organization_chart.md\n./skills/chart-visualization/references/generate_pie_chart.md\n./skills/chart-visualization/references/generate_radar_chart.md\n./skills/chart-visualization/references/generate_district_map.md\n./skills/chart-visualiz",
+      "error": null
+    },
+    {
+      "id": 129,
+      "timestamp": "2026-01-25T04:48:47.408Z",
+      "tool": "read_multiple_files",
+      "params": {
+        "paths": [
+          "/Users/yay/workspace/genspark-agent/README.md",
+          "/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md",
+          "/Users/yay/workspace/genspark-agent/docs/MCP_SKILLS_GUIDE.md",
+          "/Users/yay/workspace/genspark-agent/docs/ADVANCED_GUIDE.md"
+        ]
+      },
+      "success": true,
+      "resultPreview": "/Users/yay/workspace/genspark-agent/README.md:\n# Genspark Agent Bridge\n\n将 Genspark.ai 聊天窗口转变为 AI Agent 运行时，实现类似 Claude Code 的自主规划和执行能力。\n\n## 架构\n\nGenspark 网页 <---> Chrome Extension <---> WebSocket <---> Local Server <---> 工具执行\n\n## 安装步骤\n\n### 1. 启动本地服务器\n\ncd /Users/yay/workspace/genspark-agent/server\nnpm start\n\n### 2. 安装 Chrome 扩展\n\n1. 打开 Chrome，访问 chrome://extensions/\n2. 开启右上角「开发者模式」\n3. 点击「加载已解压的扩展程序」\n4. 选择目录：/Users/yay/workspace/genspark-agent/extension\n5. 扩展安装成功后会显示「Genspark Agent Bridge」\n\n### 3. 使",
+      "error": null
+    },
+    {
+      "id": 130,
+      "timestamp": "2026-01-25T04:49:40.805Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/TODO.md",
+        "content": "# 项目整理任务 (2026-01-25)\n\n## 文档整理\n- [ ] 更新 README.md（修正过时内容、目录结构）\n- [ ] 合并 docs/ 下 3 个文件为 1 个 GUIDE.md\n- [ ] 删除旧文档\n\n## 代码清理\n- [x] 删除 v1 代码\n- [x] 删除 legacy 目录\n- [ ] 检查其他需要清理的内容\n\n## 其他\n- [ ] 确认项目结构合理\n- [ ] 最终 git 提交\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/TODO.md",
+      "error": null
+    },
+    {
+      "id": 131,
+      "timestamp": "2026-01-25T04:49:47.643Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && find . -type f -name '*.js' -o -name '*.json' | grep -v node_modules | grep -v '.git' | sort"
+      },
+      "success": true,
+      "resultPreview": "./.mcp.json\n./extension/background.js\n./extension/content.js\n./extension/manifest.json\n./mcp-servers/mcp-server.js\n./mcp-servers/package-lock.json\n./mcp-servers/package.json\n./mcp-servers/webhook-server.js\n./server-v2/command-history.json\n./server-v2/config.json\n./server-v2/index.js\n./server-v2/logger.js\n./server-v2/package-lock.json\n./server-v2/package.json\n./server-v2/safety.js\n./server-v2/skills.js\n./skills/skills.json\n./test/config.json\n",
+      "error": null
+    },
+    {
+      "id": 132,
+      "timestamp": "2026-01-25T04:50:10.809Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/README.md",
+        "content": "# Genspark Agent Bridge\n\n将 Genspark.ai 聊天窗口转变为 AI Agent 运行时，支持本地工具调用和自主任务执行。\n\n## 架构\n\n```\nGenspark 网页 <---> Chrome Extension <---> WebSocket <---> Local Server <---> 工具执行\n```\n\n## 项目结构\n\n```\ngenspark-agent/\n├── extension/          # Chrome 扩展\n│   ├── manifest.json   # 扩展配置\n│   ├── background.js   # WebSocket 客户端\n│   └── content.js      # 页面交互、UI 控制面板\n├── server-v2/          # 本地服务器\n│   ├── index.js        # 主入口（WebSocket 服务）\n│   ├── safety.js       # 安全检查（路径、命令白名单）\n│   ├── skills.js       # Skills 加载器\n│   ├── logger.js       # 日志模块\n│   └── config.json     # 配置文件\n├── mcp-servers/        # MCP 服务（可选）\n│   ├── mcp-server.js   # MCP 协议服务\n│   └── webhook-server.js\n├── skills/             # 技能模块\n│   ├── skills.json     # 技能索引\n│   └── */SKILL.md      # 各技能文档\n├── docs/               # 文档\n└── logs/               # 运行日志\n```\n\n## 快速开始\n\n### 1. 启动本地服务器\n\n```bash\ncd /Users/yay/workspace/genspark-agent/server-v2\nnpm install\nnpm start\n```\n\n服务器启动后会显示「WebSocket 服务已启动」。\n\n### 2. 安装 Chrome 扩展\n\n1. 打开 Chrome，访问 `chrome://extensions/`\n2. 开启右上角「开发者模式」\n3. 点击「加载已解压的扩展程序」\n4. 选择目录：`/Users/yay/workspace/genspark-agent/extension`\n\n### 3. 使用\n\n1. 打开 Genspark.ai 对话页面\n2. 页面右下角出现「Agent Bridge」控制面板\n3. 面板显示「已连接」即可开始使用\n\n## 工具调用格式\n\nAI 通过以下格式调用工具：\n\n```\n@TOOL:{\"tool\":\"工具名\",\"params\":{\"参数\":\"值\"}}\n```\n\n### 常用工具\n\n| 工具 | 用途 | 参数 |\n|------|------|------|\n| `read_file` | 读取文件 | `path`: 文件路径 |\n| `write_file` | 写入文件 | `path`, `content` |\n| `edit_file` | 编辑文件 | `path`, `edits` |\n| `list_directory` | 列出目录 | `path`: 目录路径 |\n| `run_command` | 执行命令 | `command`: 命令字符串 |\n\n完整工具列表见 [docs/GUIDE.md](docs/GUIDE.md)。\n\n## 安全机制\n\n- **路径限制**：只能访问 `/Users/yay/workspace` 和 `/private/tmp`\n- **命令过滤**：屏蔽危险命令（`sudo`, `rm -rf /` 等）\n- **操作日志**：所有操作记录在 `logs/` 目录\n\n## 配置\n\n编辑 `server-v2/config.json` 可修改：\n\n- `allowedPaths`: 允许访问的目录\n- `blockedCommands`: 屏蔽的危险命令\n- `logLevel`: 日志级别\n\n## 故障排除\n\n| 问题 | 解决方法 |\n|------|----------|\n| 扩展显示「断开」 | 确保服务器已启动，检查终端错误 |\n| 工具调用无响应 | 刷新页面，检查控制面板日志 |\n| 权限被拒绝 | 检查路径是否在 allowedPaths 中 |\n\n## 许可\n\nMIT License\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/README.md",
+      "error": null
+    },
+    {
+      "id": 133,
+      "timestamp": "2026-01-25T04:50:57.202Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/docs/GUIDE.md",
+        "content": "# Genspark Agent 完整指南\n\n本文档供 AI Agent 参考，包含工具使用、Skills 开发、错误处理等内容。\n\n---\n\n## 一、工具分类\n\n系统提供 67 个工具，分为 4 大类：\n\n| 分类 | 数量 | 用途 | 典型场景 |\n|------|------|------|----------|\n| filesystem | 14 | 文件读写、目录操作 | 读配置、写代码、查目录 |\n| shell | 1 | 执行终端命令 | grep、git、运行脚本 |\n| tree-sitter | 26 | 代码分析 | 查函数定义、找引用 |\n| chrome-devtools | 26 | 浏览器自动化 | 截图、填表、调试网页 |\n\n---\n\n## 二、文件系统工具\n\n### 读取文件\n\n```\nread_file           # 读取单个文件\n  path: 绝对路径\n\nread_multiple_files # 同时读多个文件\n  paths: [路径数组]\n\nread_media_file     # 读取图片/音频\n  path: 绝对路径\n```\n\n### 写入/编辑文件\n\n```\nwrite_file          # 创建或完全覆盖\n  path: 绝对路径\n  content: 内容\n\nedit_file           # 行级编辑（小范围修改推荐）\n  path: 绝对路径\n  edits: [{oldText, newText}]\n```\n\n### 目录操作\n\n```\nlist_directory            # 列出目录内容\nlist_directory_with_sizes # 含文件大小\ndirectory_tree            # 递归树形结构\ncreate_directory          # 创建目录\nmove_file                 # 移动/重命名\nsearch_files              # 搜索文件名\nget_file_info             # 获取文件元信息\nlist_allowed_directories  # 查看允许访问的目录\n```\n\n---\n\n## 三、命令执行\n\n```\nrun_command         # 执行终端命令\n  command: 命令字符串\n```\n\n### 命令组合方式\n\n```bash\n# 管道组合\ncat file.txt | grep pattern | wc -l\n\n# 顺序执行\ncd project && npm install && npm run build\n\n# 条件执行\ntest -f config.json && cat config.json || echo \"不存在\"\n```\n\n### 长时间任务处理\n\n默认超时 30 秒。对于耗时任务，使用后台执行：\n\n```bash\n# 后台运行\nnohup long_command > /private/tmp/output.log 2>&1 &\necho $!  # 输出 PID\n\n# 检查状态\nps -p <PID> && echo \"运行中\" || echo \"已结束\"\ntail -50 /private/tmp/output.log\n```\n\n---\n\n## 四、代码分析工具 (tree-sitter)\n\n> 使用前必须先注册项目：`register_project_tool`\n\n### 项目管理\n\n```\nregister_project_tool  # 注册项目\n  path: 项目绝对路径\n  name: 项目名称\n\nlist_projects_tool     # 列出已注册项目\nremove_project_tool    # 移除项目\n```\n\n### 代码分析\n\n```\nget_ast             # 获取语法树\nget_symbols         # 提取函数、类、变量\nfind_text           # 搜索文本（带上下文）\nfind_usage          # 查找符号引用\nanalyze_project     # 分析项目结构\nanalyze_complexity  # 分析代码复杂度\n```\n\n### 路径注意事项\n\n| 工具来源 | 参数 | 路径类型 |\n|----------|------|----------|\n| filesystem | `path` | 绝对路径 |\n| tree-sitter | `path` | 相对路径（相对项目根目录） |\n\n---\n\n## 五、浏览器自动化 (chrome-devtools)\n\n### 页面管理\n\n```\nnew_page       # 新建页面\nlist_pages     # 列出所有页面\nselect_page    # 选择页面\nclose_page     # 关闭页面\nnavigate_page  # 导航到 URL\n```\n\n### 交互操作\n\n```\nclick          # 点击元素\nfill           # 填写输入框\nfill_form      # 批量填写表单\npress_key      # 按键\nupload_file    # 上传文件\nwait_for       # 等待文本出现\n```\n\n### 截图与调试\n\n```\ntake_screenshot       # 截图\ntake_snapshot         # 获取页面文本快照\nevaluate_script       # 执行 JS\nlist_network_requests # 网络请求列表\n```\n\n---\n\n## 六、权限与安全\n\n### 允许访问的目录\n\n- `/Users/yay/workspace`\n- `/private/tmp`\n\n### 屏蔽的危险命令\n\n- `rm -rf /`, `rm -rf ~`\n- `sudo rm`, `sudo su`\n- `chmod 777`\n- `shutdown`, `reboot`\n- `curl | sh`, `wget | bash`\n\n### 安全操作规范\n\n```bash\n# 删除前先列出目标\nls -la target_dir/\nrm -r target_dir/\n\n# 覆盖前检查\ntest -f file.txt && echo \"将被覆盖\"\n```\n\n---\n\n## 七、错误处理\n\n| 错误类型 | 处理方式 |\n|----------|----------|\n| 工具未找到 | 检查拼写，如 `readfile` → `read_file` |\n| 参数错误 | 检查格式，修正后重试 |\n| 路径不存在 | 先用 `list_directory` 确认 |\n| 权限拒绝 | 检查是否在允许目录内 |\n| 超时 | 拆分任务或后台执行 |\n\n重试规则：同一操作最多重试 2 次，重试前分析失败原因。\n\n---\n\n## 八、Skills 系统\n\n### 目录结构\n\n```\nskills/\n├── skills.json          # 技能索引\n└── my-skill/\n    ├── SKILL.md         # 主文档（AI 读取）\n    └── references/      # 详细参考文档\n```\n\n### skills.json 格式\n\n```json\n{\n  \"version\": \"1.0.0\",\n  \"skills\": [\n    {\n      \"name\": \"my-skill\",\n      \"description\": \"技能描述\",\n      \"path\": \"./my-skill\",\n      \"skillFile\": \"SKILL.md\",\n      \"tools\": [\"tool1\", \"tool2\"]\n    }\n  ]\n}\n```\n\n### SKILL.md 模板\n\n```markdown\n# 技能名称\n\n简短描述。\n\n## 前置条件\n\n- 需要安装的软件\n\n## 可用命令\n\n### command-name\n\n**功能**: 做什么\n\n**示例**:\n```bash\ncommand-name --flag value\n```\n\n## 注意事项\n\n- 限制和约束\n```\n\n---\n\n## 九、工具选择决策树\n\n```\n需要做什么？\n│\n├─ 读写文件\n│   ├─ 单个文件 → read_file / write_file\n│   ├─ 多个文件 → read_multiple_files\n│   └─ 小范围修改 → edit_file\n│\n├─ 搜索内容\n│   ├─ 代码项目 → find_text (需先注册项目)\n│   ├─ 快速全文 → run_command + rg\n│   └─ 找文件名 → search_files\n│\n├─ 分析代码\n│   ├─ 语法树 → get_ast\n│   ├─ 函数/类 → get_symbols\n│   └─ 引用 → find_usage\n│\n├─ 执行命令 → run_command\n│\n└─ 浏览器操作\n    ├─ 截图 → take_screenshot\n    └─ 填表 → fill / fill_form\n```\n\n---\n\n## 十、MCP 协议简介\n\nMCP (Model Context Protocol) 提供三种能力：\n\n| 特性 | 说明 | 示例 |\n|------|------|------|\n| Tools | AI 可调用的函数 | 搜索、发送消息 |\n| Resources | 只读数据源 | 读取文档 |\n| Prompts | 预构建指令模板 | 规划旅行 |\n\n详见 [MCP 官方文档](https://modelcontextprotocol.io/docs)。\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/docs/GUIDE.md",
+      "error": null
+    },
+    {
+      "id": 134,
+      "timestamp": "2026-01-25T04:51:04.241Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent/docs && rm TOOLS_GUIDE.md MCP_SKILLS_GUIDE.md ADVANCED_GUIDE.md && ls -la"
+      },
+      "success": true,
+      "resultPreview": "total 16\ndrwxr-xr-x@  3 yay  staff    96 Jan 24 23:51 .\ndrwxr-xr-x  14 yay  staff   448 Jan 24 23:50 ..\n-rw-r--r--@  1 yay  staff  6152 Jan 24 23:50 GUIDE.md\n",
+      "error": null
     }
   ],
-  "nextId": 127
+  "nextId": 135
 }
