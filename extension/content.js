@@ -1,4 +1,4 @@
-// content.js v31 - 修复发送时机：全部使用 sendMessageSafe 避免误触停止按钮
+// content.js v32 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
 (function() {
   'use strict';
 
@@ -1364,6 +1364,30 @@ ${content}
 
   // ============== 跨 Tab 通信 ==============
 
+  let heartbeatTimer = null;
+  const HEARTBEAT_INTERVAL = 30000; // 30秒心跳
+
+  // 向 background 注册（内部函数，不显示日志）
+  function doRegister(id, silent = false) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({
+        type: 'REGISTER_AGENT',
+        agentId: id
+      }, (resp) => {
+        if (chrome.runtime.lastError) {
+          if (!silent) addLog(`❌ 注册失败: ${chrome.runtime.lastError.message}`, 'error');
+          resolve(false);
+        } else if (resp?.success) {
+          if (!silent) addLog(`🏷️ 已注册为 ${id}`, 'success');
+          resolve(true);
+        } else {
+          if (!silent) addLog(`❌ 注册失败: ${resp?.error}`, 'error');
+          resolve(false);
+        }
+      });
+    });
+  }
+
   function registerAsAgent(id) {
     agentId = id;
     CONFIG.AGENT_ID = id;
@@ -1374,17 +1398,29 @@ ${content}
       console.log('[Agent] 身份已保存:', id);
     });
     
-    chrome.runtime.sendMessage({
-      type: 'REGISTER_AGENT',
-      agentId: id
-    }, (resp) => {
-      if (resp?.success) {
-        addLog(`🏷️ 已注册为 ${id}`, 'success');
-      } else {
-        addLog(`❌ 注册失败: ${resp?.error}`, 'error');
-      }
-    });
+    doRegister(id);
+    startHeartbeat();
   }
+
+  // 心跳机制：定期重新注册，防止 background 重启后丢失
+  function startHeartbeat() {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      if (agentId) {
+        doRegister(agentId, true); // 静默注册
+        console.log('[Agent] 💓 心跳注册:', agentId);
+      }
+    }, HEARTBEAT_INTERVAL);
+    console.log('[Agent] 心跳已启动，间隔', HEARTBEAT_INTERVAL/1000, '秒');
+  }
+
+  // Tab 可见性变化时重新注册
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && agentId) {
+      console.log('[Agent] Tab 恢复可见，重新注册');
+      doRegister(agentId, true);
+    }
+  });
 
   // 从 storage 恢复 Agent ID
   function restoreAgentId() {
@@ -1394,27 +1430,26 @@ ${content}
       agentId = savedId;
       CONFIG.AGENT_ID = savedId;
       addLog(`🔄 已恢复身份: ${savedId}`, 'info');
-      // 重新向 background 注册
-      chrome.runtime.sendMessage({
-        type: 'REGISTER_AGENT',
-        agentId: savedId
-      }, (resp) => {
-        if (resp?.success) {
-          addLog(`🏷️ 已注册为 ${savedId}`, 'success');
-        } else {
-          addLog(`❌ 注册失败: ${resp?.error || '未知错误'}`, 'error');
-        }
-      });
+      doRegister(savedId);
+      startHeartbeat();
     }
   }
 
-  function sendToAgent(toAgentId, message) {
+  // 发送前确保自己已注册，然后发送消息
+  async function sendToAgent(toAgentId, message) {
+    // 先确保自己已注册
+    if (agentId) {
+      await doRegister(agentId, true);
+    }
+    
     chrome.runtime.sendMessage({
       type: 'CROSS_TAB_SEND',
       to: toAgentId,
       message: message
     }, (resp) => {
-      if (resp?.success) {
+      if (chrome.runtime.lastError) {
+        addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
+      } else if (resp?.success) {
         addLog(`📨 已发送给 ${toAgentId}`, 'success');
       } else {
         addLog(`❌ 发送失败: ${resp?.error}`, 'error');
