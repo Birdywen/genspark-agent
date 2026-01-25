@@ -1,4 +1,4 @@
-// content.js v29 - 跨 Tab 全自动通信
+// content.js v30 - 跨 Tab 全自动通信
 (function() {
   'use strict';
 
@@ -35,11 +35,48 @@
     execStartTime: 0,
     // 消息队列
     messageQueue: [],
-    isProcessingQueue: false
+    isProcessingQueue: false,
+    // 本地命令缓存（用于发送失败时重试）
+    lastToolCall: null
   };
 
   function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
+  }
+
+  // ============== AI 生成状态检测 ==============
+  
+  function isAIGenerating() {
+    const stopBtnSelectors = [
+      'button[aria-label*="stop" i]', 'button[aria-label*="停止" i]',
+      'button.stop-button', 'button[class*="stop"]', '.stop-generating',
+      '[data-testid="stop-button"]', '.generating-indicator', '.typing-indicator'
+    ];
+    for (const sel of stopBtnSelectors) {
+      try {
+        const btn = document.querySelector(sel);
+        if (btn && btn.offsetParent !== null) return true;
+      } catch (e) {}
+    }
+    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');
+    if (lastMsg) {
+      const cl = lastMsg.className.toLowerCase();
+      if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;
+      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*="loading"], [class*="typing"]').length > 0) return true;
+    }
+    const globalInd = document.querySelectorAll('.generating, .loading-response, [class*="generating"], [class*="streaming"]');
+    for (const el of globalInd) { if (el.offsetParent !== null) return true; }
+    return false;
+  }
+
+  function waitForGenerationComplete(callback, maxWait = 30000) {
+    const startTime = Date.now();
+    const check = () => {
+      if (Date.now() - startTime > maxWait) { callback(); return; }
+      if (isAIGenerating()) { setTimeout(check, 200); }
+      else { setTimeout(() => { if (!isAIGenerating()) callback(); else setTimeout(check, 200); }, 500); }
+    };
+    check();
   }
 
   // ============== 系统提示词模板 ==============
@@ -344,6 +381,15 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     }, 800);
 
     return true;
+  }
+
+  function sendMessageSafe(text) {
+    if (isAIGenerating()) {
+      addLog('⏳ 等待 AI 完成输出...', 'info');
+      waitForGenerationComplete(() => sendMessage(text));
+    } else {
+      setTimeout(() => sendMessage(text), 300);
+    }
   }
 
   // ============== 工具调用解析 ==============
@@ -671,7 +717,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
         addLog(`⏱️ 重试 #${historyId} 超时`, 'error');
         
         const timeoutResult = `**[重试结果]** \`#${historyId}\` ✗ 超时\n\n请稍后再试，或检查服务器状态。`;
-        setTimeout(() => sendMessage(timeoutResult), 300);
+        sendMessageSafe(timeoutResult);
       }
     }, CONFIG.TIMEOUT_MS);
   }
@@ -691,15 +737,42 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     showExecutingIndicator(tool.name);
     updateStatus();
     
-    chrome.runtime.sendMessage({
-      type: 'SEND_TO_SERVER',
-      payload: { 
-        type: 'tool_call', 
-        tool: tool.name, 
-        params: tool.params, 
-        id: callId 
-      }
-    });
+    // 保存到本地缓存（发送失败时可用 retryLast 重试）
+    state.lastToolCall = { tool: tool.name, params: tool.params, timestamp: Date.now() };
+    
+    // 检测消息大小（超过 500KB 可能有问题）
+    const payloadSize = JSON.stringify(tool.params).length;
+    if (payloadSize > 500000) {
+      addLog(`⚠️ 内容过大 (${Math.round(payloadSize/1024)}KB)，可能发送失败`, 'error');
+      addLog('💡 建议: 用 run_command + echo/cat 写入，或拆分内容', 'info');
+    }
+    
+    try {
+      chrome.runtime.sendMessage({
+        type: 'SEND_TO_SERVER',
+        payload: { 
+          type: 'tool_call', 
+          tool: tool.name, 
+          params: tool.params, 
+          id: callId 
+        }
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
+          state.pendingCalls.delete(callId);
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+        } else if (!response?.success) {
+          addLog('❌ 服务器未连接', 'error');
+        }
+      });
+    } catch (e) {
+      addLog(`❌ 消息发送异常: ${e.message}`, 'error');
+      state.agentRunning = false;
+      hideExecutingIndicator();
+      updateStatus();
+    }
     
     addLog(`🔧 ${tool.name}(${Object.keys(tool.params).join(',')})`, 'tool');
     
@@ -717,7 +790,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
           success: false,
           error: `执行超时 (${CONFIG.TIMEOUT_MS / 1000}秒)`
         });
-        setTimeout(() => sendMessage(timeoutResult), 300);
+        sendMessageSafe(timeoutResult);
       }
     }, CONFIG.TIMEOUT_MS);
   }
@@ -726,6 +799,12 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
   function scanForToolCalls() {
     if (state.agentRunning) return;
+    
+    // 如果 AI 正在生成中，跳过扫描
+    if (isAIGenerating()) {
+      log('AI 正在生成中，跳过扫描');
+      return;
+    }
     
     const { text, index } = getLatestAIMessage();
     
@@ -871,6 +950,7 @@ ${content}
       <div id="agent-actions">
         <button id="agent-copy-prompt" title="复制系统提示词给AI">📋 提示词</button>
         <button id="agent-clear" title="清除日志">🗑️</button>
+        <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
@@ -1001,6 +1081,34 @@ ${content}
       state.lastMessageText = '';
       updateStatus();
       addLog('🗑️ 已重置', 'info');
+    };
+    
+    document.getElementById('agent-retry-last').onclick = () => {
+      if (!state.lastToolCall) {
+        addLog('❌ 没有可重试的命令', 'error');
+        return;
+      }
+      const { tool, params, timestamp } = state.lastToolCall;
+      const age = Math.round((Date.now() - timestamp) / 1000);
+      addLog(`🔁 重试 ${tool} (${age}秒前)`, 'info');
+      
+      // 重新执行
+      const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      state.agentRunning = true;
+      showExecutingIndicator(tool);
+      updateStatus();
+      
+      chrome.runtime.sendMessage({
+        type: 'SEND_TO_SERVER',
+        payload: { type: 'tool_call', tool, params, id: callId }
+      }, (response) => {
+        if (chrome.runtime.lastError || !response?.success) {
+          addLog('❌ 重试发送失败', 'error');
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+        }
+      });
     };
     
     document.getElementById('agent-reconnect').onclick = () => {
@@ -1189,7 +1297,7 @@ ${content}
         setTimeout(() => {
           state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
         }, 5000);
-        setTimeout(() => sendMessage(resultText), 300);
+        sendMessageSafe(resultText);
         break;
 
       case 'error':
