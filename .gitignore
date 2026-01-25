@@ -25,3 +25,4 @@ fix.js
 # Trash
 _trash/
 test/
+server-v2/command-history.json
