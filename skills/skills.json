@@ -16,6 +16,26 @@
         "mega-export", "mega-import", "mega-share",
         "mega-sync", "mega-backup", "mega-transfers", "mega-speedlimit"
       ]
+    },
+    {
+      "name": "chart-visualization",
+      "description": "数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）",
+      "source": "local",
+      "path": "./chart-visualization",
+      "skillFile": "SKILL.md",
+      "references": "references/",
+      "requiredMcp": ["shell", "filesystem"],
+      "tools": [
+        "generate_line_chart", "generate_area_chart", "generate_bar_chart",
+        "generate_column_chart", "generate_pie_chart", "generate_treemap_chart",
+        "generate_scatter_chart", "generate_histogram_chart", "generate_boxplot_chart",
+        "generate_violin_chart", "generate_radar_chart", "generate_funnel_chart",
+        "generate_sankey_chart", "generate_venn_chart", "generate_word_cloud_chart",
+        "generate_liquid_chart", "generate_dual_axes_chart", "generate_network_graph",
+        "generate_organization_chart", "generate_mind_map", "generate_fishbone_diagram",
+        "generate_flow_diagram", "generate_district_map", "generate_pin_map",
+        "generate_path_map", "generate_spreadsheet"
+      ]
     }
   ]
 }
