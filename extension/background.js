@@ -167,8 +167,8 @@ function broadcastToAllTabs(message) {
 
 function sendToServer(message, tabId) {
   if (socket && socket.readyState === WebSocket.OPEN) {
-    // 记录这个调用来自哪个 Tab
-    if (message.type === 'tool_call' && message.id && tabId) {
+    // 记录这个调用来自哪个 Tab（包括 retry）
+    if ((message.type === 'tool_call' || message.type === 'retry') && message.id && tabId) {
       pendingCallsByTab.set(message.id, tabId);
       console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
       

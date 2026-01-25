@@ -101,6 +101,7 @@ ${toolList}
 4. content 参数内如果有引号，必须转义为 \\"
 5. 任务全部完成后输出 @DONE
 6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 '@TOOL:{...}' 或 '@SEND:agent:msg'）
+7. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
 
 ---
 
@@ -493,11 +494,19 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       const extracted = extractJsonFromText(text, idx + marker.length);
       if (extracted) {
         try {
-          const parsed = JSON.parse(extracted.json);
+          // Fix Chinese quotes that break JSON parsing
+          let jsonStr = extracted.json
+            .replace(/[“”]/g, '"')  // Chinese double quotes to ASCII
+            .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
+          const parsed = JSON.parse(jsonStr);
           if (parsed.tool && isRealToolCall(text, idx, idx + marker.length + extracted.json.length)) {
             toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('[Agent] JSON parse error:', e.message);
+          console.error('[Agent] Raw JSON:', extracted.json.slice(0, 300));
+          addLog('JSON parse error: ' + e.message, 'error');
+        }
         searchStart = extracted.end;
       } else { searchStart = idx + marker.length; }
     }
@@ -635,6 +644,38 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
   // ============== 工具执行 ==============
 
+  function executeRetry(historyId) {
+    const callId = `retry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    
+    state.agentRunning = true;
+    showExecutingIndicator(`retry #${historyId}`);
+    updateStatus();
+    
+    chrome.runtime.sendMessage({
+      type: 'SEND_TO_SERVER',
+      payload: { 
+        type: 'retry', 
+        historyId: historyId,
+        id: callId 
+      }
+    });
+    
+    addLog(`🔄 重试 #${historyId}...`, 'tool');
+    
+    // 超时处理
+    setTimeout(() => {
+      if (state.agentRunning) {
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        addLog(`⏱️ 重试 #${historyId} 超时`, 'error');
+        
+        const timeoutResult = `**[重试结果]** \`#${historyId}\` ✗ 超时\n\n请稍后再试，或检查服务器状态。`;
+        setTimeout(() => sendMessage(timeoutResult), 300);
+      }
+    }, CONFIG.TIMEOUT_MS);
+  }
+
   function executeToolCall(tool, callHash) {
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
@@ -717,6 +758,19 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       state.lastMessageText = textNow;
       state.lastStableTime = Date.now();
       return;
+    }
+    
+    // 检查重试命令 @RETRY:#ID
+    const retryMatch = text.match(/@RETRY:\s*#?(\d+)/);
+    if (retryMatch) {
+      const retryId = parseInt(retryMatch[1]);
+      const retryHash = `${index}:retry:${retryId}`;
+      if (!state.executedCalls.has(retryHash)) {
+        state.executedCalls.add(retryHash);
+        addLog(`🔄 重试命令 #${retryId}`, 'tool');
+        executeRetry(retryId);
+        return;
+      }
     }
     
     // 先检查跨 Tab 发送命令 @SEND:agent_id:message
@@ -1105,10 +1159,16 @@ ${content}
         }
         state.executedCalls.add(resultHash);
         
-        for (const [id, call] of state.pendingCalls) {
-          if (call.tool === msg.tool) {
-            state.pendingCalls.delete(id);
-            break;
+        // 用 msg.id 精确匹配，而不是用 tool 名称
+        if (msg.id && state.pendingCalls.has(msg.id)) {
+          state.pendingCalls.delete(msg.id);
+        } else {
+          // 回退：按 tool 名称匹配（兼容旧版本）
+          for (const [id, call] of state.pendingCalls) {
+            if (call.tool === msg.tool) {
+              state.pendingCalls.delete(id);
+              break;
+            }
           }
         }
         

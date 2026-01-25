@@ -1,9 +1,9 @@
 // Genspark Agent Server v2 - 整合版
-// MCP Hub + 安全检查 + 日志记录 + Skills 系统
+// MCP Hub + 安全检查 + 日志记录 + Skills 系统 + 命令重试
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import Logger from './logger.js';
@@ -22,10 +22,71 @@ const safety = new Safety(config.safety, logger);
 const skillsManager = new SkillsManager();
 skillsManager.load();
 
-// 读取 Agents 注册表
+// ==================== 命令历史管理 ====================
+const HISTORY_FILE = path.join(__dirname, 'command-history.json');
+const MAX_HISTORY = 100;
+
+let commandHistory = [];
+let historyIdCounter = 1;
+
+function loadHistory() {
+  try {
+    if (existsSync(HISTORY_FILE)) {
+      const data = JSON.parse(readFileSync(HISTORY_FILE, 'utf-8'));
+      commandHistory = data.history || [];
+      historyIdCounter = data.nextId || 1;
+      logger.info(`加载了 ${commandHistory.length} 条历史记录`);
+    }
+  } catch (e) {
+    logger.warning('加载历史记录失败: ' + e.message);
+    commandHistory = [];
+    historyIdCounter = 1;
+  }
+}
+
+function saveHistory() {
+  try {
+    writeFileSync(HISTORY_FILE, JSON.stringify({
+      history: commandHistory,
+      nextId: historyIdCounter
+    }, null, 2));
+  } catch (e) {
+    logger.warning('保存历史记录失败: ' + e.message);
+  }
+}
+
+function addToHistory(tool, params, success, resultPreview, error = null) {
+  const entry = {
+    id: historyIdCounter++,
+    timestamp: new Date().toISOString(),
+    tool,
+    params,
+    success,
+    resultPreview: (resultPreview || '').substring(0, 500),
+    error: error || null
+  };
+  
+  commandHistory.push(entry);
+  
+  if (commandHistory.length > MAX_HISTORY) {
+    commandHistory = commandHistory.slice(-MAX_HISTORY);
+  }
+  
+  saveHistory();
+  return entry.id;
+}
+
+function getHistory(count = 20) {
+  return commandHistory.slice(-count).reverse();
+}
+
+function getHistoryById(id) {
+  return commandHistory.find(h => h.id === id);
+}
+
+// ==================== Agents 注册表 ====================
 function loadAgents() {
   const agentsPath = path.join(__dirname, '../.agent_hub/agents.json');
-  // 也尝试 workspace 下的路径
   const altPath = '/Users/yay/workspace/.agent_hub/agents.json';
   
   const filePath = existsSync(agentsPath) ? agentsPath : (existsSync(altPath) ? altPath : null);
@@ -64,8 +125,8 @@ class MCPConnection {
     this.cmd = cmd;
     this.args = args;
     this.env = env;
-    this.startupTimeout = options.startupTimeout || 5000;  // 默认 5 秒
-    this.requestTimeout = options.requestTimeout || 60000; // 默认 60 秒
+    this.startupTimeout = options.startupTimeout || 5000;
+    this.requestTimeout = options.requestTimeout || 60000;
     this.process = null;
     this.requestId = 0;
     this.pending = new Map();
@@ -91,10 +152,8 @@ class MCPConnection {
       }
     });
     
-    // 等待进程启动
     await new Promise(r => setTimeout(r, this.startupTimeout));
     
-    // 检查进程是否还在运行
     if (this.process.exitCode !== null) {
       throw new Error(`进程已退出, code: ${this.process.exitCode}`);
     }
@@ -168,7 +227,6 @@ class MCPHub {
 
   async start() {
     for (const [name, cfg] of Object.entries(config.mcpServers)) {
-      // 从配置读取超时设置，或使用默认值
       const options = {
         startupTimeout: cfg.startupTimeout || 5000,
         requestTimeout: cfg.requestTimeout || 60000
@@ -206,22 +264,28 @@ class MCPHub {
 
 const hub = new MCPHub();
 
-async function handleToolCall(ws, message) {
+// ==================== 工具调用处理（含历史记录）====================
+async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   const { tool, params, id } = message;
   
-  logger.info(`工具调用: ${tool}`, params);
+  logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);
 
   // 安全检查
   const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);
   
   if (!safetyCheck.allowed) {
     logger.warning(`安全检查未通过: ${safetyCheck.reason}`);
+    
+    // 记录失败的调用
+    const historyId = addToHistory(tool, params, false, null, safetyCheck.reason);
+    
     ws.send(JSON.stringify({
       type: 'tool_result',
       id,
+      historyId: isRetry ? originalId : historyId,
       tool,
       success: false,
-      error: safetyCheck.reason
+      error: `[#${isRetry ? originalId : historyId}] ${safetyCheck.reason}`
     }));
     return;
   }
@@ -234,28 +298,65 @@ async function handleToolCall(ws, message) {
       result = r.content.map(c => c.text || c).join('\n');
     }
     
-    logger.tool(tool, params, typeof result === 'string' ? result.slice(0, 200) : result);
+    const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
     
-    ws.send(JSON.stringify({
+    // 记录成功的调用
+    const historyId = isRetry ? originalId : addToHistory(tool, params, true, resultStr);
+    
+    // 如果是重试，更新原记录
+    if (isRetry && originalId) {
+      const entry = getHistoryById(originalId);
+      if (entry) {
+        entry.success = true;
+        entry.resultPreview = resultStr.substring(0, 500);
+        entry.retriedAt = new Date().toISOString();
+        entry.error = null;
+        saveHistory();
+      }
+    }
+    
+    logger.tool(tool, params, resultStr.slice(0, 200));
+    
+    const response = {
       type: 'tool_result',
       id,
+      historyId,
       tool,
       success: true,
-      result
-    }));
+      result: isRetry ? `[重试 #${historyId}] ${resultStr}` : `[#${historyId}] ${resultStr}`
+    };
+    ws.send(JSON.stringify(response));
+    logger.info(`[WS] 发送结果: id=${id}, tool=${tool}, historyId=${historyId}`);
   } catch (e) {
+    const historyId = isRetry ? originalId : addToHistory(tool, params, false, null, e.message);
+    
+    // 如果是重试，更新原记录
+    if (isRetry && originalId) {
+      const entry = getHistoryById(originalId);
+      if (entry) {
+        entry.retriedAt = new Date().toISOString();
+        entry.error = e.message;
+        saveHistory();
+      }
+    }
+    
     logger.error(`工具执行失败: ${tool}`, { error: e.message });
     ws.send(JSON.stringify({
       type: 'tool_result',
       id,
+      historyId,
       tool,
       success: false,
-      error: e.message
+      error: `[#${historyId}] 错误: ${e.message}`
     }));
   }
 }
 
+// ==================== 主函数 ====================
 async function main() {
+  // 加载历史记录
+  loadHistory();
+  
   await hub.start();
 
   const wss = new WebSocketServer({
@@ -267,14 +368,14 @@ async function main() {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
 
-    // 发送连接信息、工具列表、Skills 和 Agents 信息
     ws.send(JSON.stringify({
       type: 'connected',
-      message: 'Genspark Agent Server v2 已连接',
+      message: 'Genspark Agent Server v2.1 已连接 (支持命令重试)',
       tools: hub.tools,
       skills: skillsManager.getSkillsList(),
       skillsPrompt: skillsManager.getSystemPrompt(),
-      agents: agentsData.agents || {}
+      agents: agentsData.agents || {},
+      historySupport: true  // 告知客户端支持历史重试
     }));
 
     ws.on('message', async data => {
@@ -298,7 +399,52 @@ async function main() {
             ws.send(JSON.stringify({ type: 'tools_list', tools: hub.tools }));
             break;
           
-          // 新增: Skills 相关消息处理
+          // ===== 新增: 历史记录相关 =====
+          case 'list_history':
+            const count = msg.count || 20;
+            const history = getHistory(count);
+            ws.send(JSON.stringify({ 
+              type: 'history_list', 
+              history: history.map(h => ({
+                id: h.id,
+                timestamp: h.timestamp,
+                tool: h.tool,
+                params: h.params,
+                success: h.success,
+                error: h.error,
+                preview: h.resultPreview?.substring(0, 100)
+              }))
+            }));
+            break;
+            
+          case 'retry':
+            const entry = getHistoryById(msg.historyId);
+            if (!entry) {
+              ws.send(JSON.stringify({
+                type: 'tool_result',
+                id: msg.id,
+                success: false,
+                error: `找不到历史记录 #${msg.historyId}`
+              }));
+            } else {
+              logger.info(`重试历史命令 #${entry.id}: ${entry.tool}`);
+              await handleToolCall(ws, {
+                tool: entry.tool,
+                params: entry.params,
+                id: msg.id
+              }, true, entry.id);
+            }
+            break;
+            
+          case 'get_history_detail':
+            const detail = getHistoryById(msg.historyId);
+            ws.send(JSON.stringify({
+              type: 'history_detail',
+              entry: detail || null
+            }));
+            break;
+          
+          // Skills 相关
           case 'list_skills':
             ws.send(JSON.stringify({ 
               type: 'skills_list', 
@@ -336,7 +482,17 @@ async function main() {
             logger.warning(`未知消息类型: ${msg.type}`);
         }
       } catch (e) {
-        logger.error('处理消息失败', { error: e.message });
+        logger.error('处理消息失败', { error: e.message, data: data.toString().slice(0, 200) });
+        // Return error to client
+        try {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'JSON parse failed: ' + e.message,
+            hint: 'May contain special characters causing parse error'
+          }));
+        } catch (sendErr) {
+          logger.error('Failed to send error', { error: sendErr.message });
+        }
       }
     });
 
@@ -353,13 +509,14 @@ async function main() {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
-║   🤖 Genspark Agent Server v2 (整合版)                    ║
+║   🤖 Genspark Agent Server v2.1 (支持命令重试)            ║
 ║                                                           ║
 ║   WebSocket: ws://${config.server.host}:${config.server.port}                     ║
 ║   工具数量: ${hub.tools.length.toString().padEnd(3)} 个                                  ║
 ║   Skills:   ${skillsCount.toString().padEnd(3)} 个                                  ║
 ║   安全检查: ${config.safety ? '✅ 已启用' : '❌ 未启用'}                              ║
 ║   日志记录: ${config.logging?.enabled ? '✅ 已启用' : '❌ 未启用'}                              ║
+║   命令重试: ✅ 已启用                                     ║
 ║                                                           ║
 ║   等待客户端连接...                                       ║
 ║                                                           ║
