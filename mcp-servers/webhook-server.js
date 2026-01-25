@@ -9,7 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const config = JSON.parse(readFileSync(path.join(__dirname, '../server/config.json'), 'utf-8'));
+const config = JSON.parse(readFileSync(path.join(__dirname, '../server-v2/config.json'), 'utf-8'));
 
 const WEBHOOK_PORT = config.webhook?.port || 8766;
 const WEBHOOK_SECRET = config.webhook?.secret || 'change-this-secret';
