@@ -1,34 +1,6 @@
 {
   "history": [
     {
-      "id": 25,
-      "timestamp": "2026-01-25T02:33:32.377Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
-        "edits": [
-          {
-            "oldText": "    ws.send(JSON.stringify({\n      type: 'tool_result',\n      id,\n      historyId,\n      tool,\n      success: true,\n      result: isRetry ? `[重试 #${historyId}] ${resultStr}` : `[#${historyId}] ${resultStr}`\n    }));",
-            "newText": "    const response = {\n      type: 'tool_result',\n      id,\n      historyId,\n      tool,\n      success: true,\n      result: isRetry ? `[重试 #${historyId}] ${resultStr}` : `[#${historyId}] ${resultStr}`\n    };\n    ws.send(JSON.stringify(response));\n    logger.info(`[WS] 发送结果: id=${id}, tool=${tool}, historyId=${historyId}`);"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -316,16 +316,18 @@\n     }\n     \n     logger.tool(tool, params, resultStr.slice(0, 200));\n     \n-    ws.send(JSON.stringify({\n+    const response = {\n       type: 'tool_result',\n       id,\n       historyId,\n       tool,\n    ",
-      "error": null
-    },
-    {
-      "id": 26,
-      "timestamp": "2026-01-25T02:35:15.423Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo test1 && sleep 1 && echo test2"
-      },
-      "success": true,
-      "resultPreview": "test1\ntest2\n",
-      "error": null
-    },
-    {
       "id": 27,
       "timestamp": "2026-01-25T02:35:23.176Z",
       "tool": "run_command",
@@ -1171,7 +1143,29 @@
       "success": true,
       "resultPreview": "=== content.js v30 最终验证 ===\n// content.js v30 - 跨 Tab 全自动通信\n\n新增功能:\n5\n4\n4\n2\n",
       "error": null
+    },
+    {
+      "id": 125,
+      "timestamp": "2026-01-25T04:47:10.710Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git tag v1-archive && rm -rf v1 && git add -A && git commit -m 'chore: remove v1, archived as tag v1-archive'"
+      },
+      "success": true,
+      "resultPreview": "[main 38a775a] chore: remove v1, archived as tag v1-archive\n 4 files changed, 726 insertions(+)\n create mode 100644 legacy/mcp-servers-v1/mcp-server.js\n create mode 100644 legacy/mcp-servers-v1/package-lock.json\n create mode 100644 legacy/mcp-servers-v1/package.json\n create mode 100644 legacy/mcp-servers-v1/webhook-server.js\n",
+      "error": null
+    },
+    {
+      "id": 126,
+      "timestamp": "2026-01-25T04:47:18.430Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && ls -la && echo '---' && ls legacy/ 2>/dev/null || echo 'no legacy folder'"
+      },
+      "success": true,
+      "resultPreview": "total 56\ndrwxr-xr-x  15 yay  staff    480 Jan 24 23:39 .\ndrwxr-xr-x  12 yay  staff    384 Jan 24 21:54 ..\n-rw-r--r--@  1 yay  staff  14340 Jan 24 22:43 .DS_Store\ndrwxr-xr-x@ 12 yay  staff    384 Jan 24 23:47 .git\n-rw-r--r--@  1 yay  staff    241 Jan 24 21:49 .gitignore\n-rw-r--r--   1 yay  staff     98 Jan 23 05:50 .mcp.json\ndrwxr-xr-x@  5 yay  staff    160 Jan 24 21:59 docs\ndrwxr-xr-x   8 yay  staff    256 Jan 24 23:39 extension\ndrwxr-xr-x@  3 yay  staff     96 Jan 24 23:10 legacy\ndrwxr-xr-x   3",
+      "error": null
     }
   ],
-  "nextId": 125
+  "nextId": 127
 }
