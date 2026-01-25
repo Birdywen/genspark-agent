@@ -1,4 +1,4 @@
-// content.js v30 - 跨 Tab 全自动通信
+// content.js v31 - 修复发送时机：全部使用 sendMessageSafe 避免误触停止按钮
 (function() {
   'use strict';
 
@@ -267,7 +267,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     const msg = state.messageQueue.shift();
     
     addLog(`📤 处理队列消息 (剩余: ${state.messageQueue.length})`, 'info');
-    sendMessage(msg);
+    sendMessageSafe(msg);
     
     // 等待 3 秒后处理下一条，给 AI 足够时间响应
     setTimeout(() => {
@@ -328,30 +328,32 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
         });
       };
       
-      // 尝试点击按钮
-      let btnClicked = false;
-      for (const sel of btnSelectors) {
-        const btn = document.querySelector(sel);
-        if (btn && !btn.disabled && btn.offsetParent !== null) {
-          btn.click();
-          btnClicked = true;
-          addLog('📤 点击发送按钮', 'info');
-          break;
-        }
-      }
+      // v31: 只用 Enter 发送，避免误点击停止按钮
+      pressEnter();
+      addLog('📤 Enter 发送', 'info');
       
-      // 无论按钮是否点击成功，都额外按 Enter（后台 Tab 按钮可能无效）
-      // 延迟 100ms 按 Enter，避免重复发送
+      // 200ms 后检查是否发送成功，不成功则尝试点击按钮
       setTimeout(() => {
         const inp = getInputBox();
         if (inp && inp.value && inp.value.length > 5) {
-          // 输入框还有内容，说明按钮没发出去，用 Enter
-          pressEnter();
-          addLog('📤 补充 Enter 发送', 'info');
+          // 输入框还有内容，Enter 没发出去
+          // 只有在非生成状态才点击按钮
+          if (!isAIGenerating()) {
+            for (const sel of btnSelectors) {
+              const btn = document.querySelector(sel);
+              if (btn && !btn.disabled && btn.offsetParent !== null) {
+                btn.click();
+                addLog('📤 补充点击按钮', 'info');
+                break;
+              }
+            }
+          } else {
+            addLog('⏳ AI生成中，等待...', 'info');
+          }
         }
-      }, 100);
+      }, 200);
       
-      return btnClicked;
+      return true;  // Enter 已发送
     };
 
     // 第一次尝试发送（延迟 800ms 等待页面就绪）
@@ -865,7 +867,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
         addLog(`📨 发送给 ${toAgent}...`, 'tool');
         sendToAgent(toAgent, message);
         setTimeout(() => {
-          sendMessage(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
+          sendMessageSafe(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
         }, 500);
         return;
       }
@@ -941,7 +943,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v29</span>
+        <span id="agent-title">🤖 Agent v31</span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
@@ -1414,7 +1416,7 @@ ${content}
       
       // 检查是否有待处理任务
       addLog(`🔍 自动检查任务 (${agentId})`, 'info');
-      sendMessage(`检查是否有分配给我的任务：\n\`\`\`\n@TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
+      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\n@TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
     }, CONFIG.AUTO_CHECK_INTERVAL);
     
     addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');
@@ -1449,7 +1451,7 @@ ${content}
   }
 
   function init() {
-    log('初始化 Agent v29 (Genspark)');
+    log('初始化 Agent v31 (Genspark)');
     
     createPanel();
 
@@ -1489,7 +1491,7 @@ ${content}
       });
     }, 500);
 
-    addLog('🚀 Agent v29 已启动', 'success');
+    addLog('🚀 Agent v31 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
     // 恢复之前保存的 Agent 身份
