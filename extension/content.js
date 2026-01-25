@@ -960,7 +960,8 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v31</span>
+        <span id="agent-title">🤖 Agent v32</span>
+        <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
@@ -971,6 +972,7 @@ ${content}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -1157,7 +1159,41 @@ ${content}
       btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
     };
 
+    // 查看在线 Agent 列表
+    document.getElementById('agent-list').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          addLog(`❌ 查询失败: ${chrome.runtime.lastError.message}`, 'error');
+          return;
+        }
+        if (resp?.success && resp.agents) {
+          if (resp.agents.length === 0) {
+            addLog('📭 暂无在线 Agent', 'info');
+          } else {
+            const list = resp.agents.map(a => `${a.agentId}(Tab:${a.tabId})`).join(', ');
+            addLog(`👥 在线: ${list}`, 'info');
+          }
+        } else {
+          addLog('❌ 查询失败', 'error');
+        }
+      });
+    };
+
+    // 点击 Agent ID 也显示在线列表
+    document.getElementById('agent-id').onclick = () => {
+      document.getElementById('agent-list').click();
+    };
+
     makeDraggable(panel);
+  }
+
+  // 更新面板上的 Agent ID 显示
+  function updateAgentIdDisplay() {
+    const el = document.getElementById('agent-id');
+    if (el) {
+      el.textContent = agentId ? `[${agentId}]` : '[未设置]';
+      el.style.color = agentId ? '#10b981' : '#9ca3af';
+    }
   }
 
   function makeDraggable(el) {
@@ -1432,6 +1468,7 @@ ${content}
       addLog(`🔄 已恢复身份: ${savedId}`, 'info');
       doRegister(savedId);
       startHeartbeat();
+      updateAgentIdDisplay();
     }
   }
 
@@ -1478,6 +1515,7 @@ ${content}
     agentId = id;
     CONFIG.AGENT_ID = id;
     registerAsAgent(id);  // 向 background.js 注册
+    updateAgentIdDisplay();
     startAutoCheck();
   }
 
@@ -1548,6 +1586,9 @@ ${content}
     
     // 恢复之前保存的 Agent 身份
     restoreAgentId();
+    
+    // 初始化 Agent ID 显示
+    setTimeout(updateAgentIdDisplay, 100);
   }
 
   if (document.readyState === 'loading') {

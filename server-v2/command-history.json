@@ -1,233 +1,6 @@
 {
   "history": [
     {
-      "id": 504,
-      "timestamp": "2026-01-25T16:58:40.321Z",
-      "tool": "take_snapshot",
-      "params": {},
-      "success": true,
-      "resultPreview": "# take_snapshot response\n## Latest page snapshot\nuid=6_0 RootWebArea \"Audio to Video Converter AI Online Free | Without Watermark\" url=\"https://audiocleaner.ai/audio-to-video-ai\"\n  uid=6_1 banner\n    uid=6_2 StaticText \"🔥\"\n    uid=6_3 StaticText \"Hot Feature\"\n    uid=6_4 StaticText \"Remove Music from Video Online Free \"\n    uid=6_5 StaticText \"→\"\n    uid=6_6 StaticText \"Pure Sound\"\n    uid=6_7 StaticText \"Separate Sound\"\n    uid=6_8 StaticText \"Efficient\"\n    uid=6_9 button \"✕\"\n    uid=6_10 nav",
-      "error": null
-    },
-    {
-      "id": 505,
-      "timestamp": "2026-01-25T16:58:40.439Z",
-      "tool": "evaluate_script",
-      "params": {
-        "expression": "document.querySelector('.data').innerText"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool evaluate_script: [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"string\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"function\"\n    ],\n    \"message\": \"Required\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 506,
-      "timestamp": "2026-01-25T16:58:40.653Z",
-      "tool": "fill",
-      "params": {
-        "selector": "input#search",
-        "value": "hello"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool fill: [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"string\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"uid\"\n    ],\n    \"message\": \"Required\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 507,
-      "timestamp": "2026-01-25T16:58:40.837Z",
-      "tool": "click",
-      "params": {
-        "selector": "button.submit"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool click: [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"string\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"uid\"\n    ],\n    \"message\": \"Required\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 508,
-      "timestamp": "2026-01-25T16:58:41.038Z",
-      "tool": "evaluate_script",
-      "params": {
-        "expression": "(() => { return { title: document.title, features: Array.from(document.querySelectorAll('h3')).map(h => h.textContent) } })()"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool evaluate_script: [\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"string\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"function\"\n    ],\n    \"message\": \"Required\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 509,
-      "timestamp": "2026-01-25T16:58:41.245Z",
-      "tool": "write_file",
-      "params": {
-        "path": "/tmp/audiocleaner_data.json",
-        "content": "..."
-      },
-      "success": true,
-      "resultPreview": "Access denied - path outside allowed directories: /tmp/audiocleaner_data.json not in /Users/yay/workspace, /private/tmp",
-      "error": null
-    },
-    {
-      "id": 510,
-      "timestamp": "2026-01-25T17:01:17.676Z",
-      "tool": "read_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/manifest.json"
-      },
-      "success": true,
-      "resultPreview": "{\n  \"manifest_version\": 3,\n  \"name\": \"Genspark Agent Bridge\",\n  \"version\": \"1.0.0\",\n  \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n  \"permissions\": [\n    \"activeTab\",\n    \"storage\",\n    \"scripting\"\n  ],\n  \"host_permissions\": [\n    \"https://www.genspark.ai/*\"\n  ],\n  \"background\": {\n    \"service_worker\": \"background.js\"\n  },\n  \"content_scripts\": [\n    {\n      \"matches\": [\"https://www.genspark.ai/agents*\"],\n      \"js\": [\"content.js\"],\n      \"css\": [\"styles.css\"],\n      \"run_at\": \"document_idle",
-      "error": null
-    },
-    {
-      "id": 511,
-      "timestamp": "2026-01-25T17:01:26.291Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_hub/task_manager.js agents"
-      },
-      "success": true,
-      "resultPreview": "{\n  \"success\": true,\n  \"agents\": [\n    {\n      \"id\": \"master_agent\",\n      \"name\": \"总指挥 Agent\",\n      \"description\": \"多 Agent 协作的总指挥，负责接收用户需求、制定计划、分配任务、协调各 Agent、审核汇总结果\",\n      \"can_receive\": [\n        \"any\"\n      ]\n    },\n    {\n      \"id\": \"code_agent\",\n      \"name\": \"代码开发 Agent\",\n      \"description\": \"全能 Agent，拥有完整的工具集，擅长代码开发、网站构建、脚本编写\",\n      \"can_receive\": [\n        \"any\"\n      ]\n    },\n    {\n      \"id\": \"image_agent\",\n      \"name\": \"图像生成 Agent\",\n      \"description\": \"专业图像生成与自动化助手，擅长将创意需求转化为",
-      "error": null
-    },
-    {
-      "id": 512,
-      "timestamp": "2026-01-25T17:01:34.851Z",
-      "tool": "list_pages",
-      "params": {},
-      "success": true,
-      "resultPreview": "# list_pages response\n## Pages\n1: https://audiocleaner.ai/audio-to-video-ai [selected]",
-      "error": null
-    },
-    {
-      "id": 513,
-      "timestamp": "2026-01-25T17:03:33.268Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo '检查浏览器控制台 (background service worker) 中的 agentTabs Map'"
-      },
-      "success": true,
-      "resultPreview": "检查浏览器控制台 (background service worker) 中的 agentTabs Map\n",
-      "error": null
-    },
-    {
-      "id": 514,
-      "timestamp": "2026-01-25T17:21:39.271Z",
-      "tool": "read_file",
-      "params": {
-        "path": "/Users/yay/workspace/.agent_hub/agents.json"
-      },
-      "success": true,
-      "resultPreview": "{\n  \"agents\": {\n    \"master_agent\": {\n      \"name\": \"总指挥 Agent\",\n      \"description\": \"多 Agent 协作的总指挥，负责接收用户需求、制定计划、分配任务、协调各 Agent、审核汇总结果\",\n      \"capabilities\": [\"project_planning\", \"task_distribution\", \"agent_coordination\", \"progress_monitoring\", \"result_review\"],\n      \"can_receive\": [\"any\"],\n      \"role\": \"coordinator\",\n      \"notes\": \"负责统筹全局，不直接执行具体任务，而是分解任务给专业 Agent 并监督执行\"\n    },\n    \"code_agent\": {\n      \"name\": \"代码开发 Agent\",\n      \"description\": \"全能 Agent，拥有完整的工具集，擅长代码开发、网站构建、脚本编写\",\n    ",
-      "error": null
-    },
-    {
-      "id": 515,
-      "timestamp": "2026-01-25T17:22:29.667Z",
-      "tool": "write_file",
-      "params": {
-        "path": "/Users/yay/workspace/.agent_hub/agents.json",
-        "content": "{\n  \"agents\": {\n    \"master_agent\": {\n      \"name\": \"总指挥 Agent\",\n      \"description\": \"多 Agent 协作的总指挥，负责接收用户需求、制定计划、分配任务、协调各 Agent、审核汇总结果\",\n      \"capabilities\": [\"project_planning\", \"task_distribution\", \"agent_coordination\", \"progress_monitoring\", \"result_review\"],\n      \"can_receive\": [\"any\"],\n      \"role\": \"coordinator\",\n      \"notes\": \"负责统筹全局，不直接执行具体任务，而是分解任务给专业 Agent 并监督执行\"\n    },\n    \"code_agent\": {\n      \"name\": \"代码开发 Agent\",\n      \"description\": \"全能 Agent，拥有完整的工具集，擅长代码开发、网站构建、脚本编写\",\n      \"capabilities\": [\"run_command\", \"read_file\", \"write_file\", \"list_directory\", \"web_search\", \"browser_automation\", \"code_analysis\"],\n      \"can_receive\": [\"any\"],\n      \"notes\": \"可以执行任意复杂任务，自主规划多步骤工作流\"\n    },\n    \"image_agent\": {\n      \"name\": \"图像生成 Agent\",\n      \"description\": \"专业图像生成与自动化助手，擅长将创意需求转化为高质量视觉作品，支持复杂工作流编排、批量处理和智能化图像管理\",\n      \"capabilities\": [\"generate_images\", \"image_editing\", \"background_removal\", \"style_transfer\", \"image_understanding\", \"batch_generation\", \"aidrive_storage\", \"workflow_automation\"],\n      \"can_receive\": [\"any\"],\n      \"notes\": \"派发任务只需描述目标（内容、风格、尺寸），它会自主规划执行步骤。批量任务可提供JSON脚本文件。\"\n    },\n    \"devtool_agent\": {\n      \"name\": \"浏览器自动化 Agent\",\n      \"description\": \"专精浏览器 DevTools 操作的侦察兵和执行者，能够访问、分析、操作任意网页，向总指挥汇报网站状态\",\n      \"capabilities\": [\n        \"list_pages\",\n        \"select_page\", \n        \"new_page\",\n        \"navigate_page\",\n        \"take_snapshot\",\n        \"take_screenshot\",\n        \"evaluate_script\",\n        \"fill\",\n        \"click\",\n        \"hover\",\n        \"press_key\",\n        \"wait_for\",\n        \"list_network_requests\",\n        \"get_network_request\"\n      ],\n      \"can_receive\": [\"any\"],\n      \"role\": \"scout_executor\",\n      \"workflow\": {\n        \"侦察任务\": [\n          \"1. list_pages 获取所有打开的页面\",\n          \"2. select_page 切换到目标网站\",\n          \"3. take_snapshot 获取页面结构（含 uid）\",\n          \"4. 分析页面状态，提取关键信息\",\n          \"5. @SEND:master_agent:汇报结果\"\n        ],\n        \"执行任务\": [\n          \"1. select_page 切换到目标网站\",\n          \"2. take_snapshot 获取元素 uid\",\n          \"3. fill/click 执行 UI 操作\",\n          \"4. wait_for 等待结果\",\n          \"5. take_screenshot 截图确认\",\n          \"6. @SEND:master_agent:任务完成\"\n        ]\n      },\n      \"notes\": \"DevTools 工具使用 uid 而非 selector。先用 take_snapshot 获取 uid，再操作。支持任意网站，无需预先编写脚本。\"\n    }\n  },\n  \"_meta\": {\n    \"description\": \"Agent 能力注册表\",\n    \"updated\": \"2026-01-25\",\n    \"tip\": \"派发任务描述清楚目标即可，Agent会自主规划\"\n  }\n}"
-      },
-      "success": true,
-      "resultPreview": "Successfully wrote to /Users/yay/workspace/.agent_hub/agents.json",
-      "error": null
-    },
-    {
-      "id": 516,
-      "timestamp": "2026-01-25T17:36:21.688Z",
-      "tool": "read_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "// content.js v30 - 跨 Tab 全自动通信\n(function() {\n  'use strict';\n\n  // 防止脚本重复加载\n  if (window.__GENSPARK_AGENT_LOADED__) {\n    console.log('[Agent] 已加载，跳过重复初始化');\n    return;\n  }\n  window.__GENSPARK_AGENT_LOADED__ = true;\n\n  const CONFIG = {\n    SCAN_INTERVAL: 200,\n    TIMEOUT_MS: 30000,\n    MAX_RESULT_LENGTH: 50000,\n    MAX_LOGS: 50,\n    DEBUG: false,\n    // Agent 协作：自动检查任务\n    AUTO_CHECK_ENABLED: false,\n    AUTO_CHECK_INTERVAL: 60000,  // 60秒检查一次\n    AGENT_ID: null  // 由用户在对话中设定，如 'code_agent'\n  }",
-      "error": null
-    },
-    {
-      "id": 517,
-      "timestamp": "2026-01-25T17:36:57.279Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "  function sendMessage(text) {\n    const input = getInputBox();\n    if (!input) {\n      addLog('❌ 找不到输入框', 'error');\n      return false;\n    }\n\n    input.focus();\n    \n    if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {\n      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, \"value\")?.set;\n      input.value = \"\";\n      if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }\n      input.dispatchEvent(new Event(\"input\", { bubbles: true }));\n      input.dispatchEvent(new Event(\"change\", { bubbles: true }));\n    } else {\n      input.innerHTML = '';\n      input.innerText = text;\n      input.dispatchEvent(new InputEvent('input', { \n        bubbles: true, \n        composed: true,\n        data: text,\n        inputType: 'insertText'\n      }));\n    }\n\n    const trySend = (attempt = 1) => {\n      const btnSelectors = [\n        '.enter-icon-wrapper',\n        'div[class*=enter-icon]',\n        'button[type=\"submit\"]',\n        'button.send-button',\n        'button[aria-label*=\"send\" i]',\n        'button[aria-label*=\"发送\"]',\n        '.search-input-container button',\n        'form button:not([type=\"button\"])'\n      ];\n      \n      // 按 Enter 发送\n      const pressEnter = () => {\n        ['keydown', 'keypress', 'keyup'].forEach(type => {\n          input.dispatchEvent(new KeyboardEvent(type, {\n            key: 'Enter',\n            code: 'Enter', \n            keyCode: 13,\n            which: 13,\n            bubbles: true,\n            cancelable: true\n          }));\n        });\n      };\n      \n      // 尝试点击按钮\n      let btnClicked = false;\n      for (const sel of btnSelectors) {\n        const btn = document.querySelector(sel);\n        if (btn && !btn.disabled && btn.offsetParent !== null) {\n          btn.click();\n          btnClicked = true;\n          addLog('📤 点击发送按钮', 'info');\n          break;\n        }\n      }\n      \n      // 无论按钮是否点击成功，都额外按 Enter（后台 Tab 按钮可能无效）\n      // 延迟 100ms 按 Enter，避免重复发送\n      setTimeout(() => {\n        const inp = getInputBox();\n        if (inp && inp.value && inp.value.length > 5) {\n          // 输入框还有内容，说明按钮没发出去，用 Enter\n          pressEnter();\n          addLog('📤 补充 Enter 发送', 'info');\n        }\n      }, 100);\n      \n      return btnClicked;\n    };\n\n    // 第一次尝试发送（延迟 800ms 等待页面就绪）\n    setTimeout(() => {\n      const sent = trySend(1);\n      if (!sent) {\n        // 800ms 后检查输入框是否还有内容，有则重试\n        setTimeout(() => {\n          const currentInput = getInputBox();\n          if (currentInput && currentInput.value && currentInput.value.length > 10) {\n            addLog('🔄 重试发送...', 'info');\n            trySend(2);\n            // 再次检查\n            setTimeout(() => {\n              const inp = getInputBox();\n              if (inp && inp.value && inp.value.length > 10) {\n                addLog('⚠️ 请手动点击发送', 'error');\n              } else {\n                addLog('📤 已发送', 'info');\n              }\n            }, 500);\n          } else {\n            addLog('📤 已发送(Enter)', 'info');\n          }\n        }, 800);\n      }\n    }, 800);\n\n    return true;\n  }",
-            "newText": "  function sendMessage(text) {\n    const input = getInputBox();\n    if (!input) {\n      addLog('❌ 找不到输入框', 'error');\n      return false;\n    }\n\n    // 标记正在发送，防止误触发\n    state.isSendingMessage = true;\n    \n    input.focus();\n    \n    if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {\n      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, \"value\")?.set;\n      input.value = \"\";\n      if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }\n      input.dispatchEvent(new Event(\"input\", { bubbles: true }));\n      input.dispatchEvent(new Event(\"change\", { bubbles: true }));\n    } else {\n      input.innerHTML = '';\n      input.innerText = text;\n      input.dispatchEvent(new InputEvent('input', { \n        bubbles: true, \n        composed: true,\n        data: text,\n        inputType: 'insertText'\n      }));\n    }\n\n    const trySend = (attempt = 1) => {\n      const btnSelectors = [\n        '.enter-icon-wrapper',\n        'div[class*=enter-icon]',\n        'button[type=\"submit\"]',\n        'button.send-button',\n        'button[aria-label*=\"send\" i]',\n        'button[aria-label*=\"发送\"]',\n        '.search-input-container button',\n        'form button:not([type=\"button\"])'\n      ];\n      \n      // 按 Enter 发送\n      const pressEnter = () => {\n        const currentInput = getInputBox();\n        if (!currentInput) return;\n        ['keydown', 'keypress', 'keyup'].forEach(type => {\n          currentInput.dispatchEvent(new KeyboardEvent(type, {\n            key: 'Enter',\n            code: 'Enter', \n            keyCode: 13,\n            which: 13,\n            bubbles: true,\n            cancelable: true\n          }));\n        });\n      };\n      \n      // 尝试点击按钮\n      let btnClicked = false;\n      for (const sel of btnSelectors) {\n        const btn = document.querySelector(sel);\n        if (btn && !btn.disabled && btn.offsetParent !== null) {\n          btn.click();\n          btnClicked = true;\n          addLog('📤 点击发送按钮', 'info');\n          break;\n        }\n      }\n      \n      // 如果按钮点击失败，延迟后用 Enter 发送\n      if (!btnClicked) {\n        setTimeout(() => {\n          const inp = getInputBox();\n          if (inp && inp.value && inp.value.length > 5) {\n            pressEnter();\n            addLog('📤 补充 Enter 发送', 'info');\n          }\n        }, 200);\n      }\n      \n      return btnClicked;\n    };\n\n    // 延迟发送：等待 1.5 秒让页面稳定，避免误触发\n    setTimeout(() => {\n      // 再次确认输入框内容还在\n      const currentInput = getInputBox();\n      if (!currentInput || !currentInput.value || currentInput.value.length < 10) {\n        addLog('⚠️ 输入框内容丢失，取消发送', 'error');\n        state.isSendingMessage = false;\n        return;\n      }\n      \n      const sent = trySend(1);\n      \n      // 1 秒后检查是否发送成功\n      setTimeout(() => {\n        const inp = getInputBox();\n        if (inp && inp.value && inp.value.length > 10) {\n          addLog('🔄 重试发送...', 'info');\n          trySend(2);\n          \n          // 再次检查\n          setTimeout(() => {\n            const finalInp = getInputBox();\n            if (finalInp && finalInp.value && finalInp.value.length > 10) {\n              addLog('⚠️ 请手动点击发送', 'error');\n            } else {\n              addLog('📤 已发送', 'info');\n            }\n            state.isSendingMessage = false;\n          }, 500);\n        } else {\n          addLog('📤 已发送', 'info');\n          state.isSendingMessage = false;\n        }\n      }, 1000);\n    }, 1500);\n\n    return true;\n  }"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -282,8 +282,11 @@\n       addLog('❌ 找不到输入框', 'error');\n       return false;\n     }\n \n+    // 标记正在发送，防止误触发\n+    state.isSendingMessage = true;\n+    \n     input.focus();\n     \n     if (input.tagName === 'TEXTAREA' || inp",
-      "error": null
-    },
-    {
-      "id": 518,
-      "timestamp": "2026-01-25T17:37:10.257Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "  const state = {\n    wsConnected: false,\n    agentRunning: false,\n    availableTools: [],\n    availableSkills: [],\n    skillsPrompt: \"\",\n    executedCalls: new Set(),\n    pendingCalls: new Map(),\n    lastMessageText: '',\n    lastStableTime: 0,\n    execTimer: null,\n    execStartTime: 0,\n    // 消息队列\n    messageQueue: [],\n    isProcessingQueue: false,\n    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null\n  };",
-            "newText": "  const state = {\n    wsConnected: false,\n    agentRunning: false,\n    availableTools: [],\n    availableSkills: [],\n    skillsPrompt: \"\",\n    executedCalls: new Set(),\n    pendingCalls: new Map(),\n    lastMessageText: '',\n    lastStableTime: 0,\n    execTimer: null,\n    execStartTime: 0,\n    // 消息队列\n    messageQueue: [],\n    isProcessingQueue: false,\n    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null,\n    // 防止发送时误触发\n    isSendingMessage: false\n  };"
-          },
-          {
-            "oldText": "// content.js v30 - 跨 Tab 全自动通信",
-            "newText": "// content.js v31 - 修复发送时误触发问题"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1,5 +1,5 @@\n-// content.js v30 - 跨 Tab 全自动通信\n+// content.js v31 - 修复发送时误触发问题\n (function() {\n   'use strict';\n \n   // 防止脚本重复加载\n@@ -36,9 +36,11 @@\n     // 消息队列\n     messageQueue: [],\n     isProcessingQueue: false,\n    ",
-      "error": null
-    },
-    {
-      "id": 519,
-      "timestamp": "2026-01-25T17:37:20.451Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "<span id=\"agent-title\">🤖 Agent v29</span>",
-            "newText": "<span id=\"agent-title\">🤖 Agent v31</span>"
-          },
-          {
-            "oldText": "log('初始化 Agent v29 (Genspark)');",
-            "newText": "log('初始化 Agent v31 (Genspark)');"
-          },
-          {
-            "oldText": "addLog('🚀 Agent v29 已启动', 'success');",
-            "newText": "addLog('🚀 Agent v31 已启动', 'success');"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -957,9 +957,9 @@\n     const panel = document.createElement('div');\n     panel.id = 'agent-panel';\n     panel.innerHTML = `\n       <div id=\"agent-header\">\n-        <span id=\"agent-title\">🤖 Agent v29</span>\n+        <s",
-      "error": null
-    },
-    {
-      "id": 520,
-      "timestamp": "2026-01-25T18:01:46.480Z",
-      "tool": "run_command",
-      "params": {
-        "command": "ls -la /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "-rw-r--r--@ 1 yay  staff  49666 Jan 25 13:01 /Users/yay/workspace/genspark-agent/extension/content.js\n",
-      "error": null
-    },
-    {
-      "id": 521,
-      "timestamp": "2026-01-25T18:01:53.054Z",
-      "tool": "run_command",
-      "params": {
-        "command": "head -50 /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "// content.js v30 - 跨 Tab 全自动通信\n(function() {\n  'use strict';\n\n  // 防止脚本重复加载\n  if (window.__GENSPARK_AGENT_LOADED__) {\n    console.log('[Agent] 已加载，跳过重复初始化');\n    return;\n  }\n  window.__GENSPARK_AGENT_LOADED__ = true;\n\n  const CONFIG = {\n    SCAN_INTERVAL: 200,\n    TIMEOUT_MS: 30000,\n    MAX_RESULT_LENGTH: 50000,\n    MAX_LOGS: 50,\n    DEBUG: false,\n    // Agent 协作：自动检查任务\n    AUTO_CHECK_ENABLED: false,\n    AUTO_CHECK_INTERVAL: 60000,  // 60秒检查一次\n    AGENT_ID: null  // 由用户在对话中设定，如 'code_agent'\n  }",
-      "error": null
-    },
-    {
       "id": 522,
       "timestamp": "2026-01-25T18:01:59.309Z",
       "tool": "run_command",
@@ -1182,7 +955,237 @@
       "success": true,
       "resultPreview": "  \"version\": \"1.0.32\",\n",
       "error": null
+    },
+    {
+      "id": 604,
+      "timestamp": "2026-01-25T20:20:11.769Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'v32: 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n\n- 添加 30 秒心跳定时器，定期重新注册 Agent\n- Tab 恢复可见时自动重新注册\n- sendToAgent 发送前先确保自己已注册\n- 处理 chrome.runtime.lastError 避免报错'"
+      },
+      "success": true,
+      "resultPreview": "[main e648577] v32: 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n 3 files changed, 283 insertions(+), 228 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 605,
+      "timestamp": "2026-01-25T20:20:18.802Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git push"
+      },
+      "success": true,
+      "resultPreview": "To https://github.com/Birdywen/genspark-agent.git\n   92d1732..e648577  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 606,
+      "timestamp": "2026-01-25T20:22:13.460Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '210,230p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "function sendCrossTabMessage(fromAgentId, toAgentId, message) {\n  const targetTabId = agentTabs.get(toAgentId);\n  \n  if (!targetTabId) {\n    console.log('[BG] 目标 Agent 未注册:', toAgentId);\n    return { success: false, error: 'Agent not found: ' + toAgentId };\n  }\n  \n  console.log('[BG] 跨 Tab 消息:', fromAgentId, '->', toAgentId, '(Tab:', targetTabId, ')');\n  \n  sendToTab(targetTabId, {\n    type: 'CROSS_TAB_MESSAGE',\n    from: fromAgentId,\n    to: toAgentId,\n    message: message,\n    timestamp: Date.",
+      "error": null
+    },
+    {
+      "id": 607,
+      "timestamp": "2026-01-25T20:22:23.844Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '280,320p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      connectWebSocket();\n      sendResponse({ success: true });\n      break;\n    \n    // ===== 跨 Tab 通信 =====\n    \n    case 'REGISTER_AGENT':\n      if (message.agentId && sender.tab?.id) {\n        registerAgent(message.agentId, sender.tab.id);\n        sendResponse({ success: true, tabId: sender.tab.id });\n      } else {\n        sendResponse({ success: false, error: 'Missing agentId or tabId' });\n      }\n      break;\n    \n    case 'CROSS_TAB_SEND':\n      if (message.to && message.message) {\n    ",
+      "error": null
+    },
+    {
+      "id": 608,
+      "timestamp": "2026-01-25T20:22:33.666Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'setAgentId|detectAgentId' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "1477:  function setAgentId(id) {\n1485:  function detectAgentId(text) {\n1498:        setAgentId(match[1]);\n1521:          detectAgentId(text);\n",
+      "error": null
+    },
+    {
+      "id": 609,
+      "timestamp": "2026-01-25T20:22:40.045Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1485,1525p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function detectAgentId(text) {\n    // 匹配 \"你是 xxx_agent\" 或 \"I am xxx_agent\" 等模式\n    const patterns = [\n      /你是\\s*[`'\"]?(\\w+_agent)[`'\"]?/i,\n      /我是\\s*[`'\"]?(\\w+_agent)[`'\"]?/i,\n      /I am\\s*[`'\"]?(\\w+_agent)[`'\"]?/i,\n      /agent.?id[：:=]\\s*[`'\"]?(\\w+_agent)[`'\"]?/i,\n      /设置.*身份.*[`'\"]?(\\w+_agent)[`'\"]?/i\n    ];\n    \n    for (const pattern of patterns) {\n      const match = text.match(pattern);\n      if (match && match[1] && match[1] !== agentId) {\n        setAgentId(match[1]);\n        r",
+      "error": null
+    },
+    {
+      "id": 610,
+      "timestamp": "2026-01-25T20:22:50.243Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '600,700p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "          start: match.index,\n          end: match.index + match[0].length\n        });\n      }\n    }\n    \n    if (toolCalls.length > 0) return toolCalls;\n    \n    const blockRegex = /\\[\\[TOOL:(\\w+)\\]\\]([\\s\\S]*?)\\[\\[\\/TOOL\\]\\]/g;\n    \n    while ((match = blockRegex.exec(text)) !== null) {\n      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {\n        continue;\n      }\n      \n      const toolName = match[1];\n      const body = match[2].trim();\n      const params = parsePara",
+      "error": null
+    },
+    {
+      "id": 611,
+      "timestamp": "2026-01-25T20:22:57.259Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'createPanel|agent-panel' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "956:  function createPanel() {\n957:    if (document.getElementById('agent-panel')) return;\n960:    panel.id = 'agent-panel';\n982:      #agent-panel {\n998:      #agent-panel.minimized {\n1002:      #agent-panel.minimized #agent-tools,\n1003:      #agent-panel.minimized #agent-logs,\n1004:      #agent-panel.minimized #agent-actions button:not(#agent-minimize) {\n1154:      const panel = document.getElementById('agent-panel');\n1508:    createPanel();\n",
+      "error": null
+    },
+    {
+      "id": 612,
+      "timestamp": "2026-01-25T20:23:03.846Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1100,1160p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      state.lastMessageText = '';\n      updateStatus();\n      addLog('🗑️ 已重置', 'info');\n    };\n    \n    document.getElementById('agent-retry-last').onclick = () => {\n      if (!state.lastToolCall) {\n        addLog('❌ 没有可重试的命令', 'error');\n        return;\n      }\n      const { tool, params, timestamp } = state.lastToolCall;\n      const age = Math.round((Date.now() - timestamp) / 1000);\n      addLog(`🔁 重试 ${tool} (${age}秒前)`, 'info');\n      \n      // 重新执行\n      const callId = `${Date.now()}-${Mat",
+      "error": null
+    },
+    {
+      "id": 613,
+      "timestamp": "2026-01-25T20:23:10.243Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1050,1100p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      }\n      #agent-logs {\n        max-height: 180px;\n        overflow-y: auto;\n        margin-bottom: 10px;\n        padding: 8px;\n        background: rgba(0,0,0,0.3);\n        border-radius: 8px;\n      }\n      .agent-log-entry {\n        margin-bottom: 4px;\n        padding: 4px 6px;\n        border-radius: 4px;\n        background: rgba(255,255,255,0.03);\n        border-left: 3px solid;\n        font-size: 11px;\n        line-height: 1.4;\n        word-break: break-all;\n      }\n      .agent-log-entry",
+      "error": null
+    },
+    {
+      "id": 614,
+      "timestamp": "2026-01-25T20:23:16.447Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '960,1020p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    panel.id = 'agent-panel';\n    panel.innerHTML = `\n      <div id=\"agent-header\">\n        <span id=\"agent-title\">🤖 Agent v31</span>\n        <span id=\"agent-status\">初始化</span>\n      </div>\n      <div id=\"agent-executing\"><span class=\"exec-spinner\">⚙️</span><span class=\"exec-tool\">工具名</span><span class=\"exec-time\">0.0s</span></div>\n      <div id=\"agent-tools\"></div>\n      <div id=\"agent-logs\"></div>\n      <div id=\"agent-actions\">\n        <button id=\"agent-copy-prompt\" title=\"复制系统提示词给AI\">📋 提示词<",
+      "error": null
+    },
+    {
+      "id": 615,
+      "timestamp": "2026-01-25T20:23:25.635Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "<span id=\"agent-title\">🤖 Agent v31</span>",
+            "newText": "<span id=\"agent-title\">🤖 Agent v32</span>\n        <span id=\"agent-id\" title=\"点击查看在线Agent\" style=\"cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px\"></span>"
+          },
+          {
+            "oldText": "<button id=\"agent-reconnect\" title=\"重连服务器\">🔄</button>",
+            "newText": "<button id=\"agent-reconnect\" title=\"重连服务器\">🔄</button>\n        <button id=\"agent-list\" title=\"查看在线Agent\">👥</button>"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -959,9 +959,10 @@\n     const panel = document.createElement('div');\n     panel.id = 'agent-panel';\n     panel.innerHTML = `\n       <div id=\"agent-header\">\n-        <span id=\"agent-title\">🤖 Agent v31</span>\n+        <",
+      "error": null
+    },
+    {
+      "id": 616,
+      "timestamp": "2026-01-25T20:23:32.447Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1155,1175p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    document.getElementById('agent-minimize').onclick = () => {\n      const panel = document.getElementById('agent-panel');\n      const btn = document.getElementById('agent-minimize');\n      panel.classList.toggle('minimized');\n      btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';\n    };\n\n    makeDraggable(panel);\n  }\n\n  function makeDraggable(el) {\n    const header = el.querySelector('#agent-header');\n    let isDragging = false;\n    let startX, startY, startLeft, startBotto",
+      "error": null
+    },
+    {
+      "id": 617,
+      "timestamp": "2026-01-25T20:23:45.235Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "    document.getElementById('agent-minimize').onclick = () => {\n      const panel = document.getElementById('agent-panel');\n      const btn = document.getElementById('agent-minimize');\n      panel.classList.toggle('minimized');\n      btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';\n    };\n\n    makeDraggable(panel);\n  }",
+            "newText": "    document.getElementById('agent-minimize').onclick = () => {\n      const panel = document.getElementById('agent-panel');\n      const btn = document.getElementById('agent-minimize');\n      panel.classList.toggle('minimized');\n      btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';\n    };\n\n    // 查看在线 Agent 列表\n    document.getElementById('agent-list').onclick = () => {\n      chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {\n        if (chrome.runtime.lastError) {\n          addLog(`❌ 查询失败: ${chrome.runtime.lastError.message}`, 'error');\n          return;\n        }\n        if (resp?.success && resp.agents) {\n          if (resp.agents.length === 0) {\n            addLog('📭 暂无在线 Agent', 'info');\n          } else {\n            const list = resp.agents.map(a => `${a.agentId}(Tab:${a.tabId})`).join(', ');\n            addLog(`👥 在线: ${list}`, 'info');\n          }\n        } else {\n          addLog('❌ 查询失败', 'error');\n        }\n      });\n    };\n\n    // 点击 Agent ID 也显示在线列表\n    document.getElementById('agent-id').onclick = () => {\n      document.getElementById('agent-list').click();\n    };\n\n    makeDraggable(panel);\n  }\n\n  // 更新面板上的 Agent ID 显示\n  function updateAgentIdDisplay() {\n    const el = document.getElementById('agent-id');\n    if (el) {\n      el.textContent = agentId ? `[${agentId}]` : '[未设置]';\n      el.style.color = agentId ? '#10b981' : '#9ca3af';\n    }\n  }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1158,11 +1158,45 @@\n       panel.classList.toggle('minimized');\n       btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';\n     };\n \n+    // 查看在线 Agent 列表\n+    document.getElementById('agent-list').o",
+      "error": null
+    },
+    {
+      "id": 618,
+      "timestamp": "2026-01-25T20:23:54.632Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "  function setAgentId(id) {\n    agentId = id;\n    CONFIG.AGENT_ID = id;\n    registerAsAgent(id);  // 向 background.js 注册\n    startAutoCheck();\n  }",
+            "newText": "  function setAgentId(id) {\n    agentId = id;\n    CONFIG.AGENT_ID = id;\n    registerAsAgent(id);  // 向 background.js 注册\n    updateAgentIdDisplay();\n    startAutoCheck();\n  }"
+          },
+          {
+            "oldText": "      doRegister(savedId);\n      startHeartbeat();\n    }\n  }",
+            "newText": "      doRegister(savedId);\n      startHeartbeat();\n      updateAgentIdDisplay();\n    }\n  }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1467,8 +1467,9 @@\n       CONFIG.AGENT_ID = savedId;\n       addLog(`🔄 已恢复身份: ${savedId}`, 'info');\n       doRegister(savedId);\n       startHeartbeat();\n+      updateAgentIdDisplay();\n     }\n   }\n \n   // 发送前确保自己已注册，然后",
+      "error": null
+    },
+    {
+      "id": 619,
+      "timestamp": "2026-01-25T20:24:01.253Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1545,1580p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    \n    createPanel();\n\n    setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);\n    \n    // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）\n    let lastCheckedUserMsgCount = 0;\n    setInterval(() => {\n      const userMessages = document.querySelectorAll('.conversation-statement.user');\n      if (userMessages.length > lastCheckedUserMsgCount) {\n        const lastUserMsg = userMessages[userMessages.length - 1];\n        const text = lastUserMsg.innerText || '';\n        // 排除跨 Tab 消息的内容\n        if (!te",
+      "error": null
+    },
+    {
+      "id": 620,
+      "timestamp": "2026-01-25T20:24:08.055Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1585,1610p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    addLog('💡 点击「📋 提示词」复制给AI', 'info');\n    \n    // 恢复之前保存的 Agent 身份\n    restoreAgentId();\n  }\n\n  if (document.readyState === 'loading') {\n    document.addEventListener('DOMContentLoaded', init);\n  } else {\n    setTimeout(init, 100);\n  }\n\n})();\n",
+      "error": null
+    },
+    {
+      "id": 621,
+      "timestamp": "2026-01-25T20:24:15.433Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "    addLog('💡 点击「📋 提示词」复制给AI', 'info');\n    \n    // 恢复之前保存的 Agent 身份\n    restoreAgentId();\n  }",
+            "newText": "    addLog('💡 点击「📋 提示词」复制给AI', 'info');\n    \n    // 恢复之前保存的 Agent 身份\n    restoreAgentId();\n    \n    // 初始化 Agent ID 显示\n    setTimeout(updateAgentIdDisplay, 100);\n  }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1585,8 +1585,11 @@\n     addLog('💡 点击「📋 提示词」复制给AI', 'info');\n     \n     // 恢复之前保存的 Agent 身份\n     restoreAgentId();\n+    \n+    // 初始化 Agent ID 显示\n+    setTimeout(updateAgentIdDisplay, 100);\n   }\n \n   if (document.rea",
+      "error": null
     }
   ],
-  "nextId": 604
+  "nextId": 622
 }
