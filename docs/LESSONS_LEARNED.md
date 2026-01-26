@@ -296,3 +296,43 @@ cat > /private/tmp/content.txt << 'EOF'
 ---
 
 *最后更新: 2026-01-26*
+
+## 十一、跨Tab消息队列机制详解
+
+### 架构概述（2026-01-26 分析）
+
+**三层防护机制：**
+
+1. **消息队列 (messageQueue)** - content.js 第37-38行
+   - 跨Tab消息通过 `enqueueMessage()` 入队
+   - FIFO 顺序处理，间隔 3 秒
+
+2. **AI生成状态检测 (isAIGenerating)** - 第49-57行
+   - 检测停止按钮、typing indicator 等
+   - 多种选择器兼容不同网站
+
+3. **安全发送 (sendMessageSafe)** - 第399-406行
+   - 等待 AI 输出完成（最长30秒）
+   - 双重确认：500ms 后二次检查
+
+### 消息流转路径
+
+```
+发送方 @SEND:target:msg
+  ↓
+content.js sendToAgent()
+  ↓
+background.js CROSS_TAB_SEND → sendCrossTabMessage()
+  ↓
+目标Tab content.js CROSS_TAB_MESSAGE
+  ↓
+enqueueMessage() → processMessageQueue() → sendMessageSafe()
+```
+
+### 已知限制
+
+- 无发送失败重试
+- 无队列长度上限
+- 依赖 DOM 选择器检测 AI 状态
+
+
