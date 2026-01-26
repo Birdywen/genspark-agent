@@ -345,3 +345,11 @@ enqueueMessage() → processMessageQueue() → sendMessageSafe()
   - 拦截网络请求需要更谨慎
   - 应该先在独立环境测试
   - 使用 response.clone() 避免消费原始 response
+
+### SSE 拦截失败记录 (2026-01-26 补充)
+
+**尝试 v2**：使用 `response.clone()` + 只读处理
+**结果**：仍然导致工具不执行
+**结论**：在 content script 中覆盖 `window.fetch` 是不安全的，可能被页面检测或干扰页面功能
+
+**最终决定**：放弃 SSE 拦截，保持 DOM 观察方案
