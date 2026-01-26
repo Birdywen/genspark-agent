@@ -38,11 +38,92 @@
     isProcessingQueue: false,
     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
-    lastToolCall: null
+    lastToolCall: null,
+    // SSE 拦截 v2
+    sseBuffer: '',
+    sseEnabled: true
   };
 
   function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
+  }
+
+  // ============== SSE 拦截 v2 (安全版) ==============
+
+  function initSSEIntercept() {
+    if (!state.sseEnabled) return;
+    
+    try {
+      const originalFetch = window.fetch;
+      window.fetch = async function(...args) {
+        const response = await originalFetch.apply(this, args);
+        
+        // 只拦截 ask_proxy 端点
+        const url = args[0]?.toString() || '';
+        if (url.includes('/api/agent/ask_proxy')) {
+          try {
+            // 使用 clone 完全不影响原始流
+            const clone = response.clone();
+            processSSEStreamSafe(clone.body);
+          } catch (e) {
+            // 静默失败，不影响页面
+          }
+        }
+        
+        return response;
+      };
+      console.log('[Agent] SSE intercept v2 ready');
+    } catch (e) {
+      console.log('[Agent] SSE intercept failed:', e.message);
+    }
+  }
+
+  async function processSSEStreamSafe(body) {
+    if (!body) return;
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          state.sseBuffer = '';
+          break;
+        }
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const data = line.slice(5).trim();
+            if (data && data !== '[DONE]') {
+              parseSSEDelta(data);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // 静默失败
+    }
+  }
+
+  function parseSSEDelta(data) {
+    try {
+      const json = JSON.parse(data);
+      if (json.type === 'message_field_delta' && json.delta) {
+        state.sseBuffer += json.delta;
+        // 检测工具调用（简单版）
+        if (state.sseBuffer.includes('@TOOL:') && state.sseBuffer.includes('}')) {
+          // 工具调用检测到，可以在这里做预处理
+          // 但实际执行仍由 DOM 扫描触发
+        }
+      }
+    } catch (e) {
+      // 非 JSON 格式，忽略
+    }
   }
 
   // ============== AI 生成状态检测 ==============
@@ -1442,6 +1523,9 @@ ${tip}
   });
 
   // ============== 初始化 ==============
+
+  // SSE 拦截 v2
+  initSSEIntercept();
 
   // ============== 自动检查任务 ==============
 
