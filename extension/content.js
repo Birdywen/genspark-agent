@@ -74,6 +74,30 @@
     };
     
     console.log('[Agent SSE] intercept initialized');
+    
+    // 同时拦截 XMLHttpRequest
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...args) {
+      this._url = url;
+      return originalXHROpen.apply(this, [method, url, ...args]);
+    };
+    
+    XMLHttpRequest.prototype.send = function(body) {
+      this.addEventListener('readystatechange', function() {
+        if (this.readyState === 3 || this.readyState === 4) {
+          const contentType = this.getResponseHeader('content-type') || '';
+          if (contentType.includes('stream') || contentType.includes('event-stream')) {
+            console.log('[Agent SSE] XHR stream:', this._url);
+            console.log('[Agent SSE] XHR response:', this.responseText?.slice(0, 200));
+          }
+        }
+      });
+      return originalXHRSend.apply(this, arguments);
+    };
+    
+    console.log('[Agent SSE] XHR intercept initialized');
   }
 
   async function processSSEStream(body) {
