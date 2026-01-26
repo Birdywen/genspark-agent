@@ -942,10 +942,21 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
     
+    const tips = [
+      '举例时不加@: 写 TOOL:{...} 而非 @TOOL:{...}',
+      '每次只调用一个工具，等结果后再继续',
+      '工具详情: read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md',
+      '浏览器操作前先 take_snapshot 获取 uid',
+      '跨Agent通信: @SEND:agent_id:消息',
+      'edit_file 比 write_file 更安全(只改局部)'
+    ];
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+    
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
 ${content}
 \`\`\`
+${tip}
 请根据上述结果继续。如果任务已完成，请输出 @DONE`;
   }
 
