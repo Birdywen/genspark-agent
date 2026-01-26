@@ -284,18 +284,15 @@ cat > /private/tmp/content.txt << 'EOF'
 
 ---
 
-## 九、长内容写入最佳实践
+---
 
-### 问题根源
-JSON 参数中的长字符串容易触发解析错误，特别是包含：换行符、引号、反斜杠、模板字符串
+## 十、已知问题与待优化
 
-### 稳定性排序（从高到低）
-1. **node -e + 短脚本** - 最稳定，适合生成文件
-2. **heredoc (cat << EOF)** - 较稳定，注意用单引号 EOF
-3. **run_command + stdin** - 新发现，待验证
-4. **write_file** - 短内容OK，长内容易失败
-5. **edit_file** - 最不稳定，长内容几乎必失败
+### 跨 Tab 消息打断输出
+- **现象**：正在生成回复时，其他 Agent 消息插入导致输出截断
+- **原因**：跨 Tab 通信异步，消息到达时机不可控
+- **状态**：已有消息队列方案，运行中
 
-### Helper 脚本位置
-/Users/yay/workspace/genspark-agent/scripts/safe_write.js
-/Users/yay/workspace/genspark-agent/scripts/safe_edit.js
+---
+
+*最后更新: 2026-01-26*

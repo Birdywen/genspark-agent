@@ -1,60 +1,6 @@
 {
   "history": [
     {
-      "id": 955,
-      "timestamp": "2026-01-26T10:36:07.299Z",
-      "tool": "list_network_requests",
-      "params": {},
-      "success": true,
-      "resultPreview": "# list_network_requests response\n## Network requests\nNo requests found.",
-      "error": null
-    },
-    {
-      "id": 956,
-      "timestamp": "2026-01-26T10:36:15.967Z",
-      "tool": "click",
-      "params": {
-        "uid": "1_31"
-      },
-      "success": true,
-      "resultPreview": "# click response\nSuccessfully clicked on the element\n## Latest page snapshot\nuid=2_0 RootWebArea \"Genspark - News Briefing\" url=\"https://www.genspark.ai/news#item-www.independent.co.uk_news_world_americas_minneapolis-alex-pretti-shooting-trump-live-updates-b2907406.html\"\n  uid=2_1 image \"logo\" url=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAFYSURBVHgBtVY9kkRAGP3U7gGEQqHQDQiFwg0dwQ3WDRyBGziCcgKcoIUyQhvZfj",
-      "error": null
-    },
-    {
-      "id": 957,
-      "timestamp": "2026-01-26T10:40:03.965Z",
-      "tool": "run_command",
-      "params": {
-        "command": "curl -s 'https://www.genspark.ai/api/news/fetch_news_feed_by_lang' \\\n  -H 'accept: */*' \\\n  -H 'content-type: application/json' \\\n  -b 'i18n_set=en-US; agree_terms=0; gslogin=0; session_id=84dd03b0-e6cc-43fa-91b1-b42d84de3495:363a83231cc531f8985ee0d3a0d05593ad63e40a7d348933c68990f32d881c51; ai_user=wXMRJJf2cGyESOJJxBKgw1|2026-01-25T05:19:47.823Z' \\\n  -H 'origin: https://www.genspark.ai' \\\n  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' \\\n  --data-raw '{\"locale\":\"en-US\",\"display_lang\":\"en\",\"model\":\"\",\"channel_id\":\"\",\"selected_cat_list\":[],\"nb_id\":\"\",\"nb_ch\":\"\",\"offset\":0}' 2>/dev/null | python3 -c \"import sys,json; d=json.load(sys.stdin); print(json.dumps(d['news_briefs'][0] if 'news_briefs' in d else d, indent=2, ensure_ascii=False)[:8000])\""
-      },
-      "success": true,
-      "resultPreview": "1\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    import sys,json; d=json.load(sys.stdin); print(json.dumps(d['news_briefs'][0] if 'news_briefs' in d else d, indent=2, ensure_ascii=False)[:8000])\n                       ~~~~~~~~~^^^^^^^^^^^\n  File \"/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py\", line 298, in load\n    return loads(fp.read(),\n        cls=cls, object_hook=object_hook,\n        parse_floa",
-      "error": null
-    },
-    {
-      "id": 958,
-      "timestamp": "2026-01-26T10:40:14.659Z",
-      "tool": "evaluate_script",
-      "params": {
-        "function": "() => fetch('/api/news/fetch_news_feed_by_lang', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale: 'en-US', display_lang: 'en', model: '', channel_id: '', selected_cat_list: [], nb_id: '', nb_ch: '', offset: 0 }) }).then(r => r.json()).then(d => JSON.stringify(d.news_briefs ? d.news_briefs[0] : d, null, 2).substring(0, 8000))"
-      },
-      "success": true,
-      "resultPreview": "# evaluate_script response\nScript ran on page and returned:\n```json\n\"{\\n  \\\"results\\\": [\\n    {\\n      \\\"id\\\": \\\"www.independent.co.uk_news_world_americas_minneapolis-alex-pretti-shooting-trump-live-updates-b2907406.html\\\",\\n      \\\"link\\\": \\\"https://www.independent.co.uk/news/world/americas/minneapolis-alex-pretti-shooting-trump-live-updates-b2907406.html\\\",\\n      \\\"title\\\": \\\"Alex Pretti shooting: Obamas and Clinton speak out on fatal Minneapolis killing\\\",\\n      \\\"thumbnail\\\": \\\"https://ssp",
-      "error": null
-    },
-    {
-      "id": 959,
-      "timestamp": "2026-01-26T10:40:54.121Z",
-      "tool": "write_file",
-      "params": {
-        "path": "/Users/yay/workspace/english_youtube_channel/scripts/fetch_news.py",
-        "content": "#!/usr/bin/env python3\n\"\"\"\n从 Genspark News API 获取新闻数据\n包含完整的 podcast 对话内容\n\"\"\"\n\nimport json\nimport requests\nfrom pathlib import Path\nfrom datetime import datetime\n\nPROJECT_DIR = Path(__file__).parent.parent\nDATA_DIR = PROJECT_DIR / \"data\"\n\n# API 配置\nAPI_URL = \"https://www.genspark.ai/api/news/fetch_news_feed_by_lang\"\n\ndef fetch_news(offset=0, locale=\"en-US\", display_lang=\"en\", category_list=None):\n    \"\"\"\n    从 Genspark API 获取新闻数据\n    \n    注意：需要有效的 session cookie，建议通过浏览器 DevTools 获取\n    \"\"\"\n    payload = {\n        \"locale\": locale,\n        \"display_lang\": display_lang,\n        \"model\": \"\",\n        \"channel_id\": \"\",\n        \"selected_cat_list\": category_list or [],\n        \"nb_id\": \"\",\n        \"nb_ch\": \"\",\n        \"offset\": offset\n    }\n    \n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"*/*\",\n        \"Origin\": \"https://www.genspark.ai\",\n        \"User-Agent\": \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36\"\n    }\n    \n    # 需要有效 cookie\n    # 建议通过浏览器获取数据后保存\n    \n    try:\n        resp = requests.post(API_URL, json=payload, headers=headers)\n        resp.raise_for_status()\n        return resp.json()\n    except Exception as e:\n        print(f\"API 请求失败: {e}\")\n        return None\n\n\ndef parse_podcast_content(podcast_data):\n    \"\"\"\n    解析 podcast 数据，提取对话内容\n    \"\"\"\n    if not podcast_data:\n        return None\n    \n    result = {\n        \"audio_url\": podcast_data.get(\"audio_url\"),\n        \"duration\": podcast_data.get(\"duration\"),\n        \"speakers\": podcast_data.get(\"speakers\", []),\n        \"dialogue\": []\n    }\n    \n    # 解析 content JSON\n    content_str = podcast_data.get(\"content\", \"\")\n    if content_str:\n        try:\n            content = json.loads(content_str)\n            result[\"instruction\"] = content.get(\"instruction\", \"\")\n            result[\"dialogue\"] = content.get(\"dialogue\", [])\n        except json.JSONDecodeError:\n            result[\"raw_content\"] = content_str\n    \n    return result\n\n\ndef extract_podcast_info(news_item):\n    \"\"\"\n    从新闻项中提取完整的 podcast 信息\n    \"\"\"\n    podcast = news_item.get(\"podcast\", {})\n    \n    # 从 audio_url 提取 ID\n    audio_url = podcast.get(\"audio_url\", \"\")\n    podcast_id = \"\"\n    if audio_url:\n        # 格式: https://cdn1.genspark.ai/user-upload-image/8/UUID.mp3\n        podcast_id = audio_url.split(\"/\")[-1].replace(\".mp3\", \"\")\n    \n    return {\n        \"id\": podcast_id,\n        \"news_id\": news_item.get(\"id\", \"\"),\n        \"title\": news_item.get(\"title_i18n\") or news_item.get(\"title\", \"\"),\n        \"summary\": news_item.get(\"summary_i18n\", \"\"),\n        \"source\": news_item.get(\"source_name\", \"\"),\n        \"link\": news_item.get(\"link\", \"\"),\n        \"thumbnail\": news_item.get(\"thumbnail\", \"\"),\n        \"category\": news_item.get(\"category_list\", []),\n        \"published_ts\": news_item.get(\"published_ts\"),\n        \"audio_url\": audio_url,\n        \"duration\": podcast.get(\"duration\", 0),\n        \"speakers\": podcast.get(\"speakers\", []),\n        \"dialogue\": [],\n        \"instruction\": \"\"\n    }\n\n\ndef process_news_briefs(data):\n    \"\"\"\n    处理 API 返回的 news_briefs 数据\n    \"\"\"\n    podcasts = []\n    \n    news_briefs = data.get(\"news_briefs\", [])\n    \n    for brief in news_briefs:\n        results = brief.get(\"results\", [])\n        for item in results:\n            if item.get(\"podcast\") and item[\"podcast\"].get(\"audio_url\"):\n                info = extract_podcast_info(item)\n                \n                # 解析对话内容\n                content_str = item[\"podcast\"].get(\"content\", \"\")\n                if content_str:\n                    try:\n                        content = json.loads(content_str)\n                        info[\"instruction\"] = content.get(\"instruction\", \"\")\n                        info[\"dialogue\"] = content.get(\"dialogue\", [])\n                    except json.JSONDecodeError:\n                        pass\n                \n                podcasts.append(info)\n    \n    return podcasts\n\n\ndef save_podcasts(podcasts, filename=None):\n    \"\"\"\n    保存 podcast 数据到文件\n    \"\"\"\n    DATA_DIR.mkdir(parents=True, exist_ok=True)\n    \n    if not filename:\n        timestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")\n        filename = f\"podcasts_{timestamp}.json\"\n    \n    filepath = DATA_DIR / filename\n    \n    with open(filepath, \"w\", encoding=\"utf-8\") as f:\n        json.dump(podcasts, f, indent=2, ensure_ascii=False)\n    \n    print(f\"保存了 {len(podcasts)} 条 podcast 到 {filepath}\")\n    return filepath\n\n\ndef generate_transcript_from_dialogue(dialogue):\n    \"\"\"\n    从对话数据生成纯文本 transcript\n    \"\"\"\n    lines = []\n    for item in dialogue:\n        if item.get(\"type\") == \"speech\":\n            content = item.get(\"content\", \"\")\n            # 移除方括号中的说明 [seriously], [pause] 等\n            import re\n            clean_content = re.sub(r'\\[.*?\\]', '', content).strip()\n            # 移除 (pause) 等\n            clean_content = re.sub(r'\\(.*?\\)', '', clean_content).strip()\n            if clean_content:\n                lines.append(clean_content)\n    return \"\\n\".join(lines)\n\n\ndef main():\n    import argparse\n    \n    parser = argparse.ArgumentParser(description=\"Fetch news podcasts from Genspark\")\n    parser.add_argument(\"--input\", \"-i\", help=\"Input JSON file (from browser DevTools)\")\n    parser.add_argument(\"--output\", \"-o\", help=\"Output filename\")\n    \n    args = parser.parse_args()\n    \n    if args.input:\n        # 从文件读取（浏览器导出的数据）\n        with open(args.input, \"r\", encoding=\"utf-8\") as f:\n            data = json.load(f)\n        \n        podcasts = process_news_briefs(data)\n        save_podcasts(podcasts, args.output)\n        \n        # 显示摘要\n        print(f\"\\n找到 {len(podcasts)} 条 podcast:\")\n        for p in podcasts[:5]:\n            print(f\"  - [{p['duration']}s] {p['title'][:50]}...\")\n            if p['dialogue']:\n                print(f\"    对话: {len(p['dialogue'])} 段\")\n    else:\n        print(\"请提供 --input 参数指定从浏览器导出的 JSON 文件\")\n        print(\"\\n获取数据方法:\")\n        print(\"1. 打开 https://www.genspark.ai/news\")\n        print(\"2. 打开 DevTools -> Network -> Fetch/XHR\")\n        print(\"3. 找到 fetch_news_feed_by_lang 请求\")\n        print(\"4. 右键 -> Copy -> Copy response\")\n        print(\"5. 保存为 JSON 文件\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
-      },
-      "success": true,
-      "resultPreview": "Successfully wrote to /Users/yay/workspace/english_youtube_channel/scripts/fetch_news.py",
-      "error": null
-    },
-    {
       "id": 960,
       "timestamp": "2026-01-26T10:41:06.315Z",
       "tool": "evaluate_script",
@@ -1087,7 +1033,62 @@
       "success": true,
       "resultPreview": "logged\n",
       "error": null
+    },
+    {
+      "id": 1055,
+      "timestamp": "2026-01-26T12:08:24.374Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git status"
+      },
+      "success": true,
+      "resultPreview": "On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n\tmodified:   docs/LESSONS_LEARNED.md\n\tmodified:   docs/TOOLS_QUICK_REFERENCE.md\n\tnew file:   scripts/safe_edit.js\n\tnew file:   scripts/safe_write.js\n\tnew file:   scripts/session_counter.js\n\tmodified:   server-v2/command-history.json\n\n",
+      "error": null
+    },
+    {
+      "id": 1056,
+      "timestamp": "2026-01-26T12:08:33.142Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git commit -m 'feat: 添加经验库机制与工具稳定性规则\n\n- 新增黄金法则（长内容写入规则）\n- 新增 safe_write.js / safe_edit.js helper 脚本\n- 新增 session_counter.js 轮次计数器\n- 更新 TOOLS_QUICK_REFERENCE.md 小贴士\n- 30轮对话预警机制\n- 结构化失败日志'"
+      },
+      "success": true,
+      "resultPreview": "[main 9debebc] feat: 添加经验库机制与工具稳定性规则\n 6 files changed, 767 insertions(+), 549 deletions(-)\n create mode 100644 scripts/safe_edit.js\n create mode 100644 scripts/safe_write.js\n create mode 100644 scripts/session_counter.js\n",
+      "error": null
+    },
+    {
+      "id": 1057,
+      "timestamp": "2026-01-26T12:08:42.482Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "To https://github.com/Birdywen/genspark-agent.git\n   721391d..9debebc  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 1058,
+      "timestamp": "2026-01-26T12:11:09.173Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/genspark-agent/scripts/session_counter.js status && echo '---' && cat /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md"
+      },
+      "success": true,
+      "resultPreview": "{\n  \"session_id\": \"20260126_1769426381731\",\n  \"start_time\": \"2026-01-26T11:19:41.731Z\",\n  \"round\": 20,\n  \"warning_threshold\": 30\n}\n---\n# 经验教训库\n\n> 持续更新，避免重复踩坑\n\n---\n\n## 零、黄金法则（必读）\n\n**长内容写入规则：**\n- 短内容(<500字符) → edit_file/write_file\n- 长内容写入 → run_command+stdin 或 safe_write.js\n- 长内容替换 → safe_edit.js（自动.bak）\n\n**避免误执行：** 示例中不写真实前缀，用 TOOL: 代替\n\n---\n\n## 一、工具使用技巧\n\n### ✅ 有效的做法\n\n1. **长代码修改用 Node 脚本**\n   - 先 `write_file` 写脚本到 `/private/tmp/xxx.js`\n   - 再 `run_command` 执行 `node /private/tmp/xxx.js`\n   - 原因：直接用",
+      "error": null
+    },
+    {
+      "id": 1059,
+      "timestamp": "2026-01-26T12:11:23.350Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e '\nconst fs = require(\"fs\");\nlet c = fs.readFileSync(\"/Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md\", \"utf8\");\n// 删除重复的第九章\nconst idx = c.lastIndexOf(\"## 九、长内容写入最佳实践\");\nif (idx > 0) {\n  const firstIdx = c.indexOf(\"## 九、长内容写入最佳实践\");\n  if (firstIdx < idx) {\n    c = c.substring(0, idx).trim();\n  }\n}\n// 添加第十章\nc += `\\n\\n---\\n\\n## 十、已知问题与待优化\\n\\n### 跨 Tab 消息打断输出\\n- **现象**：正在生成回复时，其他 Agent 消息插入导致输出截断\\n- **原因**：跨 Tab 通信异步，消息到达时机不可控\\n- **状态**：已有消息队列方案，运行中\\n\\n---\\n\\n*最后更新: 2026-01-26*\\n`;\nfs.writeFileSync(\"/Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md\", c);\nconsole.log(\"cleaned and updated\");'"
+      },
+      "success": true,
+      "resultPreview": "cleaned and updated\n",
+      "error": null
     }
   ],
-  "nextId": 1055
+  "nextId": 1060
 }
