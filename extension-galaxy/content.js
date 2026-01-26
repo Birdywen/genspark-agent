@@ -82,22 +82,16 @@
   // ============== 系统提示词模板 ==============
   
   function generateSystemPrompt() {
-    const toolList = state.availableTools.length > 0 
-      ? state.availableTools.map(t => {
-          const name = t.name || t;
-          // 只取描述的第一句话
-          const desc = (t.description || '').split('.')[0];
-          return `- **${name}**: ${desc}`;
-        }).join('\n')
-      : `- **run_command**: 执行终端命令
-    command: <要执行的命令>
-- **read_file**: 读取文件内容
-    path: <文件路径>
-- **write_file**: 写入文件
-    path: <文件路径>
-    content: <文件内容>
-- **list_directory**: 列出目录内容
-    path: <目录路径>`;
+    const toolCount = state.availableTools.length || 67;
+    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：
+- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等
+- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  
+- **命令执行** (1个): run_command
+- **代码分析** (26个): register_project_tool, find_text, get_symbols 等
+
+**需要查看完整工具文档时：**
+- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md
+- 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md`;
 
     const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。
 
@@ -128,7 +122,7 @@ ${'@'}TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":
 
 ## 可用工具
 
-${toolList}
+${toolSummary}
 
 ## 规则
 
