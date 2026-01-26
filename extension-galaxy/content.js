@@ -1,13 +1,13 @@
-// content.js v32 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+// content.js v2 - Galaxy AI 修复 data-testid 选择器，支持 p.overflow-wrap-anywhere
 (function() {
   'use strict';
 
   // 防止脚本重复加载
-  if (window.__GENSPARK_AGENT_LOADED__) {
+  if (window.__GALAXY_AGENT_LOADED__) {
     console.log('[Agent] 已加载，跳过重复初始化');
     return;
   }
-  window.__GENSPARK_AGENT_LOADED__ = true;
+  window.__GALAXY_AGENT_LOADED__ = true;
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
@@ -58,7 +58,7 @@
         if (btn && btn.offsetParent !== null) return true;
       } catch (e) {}
     }
-    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');
+    const lastMsg = document.querySelector('main [data-testid="message-content"]:last-of-type');
     if (lastMsg) {
       const cl = lastMsg.className.toLowerCase();
       if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;
@@ -214,7 +214,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
   // ============== DOM 操作 (Genspark 专用) ==============
   
   function getAIMessages() {
-    return Array.from(document.querySelectorAll('.conversation-statement.assistant'));
+    return Array.from(document.querySelectorAll('main [data-testid="message-content"], main div.user-message'));
   }
 
   function getLatestAIMessage() {
@@ -222,9 +222,13 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     if (messages.length === 0) return { text: '', index: -1, element: null };
     const lastMsg = messages[messages.length - 1];
     
-    const contentEl = lastMsg.querySelector('.markdown-viewer') || 
-                      lastMsg.querySelector('.bubble .content') ||
-                      lastMsg.querySelector('.bubble');
+    // Galaxy AI 使用 div.not-prose 容器包含消息内容
+    const contentEl = lastMsg.querySelector('div.not-prose') ||
+                      lastMsg.querySelector('div#math-root') ||
+                      lastMsg.querySelector('p.overflow-wrap-anywhere') ||
+                      lastMsg.querySelector('div.overflow-wrap-anywhere') ||
+                      lastMsg.querySelector('[class*="markdown"]') || 
+                      lastMsg;
     
     return { 
       text: contentEl?.innerText || lastMsg.innerText || '', 
@@ -235,7 +239,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
   function getInputBox() {
     const selectors = [
-      'textarea.search-input',
+      'textarea[placeholder="Send a message..."]',
       'textarea[placeholder*="消息"]',
       'textarea[placeholder*="message" i]',
       'div[contenteditable="true"].search-input',
@@ -289,13 +293,13 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
       input.value = "";
       if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
+      input.dispatchEvent(new Event("input", {bubbles: true }));
+      input.dispatchEvent(new Event("change", {bubbles: true }));
     } else {
       input.innerHTML = '';
       input.innerText = text;
       input.dispatchEvent(new InputEvent('input', { 
-        bubbles: true, 
+       bubbles: true, 
         composed: true,
         data: text,
         inputType: 'insertText'
@@ -304,8 +308,8 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
     const trySend = (attempt = 1) => {
       const btnSelectors = [
-        '.enter-icon-wrapper',
-        'div[class*=enter-icon]',
+        'button[type="submit"]',
+        'button[class*=send]',
         'button[type="submit"]',
         'button.send-button',
         'button[aria-label*="send" i]',
@@ -322,7 +326,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
             code: 'Enter', 
             keyCode: 13,
             which: 13,
-            bubbles: true,
+           bubbles: true,
             cancelable: true
           }));
         });
@@ -960,7 +964,7 @@ ${content}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v32</span>
+        <span id="agent-title">🤖 Galaxy Agent v1</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
       </div>
@@ -1541,7 +1545,7 @@ ${content}
   }
 
   function init() {
-    log('初始化 Agent v31 (Genspark)');
+    log('初始化 Galaxy Agent v1 (Genspark)');
     
     createPanel();
 
@@ -1550,7 +1554,7 @@ ${content}
     // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
     let lastCheckedUserMsgCount = 0;
     setInterval(() => {
-      const userMessages = document.querySelectorAll('.conversation-statement.user');
+      const userMessages = document.querySelectorAll('main div.user-message');
       if (userMessages.length > lastCheckedUserMsgCount) {
         const lastUserMsg = userMessages[userMessages.length - 1];
         const text = lastUserMsg.innerText || '';
@@ -1581,7 +1585,7 @@ ${content}
       });
     }, 500);
 
-    addLog('🚀 Agent v31 已启动', 'success');
+    addLog('🚀 Galaxy Agent v1 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
     // 恢复之前保存的 Agent 身份

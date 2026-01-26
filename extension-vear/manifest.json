@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Vear Agent Bridge",
+  "version": "1.0.0",
+  "description": "将 Vear.com 聊天窗口转变为 AI Agent 运行时",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://vear.com/*",
+    "https://www.vear.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://vear.com/*", "https://www.vear.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
