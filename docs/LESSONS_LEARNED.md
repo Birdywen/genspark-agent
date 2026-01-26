@@ -4,6 +4,17 @@
 
 ---
 
+## 零、黄金法则（必读）
+
+**长内容写入规则：**
+- 短内容(<500字符) → edit_file/write_file
+- 长内容写入 → run_command+stdin 或 safe_write.js
+- 长内容替换 → safe_edit.js（自动.bak）
+
+**避免误执行：** 示例中不写真实前缀，用 TOOL: 代替
+
+---
+
 ## 一、工具使用技巧
 
 ### ✅ 有效的做法
@@ -98,6 +109,48 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents
 
 ## 四、Context 管理
 
+### 对话轮次预警机制 ⚠️
+
+**规则：每 30 轮对话后发出预警（可调整）
+
+**数据收集目的：**
+- 观察多少轮对话后开始卡顿
+- 分析 token 量与响应速度的关系
+- 找到最佳的对话轮次阈值
+
+预警内容：
+```
+⚠️ 【Context 预警】当前对话已超过 30 轮
+- 历史消息可能造成 context 挤压
+- 建议：总结当前进度，考虑开启新对话
+- 如需继续，请确认重要上下文已记录到经验库
+```
+
+### 踩坑自动记录机制 📝
+
+**触发条件：**
+- 工具执行失败超过 2 次
+- 发现新的坑点或解决方案
+- 用户反馈某方法无效
+
+**记录格式：**
+```markdown
+### [日期] 问题简述
+- **现象**：发生了什么
+- **原因**：为什么会这样
+- **解决**：如何修复
+- **预防**：以后怎么避免
+```
+
+### 进度总结机制 📊
+
+**何时总结：**
+- 复杂任务完成一个阶段
+- 对话即将结束
+- 收到预警时
+
+**总结写入位置：** `/Users/yay/workspace/TODO.md` 或本文件
+
 ### 问题
 - 长对话导致 context 过大
 - 不得不截断丢失上下文
@@ -130,3 +183,119 @@ git stash && git stash pop
 ---
 
 *最后更新: 2026-01-26*
+
+---
+
+## 六、工具执行失败日志
+
+**日志位置**: `/Users/yay/workspace/genspark-agent/logs/tool_failures.log`
+
+**触发记录的关键词**:
+- "不执行" / "没执行"
+- "没反应" / "没有反应"
+- "failed" / "失败"
+
+**记录内容**:
+- 时间（对话轮次）
+- 调用的工具和参数
+- 用户反馈的现象
+- 可能原因
+- 解决方案
+
+**用途**: 分析哪些工具调用模式容易失败，优化调用策略
+
+---
+
+## 七、新对话启动清单
+
+**每次新对话开始时，执行以下步骤：**
+
+1. 读取经验库：`read_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md`
+2. 检查待办事项：`cat /Users/yay/workspace/TODO.md`
+3. 查看失败日志（可选）：`tail -30 /Users/yay/workspace/genspark-agent/logs/tool_failures.log`
+4. 初始化轮次计数：`echo '{"session":"'$(date +%Y%m%d_%H%M%S)'","round":0}' > /private/tmp/session_counter.json`
+
+**快速启动命令（一键执行）：**
+```bash
+cat /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md && echo '---SESSION START---' && cat /Users/yay/workspace/TODO.md 2>/dev/null || echo 'No TODO' && echo '{"session":"'$(date +%Y%m%d_%H%M%S)'","round":0}' > /private/tmp/session_counter.json
+```
+
+---
+
+## 八、轮次计数与日志工具
+
+### 轮次计数器
+
+**脚本位置**: `/Users/yay/workspace/genspark-agent/scripts/session_counter.js`
+
+**用法**:
+```bash
+# 查看当前状态
+node /Users/yay/workspace/genspark-agent/scripts/session_counter.js status
+
+# 增加轮次（每轮对话后调用）
+node /Users/yay/workspace/genspark-agent/scripts/session_counter.js inc
+
+# 重置（新对话开始时）
+node /Users/yay/workspace/genspark-agent/scripts/session_counter.js reset
+```
+
+### 结构化失败日志
+
+**位置**: `/Users/yay/workspace/genspark-agent/logs/tool_failures.json`
+
+**记录新失败**:
+```bash
+node -e 'const fs=require("fs");const f="/Users/yay/workspace/genspark-agent/logs/tool_failures.json";const d=JSON.parse(fs.readFileSync(f));d.push({id:d.length+1,date:"日期",round:轮次,tool:"工具名",error_type:"类型",symptom:"现象",cause:"原因",solution:"方案"});fs.writeFileSync(f,JSON.stringify(d,null,2));'
+```
+
+**错误类型枚举**: param_error, no_execute, rate_limit, timeout, unknown
+
+---
+
+## 九、长内容写入最佳实践
+
+### 问题根源
+JSON 参数中的长字符串容易触发解析错误，特别是包含：换行符、引号、反斜杠、模板字符串
+
+### 稳定性排序（从高到低）
+1. **node -e + 短脚本** - 最稳定，适合生成文件
+2. **heredoc (cat << 'EOF')** - 较稳定，注意用单引号 EOF 防止变量展开
+3. **run_command + stdin** - 新发现，待验证
+4. **write_file** - 短内容OK，长内容易失败
+5. **edit_file** - 最不稳定，长内容几乎必失败
+
+### Helper 脚本
+
+**位置**: `/Users/yay/workspace/genspark-agent/scripts/`
+
+| 脚本 | 用途 | 用法 |
+|------|------|------|
+| safe_write.js | 安全写入 | `echo "内容" \| node safe_write.js /path` |
+| safe_edit.js | 安全编辑 | `node safe_edit.js file old.txt new.txt` |
+
+### 推荐工作流
+
+```bash
+# 1. 先写内容到临时文件
+cat > /private/tmp/content.txt << 'EOF'
+长内容...
+
+
+---
+
+## 九、长内容写入最佳实践
+
+### 问题根源
+JSON 参数中的长字符串容易触发解析错误，特别是包含：换行符、引号、反斜杠、模板字符串
+
+### 稳定性排序（从高到低）
+1. **node -e + 短脚本** - 最稳定，适合生成文件
+2. **heredoc (cat << EOF)** - 较稳定，注意用单引号 EOF
+3. **run_command + stdin** - 新发现，待验证
+4. **write_file** - 短内容OK，长内容易失败
+5. **edit_file** - 最不稳定，长内容几乎必失败
+
+### Helper 脚本位置
+/Users/yay/workspace/genspark-agent/scripts/safe_write.js
+/Users/yay/workspace/genspark-agent/scripts/safe_edit.js

@@ -5,6 +5,8 @@
 @TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
 ```
 
+> 小贴士：长内容（长脚本/长 Markdown/大段 JSON）不要塞进工具调用 JSON，优先用 run_command + stdin，或使用 scripts/safe_write.js（写入）与 scripts/safe_edit.js（替换，自动 .bak 备份）。示例里请用 TOOL: 前缀代替真实 @TOOL:，避免误执行。
+
 ---
 
 ## 1. 文件系统 (14个)
