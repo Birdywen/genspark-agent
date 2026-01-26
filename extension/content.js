@@ -1,4 +1,4 @@
-// content.js v32 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+// content.js v33 - SSE 流拦截 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
 (function() {
   'use strict';
 
@@ -38,11 +38,108 @@
     isProcessingQueue: false,
     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
-    lastToolCall: null
+    lastToolCall: null,
+    // SSE 拦截
+    sseBuffer: '',
+    sseInterceptEnabled: true
   };
 
   function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
+  }
+
+  // ============== SSE 流拦截 ==============
+
+  function initSSEIntercept() {
+    if (!state.sseInterceptEnabled) return;
+    
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+      const [url, options] = args;
+      const response = await originalFetch.apply(this, args);
+      
+      // 检测 SSE 流 (genspark chat API)
+      const contentType = response.headers.get('content-type') || '';
+      const isSSE = contentType.includes('text/event-stream') || 
+                    contentType.includes('stream') ||
+                    (typeof url === 'string' && url.includes('/chat'));
+      
+      if (isSSE && response.body) {
+        log('SSE stream detected:', url);
+        const clone = response.clone();
+        processSSEStream(clone.body);
+      }
+      
+      return response;
+    };
+    
+    log('SSE intercept initialized');
+  }
+
+  async function processSSEStream(body) {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        
+        // 解析 SSE 格式
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            const data = line.slice(5).trim();
+            if (data && data !== '[DONE]') {
+              processSSEData(data);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      log('SSE read error:', e);
+    }
+  }
+
+  function processSSEData(data) {
+    try {
+      const json = JSON.parse(data);
+      // 提取文本内容 - 根据 genspark 的响应格式调整
+      const text = json.choices?.[0]?.delta?.content || 
+                   json.content || 
+                   json.text || 
+                   json.message?.content || '';
+      
+      if (text) {
+        state.sseBuffer += text;
+        // 检查是否有完整的工具调用
+        checkSSEToolCall();
+      }
+    } catch (e) {
+      // 非 JSON 数据，可能是原始文本
+      state.sseBuffer += data;
+      checkSSEToolCall();
+    }
+  }
+
+  function checkSSEToolCall() {
+    // 检查 @TOOL 模式 (完整的代码块)
+    const toolMatch = state.sseBuffer.match(/\x60\x60\x60\n@TOOL:\{[^\x60]+\}\n\x60\x60\x60/);
+    if (toolMatch) {
+      log('SSE detected tool call:', toolMatch[0].slice(0, 100));
+      // 这里可以提前执行，但为了安全先只做日志
+      // 实际执行仍由 DOM 扫描触发
+    }
+    
+    // 防止 buffer 过大
+    if (state.sseBuffer.length > 100000) {
+      state.sseBuffer = state.sseBuffer.slice(-50000);
+    }
   }
 
   // ============== AI 生成状态检测 ==============
@@ -1442,6 +1539,9 @@ ${tip}
   });
 
   // ============== 初始化 ==============
+
+  // 初始化 SSE 拦截
+  initSSEIntercept();
 
   // ============== 自动检查任务 ==============
 
