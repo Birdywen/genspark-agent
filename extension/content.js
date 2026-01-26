@@ -946,11 +946,12 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     const tips = [
       '举例时不加@: 写 TOOL:{...} 而非 @TOOL:{...}',
       '每次只调用一个工具，等结果后再继续',
-      '工具详情: read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md',
+      '长内容勿塞JSON: 用 node -e 或 run_command+stdin',
+      'Helper脚本: scripts/safe_write.js, safe_edit.js',
       '浏览器操作前先 take_snapshot 获取 uid',
       '跨Agent通信: @SEND:agent_id:消息',
-      'edit_file 比 write_file 更安全(只改局部)',
-      '长代码修改: 先 write_file 写 node 脚本到 /private/tmp/，再执行'
+      '新对话先读: docs/LESSONS_LEARNED.md',
+      '轮次计数: node scripts/session_counter.js status'
     ];
     const tip = tips[Math.floor(Math.random() * tips.length)];
     
