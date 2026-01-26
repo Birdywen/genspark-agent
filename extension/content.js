@@ -65,7 +65,7 @@
                     (typeof url === 'string' && url.includes('/chat'));
       
       if (isSSE && response.body) {
-        log('SSE stream detected:', url);
+        console.log('[Agent SSE] stream detected:', url);
         const clone = response.clone();
         processSSEStream(clone.body);
       }
@@ -73,7 +73,7 @@
       return response;
     };
     
-    log('SSE intercept initialized');
+    console.log('[Agent SSE] intercept initialized');
   }
 
   async function processSSEStream(body) {
@@ -102,7 +102,7 @@
         }
       }
     } catch (e) {
-      log('SSE read error:', e);
+      console.log('[Agent SSE] read error:', e);
     }
   }
 
@@ -131,7 +131,7 @@
     // 检查 @TOOL 模式 (完整的代码块)
     const toolMatch = state.sseBuffer.match(/\x60\x60\x60\n@TOOL:\{[^\x60]+\}\n\x60\x60\x60/);
     if (toolMatch) {
-      log('SSE detected tool call:', toolMatch[0].slice(0, 100));
+      console.log('[Agent SSE] detected tool call:', toolMatch[0].slice(0, 100));
       // 这里可以提前执行，但为了安全先只做日志
       // 实际执行仍由 DOM 扫描触发
     }
