@@ -555,6 +555,11 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       if (idx === -1) break;
       const extracted = extractJsonFromText(text, idx + marker.length);
       if (extracted) {
+        // Skip if extracted JSON is too short or looks invalid
+        if (!extracted.json || extracted.json.length < 5 || !extracted.json.startsWith('{')) {
+          searchStart = idx + marker.length;
+          continue;
+        }
         try {
           // Fix Chinese quotes that break JSON parsing
           let jsonStr = extracted.json
