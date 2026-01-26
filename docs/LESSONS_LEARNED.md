@@ -336,3 +336,12 @@ enqueueMessage() → processMessageQueue() → sendMessageSafe()
 - 依赖 DOM 选择器检测 AI 状态
 
 
+
+### [2026-01-26] SSE 拦截导致工具不执行
+- **现象**：添加 fetch/XHR/WebSocket 拦截后，工具调用频繁不执行
+- **原因**：拦截代码可能破坏了页面原有的请求流程
+- **解决**：回滚到 d27a394
+- **预防**：
+  - 拦截网络请求需要更谨慎
+  - 应该先在独立环境测试
+  - 使用 response.clone() 避免消费原始 response
