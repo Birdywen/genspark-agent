@@ -36,6 +36,7 @@
     // 消息队列
     messageQueue: [],
     isProcessingQueue: false,
+    roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
     lastToolCall: null
   };
@@ -919,6 +920,32 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
   // ============== 结果格式化 ==============
 
+  function incrementRound() {
+    state.roundCount++;
+    localStorage.setItem('agent_round_count', state.roundCount.toString());
+    // 每 30 轮发出预警
+    if (state.roundCount > 0 && state.roundCount % 30 === 0) {
+      addLog('⚠️ 已达 ' + state.roundCount + ' 轮，考虑开新对话', 'warn');
+    }
+    addLog('📊 轮次: ' + state.roundCount, 'info');
+    updateRoundDisplay();
+  }
+
+  function resetRound() {
+    state.roundCount = 0;
+    localStorage.setItem('agent_round_count', '0');
+    addLog('🔄 轮次已重置', 'info');
+    updateRoundDisplay();
+  }
+
+  function updateRoundDisplay() {
+    const el = document.getElementById('agent-round');
+    if (el) {
+      el.textContent = 'R:' + state.roundCount;
+      el.style.color = state.roundCount >= 30 ? '#f59e0b' : state.roundCount >= 20 ? '#eab308' : '#9ca3af';
+    }
+  }
+
   function formatToolResult(msg) {
     let content;
     
@@ -975,6 +1002,7 @@ ${tip}
         <span id="agent-title">🤖 Agent v32</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
+        <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
       <div id="agent-tools"></div>
@@ -1171,6 +1199,15 @@ ${tip}
       btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
     };
 
+
+    // 轮次显示点击重置
+    document.getElementById('agent-round').onclick = () => {
+      if (confirm('重置轮次计数？')) {
+        resetRound();
+      }
+    };
+    // 初始化显示
+    updateRoundDisplay();
     // 查看在线 Agent 列表
     document.getElementById('agent-list').onclick = () => {
       chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
@@ -1365,6 +1402,7 @@ ${tip}
           state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
         }, 5000);
         sendMessageSafe(resultText);
+        incrementRound();
         break;
 
       case 'error':
