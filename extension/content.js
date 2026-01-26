@@ -944,7 +944,8 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       '工具详情: read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md',
       '浏览器操作前先 take_snapshot 获取 uid',
       '跨Agent通信: @SEND:agent_id:消息',
-      'edit_file 比 write_file 更安全(只改局部)'
+      'edit_file 比 write_file 更安全(只改局部)',
+      '长代码修改: 先 write_file 写 node 脚本到 /private/tmp/，再执行'
     ];
     const tip = tips[Math.floor(Math.random() * tips.length)];
     
