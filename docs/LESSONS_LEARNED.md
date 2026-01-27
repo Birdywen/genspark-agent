@@ -353,3 +353,44 @@ enqueueMessage() → processMessageQueue() → sendMessageSafe()
 **结论**：在 content script 中覆盖 `window.fetch` 是不安全的，可能被页面检测或干扰页面功能
 
 **最终决定**：放弃 SSE 拦截，保持 DOM 观察方案
+
+---
+
+## 记忆系统 (2026-01-27)
+
+### 新对话开始时加载上下文
+
+```bash
+node /Users/yay/workspace/.agent_memory/load_context.js
+```
+
+### 记录里程碑
+
+```bash
+node /Users/yay/workspace/.agent_memory/memory_manager.js milestone "完成XX功能"
+```
+
+### 设置当前任务
+
+```bash
+node /Users/yay/workspace/.agent_memory/memory_manager.js task "任务描述"
+```
+
+### 生成会话摘要
+
+```bash
+node /Users/yay/workspace/.agent_memory/memory_manager.js summary
+```
+
+### 开启新会话（归档旧会话）
+
+```bash
+node /Users/yay/workspace/.agent_memory/memory_manager.js new
+```
+
+### 文件位置
+
+- 会话数据: `/Users/yay/workspace/.agent_memory/current_session.json`
+- 会话摘要: `/Users/yay/workspace/.agent_memory/session_summary.md`
+- 命令历史: `/Users/yay/workspace/.agent_memory/command_history.json`
+- 详细输出: `/Users/yay/workspace/.agent_memory/outputs/`
