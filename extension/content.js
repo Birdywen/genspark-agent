@@ -1007,7 +1007,11 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       '跨Agent通信: @SEND:agent_id:消息',
       '新对话先读: docs/LESSONS_LEARNED.md',
       '轮次计数: node scripts/session_counter.js status',
-      '项目记忆: node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects'
+      '项目记忆: node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects',
+      '恢复上下文: memory_manager_v2.js digest <proj> command-history.json',
+      '历史分析: history_compressor.js context command-history.json',
+      '记录里程碑: memory_manager_v2.js milestone "完成XX"',
+      '命令历史500条，超出自动归档到 history-archives/'
     ];
     const tip = tips[Math.floor(Math.random() * tips.length)];
     
