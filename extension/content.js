@@ -80,131 +80,89 @@
     check();
   }
 
-  // ============== 系统提示词模板 ==============
+  // ============== 系统提示词模板 v2 ==============
   
   function generateSystemPrompt() {
     const toolCount = state.availableTools.length || 67;
-    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：
-- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等
-- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  
-- **命令执行** (1个): run_command
-- **代码分析** (26个): register_project_tool, find_text, get_symbols 等
-
-**需要查看完整工具文档时：**
-- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md
-- 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md`;
-
+    
     const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。
 
-## 调用格式（严格遵守）
-
-**必须使用代码块包裹 JSON 格式：**
+## 一、调用格式（严格遵守）
 
 \`\`\`
 ${'@'}TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
 \`\`\`
 
-### 示例
+**示例：**
+- 执行命令: \`${'@'}TOOL:{"tool":"run_command","params":{"command":"ls -la"}}\`
+- 读取文件: \`${'@'}TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}\`
+- 写入文件: \`${'@'}TOOL:{"tool":"write_file","params":{"path":"/path","content":"内容"}}\`
 
-执行命令：
+## 二、核心规则
+
+1. 每次只调用 **一个** 工具，等待返回结果后再继续
+2. **不要** 编造执行结果，等待系统返回
+3. JSON 内的引号必须转义为 \\\`\"\`
+4. 举例时不加 @ 符号（写 \`TOOL:{...}\` 避免误执行）
+5. 任务完成后输出 \`@DONE\`
+6. 命令失败可用 \`@RETRY:#ID\` 重试
+
+## 三、可用工具 (${toolCount}个)
+
+| 分类 | 数量 | 常用工具 |
+|------|------|----------|
+| 文件系统 | 14 | read_file, write_file, edit_file, list_directory |
+| 浏览器 | 26 | navigate_page, click, fill, take_screenshot |
+| 命令执行 | 1 | run_command |
+| 代码分析 | 26 | find_text, get_symbols |
+
+**完整文档:** \`read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md\`
+
+## 四、记忆系统 ⭐重要
+
+**新对话开始时，恢复上下文：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json
 \`\`\`
-${'@'}TOOL:{"tool":"run_command","params":{"command":"ls -la"}}
+
+**查看所有项目：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects
 \`\`\`
 
-读取文件：
-\`\`\`
-${'@'}TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}
-\`\`\`
-
-写入文件（注意：content 内的引号必须转义为 \\"）：
-\`\`\`
-${'@'}TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
+**完成重要功能时，记录里程碑：**
+\`\`\`bash
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone "完成XX功能"
 \`\`\`
 
-## 可用工具
+**遇到问题时，查阅经验库：**
+\`\`\`bash
+read_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md
+\`\`\`
 
-${toolSummary}
+## 五、Agent 协作
 
-## 规则
-
-1. **必须**用代码块包裹工具调用
-2. 每次只调用**一个**工具，等待返回结果后再继续
-3. **不要**自己编造执行结果，等待系统返回
-4. content 参数内如果有引号，必须转义为 \\"
-5. 任务全部完成后输出 @DONE
-6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 '@TOOL:{...}' 或 '@SEND:agent:msg'）
-7. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
-
----
-
-## Agent 协作系统
-
-你是多 Agent 协作网络中的一员。
-
-### 跨 Tab 直接通信（推荐）
-
-**发送消息给其他 Agent（自动路由到对方聊天框）：**
+**跨 Tab 通信：**
 \`\`\`
 ${'@'}SEND:目标agent_id:消息内容
 \`\`\`
 
-示例：
-\`\`\`
-${'@'}SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
-\`\`\`
-
-对方会自动收到消息并处理，完成后会回复你。
-
-### 任务队列（持久化存储）
-
-如需持久化任务（即使关闭浏览器也保留），使用任务队列：
-
-**检查任务：**
+**检查后台任务：**
 \`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID
+node /Users/yay/workspace/.agent_hub/task_manager.js check <your_agent_id>
 \`\`\`
 
-### 协作命令
-
-**创建任务给其他 Agent：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js create <from> <to> <action> '<payload_json>'
-\`\`\`
-
-**完成任务后报告：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js complete <task_id> '<result_json>'
-\`\`\`
-
-**查看你发起的任务结果：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js results YOUR_AGENT_ID
-\`\`\`
-
-### 查看可用 Agent 及其能力
-
-**列出所有 Agent：**
+**查看可用 Agent：**
 \`\`\`bash
 node /Users/yay/workspace/.agent_hub/task_manager.js agents
 \`\`\`
 
-**查看特定 Agent 的详细能力（参数、限制）：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
-\`\`\`
+## 六、长内容写入技巧
 
-派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。
-
----
-
-## 系统架构
-
-本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。
-
-- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json
-- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等
-- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效
-- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端
+- **短内容 (<500字)** → write_file / edit_file
+- **长内容** → \`cat > file << 'EOF'\` 或 Helper 脚本：
+  - 写入: \`echo "内容" | node scripts/safe_write.js /path\`
+  - 替换: \`node scripts/safe_edit.js file old.txt new.txt\`
 
 ---
 

@@ -1,177 +1,6 @@
 {
   "history": [
     {
-      "id": 1577,
-      "timestamp": "2026-01-27T15:50:02.034Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/switch_new.txt << 'EOF'\n    case 'SWITCH_SERVER':\n      const target = message.server || 'local';\n      if (SERVERS[target]) {\n        currentServer = target;\n        console.log('[Agent] 切换服务器:', target, SERVERS[target]);\n        if (socket) socket.close();\n        setTimeout(connect, 500);\n        sendResponse({ success: true, server: target, url: SERVERS[target] });\n      } else {\n        sendResponse({ success: false, error: 'Unknown server: ' + target });\n      }\n      break;\n\n    case 'GET_SERVER_INFO':\n      sendResponse({ current: currentServer, servers: SERVERS });\n      break;\n\n    case 'GET_REGISTERED_AGENTS':\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 1578,
-      "timestamp": "2026-01-27T15:50:10.087Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/genspark-agent/scripts/safe_edit.js /Users/yay/workspace/genspark-agent/extension/background.js /tmp/switch_old.txt /tmp/switch_new.txt"
-      },
-      "success": true,
-      "resultPreview": "Backup: /Users/yay/workspace/genspark-agent/extension/background.js.bak\nUpdated: /Users/yay/workspace/genspark-agent/extension/background.js\n",
-      "error": null
-    },
-    {
-      "id": 1579,
-      "timestamp": "2026-01-27T15:50:18.233Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '30,50p' /Users/yay/workspace/genspark-agent/extension/background.js"
-      },
-      "success": true,
-      "resultPreview": "  if (socket && socket.readyState === WebSocket.OPEN) {\n    return;\n  }\n\n  if (socket) {\n    try { socket.close(); } catch(e) {}\n    socket = null;\n  }\n\n  console.log('[BG] 连接 WebSocket...');\n\n  try {\n    socket = new WebSocket(WS_URL);\n  } catch(e) {\n    console.error('[BG] 创建失败:', e);\n    scheduleReconnect();\n    return;\n  }\n\n  socket.onopen = () => {\n    console.log('[BG] 已连接');\n",
-      "error": null
-    },
-    {
-      "id": 1580,
-      "timestamp": "2026-01-27T15:50:26.234Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/ws_old.txt << 'EOF'\n    socket = new WebSocket(WS_URL);\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 1581,
-      "timestamp": "2026-01-27T15:50:34.850Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/ws_new.txt << 'EOF'\n    socket = new WebSocket(SERVERS[currentServer]);\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 1582,
-      "timestamp": "2026-01-27T15:50:42.878Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/genspark-agent/scripts/safe_edit.js /Users/yay/workspace/genspark-agent/extension/background.js /tmp/ws_old.txt /tmp/ws_new.txt"
-      },
-      "success": true,
-      "resultPreview": "Backup: /Users/yay/workspace/genspark-agent/extension/background.js.bak\nUpdated: /Users/yay/workspace/genspark-agent/extension/background.js\n",
-      "error": null
-    },
-    {
-      "id": 1583,
-      "timestamp": "2026-01-27T15:50:53.033Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent && git add extension/background.js && git commit -m 'feat: 支持本地/云端服务器切换' && git push origin main"
-      },
-      "success": true,
-      "resultPreview": "[main 882e2ba] feat: 支持本地/云端服务器切换\n 1 file changed, 25 insertions(+), 2 deletions(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   198e270..882e2ba  main -> main\n",
-      "error": null
-    },
-    {
-      "id": 1584,
-      "timestamp": "2026-01-27T15:51:01.349Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '部署genspark-agent到Oracle云服务器(157.151.227.157:8765)' && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '实现本地/云端服务器切换功能'"
-      },
-      "success": true,
-      "resultPreview": "里程碑已添加: 部署genspark-agent到Oracle云服务器(157.151.227.157:8765)\n里程碑已添加: 实现本地/云端服务器切换功能\n",
-      "error": null
-    },
-    {
-      "id": 1585,
-      "timestamp": "2026-01-27T15:52:52.510Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo 'test cloud connection'"
-      },
-      "success": true,
-      "resultPreview": "test cloud connection\n",
-      "error": null
-    },
-    {
-      "id": 1586,
-      "timestamp": "2026-01-27T15:53:48.717Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
-        "edits": [
-          {
-            "oldText": "let currentServer = 'local';  // 默认本地",
-            "newText": "let currentServer = 'cloud';  // 默认云端"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -22,9 +22,9 @@\n const SERVERS = {\n   local: 'ws://localhost:8765',\n   cloud: 'ws://157.151.227.157:8765'\n };\n-let currentServer = 'local';  // 默认本地\n+let currentServer = 'cloud';  // 默认云端\n const WS_URL = SERVE",
-      "error": null
-    },
-    {
-      "id": 1587,
-      "timestamp": "2026-01-27T15:54:33.724Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'agent-reconnect\\|agent-actions' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
-      },
-      "success": true,
-      "resultPreview": "1039:      <div id=\"agent-actions\">\n1043:        <button id=\"agent-reconnect\" title=\"重连服务器\">🔄</button>\n1075:      #agent-panel.minimized #agent-actions button:not(#agent-minimize) {\n1146:      #agent-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n1147:      #agent-actions button {\n1159:      #agent-actions button:hover { background: #4b5563; }\n1204:    document.getElementById('agent-reconnect').onclick = () => {\n",
-      "error": null
-    },
-    {
-      "id": 1588,
-      "timestamp": "2026-01-27T15:54:42.516Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/btn_old.txt << 'EOF'\n        <button id=\"agent-reconnect\" title=\"重连服务器\">🔄</button>\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 1589,
-      "timestamp": "2026-01-27T15:54:51.313Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/btn_new.txt << 'EOF'\n        <button id=\"agent-reconnect\" title=\"重连服务器\">🔄</button>\n        <button id=\"agent-switch-server\" title=\"切换本地/云端\">🌐 云</button>\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 1590,
-      "timestamp": "2026-01-27T15:54:58.972Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/genspark-agent/scripts/safe_edit.js /Users/yay/workspace/genspark-agent/extension/content.js /tmp/btn_old.txt /tmp/btn_new.txt"
-      },
-      "success": true,
-      "resultPreview": "Backup: /Users/yay/workspace/genspark-agent/extension/content.js.bak\nUpdated: /Users/yay/workspace/genspark-agent/extension/content.js\n",
-      "error": null
-    },
-    {
-      "id": 1591,
-      "timestamp": "2026-01-27T15:55:07.712Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '1200,1220p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "          updateStatus();\n        }\n      });\n    };\n    \n    document.getElementById('agent-reconnect').onclick = () => {\n      chrome.runtime.sendMessage({ type: 'RECONNECT' });\n      addLog('🔄 重连中...', 'info');\n    };\n    \n    document.getElementById('agent-copy-prompt').onclick = () => {\n      const prompt = generateSystemPrompt();\n      navigator.clipboard.writeText(prompt).then(() => {\n        addLog('📋 提示词已复制', 'success');\n      }).catch(() => {\n        const ta = document.createElement",
-      "error": null
-    },
-    {
       "id": 1592,
       "timestamp": "2026-01-27T15:55:16.111Z",
       "tool": "run_command",
@@ -1181,7 +1010,175 @@
       "success": true,
       "resultPreview": "total 88\ndrwxr-xr-x@  6 yay  staff    192 Jan 27 12:20 .\ndrwxr-xr-x  17 yay  staff    544 Jan 27 11:43 ..\n-rw-r--r--@  1 yay  staff  11304 Jan 25 22:06 ADVANCED_GUIDE.md\n-rw-r--r--@  1 yay  staff  13302 Jan 27 11:47 LESSONS_LEARNED.md\n-rw-r--r--@  1 yay  staff   6152 Jan 24 23:50 TOOLS_GUIDE.md\n-rw-r--r--@  1 yay  staff   6906 Jan 26 07:01 TOOLS_QUICK_REFERENCE.md\n",
       "error": null
+    },
+    {
+      "id": 1677,
+      "timestamp": "2026-01-27T17:20:49.260Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'docs: 整理文档结构，匹配skills.js的引用' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main fe74c32] docs: 整理文档结构，匹配skills.js的引用\n 4 files changed, 518 insertions(+), 534 deletions(-)\n rename docs/{TOOLS_REFERENCE.md => ADVANCED_GUIDE.md} (100%)\n delete mode 100644 docs/MEMORY_SYSTEM.md\n rename docs/{GUIDE.md => TOOLS_GUIDE.md} (100%)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   0a3ea91..fe74c32  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 1678,
+      "timestamp": "2026-01-27T17:23:29.290Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'generateSystemPrompt\\|systemPrompt\\|提示词' /Users/yay/workspace/genspark-agent/extension/content.js | head -30"
+      },
+      "success": true,
+      "resultPreview": "83:  // ============== 系统提示词模板 ==============\n85:  function generateSystemPrompt() {\n213:    // 如果有 Skills 提示词，附加到末尾\n1044:        <button id=\"agent-copy-prompt\" title=\"复制系统提示词给AI\">📋 提示词</button>\n1243:      const prompt = generateSystemPrompt();\n1245:        addLog('📋 提示词已复制', 'success');\n1253:        addLog('📋 提示词已复制', 'success');\n1868:    addLog('💡 点击「📋 提示词」复制给AI', 'info');\n",
+      "error": null
+    },
+    {
+      "id": 1679,
+      "timestamp": "2026-01-27T17:23:35.888Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '83,220p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  // ============== 系统提示词模板 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等\n- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols 等\n\n**需要查看完整工具文档时：**\n- 能联网: 用 crawler 访问 https://raw.githu",
+      "error": null
+    },
+    {
+      "id": 1680,
+      "timestamp": "2026-01-27T17:23:43.886Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'skillsPrompt\\|getSystemPrompt\\|附加' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "108:  getSystemPrompt() {\n",
+      "error": null
+    },
+    {
+      "id": 1681,
+      "timestamp": "2026-01-27T17:23:51.886Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '80,150p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "      }\n      prompt += '\\n';\n    }\n    \n    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n\n    // 添加工具选择指南\n    const toolsGuidePath = path.join(__dirname, '..', 'docs', 'TOOLS_GUIDE.md');\n    if (existsSync(toolsGuidePath)) {\n      prompt += '\\n---\\n\\n';\n      prompt += readFileSync(toolsGuidePath, 'utf-8');\n      console.log('✅ 已加载工具使用指南 (TOOLS_GUIDE.md)');\n    }\n\n    // 添加进阶指南（错误处理、超时、权限等）\n    const advancedGuidePath = path.join(__dirname, '..', 'docs', 'ADVA",
+      "error": null
+    },
+    {
+      "id": 1682,
+      "timestamp": "2026-01-27T17:23:58.080Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1,80p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "// Skills 加载模块\n// 自动加载 skills 目录下的所有 Skill，生成系统提示\n\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport path from 'path';\nimport { fileURLToPath } from 'url';\n\nconst __dirname = path.dirname(fileURLToPath(import.meta.url));\nconst SKILLS_DIR = path.join(__dirname, '..', 'skills');\n\nclass SkillsManager {\n  constructor() {\n    this.skills = [];\n    this.systemPrompt = '';\n  }\n\n  /**\n   * 加载所有 Skills\n   */\n  load() {\n    // 检查 skills 目录是否存在\n    if (!existsSync(SKILLS_DIR)) {\n      cons",
+      "error": null
+    },
+    {
+      "id": 1683,
+      "timestamp": "2026-01-27T17:24:05.076Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/.ai-env.md 2>/dev/null || echo '文件不存在'"
+      },
+      "success": true,
+      "resultPreview": "## 本地环境\n\n- **系统**: macOS (arm64 Apple Silicon)\n- **文档**: pandoc, wkhtmltopdf\n- **媒体**: ffmpeg, ImageMagick\n- **数据**: jq, sqlite3\n- **开发**: git, python3, node/npm\n- **网络**: curl, wget, httpie\n- **效率**: rg, fd, bat, eza\n\n通过 `run_command` 调用以上工具。\n\n---\n\n## AI 工作规范\n\n### TODO 机制\n\n**何时创建 TODO**：\n- 任务涉及 3 个以上步骤\n- 跨多个文件的修改\n- 用户明确提出多项任务\n- 开放性任务需要自行规划\n\n**何时不需要**：\n- 单步任务（查文件、改一行、回答问题）\n- 简单的一问一答\n\n**TODO 文件位置**：`/Users/yay/workspace/TODO.md`\n\n**工作流程**：\n1. 收到复杂任务时，先创建/更新 TODO.md\n2. 每完成一项，将 `[ ]` 改为 `[x]`\n3. 任务",
+      "error": null
+    },
+    {
+      "id": 1684,
+      "timestamp": "2026-01-27T17:24:42.079Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/docs/PROMPT_ANALYSIS.md",
+        "content": "# 系统提示词分析报告\n\n## 当前提示词结构\n\n提示词由多个部分组成，按顺序拼接：\n\n```\n1. content.js generateSystemPrompt() - 基础框架\n   ├── 调用格式说明\n   ├── 工具概览 (4大类)\n   ├── 规则 (7条)\n   ├── Agent 协作系统\n   └── 系统架构说明\n\n2. skills.js _generateSystemPrompt() - 附加内容\n   ├── .ai-env.md - 本地环境信息\n   ├── Skills 列表\n   ├── TOOLS_GUIDE.md - 工具使用指南\n   └── ADVANCED_GUIDE.md - 详细工具参考\n```\n\n---\n\n## 问题分析\n\n### 1. 重复内容 ❌\n\n| 位置 | 内容 | 问题 |\n|------|------|------|\n| content.js | 工具概览 (4大类, 67个) | 与 TOOLS_GUIDE.md 重复 |\n| content.js | 文件路径引用 | 与 skills.js 加载的内容重复 |\n| TOOLS_GUIDE.md | 完整工具列表 | 与 ADVANCED_GUIDE.md 部分重复 |\n\n### 2. 缺失内容 ❌\n\n| 应该有 | 当前状态 | 重要性 |\n|--------|----------|--------|\n| 记忆系统使用说明 | 缺失 | ⭐⭐⭐ 高 |\n| 新对话启动流程 | 缺失 | ⭐⭐⭐ 高 |\n| digest 命令介绍 | 缺失 | ⭐⭐⭐ 高 |\n| 经验教训库路径 | 缺失 | ⭐⭐ 中 |\n| 常见错误处理 | 零散 | ⭐⭐ 中 |\n| Helper 脚本说明 | 在小贴士里 | ⭐ 低 |\n\n### 3. 不清晰的地方 ❌\n\n| 问题 | 说明 |\n|------|------|\n| YOUR_AGENT_ID | 没说明怎么获取自己的 agent_id |\n| 工具文档路径 | 提到 TOOLS_QUICK_REFERENCE.md 但现在文件名可能不同 |\n| MCP 配置 | 普通用户不需要知道这些细节 |\n| Skills 目录 | 路径写死了，不够通用 |\n\n### 4. 可以压缩的内容 ✂️\n\n| 内容 | 建议 |\n|------|------|\n| Agent 协作系统 | 太详细，大多数场景用不到，可精简 |\n| 任务队列命令 | 可移到文档，提示词只保留关键命令 |\n| MCP 架构说明 | 可删除或极简化 |\n| ADVANCED_GUIDE.md 全文 | 太长，应按需加载 |\n\n---\n\n## 改进建议\n\n### 新的提示词结构\n\n```\n1. 核心指令（必须，~500字）\n   ├── 调用格式（精简版）\n   ├── 关键规则（5条）\n   └── 完成标记 @DONE\n\n2. 记忆系统（新增，~300字）⭐\n   ├── 新对话启动：digest 命令\n   ├── 记录里程碑\n   └── 经验库路径\n\n3. 本地环境（.ai-env.md，~200字）\n   ├── 可用工具\n   └── 工作规范\n\n4. 工具速查（精简版，~300字）\n   ├── 4大类概览\n   └── 详细文档链接\n\n5. 协作系统（精简版，~200字）\n   ├── @SEND 跨Tab通信\n   └── 检查任务命令\n\n6. Skills（动态，按需）\n```\n\n### 具体改动\n\n#### A. content.js generateSystemPrompt() 重写\n\n**删除：**\n- MCP 架构说明（用户不需要）\n- 详细的任务队列命令（移到文档）\n- 重复的工具列表\n\n**新增：**\n- 记忆系统核心命令\n- 新对话启动流程\n- 经验库链接\n\n**精简：**\n- Agent 协作：只保留 @SEND 和检查任务\n- 规则：从7条精简到5条核心规则\n\n#### B. 文档路径更新\n\n```\nTOOLS_QUICK_REFERENCE.md  → 保持（速查）\nTOOLS_GUIDE.md           → 保持（指南）\nADVANCED_GUIDE.md        → 按需加载，不放入提示词\nLESSONS_LEARNED.md       → 在提示词中提供路径\n```\n\n#### C. 新增提示词段落\n\n```markdown\n## 记忆系统\n\n**新对话开始时，恢复上下文：**\n```bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <project> /path/to/command-history.json\n```\n\n**完成重要功能时，记录里程碑：**\n```bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"完成XX功能\"\n```\n\n**遇到问题时，查阅经验库：**\n- 路径：/Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md\n- 包含：踩坑记录、最佳实践、常用命令\n```\n\n---\n\n## 预期效果\n\n| 指标 | 当前 | 改进后 |\n|------|------|--------|\n| 提示词长度 | ~4000字 | ~2000字 |\n| 记忆系统覆盖 | 0% | 100% |\n| 新对话启动指引 | 无 | 有 |\n| 重复内容 | 多 | 无 |\n| 按需加载 | 无 | 有 |\n\n---\n\n## 实施计划\n\n1. [ ] 重写 content.js generateSystemPrompt()\n2. [ ] 更新 .ai-env.md 添加记忆系统\n3. [ ] 确认文档路径正确\n4. [ ] 测试新提示词\n5. [ ] 提交代码\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/docs/PROMPT_ANALYSIS.md",
+      "error": null
+    },
+    {
+      "id": 1685,
+      "timestamp": "2026-01-27T17:25:20.868Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/private/tmp/new_prompt.js",
+        "content": "  // ============== 系统提示词模板 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    \n    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。\n\n## 调用格式（严格遵守）\n\n**必须使用代码块包裹 JSON 格式：**\n\n\\`\\`\\`\n${'{@'}TOOL:{\"tool\":\"工具名\",\"params\":{\"参数名\":\"参数值\"}}\n\\`\\`\\`\n\n### 示例\n\n执行命令：\n\\`\\`\\`\n${'{@'}TOOL:{\"tool\":\"run_command\",\"params\":{\"command\":\"ls -la\"}}\n\\`\\`\\`\n\n读取文件：\n\\`\\`\\`\n${'{@'}TOOL:{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/to/file\"}}\n\\`\\`\\`\n\n写入文件（注意：content 内的引号必须转义为 \\\\\"）：\n\\`\\`\\`\n${'{@'}TOOL:{\"tool\":\"write_file\",\"params\":{\"path\":\"/path/to/file.json\",\"content\":\"{\\\\\"key\\\\\":\\\\\"value\\\\\"}\"}}\n\\`\\`\\`\n\n## 可用工具\n\n本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等\n- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols 等\n\n**需要查看完整工具文档时：**\n- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md\n- 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md\n\n## 规则\n\n1. **必须**用代码块包裹工具调用\n2. 每次只调用**一个**工具，等待返回结果后再继续\n3. **不要**自己编造执行结果，等待系统返回\n4. content 参数内如果有引号，必须转义为 \\\\\"\n5. 任务全部完成后输出 @DONE\n6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 '@TOOL:{...}' 或 '@SEND:agent:msg'）\n7. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \\`@RETRY:#ID\\` 即可重新执行，无需重写代码\n\n---\n\n## Agent 协作系统\n\n你是多 Agent 协作网络中的一员。\n\n### 跨 Tab 直接通信（推荐）\n\n**发送消息给其他 Agent（自动路由到对方聊天框）：**\n\\`\\`\\`\n${'@'}SEND:目标agent_id:消息内容\n\\`\\`\\`\n\n示例：\n\\`\\`\\`\n${'@'}SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png\n\\`\\`\\`\n\n对方会自动收到消息并处理，完成后会回复你。\n\n### 任务队列（持久化存储）\n\n如需持久化任务（即使关闭浏览器也保留），使用任务队列：\n\n**检查任务：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID\n\\`\\`\\`\n\n### 协作命令\n\n**创建任务给其他 Agent：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js create <from> <to> <action> '<payload_json>'\n\\`\\`\\`\n\n**完成任务后报告：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js complete <task_id> '<result_json>'\n\\`\\`\\`\n\n**查看你发起的任务结果：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js results YOUR_AGENT_ID\n\\`\\`\\`\n\n### 查看可用 Agent 及其能力\n\n**列出所有 Agent：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js agents\n\\`\\`\\`\n\n**查看特定 Agent 的详细能力（参数、限制）：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>\n\\`\\`\\`\n\n派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。\n\n---\n\n## 系统架构\n\n本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。\n\n- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json\n- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n\n---\n\n请告诉我你的任务。`;\n\n    // 如果有 Skills 提示词，附加到末尾\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /private/tmp/new_prompt.js",
+      "error": null
+    },
+    {
+      "id": 1686,
+      "timestamp": "2026-01-27T17:25:43.067Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/private/tmp/new_generate_prompt.js",
+        "content": "  // ============== 系统提示词模板 v2 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    \n    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。\n\n## 一、调用格式（严格遵守）\n\n\\`\\`\\`\n@TOOL:{\"tool\":\"工具名\",\"params\":{\"参数名\":\"参数值\"}}\n\\`\\`\\`\n\n**示例：**\n- 执行命令: \\`@TOOL:{\"tool\":\"run_command\",\"params\":{\"command\":\"ls -la\"}}\\`\n- 读取文件: \\`@TOOL:{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/to/file\"}}\\`\n- 写入文件: \\`@TOOL:{\"tool\":\"write_file\",\"params\":{\"path\":\"/path\",\"content\":\"内容\"}}\\`\n\n## 二、核心规则\n\n1. 每次只调用 **一个** 工具，等待返回结果后再继续\n2. **不要** 编造执行结果，等待系统返回\n3. JSON 内的引号必须转义为 \\\\\\`\\\\\"\\\\\n4. 举例时不加 @（写 \\`TOOL:{...}\\` 避免误执行）\n5. 任务完成后输出 \\`@DONE\\`\n6. 命令失败可用 \\`@RETRY:#ID\\` 重试\n\n## 三、可用工具 (${toolCount}个)\n\n| 分类 | 数量 | 常用工具 |\n|------|------|----------|\n| 文件系统 | 14 | read_file, write_file, edit_file, list_directory |\n| 浏览器 | 26 | navigate_page, click, fill, take_screenshot |\n| 命令执行 | 1 | run_command |\n| 代码分析 | 26 | find_text, get_symbols |\n\n**完整文档:** \\`read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md\\`\n\n## 四、记忆系统 ⭐重要\n\n### 新对话开始时，恢复上下文：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json\n\\`\\`\\`\n\n### 查看所有项目：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects\n\\`\\`\\`\n\n### 完成重要功能时，记录里程碑：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"完成XX功能\"\n\\`\\`\\`\n\n### 遇到问题时，查阅经验库：\n\\`\\`\\`bash\nread_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md\n\\`\\`\\`\n\n## 五、Agent 协作\n\n### 跨 Tab 通信：\n\\`\\`\\`\n@SEND:目标agent_id:消息内容\n\\`\\`\\`\n\n### 检查后台任务：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js check <your_agent_id>\n\\`\\`\\`\n\n### 查看可用 Agent：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js agents\n\\`\\`\\`\n\n## 六、长内容写入技巧\n\n- **短内容 (<500字)** → write_file / edit_file\n- **长内容** → \\`cat > file << 'EOF'\\` 或 Helper 脚本：\n  - 写入: \\`echo \"内容\" | node scripts/safe_write.js /path\\`\n  - 替换: \\`node scripts/safe_edit.js file old.txt new.txt\\`\n\n---\n\n请告诉我你的任务。`;\n\n    // 如果有 Skills 提示词，附加到末尾\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /private/tmp/new_generate_prompt.js",
+      "error": null
+    },
+    {
+      "id": 1687,
+      "timestamp": "2026-01-27T17:25:52.907Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '83,220p' /Users/yay/workspace/genspark-agent/extension/content.js | head -5 && echo '...' && sed -n '83,220p' /Users/yay/workspace/genspark-agent/extension/content.js | tail -5"
+      },
+      "success": true,
+      "resultPreview": "  // ============== 系统提示词模板 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n...\n    }\n    return prompt;\n  }\n\n  // ============== DOM 操作 (Genspark 专用) ==============\n",
+      "error": null
+    },
+    {
+      "id": 1688,
+      "timestamp": "2026-01-27T17:26:01.496Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '83,218p' /Users/yay/workspace/genspark-agent/extension/content.js > /private/tmp/old_prompt.txt && wc -l /private/tmp/old_prompt.txt"
+      },
+      "success": true,
+      "resultPreview": "     136 /private/tmp/old_prompt.txt\n",
+      "error": null
+    },
+    {
+      "id": 1689,
+      "timestamp": "2026-01-27T17:26:19.290Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /private/tmp/new_prompt.txt << 'ENDOFFILE'\n  // ============== 系统提示词模板 v2 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    \n    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。\n\n## 一、调用格式（严格遵守）\n\n\\`\\`\\`\n${'@'}TOOL:{\"tool\":\"工具名\",\"params\":{\"参数名\":\"参数值\"}}\n\\`\\`\\`\n\n**示例：**\n- 执行命令: \\`${'@'}TOOL:{\"tool\":\"run_command\",\"params\":{\"command\":\"ls -la\"}}\\`\n- 读取文件: \\`${'@'}TOOL:{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/to/file\"}}\\`\n- 写入文件: \\`${'@'}TOOL:{\"tool\":\"write_file\",\"params\":{\"path\":\"/path\",\"content\":\"内容\"}}\\`\n\n## 二、核心规则\n\n1. 每次只调用 **一个** 工具，等待返回结果后再继续\n2. **不要** 编造执行结果，等待系统返回\n3. JSON 内的引号必须转义为 \\\\\\`\\\"\\`\n4. 举例时不加 @ 符号（写 \\`TOOL:{...}\\` 避免误执行）\n5. 任务完成后输出 \\`@DONE\\`\n6. 命令失败可用 \\`@RETRY:#ID\\` 重试\n\n## 三、可用工具 (${toolCount}个)\n\n| 分类 | 数量 | 常用工具 |\n|------|------|----------|\n| 文件系统 | 14 | read_file, write_file, edit_file, list_directory |\n| 浏览器 | 26 | navigate_page, click, fill, take_screenshot |\n| 命令执行 | 1 | run_command |\n| 代码分析 | 26 | find_text, get_symbols |\n\n**完整文档:** \\`read_file /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md\\`\n\n## 四、记忆系统 ⭐重要\n\n**新对话开始时，恢复上下文：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json\n\\`\\`\\`\n\n**查看所有项目：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects\n\\`\\`\\`\n\n**完成重要功能时，记录里程碑：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"完成XX功能\"\n\\`\\`\\`\n\n**遇到问题时，查阅经验库：**\n\\`\\`\\`bash\nread_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md\n\\`\\`\\`\n\n## 五、Agent 协作\n\n**跨 Tab 通信：**\n\\`\\`\\`\n${'@'}SEND:目标agent_id:消息内容\n\\`\\`\\`\n\n**检查后台任务：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js check <your_agent_id>\n\\`\\`\\`\n\n**查看可用 Agent：**\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_hub/task_manager.js agents\n\\`\\`\\`\n\n## 六、长内容写入技巧\n\n- **短内容 (<500字)** → write_file / edit_file\n- **长内容** → \\`cat > file << 'EOF'\\` 或 Helper 脚本：\n  - 写入: \\`echo \"内容\" | node scripts/safe_write.js /path\\`\n  - 替换: \\`node scripts/safe_edit.js file old.txt new.txt\\`\n\n---\n\n请告诉我你的任务。`;\n\n    // 如果有 Skills 提示词，附加到末尾\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\nENDOFFILE\nwc -l /private/tmp/new_prompt.txt"
+      },
+      "success": true,
+      "resultPreview": "      94 /private/tmp/new_prompt.txt\n",
+      "error": null
+    },
+    {
+      "id": 1690,
+      "timestamp": "2026-01-27T17:26:27.750Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/genspark-agent/scripts/safe_edit.js /Users/yay/workspace/genspark-agent/extension/content.js /private/tmp/old_prompt.txt /private/tmp/new_prompt.txt"
+      },
+      "success": true,
+      "resultPreview": "Backup: /Users/yay/workspace/genspark-agent/extension/content.js.bak\nUpdated: /Users/yay/workspace/genspark-agent/extension/content.js\n",
+      "error": null
+    },
+    {
+      "id": 1691,
+      "timestamp": "2026-01-27T17:26:38.281Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '83,180p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  // ============== 系统提示词模板 v2 ==============\n  \n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    \n    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。\n\n## 一、调用格式（严格遵守）\n\n\\`\\`\\`\n${'@'}TOOL:{\"tool\":\"工具名\",\"params\":{\"参数名\":\"参数值\"}}\n\\`\\`\\`\n\n**示例：**\n- 执行命令: \\`${'@'}TOOL:{\"tool\":\"run_command\",\"params\":{\"command\":\"ls -la\"}}\\`\n- 读取文件: \\`${'@'}TOOL:{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/to/file\"}}\\`\n- 写入文件: \\`${'@'}TOOL:{\"tool\":\"write_file\",\"params\":{\"path\":\"/pat",
+      "error": null
     }
   ],
-  "nextId": 1677
+  "nextId": 1692
 }
