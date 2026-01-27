@@ -3,7 +3,7 @@
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import Logger from './logger.js';
@@ -24,7 +24,9 @@ skillsManager.load();
 
 // ==================== 命令历史管理 ====================
 const HISTORY_FILE = path.join(__dirname, 'command-history.json');
-const MAX_HISTORY = 100;
+const ARCHIVE_DIR = path.join(__dirname, 'history-archives');
+const MAX_HISTORY = 500;  // 保留更多历史供上下文恢复
+const ARCHIVE_THRESHOLD = 400;  // 超过此数量时归档旧记录
 
 let commandHistory = [];
 let historyIdCounter = 1;
@@ -55,6 +57,47 @@ function saveHistory() {
   }
 }
 
+// 归档旧历史记录
+function archiveOldHistory() {
+  try {
+    // 确保归档目录存在
+    if (!existsSync(ARCHIVE_DIR)) {
+      mkdirSync(ARCHIVE_DIR, { recursive: true });
+    }
+    
+    // 计算要归档的数量（保留最近 ARCHIVE_THRESHOLD 条）
+    const toArchive = commandHistory.slice(0, commandHistory.length - ARCHIVE_THRESHOLD);
+    commandHistory = commandHistory.slice(-ARCHIVE_THRESHOLD);
+    
+    if (toArchive.length === 0) return;
+    
+    // 生成归档文件名（按日期）
+    const date = new Date().toISOString().split('T')[0];
+    const archiveFile = path.join(ARCHIVE_DIR, `archive-${date}.json`);
+    
+    // 如果当天已有归档，追加；否则新建
+    let archiveData = { archived: [], meta: {} };
+    if (existsSync(archiveFile)) {
+      archiveData = JSON.parse(readFileSync(archiveFile, 'utf-8'));
+    }
+    
+    archiveData.archived.push(...toArchive);
+    archiveData.meta.lastUpdate = new Date().toISOString();
+    archiveData.meta.count = archiveData.archived.length;
+    archiveData.meta.idRange = {
+      from: archiveData.archived[0]?.id,
+      to: archiveData.archived[archiveData.archived.length - 1]?.id
+    };
+    
+    writeFileSync(archiveFile, JSON.stringify(archiveData, null, 2));
+    logger.info(`归档了 ${toArchive.length} 条历史记录到 ${archiveFile}`);
+  } catch (e) {
+    logger.warning('归档历史记录失败: ' + e.message);
+    // 归档失败时，简单截断
+    commandHistory = commandHistory.slice(-MAX_HISTORY);
+  }
+}
+
 function addToHistory(tool, params, success, resultPreview, error = null) {
   const entry = {
     id: historyIdCounter++,
@@ -68,8 +111,9 @@ function addToHistory(tool, params, success, resultPreview, error = null) {
   
   commandHistory.push(entry);
   
+  // 自动归档：当超过阈值时，归档旧记录
   if (commandHistory.length > MAX_HISTORY) {
-    commandHistory = commandHistory.slice(-MAX_HISTORY);
+    archiveOldHistory();
   }
   
   saveHistory();
