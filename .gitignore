@@ -26,3 +26,4 @@ fix.js
 _trash/
 test/
 server-v2/command-history.json
+ssh-key-*.key

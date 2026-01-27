@@ -23,7 +23,7 @@ const SERVERS = {
   local: 'ws://localhost:8765',
   cloud: 'ws://157.151.227.157:8765'
 };
-let currentServer = 'cloud';  // 默认云端
+let currentServer = 'local';  // 默认云端
 const WS_URL = SERVERS[currentServer];
 
 function connectWebSocket() {
