@@ -74,16 +74,6 @@ function addToHistory(tool, params, success, resultPreview, error = null) {
   
   saveHistory();
   
-  // 集成记忆系统 - 异步记录到长期存储
-  const memoryManager = '/Users/yay/workspace/.agent_memory/memory_manager_v2.js';
-  const { execSync } = require('child_process');
-  try {
-    const paramStr = JSON.stringify(params).replace(/'/g, "'\''");
-    const previewStr = (resultPreview || '').substring(0, 200).replace(/'/g, "'\''").replace(/\n/g, ' ');
-    execSync(`node ${memoryManager} record ${entry.id} ${tool} '${paramStr}' ${success} '${previewStr}'`, { timeout: 1000 });
-  } catch (e) {
-    // 记忆系统失败不影响主流程
-  }
   
   return entry.id;
 }
