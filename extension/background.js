@@ -18,7 +18,13 @@ const processedResults = new Set();
 const agentTabs = new Map(); // agentId -> tabId
 const tabAgents = new Map(); // tabId -> agentId
 
-const WS_URL = 'ws://localhost:8765';
+// 服务器地址配置（可切换本地/云端）
+const SERVERS = {
+  local: 'ws://localhost:8765',
+  cloud: 'ws://157.151.227.157:8765'
+};
+let currentServer = 'local';  // 默认本地
+const WS_URL = SERVERS[currentServer];
 
 function connectWebSocket() {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -33,7 +39,7 @@ function connectWebSocket() {
   console.log('[BG] 连接 WebSocket...');
 
   try {
-    socket = new WebSocket(WS_URL);
+    socket = new WebSocket(SERVERS[currentServer]);
   } catch(e) {
     console.error('[BG] 创建失败:', e);
     scheduleReconnect();
@@ -302,6 +308,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
     
+    case 'SWITCH_SERVER':
+      const target = message.server || 'local';
+      if (SERVERS[target]) {
+        currentServer = target;
+        console.log('[Agent] 切换服务器:', target, SERVERS[target]);
+        if (socket) socket.close();
+        setTimeout(connect, 500);
+        sendResponse({ success: true, server: target, url: SERVERS[target] });
+      } else {
+        sendResponse({ success: false, error: 'Unknown server: ' + target });
+      }
+      break;
+
+    case 'GET_SERVER_INFO':
+      sendResponse({ current: currentServer, servers: SERVERS });
+      break;
+
     case 'GET_REGISTERED_AGENTS':
       sendResponse({ success: true, agents: getRegisteredAgents() });
       break;
