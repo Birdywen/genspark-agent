@@ -394,3 +394,32 @@ node /Users/yay/workspace/.agent_memory/memory_manager.js new
 - 会话摘要: `/Users/yay/workspace/.agent_memory/session_summary.md`
 - 命令历史: `/Users/yay/workspace/.agent_memory/command_history.json`
 - 详细输出: `/Users/yay/workspace/.agent_memory/outputs/`
+
+---
+
+## 新对话启动流程 (重要!)
+
+每次新对话开始时，先执行以下命令了解当前状态：
+
+```bash
+# 1. 查看所有项目和当前进度
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects
+
+# 2. 如果用户提到某个项目，切换并加载
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch <project_name>
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js load
+```
+
+### 项目名称映射
+
+| 用户可能说的 | 实际项目名 |
+|-------------|------------|
+| youtube/英语频道/视频 | english_youtube_channel |
+| agent/genspark/插件 | genspark-agent |
+
+### 里程碑记录
+
+完成重要功能时主动记录：
+```bash
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone "完成XX功能"
+```
