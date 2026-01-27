@@ -1041,6 +1041,7 @@ ${tip}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
@@ -1205,6 +1206,34 @@ ${tip}
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
       addLog('🔄 重连中...', 'info');
     };
+
+    // 切换本地/云端服务器
+    document.getElementById('agent-switch-server').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 获取服务器信息失败', 'error');
+          return;
+        }
+        const newServer = info.current === 'local' ? 'cloud' : 'local';
+        chrome.runtime.sendMessage({ type: 'SWITCH_SERVER', server: newServer }, (resp) => {
+          if (resp?.success) {
+            const btn = document.getElementById('agent-switch-server');
+            btn.textContent = newServer === 'cloud' ? '🌐 云' : '💻 本地';
+            addLog('✅ 已切换到 ' + newServer + ': ' + resp.url, 'success');
+          } else {
+            addLog('❌ 切换失败: ' + (resp?.error || '未知错误'), 'error');
+          }
+        });
+      });
+    };
+
+    // 初始化服务器按钮状态
+    chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+      if (info?.current) {
+        const btn = document.getElementById('agent-switch-server');
+        if (btn) btn.textContent = info.current === 'cloud' ? '🌐 云' : '💻 本地';
+      }
+    });
     
     document.getElementById('agent-copy-prompt').onclick = () => {
       const prompt = generateSystemPrompt();
