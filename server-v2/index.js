@@ -75,7 +75,7 @@ function addToHistory(tool, params, success, resultPreview, error = null) {
   saveHistory();
   
   // 集成记忆系统 - 异步记录到长期存储
-  const memoryManager = '/Users/yay/workspace/.agent_memory/memory_manager.js';
+  const memoryManager = '/Users/yay/workspace/.agent_memory/memory_manager_v2.js';
   const { execSync } = require('child_process');
   try {
     const paramStr = JSON.stringify(params).replace(/'/g, "'\''");
