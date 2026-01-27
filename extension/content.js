@@ -1827,9 +1827,12 @@ ${tip}
         // 排除跨 Tab 消息的内容
         if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
           detectAgentId(text);
-          // 检测自动巡检命令
-          if (text.includes('自动巡检') || text.toLowerCase().includes('autopilot')) {
-            if (text.includes('开启') || text.includes('启动') || text.toLowerCase().includes('start') || text.toLowerCase().includes('enable')) {
+          // 检测自动巡检命令（只匹配明确的指令格式）
+          const hasAutopilotCmd = text.match(/@AUTOPILOT[_\s]?(START|STOP)/i) || 
+                                   text.match(/开[启始].*巡检/) || 
+                                   text.match(/巡检.*开[启始]/);
+          if (hasAutopilotCmd) {
+            if (text.includes('开启') || text.includes('启动') || text.toLowerCase().includes('start')) {
               const match = text.match(/(\d+)\s*分钟/);
               const mins = match ? parseInt(match[1]) : 3;
               startAutoPilot(mins);
