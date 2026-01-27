@@ -19,6 +19,20 @@
     "tree-sitter": {
       "command": "/Users/yay/.local/bin/mcp-server-tree-sitter",
       "args": []
+    },
+    "ssh-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ssh-mcp",
+        "--",
+        "--host=ezmusicstore.com",
+        "--port=1394",
+        "--user=ezmusics",
+        "--password=Wenhao123@",
+        "--timeout=60000",
+        "--maxChars=none"
+      ]
     }
   },
   "safety": {

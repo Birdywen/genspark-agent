@@ -11,7 +11,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 30000,
+    TIMEOUT_MS: 120000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,
@@ -194,6 +194,17 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 \`\`\`
 
 派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。
+
+---
+
+## 系统架构
+
+本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。
+
+- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json
+- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等
+- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效
+- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端
 
 ---
 
@@ -860,6 +871,23 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     // 检查重试命令 @RETRY:#ID
     const retryMatch = text.match(/@RETRY:\s*#?(\d+)/);
+
+    // 检查 AI 回复中的自动巡检指令
+    const autoPilotStartMatch = text.match(/@AUTOPILOT[_\s]?START[:\s]*(\d*)分?钟?/i);
+    const autoPilotStopMatch = text.match(/@AUTOPILOT[_\s]?STOP/i);
+    
+    if (autoPilotStartMatch && !state.executedCalls.has(index + ":autopilot_start")) {
+      state.executedCalls.add(index + ":autopilot_start");
+      const mins = parseInt(autoPilotStartMatch[1]) || 3;
+      startAutoPilot(mins);
+      addLog("🤖 AI 指令：启动自动巡检 " + mins + " 分钟", "success");
+    }
+    
+    if (autoPilotStopMatch && !state.executedCalls.has(index + ":autopilot_stop")) {
+      state.executedCalls.add(index + ":autopilot_stop");
+      stopAutoPilot();
+      addLog("🤖 AI 指令：停止自动巡检", "info");
+    }
     if (retryMatch) {
       const retryId = parseInt(retryMatch[1]);
       const retryHash = `${index}:retry:${retryId}`;
@@ -1544,6 +1572,164 @@ ${tip}
     });
   }
 
+  // ============== 自动巡检模式 (Auto-Pilot) ==============
+  
+  let autoPilotTimer = null;
+  let autoPilotEnabled = false;
+  
+  const AUTOPILOT_MESSAGES = [
+    '继续检查任务进度',
+    '汇报当前状态',
+    '检查后台任务',
+    '自动巡检中，请汇报进度'
+  ];
+  
+  function startAutoPilot(intervalMinutes = 3) {
+    if (autoPilotTimer) {
+      clearInterval(autoPilotTimer);
+    }
+    
+    autoPilotEnabled = true;
+    const intervalMs = intervalMinutes * 60 * 1000;
+    
+    addLog(`🚀 自动巡检已启动，间隔 ${intervalMinutes} 分钟`, 'success');
+    
+    // 立即执行一次
+    sendAutoPilotMessage();
+    
+    // 定时执行
+    autoPilotTimer = setInterval(() => {
+      if (!autoPilotEnabled) return;
+      sendAutoPilotMessage();
+    }, intervalMs);
+    
+    // 在页面显示状态
+    showAutoPilotStatus(true, intervalMinutes);
+  }
+  
+  function stopAutoPilot() {
+    autoPilotEnabled = false;
+    if (autoPilotTimer) {
+      clearInterval(autoPilotTimer);
+      autoPilotTimer = null;
+    }
+    addLog('⏹️ 自动巡检已停止', 'info');
+    showAutoPilotStatus(false);
+  }
+  
+  function sendAutoPilotMessage() {
+    if (state.agentRunning) {
+      addLog('⏳ Agent 正在执行，跳过本次巡检', 'info');
+      return;
+    }
+    
+    const msg = AUTOPILOT_MESSAGES[Math.floor(Math.random() * AUTOPILOT_MESSAGES.length)];
+    addLog(`📡 发送巡检消息: ${msg}`, 'info');
+    
+    // 发送消息到聊天框
+    sendMessageToChat(msg);
+  }
+  
+  function sendMessageToChat(text) {
+    // 找到输入框
+    const inputSelectors = [
+      'textarea[placeholder*="Message"]',
+      'textarea[placeholder*="message"]', 
+      'div[contenteditable="true"]',
+      'textarea.chat-input',
+      'textarea'
+    ];
+    
+    let input = null;
+    for (const sel of inputSelectors) {
+      input = document.querySelector(sel);
+      if (input) break;
+    }
+    
+    if (!input) {
+      addLog('❌ 找不到输入框', 'error');
+      return;
+    }
+    
+    // 设置内容
+    if (input.tagName === 'TEXTAREA') {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      input.textContent = text;
+      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    }
+    
+    // 直接用 Enter 键发送（最可靠）
+    setTimeout(() => {
+      // 先尝试 Genspark 的发送按钮
+      const gensparkSend = document.querySelector('.enter-icon-wrapper');
+      if (gensparkSend) {
+        gensparkSend.click();
+        addLog('✅ Genspark 发送按钮已点击', 'success');
+        return;
+      }
+      
+      // 用 Enter 键发送
+      const enterEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true
+      });
+      input.dispatchEvent(enterEvent);
+      
+      // 也尝试 keypress 和 keyup
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', keyCode: 13, bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+      
+      addLog('⌨️ Enter 键已发送', 'info');
+    }, 100);
+  }
+  
+  function showAutoPilotStatus(enabled, minutes = 0) {
+    let statusEl = document.getElementById('autopilot-status');
+    
+    if (!enabled) {
+      if (statusEl) statusEl.remove();
+      return;
+    }
+    
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'autopilot-status';
+      statusEl.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #10b981;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 99999;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        cursor: pointer;
+      `;
+      statusEl.onclick = () => {
+        if (confirm('停止自动巡检？')) stopAutoPilot();
+      };
+      document.body.appendChild(statusEl);
+    }
+    
+    statusEl.textContent = '🤖 自动巡检中 (' + minutes + '分钟)';
+  }
+  
+  // 暴露到全局
+  window.__autoPilot = {
+    start: startAutoPilot,
+    stop: stopAutoPilot,
+    isEnabled: () => autoPilotEnabled
+  };
+
   function startAutoCheck() {
     if (!CONFIG.AUTO_CHECK_ENABLED) return;
     if (autoCheckTimer) clearInterval(autoCheckTimer);
@@ -1607,6 +1793,16 @@ ${tip}
         // 排除跨 Tab 消息的内容
         if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
           detectAgentId(text);
+          // 检测自动巡检命令
+          if (text.includes('自动巡检') || text.toLowerCase().includes('autopilot')) {
+            if (text.includes('开启') || text.includes('启动') || text.toLowerCase().includes('start') || text.toLowerCase().includes('enable')) {
+              const match = text.match(/(\d+)\s*分钟/);
+              const mins = match ? parseInt(match[1]) : 3;
+              startAutoPilot(mins);
+            } else if (text.includes('关闭') || text.includes('停止') || text.toLowerCase().includes('stop') || text.toLowerCase().includes('disable')) {
+              stopAutoPilot();
+            }
+          }
         }
         lastCheckedUserMsgCount = userMessages.length;
       }
