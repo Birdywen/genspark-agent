@@ -399,16 +399,29 @@ node /Users/yay/workspace/.agent_memory/memory_manager.js new
 
 ## 新对话启动流程 (重要!)
 
-每次新对话开始时，先执行以下命令了解当前状态：
+每次新对话开始时，**一键恢复上下文**：
 
 ```bash
-# 1. 查看所有项目和当前进度
+# 推荐：生成完整上下文摘要（项目信息 + 命令历史精华）
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <project_name> /Users/yay/workspace/genspark-agent/server-v2/command-history.json
+
+# 或者分步执行：
+# 1. 查看所有项目
 node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects
 
-# 2. 如果用户提到某个项目，切换并加载
+# 2. 切换并加载项目
 node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch <project_name>
-node /Users/yay/workspace/.agent_memory/memory_manager_v2.js load
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js summary
 ```
+
+### digest 命令输出内容
+- 📋 当前任务
+- 📁 关键路径（项目结构）
+- 🖥️ 服务器信息
+- ✅ 最近里程碑
+- 📝 备注
+- 🔧 上次完成的工作（从命令历史自动提取）
+- 💡 关键信息（服务器状态、修改的文件等）
 
 ### 项目名称映射
 
@@ -423,3 +436,50 @@ node /Users/yay/workspace/.agent_memory/memory_manager_v2.js load
 ```bash
 node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone "完成XX功能"
 ```
+
+### 设置任意字段
+
+```bash
+# 设置备注
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js set notes "项目说明..."
+
+# 设置服务器信息（支持点号路径）
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js set server.ip "157.151.227.157"
+node /Users/yay/workspace/.agent_memory/memory_manager_v2.js set server.port "8765"
+```
+
+---
+
+## 智能历史压缩系统
+
+### 命令历史容量
+- **热历史**：保留最近 500 条命令（在 `command-history.json`）
+- **自动归档**：超过 500 条时，旧记录自动归档到 `history-archives/archive-YYYY-MM-DD.json`
+
+### 历史分析工具
+
+```bash
+# 分析历史统计
+node /Users/yay/workspace/.agent_memory/history_compressor.js analyze /path/to/command-history.json
+
+# 生成操作摘要（从100条命令提炼为6-8条有意义的操作）
+node /Users/yay/workspace/.agent_memory/history_compressor.js summary /path/to/command-history.json
+
+# 生成下次对话上下文
+node /Users/yay/workspace/.agent_memory/history_compressor.js context /path/to/command-history.json
+```
+
+### 压缩示例
+
+原始 100 条命令 → 压缩后：
+```
+- 部署到 157.151.227.157: clone → install → configure → start
+- 提交并推送代码: "feat: 添加服务器切换功能"
+- 创建文件: background.js, history_compressor.js
+- 远程操作: 157.151.227.157
+```
+
+### 过滤的噪音
+- `echo test/hello/ok` 等测试命令
+- `sleep`, `pwd`, `ls` 等简单命令
+- 失败后成功重试的重复命令
