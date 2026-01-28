@@ -41,7 +41,48 @@
     lastToolCall: null
   };
 
-  function log(...args) {
+  
+  // 改进的 JSON 解析函数 - 处理长内容和特殊字符
+  function safeJsonParse(jsonStr) {
+    let fixed = jsonStr
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'");
+    
+    try {
+      return JSON.parse(fixed);
+    } catch (e1) {
+      // 尝试修复字符串内的换行符
+      try {
+        let result = '', inString = false, escape = false;
+        for (let i = 0; i < fixed.length; i++) {
+          const c = fixed[i];
+          if (escape) { result += c; escape = false; continue; }
+          if (c === '\\') { result += c; escape = true; continue; }
+          if (c === '"') { inString = !inString; result += c; continue; }
+          if (inString && c === '\n') { result += '\\n'; continue; }
+          if (inString && c === '\r') { result += '\\r'; continue; }
+          if (inString && c === '\t') { result += '\\t'; continue; }
+          result += c;
+        }
+        return JSON.parse(result);
+      } catch (e2) {
+        // 最后尝试：提取工具名和简单参数
+        const toolMatch = fixed.match(/"tool"\s*:\s*"(\w+)"/);
+        const pathMatch = fixed.match(/"path"\s*:\s*"([^"]+)"/);
+        const cmdMatch = fixed.match(/"command"\s*:\s*"([^"]+)"/);
+        if (toolMatch) {
+          const params = {};
+          if (pathMatch) params.path = pathMatch[1];
+          if (cmdMatch) params.command = cmdMatch[1];
+          console.warn('[Agent] Partial parse for tool:', toolMatch[1]);
+          return { tool: toolMatch[1], params, _partialParse: true };
+        }
+        throw e1;
+      }
+    }
+  }
+
+function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
   }
 
@@ -588,7 +629,7 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
     while ((m = re.exec(text)) !== null) {
       try {
         const json = m[1].trim().replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-        const p = JSON.parse(json);
+        const p = safeJsonParse(json);
         if (p.tool) calls.push({ name: p.tool, params: p.params || {}, raw: m[0], start: m.index, end: m.index + m[0].length });
       } catch (e) { console.error('[Agent] tool block error:', e.message); }
     }
@@ -628,7 +669,7 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
           let jsonStr = extracted.json
             .replace(/[“”]/g, '"')  // Chinese double quotes to ASCII
             .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
-          const parsed = JSON.parse(jsonStr);
+          const parsed = safeJsonParse(jsonStr);
           if (parsed.tool) {
             toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
           }
