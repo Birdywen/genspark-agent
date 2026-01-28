@@ -483,3 +483,32 @@ node /Users/yay/workspace/.agent_memory/history_compressor.js context /path/to/c
 - `echo test/hello/ok` 等测试命令
 - `sleep`, `pwd`, `ls` 等简单命令
 - 失败后成功重试的重复命令
+
+
+## 2026-01-28: 工具调用误判问题及解决方案
+
+### 问题
+当 AI 输出的内容中包含某些关键词时，调用不会被执行。
+
+原因：parseToolCalls 从渲染后的 DOM 文本中搜索模式，isExampleToolCall 会把某些内容误判为示例而跳过。
+
+### 解决方案：特殊代码块语言标记
+
+只有 tool 语言标记的代码块才被执行。
+
+### 实现要点
+1. 修改 parseToolCalls - 只解析 tool 代码块内的内容
+2. 简化 isExampleToolCall
+3. AI 输出时用 tool 语言标记包裹调用
+
+
+### 最终解决方案 (v34)
+
+1. **Ω 标记替代 @TOOL** - 使用希腊字母 Ω 作为工具调用标记，几乎不可能在正常文本中出现
+2. **移除 isRealToolCall 检查** - Ω 格式不需要复杂的示例检测
+3. **移除执行结果关键词检查** - 原来的检查会误判包含这些字符的代码
+
+调用格式:
+```
+Ω{"tool":"run_command","params":{"command":"echo hello"}}
+```
