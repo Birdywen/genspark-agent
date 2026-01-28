@@ -1679,8 +1679,8 @@ ${tip}
   // ============== AI 响应超时唤醒 ==============
   let lastAiMessageTime = Date.now();
   let wakeupTimer = null;
-  const WAKEUP_TIMEOUT = 10000; // 10 seconds timeout
-  const WAKEUP_CHECK_INTERVAL = 5000; // check every 5 seconds
+  const WAKEUP_TIMEOUT = 60000; // 60 seconds timeout
+  const WAKEUP_CHECK_INTERVAL = 15000; // check every 15 seconds
   
   function updateLastAiMessageTime() {
     lastAiMessageTime = Date.now();

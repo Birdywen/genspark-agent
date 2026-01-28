@@ -5463,7 +5463,95 @@
       "success": true,
       "resultPreview": "added more error tips\n",
       "error": null
+    },
+    {
+      "id": 2086,
+      "timestamp": "2026-01-28T02:43:11.188Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: SmartTips添加更多错误提示' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main f6a912c] feat: SmartTips添加更多错误提示\n 2 files changed, 76 insertions(+), 1 deletion(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   0719299..f6a912c  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2087,
+      "timestamp": "2026-01-28T02:45:13.602Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ssh -i ~/.ssh/oracle-cloud.key ubuntu@157.151.227.157 'cd ~/genspark-agent && git pull origin main && echo done'"
+      },
+      "success": false,
+      "resultPreview": "",
+      "error": "命令不在白名单: ssh"
+    },
+    {
+      "id": 2088,
+      "timestamp": "2026-01-28T02:52:18.100Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd ~/genspark-agent/server-v2 && pm2 restart genspark-agent || (pm2 start index.js --name genspark-agent && pm2 save)"
+      },
+      "success": true,
+      "resultPreview": "127\n/bin/sh: line 0: cd: /Users/yay/genspark-agent/server-v2: No such file or directory\n/bin/sh: pm2: command not found\n",
+      "error": null
+    },
+    {
+      "id": 2089,
+      "timestamp": "2026-01-28T02:52:29.702Z",
+      "tool": "run_command",
+      "params": {
+        "command": "whoami && hostname"
+      },
+      "success": true,
+      "resultPreview": "yay\nYAOs-MacBook-Air.local\n",
+      "error": null
+    },
+    {
+      "id": 2090,
+      "timestamp": "2026-01-28T02:55:05.738Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'test' && whoami && pwd"
+      },
+      "success": true,
+      "resultPreview": "test\nyay\n/Users/yay/workspace/genspark-agent/server-v2\n",
+      "error": null
+    },
+    {
+      "id": 2091,
+      "timestamp": "2026-01-28T02:56:20.525Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'WAKE\\|唤醒\\|timeout\\|TIMEOUT' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "14:    TIMEOUT_MS: 120000,\n432:    // 更新最后消息时间（用于超时唤醒检测）\n803:        const timeoutResult = `**[重试结果]** \\`#${historyId}\\` ✗ 超时\\n\\n请稍后再试，或检查服务器状态。`;\n804:        sendMessageSafe(timeoutResult);\n806:    }, CONFIG.TIMEOUT_MS);\n872:        const timeoutResult = formatToolResult({\n875:          error: `执行超时 (${CONFIG.TIMEOUT_MS / 1000}秒)`\n877:        sendMessageSafe(timeoutResult);\n879:    }, CONFIG.TIMEOUT_MS);\n1031:      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',\n1679:  // ============== AI 响应超时唤醒 ===",
+      "error": null
+    },
+    {
+      "id": 2092,
+      "timestamp": "2026-01-28T02:56:34.716Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -i '' 's/WAKEUP_TIMEOUT = 10000/WAKEUP_TIMEOUT = 60000/; s/WAKEUP_CHECK_INTERVAL = 5000/WAKEUP_CHECK_INTERVAL = 15000/' /Users/yay/workspace/genspark-agent/extension/content.js && grep -n 'WAKEUP' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1682:  const WAKEUP_TIMEOUT = 60000; // 10 seconds timeout\n1683:  const WAKEUP_CHECK_INTERVAL = 15000; // check every 5 seconds\n1700:      if (elapsed > WAKEUP_TIMEOUT) {\n1705:    }, WAKEUP_CHECK_INTERVAL);\n",
+      "error": null
+    },
+    {
+      "id": 2093,
+      "timestamp": "2026-01-28T02:56:45.311Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -i '' 's/WAKEUP_TIMEOUT = 60000; \\/\\/ 10 seconds/WAKEUP_TIMEOUT = 60000; \\/\\/ 60 seconds/; s/WAKEUP_CHECK_INTERVAL = 15000; \\/\\/ check every 5 seconds/WAKEUP_CHECK_INTERVAL = 15000; \\/\\/ check every 15 seconds/' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
     }
   ],
-  "nextId": 2086
+  "nextId": 2094
 }
