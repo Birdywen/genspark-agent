@@ -610,6 +610,12 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
       const marker = 'Ω';
       const idx = text.indexOf(marker, searchStart);
       if (idx === -1) break;
+      // 检查是否紧跟 {"tool":
+      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);
+      if (!afterMarker.match(/^\s*\{\s*"tool"/)) {
+        searchStart = idx + marker.length;
+        continue;
+      }
       const extracted = extractJsonFromText(text, idx + marker.length);
       if (extracted) {
         // Skip if extracted JSON is too short or looks invalid

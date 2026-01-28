@@ -5148,7 +5148,84 @@
       "success": true,
       "resultPreview": "1:// content.js v34 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n104:Ω{\"tool\":\"工具名\",\"params\":{\"参数名\":\"参数值\"}}\n111:Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"ls -la\"}}\n116:Ω{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/to/file\"}}\n121:Ω{\"tool\":\"write_file\",\"params\":{\"path\":\"/path/to/file.json\",\"content\":\"{\\\\\"key\\\\\":\\\\\"value\\\\\"}\"}}\n135:6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg'）\n536:  // 解析新的代码块格式: Ωname ... ΩEND\n539:    const regex = /Ω(\\w",
       "error": null
+    },
+    {
+      "id": 2057,
+      "timestamp": "2026-01-28T02:27:27.058Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat(v34): 用Ω标记替代@TOOL解决工具调用误判问题' && git log --oneline -3"
+      },
+      "success": true,
+      "resultPreview": "[main 76e66d1] feat(v34): 用Ω标记替代@TOOL解决工具调用误判问题\n 5 files changed, 4487 insertions(+), 412 deletions(-)\n create mode 100644 extension/smart_tips.js\n create mode 100644 oracle-cloud.key\n76e66d1 feat(v34): 用Ω标记替代@TOOL解决工具调用误判问题\nd0cfb25 refactor: 优化系统提示词v2 - 精简结构、添加记忆系统说明\nfe74c32 docs: 整理文档结构，匹配skills.js的引用\n",
+      "error": null
+    },
+    {
+      "id": 2058,
+      "timestamp": "2026-01-28T02:27:37.581Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git rm --cached oracle-cloud.key && echo 'oracle-cloud.key' >> .gitignore && git add .gitignore && git commit -m 'fix: 移除误提交的密钥文件' && git log --oneline -2"
+      },
+      "success": true,
+      "resultPreview": "rm 'oracle-cloud.key'\n[main aa677e6] fix: 移除误提交的密钥文件\n 2 files changed, 1 insertion(+), 27 deletions(-)\n delete mode 100644 oracle-cloud.key\naa677e6 fix: 移除误提交的密钥文件\n76e66d1 feat(v34): 用Ω标记替代@TOOL解决工具调用误判问题\n",
+      "error": null
+    },
+    {
+      "id": 2059,
+      "timestamp": "2026-01-28T02:27:49.969Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "To https://github.com/Birdywen/genspark-agent.git\n   d0cfb25..aa677e6  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2060,
+      "timestamp": "2026-01-28T02:28:02.715Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo hello"
+      },
+      "success": true,
+      "resultPreview": "hello\n",
+      "error": null
+    },
+    {
+      "id": 2061,
+      "timestamp": "2026-01-28T02:31:06.527Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '608,630p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      const extracted = extractJsonFromText(text, idx + marker.length);\n      if (extracted) {\n        // Skip if extracted JSON is too short or looks invalid\n        if (!extracted.json || extracted.json.length < 5 || !extracted.json.startsWith('{')) {\n          searchStart = idx + marker.length;\n          continue;\n        }\n        try {\n     ",
+      "error": null
+    },
+    {
+      "id": 2062,
+      "timestamp": "2026-01-28T02:31:22.782Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'NS'\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet code = fs.readFileSync(file, 'utf8');\n\n// 添加更严格的检查：Ω 后面必须紧跟 {\"tool\":\nconst oldCheck = `const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;`;\nconst newCheck = `const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\\\s*\\\\{\\\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }`;\n\ncode = code.replace(oldCheck, newCheck);\nfs.writeFileSync(file, code);\nconsole.log('stricter check added');\nNS"
+      },
+      "success": true,
+      "resultPreview": "stricter check added\n",
+      "error": null
+    },
+    {
+      "id": 2063,
+      "timestamp": "2026-01-28T02:31:32.322Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '608,625p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\s*\\{\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }\n      const extracted = extractJsonFromText(text, idx + marker.length);\n      if (extracted) {\n        // Skip if ",
+      "error": null
     }
   ],
-  "nextId": 2057
+  "nextId": 2064
 }
