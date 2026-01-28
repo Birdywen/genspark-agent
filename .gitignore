@@ -27,3 +27,4 @@ _trash/
 test/
 server-v2/command-history.json
 ssh-key-*.key
+oracle-cloud.key
