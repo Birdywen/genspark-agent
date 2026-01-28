@@ -5225,7 +5225,40 @@
       "success": true,
       "resultPreview": "    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\s*\\{\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }\n      const extracted = extractJsonFromText(text, idx + marker.length);\n      if (extracted) {\n        // Skip if ",
       "error": null
+    },
+    {
+      "id": 2064,
+      "timestamp": "2026-01-28T02:31:43.926Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: Ω标记需紧跟{\"tool\":才解析，避免误解析示例文本' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main 79502eb] fix: Ω标记需紧跟{\"tool\":才解析，避免误解析示例文本\n 2 files changed, 84 insertions(+), 1 deletion(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   aa677e6..79502eb  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2065,
+      "timestamp": "2026-01-28T02:32:47.681Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n '@SEND' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "135:6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg'）\n940:    // 先检查跨 Tab 发送命令 @SEND:agent_id:message\n941:    // 排除示例、代码块内、引用中的 @SEND\n942:    const sendMatch = text.match(/@SEND:([\\w_]+):([\\s\\S]+?)(?=@SEND:|Ω|@DONE|$)/);\n1532:        const crossTabMsg = `**[来自 ${msg.from} 的消息]**\\n\\n${msg.message}\\n\\n---\\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;\n",
+      "error": null
+    },
+    {
+      "id": 2066,
+      "timestamp": "2026-01-28T02:36:15.224Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'NS'\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet code = fs.readFileSync(file, 'utf8');\n\n// 把 console.error 改成 console.log，并且只在 DEBUG 模式下输出\ncode = code.replace(\n  \"console.error('[Agent] JSON parse error:', e.message);\",\n  \"if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);\"\n);\n\nfs.writeFileSync(file, code);\nconsole.log('error log silenced');\nNS"
+      },
+      "success": true,
+      "resultPreview": "error log silenced\n",
+      "error": null
     }
   ],
-  "nextId": 2064
+  "nextId": 2067
 }

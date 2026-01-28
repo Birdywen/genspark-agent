@@ -633,7 +633,7 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
             toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
           }
         } catch (e) {
-          console.error('[Agent] JSON parse error:', e.message);
+          if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
           console.error('[Agent] Raw JSON:', extracted.json.slice(0, 300));
           addLog('JSON parse error: ' + e.message, 'error');
         }
