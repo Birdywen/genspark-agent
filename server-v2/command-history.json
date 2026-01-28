@@ -5390,7 +5390,80 @@
       "success": true,
       "resultPreview": "    const status = msg.success ? '✓ 成功' : '✗ 失败';\n    \n    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);\n    \n    return `**[执行结果]** \\`${msg.tool}\\` ${status}:\n\\`\\`\\`\n${content}\n\\`\\`\\`\n${tip}\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n  }\n\n  // ============== UI ==============\n\n  function createPanel() {\n    if (document.getElementById('agent-panel')) return;\n",
       "error": null
+    },
+    {
+      "id": 2079,
+      "timestamp": "2026-01-28T02:41:41.590Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: 智能提示系统SmartTips - 根据工具类型和执行结果显示相关提示' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main 0719299] feat: 智能提示系统SmartTips - 根据工具类型和执行结果显示相关提示\n 2 files changed, 122 insertions(+), 17 deletions(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   e0d4111..0719299  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2080,
+      "timestamp": "2026-01-28T02:41:53.524Z",
+      "tool": "take_snapshot",
+      "params": {},
+      "success": true,
+      "resultPreview": "# take_snapshot response\n## Latest page snapshot\nuid=1_0 RootWebArea url=\"about:blank\"\n",
+      "error": null
+    },
+    {
+      "id": 2081,
+      "timestamp": "2026-01-28T02:42:05.802Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -A3 'take_snapshot' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "      'take_snapshot': '快照包含 uid，用于 click/fill 等操作',\n      'click': '点击后可能需要 wait_for 等待页面变化',\n      'fill': '填写后通常需要 click 提交按钮',\n      'navigate_page': '导航后用 take_snapshot 获取页面内容',\n      'new_page': '新页面已创建，用 take_snapshot 查看内容',\n      'write_file': '文件已写入，大文件建议用 run_command',\n      'edit_file': '文件已修改，可用 read_file 验证',\n      'register_project_tool': '项目已注册，可用 get_symbols/find_text 分析',\n",
+      "error": null
+    },
+    {
+      "id": 2082,
+      "timestamp": "2026-01-28T02:42:17.191Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'test smart tips'"
+      },
+      "success": true,
+      "resultPreview": "test smart tips\n",
+      "error": null
+    },
+    {
+      "id": 2083,
+      "timestamp": "2026-01-28T02:42:34.720Z",
+      "tool": "take_snapshot",
+      "params": {},
+      "success": true,
+      "resultPreview": "The selected page has been closed. Call list_pages to see open pages.",
+      "error": null
+    },
+    {
+      "id": 2084,
+      "timestamp": "2026-01-28T02:42:45.194Z",
+      "tool": "read_file",
+      "params": {
+        "path": "/nonexistent/path/file.txt"
+      },
+      "success": false,
+      "resultPreview": "",
+      "error": "路径不允许: /nonexistent/path/file.txt"
+    },
+    {
+      "id": 2085,
+      "timestamp": "2026-01-28T02:42:58.089Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'NS'\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet code = fs.readFileSync(file, 'utf8');\n\n// 添加更多错误提示\nconst oldErrorTips = `'command not found': '命令不存在，检查是否已安装',\n    },`;\nconst newErrorTips = `'command not found': '命令不存在，检查是否已安装',\n      'not allowed': '路径不在允许目录内，检查 list_allowed_directories',\n      'syntax error': '语法错误，检查代码格式',\n    },`;\n\ncode = code.replace(oldErrorTips, newErrorTips);\nfs.writeFileSync(file, code);\nconsole.log('added more error tips');\nNS"
+      },
+      "success": true,
+      "resultPreview": "added more error tips\n",
+      "error": null
     }
   ],
-  "nextId": 2079
+  "nextId": 2086
 }

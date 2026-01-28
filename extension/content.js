@@ -1035,6 +1035,8 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
       'eacces': '访问被拒绝，检查文件权限',
       'no such file': '文件不存在，用 list_directory 查看目录',
       'command not found': '命令不存在，检查是否已安装',
+      'not allowed': '路径不在允许目录内，检查 list_allowed_directories',
+      'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
       '每次只调用一个工具，等结果后再继续',
