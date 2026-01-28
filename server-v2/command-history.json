@@ -5313,7 +5313,84 @@
       "success": true,
       "resultPreview": "1073:        <span id=\"agent-title\">🤖 Agent v34</span>\n1737:    log('初始化 Agent v34 (Genspark)');\n1778:    addLog('🚀 Agent v34 已启动', 'success');\n",
       "error": null
+    },
+    {
+      "id": 2072,
+      "timestamp": "2026-01-28T02:39:21.672Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: 更新面板版本号为v34' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main e0d4111] fix: 更新面板版本号为v34\n 2 files changed, 59 insertions(+), 4 deletions(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   ff872c1..e0d4111  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2073,
+      "timestamp": "2026-01-28T02:40:18.193Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function formatToolResult' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1015:  function formatToolResult(msg) {\n",
+      "error": null
+    },
+    {
+      "id": 2074,
+      "timestamp": "2026-01-28T02:40:27.979Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1015,1060p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function formatToolResult(msg) {\n    let content;\n    \n    if (msg.success) {\n      if (typeof msg.result === 'string') {\n        content = msg.result;\n      } else if (msg.result?.stdout !== undefined) {\n        content = msg.result.stdout || '(空输出)';\n        if (msg.result.stderr) {\n          content += '\\n[stderr]: ' + msg.result.stderr;\n        }\n      } else {\n        content = JSON.stringify(msg.result, null, 2);\n      }\n    } else {\n      content = `错误: ${msg.error || msg.result?.stderr",
+      "error": null
+    },
+    {
+      "id": 2075,
+      "timestamp": "2026-01-28T02:40:51.682Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'NS'\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet code = fs.readFileSync(file, 'utf8');\n\n// SmartTips 对象\nconst smartTips = `\n  // ============== 智能提示系统 ==============\n  const SmartTips = {\n    toolTips: {\n      'take_screenshot': '截图已保存，可用 read_media_file 查看',\n      'take_snapshot': '快照包含 uid，用于 click/fill 等操作',\n      'click': '点击后可能需要 wait_for 等待页面变化',\n      'fill': '填写后通常需要 click 提交按钮',\n      'navigate_page': '导航后用 take_snapshot 获取页面内容',\n      'new_page': '新页面已创建，用 take_snapshot 查看内容',\n      'write_file': '文件已写入，大文件建议用 run_command',\n      'edit_file': '文件已修改，可用 read_file 验证',\n      'register_project_tool': '项目已注册，可用 get_symbols/find_text 分析',\n      'get_symbols': '符号列表可用于 find_usage 查引用',\n    },\n    errorTips: {\n      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',\n      'not found': '路径不存在，先用 list_directory 确认',\n      'permission denied': '权限不足，检查是否在允许目录内',\n      'enoent': '文件/目录不存在，检查路径拼写',\n      'eacces': '访问被拒绝，检查文件权限',\n      'no such file': '文件不存在，用 list_directory 查看目录',\n      'command not found': '命令不存在，检查是否已安装',\n    },\n    generalTips: [\n      '每次只调用一个工具，等结果后再继续',\n      '长内容用 run_command + heredoc 写入',\n      '项目记忆: memory_manager_v2.js projects',\n    ],\n    getTip(toolName, success, content, error) {\n      const text = ((content || '') + ' ' + (error || '')).toLowerCase();\n      if (!success) {\n        for (const [key, tip] of Object.entries(this.errorTips)) {\n          if (text.includes(key)) return tip;\n        }\n      }\n      if (success && this.toolTips[toolName]) {\n        return this.toolTips[toolName];\n      }\n      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];\n    }\n  };\n`;\n\n// 在 formatToolResult 前插入 SmartTips\nconst funcStart = code.indexOf('function formatToolResult(msg)');\ncode = code.slice(0, funcStart) + smartTips + '\\n  ' + code.slice(funcStart);\n\nfs.writeFileSync(file, code);\nconsole.log('SmartTips added before formatToolResult');\nNS"
+      },
+      "success": true,
+      "resultPreview": "SmartTips added before formatToolResult\n",
+      "error": null
+    },
+    {
+      "id": 2076,
+      "timestamp": "2026-01-28T02:41:08.654Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'NS'\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet code = fs.readFileSync(file, 'utf8');\n\n// 替换随机 tips 为 SmartTips.getTip()\nconst oldTips = `const tips = [\n      '举例时不加@: 写 TOOL:{...} 而非 Ω{...}',\n      '每次只调用一个工具，等结果后再继续',\n      '长内容勿塞JSON: 用 node -e 或 run_command+stdin',\n      'Helper脚本: scripts/safe_write.js, safe_edit.js',\n      '浏览器操作前先 take_snapshot 获取 uid',\n      '跨Agent通信: SEND:agent_id:消息 (前加@执行)',\n      '新对话先读: docs/LESSONS_LEARNED.md',\n      '轮次计数: node scripts/session_counter.js status',\n      '项目记忆: node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects',\n      '恢复上下文: memory_manager_v2.js digest <proj> command-history.json',\n      '历史分析: history_compressor.js context command-history.json',\n      '记录里程碑: memory_manager_v2.js milestone \"完成XX\"',\n      '命令历史500条，超出自动归档到 history-archives/'\n    ];\n    const tip = tips[Math.floor(Math.random() * tips.length)];`;\n\nconst newTips = `const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);`;\n\nif (code.includes(oldTips)) {\n  code = code.replace(oldTips, newTips);\n  fs.writeFileSync(file, code);\n  console.log('tips replaced with SmartTips.getTip()');\n} else {\n  console.log('old tips pattern not found, trying alternative...');\n  // 尝试只替换关键行\n  const idx = code.indexOf(\"const tips = [\");\n  console.log('tips array at:', idx);\n}\nNS"
+      },
+      "success": true,
+      "resultPreview": "tips replaced with SmartTips.getTip()\n",
+      "error": null
+    },
+    {
+      "id": 2077,
+      "timestamp": "2026-01-28T02:41:18.779Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1055,1080p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    }\n  };\n\n  function formatToolResult(msg) {\n    let content;\n    \n    if (msg.success) {\n      if (typeof msg.result === 'string') {\n        content = msg.result;\n      } else if (msg.result?.stdout !== undefined) {\n        content = msg.result.stdout || '(空输出)';\n        if (msg.result.stderr) {\n          content += '\\n[stderr]: ' + msg.result.stderr;\n        }\n      } else {\n        content = JSON.stringify(msg.result, null, 2);\n      }\n    } else {\n      content = `错误: ${msg.error || msg.re",
+      "error": null
+    },
+    {
+      "id": 2078,
+      "timestamp": "2026-01-28T02:41:30.179Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1080,1095p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    const status = msg.success ? '✓ 成功' : '✗ 失败';\n    \n    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);\n    \n    return `**[执行结果]** \\`${msg.tool}\\` ${status}:\n\\`\\`\\`\n${content}\n\\`\\`\\`\n${tip}\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n  }\n\n  // ============== UI ==============\n\n  function createPanel() {\n    if (document.getElementById('agent-panel')) return;\n",
+      "error": null
     }
   ],
-  "nextId": 2072
+  "nextId": 2079
 }

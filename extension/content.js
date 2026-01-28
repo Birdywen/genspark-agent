@@ -1012,6 +1012,49 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
     }
   }
 
+  
+  // ============== 智能提示系统 ==============
+  const SmartTips = {
+    toolTips: {
+      'take_screenshot': '截图已保存，可用 read_media_file 查看',
+      'take_snapshot': '快照包含 uid，用于 click/fill 等操作',
+      'click': '点击后可能需要 wait_for 等待页面变化',
+      'fill': '填写后通常需要 click 提交按钮',
+      'navigate_page': '导航后用 take_snapshot 获取页面内容',
+      'new_page': '新页面已创建，用 take_snapshot 查看内容',
+      'write_file': '文件已写入，大文件建议用 run_command',
+      'edit_file': '文件已修改，可用 read_file 验证',
+      'register_project_tool': '项目已注册，可用 get_symbols/find_text 分析',
+      'get_symbols': '符号列表可用于 find_usage 查引用',
+    },
+    errorTips: {
+      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',
+      'not found': '路径不存在，先用 list_directory 确认',
+      'permission denied': '权限不足，检查是否在允许目录内',
+      'enoent': '文件/目录不存在，检查路径拼写',
+      'eacces': '访问被拒绝，检查文件权限',
+      'no such file': '文件不存在，用 list_directory 查看目录',
+      'command not found': '命令不存在，检查是否已安装',
+    },
+    generalTips: [
+      '每次只调用一个工具，等结果后再继续',
+      '长内容用 run_command + heredoc 写入',
+      '项目记忆: memory_manager_v2.js projects',
+    ],
+    getTip(toolName, success, content, error) {
+      const text = ((content || '') + ' ' + (error || '')).toLowerCase();
+      if (!success) {
+        for (const [key, tip] of Object.entries(this.errorTips)) {
+          if (text.includes(key)) return tip;
+        }
+      }
+      if (success && this.toolTips[toolName]) {
+        return this.toolTips[toolName];
+      }
+      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];
+    }
+  };
+
   function formatToolResult(msg) {
     let content;
     
@@ -1036,22 +1079,7 @@ digest 会显示：当前任务、关键路径、里程碑、上次完成的工�
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
     
-    const tips = [
-      '举例时不加@: 写 TOOL:{...} 而非 Ω{...}',
-      '每次只调用一个工具，等结果后再继续',
-      '长内容勿塞JSON: 用 node -e 或 run_command+stdin',
-      'Helper脚本: scripts/safe_write.js, safe_edit.js',
-      '浏览器操作前先 take_snapshot 获取 uid',
-      '跨Agent通信: SEND:agent_id:消息 (前加@执行)',
-      '新对话先读: docs/LESSONS_LEARNED.md',
-      '轮次计数: node scripts/session_counter.js status',
-      '项目记忆: node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects',
-      '恢复上下文: memory_manager_v2.js digest <proj> command-history.json',
-      '历史分析: history_compressor.js context command-history.json',
-      '记录里程碑: memory_manager_v2.js milestone "完成XX"',
-      '命令历史500条，超出自动归档到 history-archives/'
-    ];
-    const tip = tips[Math.floor(Math.random() * tips.length)];
+    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);
     
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
