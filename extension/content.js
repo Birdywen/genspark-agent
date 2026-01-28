@@ -1070,7 +1070,7 @@ ${tip}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Agent v32</span>
+        <span id="agent-title">🤖 Agent v34</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
@@ -1734,7 +1734,7 @@ ${tip}
   }
 
   function init() {
-    log('初始化 Agent v31 (Genspark)');
+    log('初始化 Agent v34 (Genspark)');
     
     createPanel();
 
@@ -1775,7 +1775,7 @@ ${tip}
       });
     }, 500);
 
-    addLog('🚀 Agent v31 已启动', 'success');
+    addLog('🚀 Agent v34 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
     // 恢复之前保存的 Agent 身份
