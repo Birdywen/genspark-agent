@@ -372,7 +372,16 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       result = r.content.map(c => c.text || c).join('\n');
     }
     
-    const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
+    let resultStr = typeof result === 'string' ? result : JSON.stringify(result);
+    
+    // 截断 take_snapshot 结果，限制返回的元素数量
+    if (tool === 'take_snapshot' && resultStr.length > 8000) {
+      const lines = resultStr.split('\n');
+      const maxLines = params.maxElements || 150; // 默认最多150个元素
+      if (lines.length > maxLines) {
+        resultStr = lines.slice(0, maxLines).join('\n') + `\n\n... (内容已截断，共 ${lines.length} 行，显示前 ${maxLines} 行)`;
+      }
+    }
     
     // 记录成功的调用
     const historyId = isRetry ? originalId : addToHistory(tool, params, true, resultStr);

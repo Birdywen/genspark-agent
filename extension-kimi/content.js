@@ -1,13 +1,13 @@
-// content.js v34 - Galaxy AI Agent Bridge
+// content.js v34 - Kimi AI Agent Bridge
 (function() {
   'use strict';
 
   // 防止脚本重复加载
-  if (window.__GALAXY_AGENT_LOADED__) {
+  if (window.__KIMI_AGENT_LOADED__) {
     console.log('[Agent] 已加载，跳过重复初始化');
     return;
   }
-  window.__GALAXY_AGENT_LOADED__ = true;
+  window.__KIMI_AGENT_LOADED__ = true;
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
@@ -248,10 +248,16 @@ ${toolSummary}
   }
 
 
-    // ============== DOM 操作 (Galaxy AI 专用) ==============
+    // ============== DOM 操作 (Kimi AI 专用) ==============
   
   function getAIMessages() {
-    return Array.from(document.querySelectorAll('main [data-testid="message-content"], main div.user-message'));
+    // Kimi 的 AI 消息：.chat-content-item 中包含 .markdown 的元素（用户消息包含 .user-content）
+    const allItems = document.querySelectorAll('.chat-content-item');
+    const aiMessages = Array.from(allItems).filter(item => {
+      // AI 消息有 .markdown，用户消息有 .user-content
+      return item.querySelector('.markdown') && !item.querySelector('.user-content');
+    });
+    return aiMessages;
   }
 
   function getLatestAIMessage() {
@@ -259,11 +265,9 @@ ${toolSummary}
     if (messages.length === 0) return { text: '', index: -1, element: null };
     const lastMsg = messages[messages.length - 1];
     
-    const contentEl = lastMsg.querySelector('div.not-prose') ||
-                      lastMsg.querySelector('div#math-root') ||
-                      lastMsg.querySelector('p.overflow-wrap-anywhere') ||
-                      lastMsg.querySelector('div.overflow-wrap-anywhere') ||
-                      lastMsg.querySelector('[class*="markdown"]') || 
+    // Kimi 的消息内容在 .markdown 中
+    const contentEl = lastMsg.querySelector('.markdown') ||
+                      lastMsg.querySelector('[class*="markdown"]') ||
                       lastMsg;
     
     return { 
@@ -275,10 +279,12 @@ ${toolSummary}
 
   function getInputBox() {
     const selectors = [
-      'textarea[placeholder="Send a message..."]',
-      'textarea[placeholder*="消息"]',
-      'textarea[placeholder*="message" i]',
-      'div[contenteditable="true"].search-input',
+      // Kimi 特定选择器
+      'div.chat-input-editor[contenteditable="true"]',
+      '[contenteditable="true"][class*="chat-input"]',
+      '[contenteditable="true"][class*="editor"]',
+      'textarea[placeholder*="Ask Anything"]',
+      'textarea[placeholder*="输入"]',
       'div[contenteditable="true"]',
       'textarea'
     ];
@@ -1114,7 +1120,7 @@ ${tip}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Galaxy Agent v34</span>
+        <span id="agent-title">🤖 Kimi Agent v34</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>

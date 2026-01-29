@@ -1,4 +1,4 @@
-// content.js v34 - 修复 Vear.com 选择器为 .chata，支持 .answerContent
+// content.js v34 - Vear AI Agent Bridge
 (function() {
   'use strict';
 
@@ -11,7 +11,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 30000,
+    TIMEOUT_MS: 120000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,
@@ -36,11 +36,53 @@
     // 消息队列
     messageQueue: [],
     isProcessingQueue: false,
+    roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
     lastToolCall: null
   };
 
-  function log(...args) {
+  
+  // 改进的 JSON 解析函数 - 处理长内容和特殊字符
+  function safeJsonParse(jsonStr) {
+    let fixed = jsonStr
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'");
+    
+    try {
+      return JSON.parse(fixed);
+    } catch (e1) {
+      // 尝试修复字符串内的换行符
+      try {
+        let result = '', inString = false, escape = false;
+        for (let i = 0; i < fixed.length; i++) {
+          const c = fixed[i];
+          if (escape) { result += c; escape = false; continue; }
+          if (c === '\\') { result += c; escape = true; continue; }
+          if (c === '"') { inString = !inString; result += c; continue; }
+          if (inString && c === '\n') { result += '\\n'; continue; }
+          if (inString && c === '\r') { result += '\\r'; continue; }
+          if (inString && c === '\t') { result += '\\t'; continue; }
+          result += c;
+        }
+        return JSON.parse(result);
+      } catch (e2) {
+        // 最后尝试：提取工具名和简单参数
+        const toolMatch = fixed.match(/"tool"\s*:\s*"(\w+)"/);
+        const pathMatch = fixed.match(/"path"\s*:\s*"([^"]+)"/);
+        const cmdMatch = fixed.match(/"command"\s*:\s*"([^"]+)"/);
+        if (toolMatch) {
+          const params = {};
+          if (pathMatch) params.path = pathMatch[1];
+          if (cmdMatch) params.command = cmdMatch[1];
+          console.warn('[Agent] Partial parse for tool:', toolMatch[1]);
+          return { tool: toolMatch[1], params, _partialParse: true };
+        }
+        throw e1;
+      }
+    }
+  }
+
+function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
   }
 
@@ -58,7 +100,7 @@
         if (btn && btn.offsetParent !== null) return true;
       } catch (e) {}
     }
-    const lastMsg = document.querySelector('.chata:last-child');
+    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');
     if (lastMsg) {
       const cl = lastMsg.className.toLowerCase();
       if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;
@@ -93,31 +135,48 @@
 - 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md
 - 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md`;
 
-    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。
+    const prompt = `## 身份
+
+你连接了 genspark-agent 本地代理系统，可执行工具操作。
+如果用户指定了你的身份（如「你是 code_agent」），记住它用于后续协作。
+
+---
+
+## 第一步（每次新对话必做）
+
+立即执行上下文恢复：
+
+\`\`\`
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"}}
+\`\`\`
+
+如果用户指定项目，替换项目名。常用：genspark-agent, ezmusicstore, oracle-cloud
+
+---
 
 ## 调用格式（严格遵守）
 
 **必须使用代码块包裹 JSON 格式：**
 
 \`\`\`
-${'@'}TOOL:{"tool":"工具名","params":{"参数名":"参数值"}}
+Ω{"tool":"工具名","params":{"参数名":"参数值"}}
 \`\`\`
 
 ### 示例
 
 执行命令：
 \`\`\`
-${'@'}TOOL:{"tool":"run_command","params":{"command":"ls -la"}}
+Ω{"tool":"run_command","params":{"command":"ls -la"}}
 \`\`\`
 
 读取文件：
 \`\`\`
-${'@'}TOOL:{"tool":"read_file","params":{"path":"/path/to/file"}}
+Ω{"tool":"read_file","params":{"path":"/path/to/file"}}
 \`\`\`
 
 写入文件（注意：content 内的引号必须转义为 \\"）：
 \`\`\`
-${'@'}TOOL:{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
+Ω{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
 \`\`\`
 
 ## 可用工具
@@ -131,72 +190,55 @@ ${toolSummary}
 3. **不要**自己编造执行结果，等待系统返回
 4. content 参数内如果有引号，必须转义为 \\"
 5. 任务全部完成后输出 @DONE
-6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 '@TOOL:{...}' 或 '@SEND:agent:msg'）
-7. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
+6. **输出 @DONE 前**，如果完成了重要工作，先切换到正确项目并记录里程碑：
+   \`\`\`
+   Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch <项目名> && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"简短描述完成的工作\""}}
+   \`\`\`
+   常用项目名：genspark-agent, ezmusicstore, oracle-cloud
+7. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg')
+8. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
 
 ---
 
-## Agent 协作系统
+## Agent 协作（按需使用）
 
-你是多 Agent 协作网络中的一员。
+跨 Tab 通信：\`@SEND:agent_id:消息\`
 
-### 跨 Tab 直接通信（推荐）
-
-**发送消息给其他 Agent（自动路由到对方聊天框）：**
-\`\`\`
-${'@'}SEND:目标agent_id:消息内容
-\`\`\`
-
-示例：
-\`\`\`
-${'@'}SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
-\`\`\`
-
-对方会自动收到消息并处理，完成后会回复你。
-
-### 任务队列（持久化存储）
-
-如需持久化任务（即使关闭浏览器也保留），使用任务队列：
-
-**检查任务：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID
-\`\`\`
-
-### 协作命令
-
-**创建任务给其他 Agent：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js create <from> <to> <action> '<payload_json>'
-\`\`\`
-
-**完成任务后报告：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js complete <task_id> '<result_json>'
-\`\`\`
-
-**查看你发起的任务结果：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js results YOUR_AGENT_ID
-\`\`\`
-
-### 查看可用 Agent 及其能力
-
-**列出所有 Agent：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js agents
-\`\`\`
-
-**查看特定 Agent 的详细能力（参数、限制）：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
-\`\`\`
-
-派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。
+详细命令见：read_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md
 
 ---
 
-请告诉我你的任务。`;
+## 系统架构
+
+本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。
+
+- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json
+- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等
+- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效
+- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端
+
+### SSH 远程服务器（重要）
+
+**禁止使用** \`run_command\` + \`ssh/sshpass\`，必须使用 MCP SSH 工具：
+
+| 服务器 | 工具名 | 用途 |
+|--------|--------|------|
+| Oracle Cloud | \`ssh-oracle:exec\` | 执行命令 |
+| Oracle Cloud | \`ssh-oracle:sudo-exec\` | sudo 命令 |
+| cPanel | \`ssh-cpanel:exec\` | 执行命令 |
+
+**调用示例：**
+\`\`\`
+Ω{"tool":"ssh-oracle:exec","params":{"command":"hostname && uptime"}}
+Ω{"tool":"ssh-cpanel:exec","params":{"command":"ls ~/public_html"}}
+\`\`\`
+
+---
+
+## 补充规则
+
+- 举例时不写真实前缀，避免误触发
+- 命令失败可说「重试 #ID」，输出 @RETRY:#ID 即可`;
 
     // 如果有 Skills 提示词，附加到末尾
     if (state.skillsPrompt) {
@@ -205,7 +247,8 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     return prompt;
   }
 
-  // ============== DOM 操作 (Genspark 专用) ==============
+
+    // ============== DOM 操作 (Vear AI 专用) ==============
   
   function getAIMessages() {
     return Array.from(document.querySelectorAll('.chata'));
@@ -286,13 +329,13 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
       const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
       input.value = "";
       if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }
-      input.dispatchEvent(new Event("input", {bubbles: true }));
-      input.dispatchEvent(new Event("change", {bubbles: true }));
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
     } else {
       input.innerHTML = '';
       input.innerText = text;
       input.dispatchEvent(new InputEvent('input', { 
-       bubbles: true, 
+        bubbles: true, 
         composed: true,
         data: text,
         inputType: 'insertText'
@@ -301,8 +344,8 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
     const trySend = (attempt = 1) => {
       const btnSelectors = [
-        'button.sendQBtn',
-        'button[class*=send]',
+        '.enter-icon-wrapper',
+        'div[class*=enter-icon]',
         'button[type="submit"]',
         'button.send-button',
         'button[aria-label*="send" i]',
@@ -319,7 +362,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
             code: 'Enter', 
             keyCode: 13,
             which: 13,
-           bubbles: true,
+            bubbles: true,
             cancelable: true
           }));
         });
@@ -400,6 +443,11 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
   }
 
   function sendMessageSafe(text) {
+    // 更新最后消息时间（用于超时唤醒检测）
+    if (typeof updateLastAiMessageTime === 'function') {
+      updateLastAiMessageTime();
+    }
+    
     if (isAIGenerating()) {
       addLog('⏳ 等待 AI 完成输出...', 'info');
       waitForGenerationComplete(() => sendMessage(text));
@@ -499,10 +547,10 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     return null;
   }
 
-  // 解析新的代码块格式: @TOOL:name ... @TOOL:END
+  // 解析新的代码块格式: Ωname ... ΩEND
   function parseCodeBlockFormat(text) {
     const toolCalls = [];
-    const regex = /@TOOL:(\w+)\s*\n([\s\S]*?)@TOOL:END/g;
+    const regex = /Ω(\w+)\s*\n([\s\S]*?)ΩEND/g;
     let match;
     
     while ((match = regex.exec(text)) !== null) {
@@ -542,17 +590,46 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     return toolCalls;
   }
 
+  
+  // 方案3: 解析 ```tool 代码块
+  function parseToolCodeBlock(text) {
+    console.log('[Agent] parseToolCodeBlock called, text length:', text.length);
+    console.log('[Agent] looking for tool blocks...');
+    const calls = [];
+    const re = /```tool\s*\n([\s\S]*?)\n```/g;
+    console.log('[Agent] regex test:', re.test(text));
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      try {
+        const json = m[1].trim().replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        const p = safeJsonParse(json);
+        if (p.tool) calls.push({ name: p.tool, params: p.params || {}, raw: m[0], start: m.index, end: m.index + m[0].length });
+      } catch (e) { console.error('[Agent] tool block error:', e.message); }
+    }
+    return calls;
+  }
+
   function parseToolCalls(text) {
-    // 优先尝试代码块格式 @TOOL:name ... @TOOL:END
+    // 方案3: 优先解析 ```tool 代码块
+    const toolBlockCalls = parseToolCodeBlock(text);
+    if (toolBlockCalls.length > 0) return toolBlockCalls;
+
+    // 兼容旧格式: Ωname ... ΩEND
     const codeBlockCalls = parseCodeBlockFormat(text);
     if (codeBlockCalls.length > 0) return codeBlockCalls;
 
     const toolCalls = [];
     let searchStart = 0;
     while (true) {
-      const marker = '@TOOL:';
+      const marker = 'Ω';
       const idx = text.indexOf(marker, searchStart);
       if (idx === -1) break;
+      // 检查是否紧跟 {"tool":
+      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);
+      if (!afterMarker.match(/^\s*\{\s*"tool"/)) {
+        searchStart = idx + marker.length;
+        continue;
+      }
       const extracted = extractJsonFromText(text, idx + marker.length);
       if (extracted) {
         // Skip if extracted JSON is too short or looks invalid
@@ -565,12 +642,12 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
           let jsonStr = extracted.json
             .replace(/[“”]/g, '"')  // Chinese double quotes to ASCII
             .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
-          const parsed = JSON.parse(jsonStr);
-          if (parsed.tool && isRealToolCall(text, idx, idx + marker.length + extracted.json.length)) {
+          const parsed = safeJsonParse(jsonStr);
+          if (parsed.tool) {
             toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
           }
         } catch (e) {
-          console.error('[Agent] JSON parse error:', e.message);
+          if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
           console.error('[Agent] Raw JSON:', extracted.json.slice(0, 300));
           addLog('JSON parse error: ' + e.message, 'error');
         }
@@ -819,6 +896,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
   // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
+    // console.log("[Agent] scanning...");
     if (state.agentRunning) return;
     
     // 如果 AI 正在生成中，跳过扫描
@@ -831,9 +909,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     if (index < 0 || !text) return;
     
-    if (text.includes('**[执行结果]**') || text.includes('[执行结果]')) {
-      return;
-    }
+    // Removed: result check (conflicts with code containing these chars)
     
     const toolStartCount = (text.match(/\[\[TOOL:/g) || []).length;
     const toolEndCount = (text.match(/\[\[\/TOOL\]\]/g) || []).length;
@@ -862,6 +938,8 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     // 检查重试命令 @RETRY:#ID
     const retryMatch = text.match(/@RETRY:\s*#?(\d+)/);
+
+
     if (retryMatch) {
       const retryId = parseInt(retryMatch[1]);
       const retryHash = `${index}:retry:${retryId}`;
@@ -875,7 +953,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     // 先检查跨 Tab 发送命令 @SEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|@TOOL:|@DONE|$)/);
+    const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|Ω|@DONE|$)/);
     const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
     if (sendMatch && !isExampleSend) {
       const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
@@ -922,6 +1000,77 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
   // ============== 结果格式化 ==============
 
+  function incrementRound() {
+    state.roundCount++;
+    localStorage.setItem('agent_round_count', state.roundCount.toString());
+    // 每 30 轮发出预警
+    if (state.roundCount > 0 && state.roundCount % 30 === 0) {
+      addLog('⚠️ 已达 ' + state.roundCount + ' 轮，考虑开新对话', 'warn');
+    }
+    addLog('📊 轮次: ' + state.roundCount, 'info');
+    updateRoundDisplay();
+  }
+
+  function resetRound() {
+    state.roundCount = 0;
+    localStorage.setItem('agent_round_count', '0');
+    addLog('🔄 轮次已重置', 'info');
+    updateRoundDisplay();
+  }
+
+  function updateRoundDisplay() {
+    const el = document.getElementById('agent-round');
+    if (el) {
+      el.textContent = 'R:' + state.roundCount;
+      el.style.color = state.roundCount >= 30 ? '#f59e0b' : state.roundCount >= 20 ? '#eab308' : '#9ca3af';
+    }
+  }
+
+  
+  // ============== 智能提示系统 ==============
+  const SmartTips = {
+    toolTips: {
+      'take_screenshot': '截图已保存，可用 read_media_file 查看',
+      'take_snapshot': '快照包含 uid，用于 click/fill 等操作',
+      'click': '点击后可能需要 wait_for 等待页面变化',
+      'fill': '填写后通常需要 click 提交按钮',
+      'navigate_page': '导航后用 take_snapshot 获取页面内容',
+      'new_page': '新页面已创建，用 take_snapshot 查看内容',
+      'write_file': '文件已写入，大文件建议用 run_command',
+      'edit_file': '文件已修改，可用 read_file 验证',
+      'register_project_tool': '项目已注册，可用 get_symbols/find_text 分析',
+      'get_symbols': '符号列表可用于 find_usage 查引用',
+    },
+    errorTips: {
+      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',
+      'not found': '路径不存在，先用 list_directory 确认',
+      'permission denied': '权限不足，检查是否在允许目录内',
+      'enoent': '文件/目录不存在，检查路径拼写',
+      'eacces': '访问被拒绝，检查文件权限',
+      'no such file': '文件不存在，用 list_directory 查看目录',
+      'command not found': '命令不存在，检查是否已安装',
+      'not allowed': '路径不在允许目录内，检查 list_allowed_directories',
+      'syntax error': '语法错误，检查代码格式',
+    },
+    generalTips: [
+      '每次只调用一个工具，等结果后再继续',
+      '长内容用 run_command + heredoc 写入',
+      '项目记忆: memory_manager_v2.js projects',
+    ],
+    getTip(toolName, success, content, error) {
+      const text = ((content || '') + ' ' + (error || '')).toLowerCase();
+      if (!success) {
+        for (const [key, tip] of Object.entries(this.errorTips)) {
+          if (text.includes(key)) return tip;
+        }
+      }
+      if (success && this.toolTips[toolName]) {
+        return this.toolTips[toolName];
+      }
+      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];
+    }
+  };
+
   function formatToolResult(msg) {
     let content;
     
@@ -946,17 +1095,7 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
     
-    const tips = [
-      '举例时不加@: 写 TOOL:{...} 而非 @TOOL:{...}',
-      '每次只调用一个工具，等结果后再继续',
-      '长内容勿塞JSON: 用 node -e 或 run_command+stdin',
-      'Helper脚本: scripts/safe_write.js, safe_edit.js',
-      '浏览器操作前先 take_snapshot 获取 uid',
-      '跨Agent通信: @SEND:agent_id:消息',
-      '新对话先读: docs/LESSONS_LEARNED.md',
-      '轮次计数: node scripts/session_counter.js status'
-    ];
-    const tip = tips[Math.floor(Math.random() * tips.length)];
+    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);
     
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
@@ -975,9 +1114,10 @@ ${tip}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Vear Agent v1</span>
+        <span id="agent-title">🤖 Vear Agent v34</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
+        <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
       </div>
       <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
       <div id="agent-tools"></div>
@@ -987,6 +1127,7 @@ ${tip}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
@@ -1151,6 +1292,34 @@ ${tip}
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
       addLog('🔄 重连中...', 'info');
     };
+
+    // 切换本地/云端服务器
+    document.getElementById('agent-switch-server').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 获取服务器信息失败', 'error');
+          return;
+        }
+        const newServer = info.current === 'local' ? 'cloud' : 'local';
+        chrome.runtime.sendMessage({ type: 'SWITCH_SERVER', server: newServer }, (resp) => {
+          if (resp?.success) {
+            const btn = document.getElementById('agent-switch-server');
+            btn.textContent = newServer === 'cloud' ? '🌐 云' : '💻 本地';
+            addLog('✅ 已切换到 ' + newServer + ': ' + resp.url, 'success');
+          } else {
+            addLog('❌ 切换失败: ' + (resp?.error || '未知错误'), 'error');
+          }
+        });
+      });
+    };
+
+    // 初始化服务器按钮状态
+    chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+      if (info?.current) {
+        const btn = document.getElementById('agent-switch-server');
+        if (btn) btn.textContent = info.current === 'cloud' ? '🌐 云' : '💻 本地';
+      }
+    });
     
     document.getElementById('agent-copy-prompt').onclick = () => {
       const prompt = generateSystemPrompt();
@@ -1174,6 +1343,15 @@ ${tip}
       btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
     };
 
+
+    // 轮次显示点击重置
+    document.getElementById('agent-round').onclick = () => {
+      if (confirm('重置轮次计数？')) {
+        resetRound();
+      }
+    };
+    // 初始化显示
+    updateRoundDisplay();
     // 查看在线 Agent 列表
     document.getElementById('agent-list').onclick = () => {
       chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
@@ -1368,6 +1546,7 @@ ${tip}
           state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
         }, 5000);
         sendMessageSafe(resultText);
+        incrementRound();
         break;
 
       case 'error':
@@ -1509,6 +1688,49 @@ ${tip}
     });
   }
 
+
+
+  // ============== AI 响应超时唤醒 ==============
+  let lastAiMessageTime = Date.now();
+  let wakeupTimer = null;
+  const WAKEUP_TIMEOUT = 60000; // 60 seconds timeout
+  const WAKEUP_CHECK_INTERVAL = 15000; // check every 15 seconds
+  
+  function updateLastAiMessageTime() {
+    lastAiMessageTime = Date.now();
+  }
+  
+  function startWakeupMonitor() {
+    if (wakeupTimer) clearInterval(wakeupTimer);
+    
+    wakeupTimer = setInterval(() => {
+      // 只在 Agent 运行中（有待处理任务）时检查
+      if (!state.agentRunning) {
+        lastAiMessageTime = Date.now(); // 重置时间
+        return;
+      }
+      
+      const elapsed = Date.now() - lastAiMessageTime;
+      if (elapsed > WAKEUP_TIMEOUT) {
+        addLog(`⏰ AI 超过 ${Math.round(elapsed/1000)} 秒无响应，发送唤醒消息`, 'warning');
+        sendWakeupMessage();
+        lastAiMessageTime = Date.now(); // 重置，避免重复发送
+      }
+    }, WAKEUP_CHECK_INTERVAL);
+    
+    addLog('👁️ 响应超时监控已启动', 'info');
+  }
+  
+  function sendWakeupMessage() {
+    const messages = [
+      '继续',
+      '请继续执行',
+      '继续之前的任务'
+    ];
+    const msg = messages[Math.floor(Math.random() * messages.length)];
+    sendMessageSafe(msg);
+  }
+  
   function startAutoCheck() {
     if (!CONFIG.AUTO_CHECK_ENABLED) return;
     if (autoCheckTimer) clearInterval(autoCheckTimer);
@@ -1520,7 +1742,7 @@ ${tip}
       
       // 检查是否有待处理任务
       addLog(`🔍 自动检查任务 (${agentId})`, 'info');
-      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\n@TOOL:{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
+      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩ{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
     }, CONFIG.AUTO_CHECK_INTERVAL);
     
     addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');
@@ -1556,7 +1778,7 @@ ${tip}
   }
 
   function init() {
-    log('初始化 Vear Agent v1 (Genspark)');
+    log('初始化 Agent v34 (Genspark)');
     
     createPanel();
 
@@ -1565,13 +1787,14 @@ ${tip}
     // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
     let lastCheckedUserMsgCount = 0;
     setInterval(() => {
-      const userMessages = document.querySelectorAll('.chata [class*="user"]');
+      const userMessages = document.querySelectorAll('.conversation-statement.user');
       if (userMessages.length > lastCheckedUserMsgCount) {
         const lastUserMsg = userMessages[userMessages.length - 1];
         const text = lastUserMsg.innerText || '';
         // 排除跨 Tab 消息的内容
         if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
           detectAgentId(text);
+
         }
         lastCheckedUserMsgCount = userMessages.length;
       }
@@ -1596,11 +1819,14 @@ ${tip}
       });
     }, 500);
 
-    addLog('🚀 Vear Agent v1 已启动', 'success');
+    addLog('🚀 Agent v34 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
     // 恢复之前保存的 Agent 身份
     restoreAgentId();
+    
+    // 启动 AI 响应超时监控
+    startWakeupMonitor();
     
     // 初始化 Agent ID 显示
     setTimeout(updateAgentIdDisplay, 100);

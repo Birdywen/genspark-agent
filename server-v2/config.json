@@ -242,7 +242,8 @@
       "mega-users",
       "mega-version",
       "mega-webdav",
-      "mega-whoami"
+      "mega-whoami",
+      "lsof"
     ],
     "dangerousOperations": [
       "write_file",

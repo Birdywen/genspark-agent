@@ -795,3 +795,28 @@ def analyze_local_images(local_paths):
 - 短内容 → `write_file`
 - 长内容/复杂代码 → `run_command` + `stdin`
 - 避免用 heredoc 写入包含特殊字符的内容
+
+## 2026-01-29: EzMusicStore 前端调试
+
+### 问题1: Snapshot 返回内容过长
+- **现象**: take_snapshot 返回 900+ 行，占用大量 token
+- **解决**: 在 server-v2/index.js 添加截断逻辑，支持 maxElements 参数
+- **教训**: 对于返回大量数据的工具，应该有默认的截断机制
+
+### 问题2: 字母索引不工作
+- **现象**: 点击 A-Z 字母导航无响应
+- **诊断**: 通过 list_console_messages 发现 "composerName is not defined" 错误
+- **原因**: 模板字符串中使用了未定义变量 composerName，应为 score.composerName
+- **教训**: 前端功能异常时，先检查控制台错误
+
+### 问题3: PDF 加载失败
+- **现象**: PDF Modal 显示 "Load failed"
+- **诊断**: Content-Type 返回 text/html 而非 application/pdf
+- **原因**: SPA fallback 路由拦截了 PDF 请求；前端路径缺少 /scores/ 前缀
+- **解决**: 修改前端 PDF 加载路径为 /scores/ + pdfPath
+- **教训**: 静态文件服务路径要与前端请求路径一致
+
+### 调试技巧
+1. **list_console_messages** 快速定位 JS 错误
+2. **curl -sI** 检查 HTTP 响应头（Content-Type、CSP）
+3. **grep -n** 定位代码中的关键字
