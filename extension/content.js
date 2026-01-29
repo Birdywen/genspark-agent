@@ -173,8 +173,12 @@ ${toolSummary}
 3. **不要**自己编造执行结果，等待系统返回
 4. content 参数内如果有引号，必须转义为 \\"
 5. 任务全部完成后输出 @DONE
-6. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg'）
-7. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
+6. **输出 @DONE 前**，如果完成了重要工作，先记录里程碑：
+   \`\`\`
+   Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"简短描述完成的工作\""}}
+   \`\`\`
+7. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg')
+8. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
 
 ---
 
