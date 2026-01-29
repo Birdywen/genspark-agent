@@ -5336,7 +5336,123 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -250,8 +250,24 @@\n - **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n - **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n - **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n \n+### SSH 远",
       "error": null
+    },
+    {
+      "id": 2692,
+      "timestamp": "2026-01-29T11:10:43.974Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: 系统提示添加SSH MCP工具说明，禁止用run_command+ssh' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main 545e441] feat: 系统提示添加SSH MCP工具说明，禁止用run_command+ssh\n 2 files changed, 67 insertions(+), 1 deletion(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   2e8e40d..545e441  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2693,
+      "timestamp": "2026-01-29T11:10:53.232Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'SSH MCP工具说明加入系统提示'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: SSH MCP工具说明加入系统提示\n",
+      "error": null
+    },
+    {
+      "id": 2694,
+      "timestamp": "2026-01-29T11:13:31.990Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-01-29T11:13\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 升级为多项目记忆系统v2\n- 支持本地/云端服务器切换(面板按钮)\n- 实现智能历史压缩器(history_compressor)和digest命令\n- 历史记录扩容",
+      "error": null
+    },
+    {
+      "id": 2695,
+      "timestamp": "2026-01-29T11:13:42.285Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/.agent_memory/projects/genspark-agent/session.json"
+      },
+      "success": true,
+      "resultPreview": "{\n  \"task\": \"Agent系统开发 - 记忆系统、多项目支持、上下文恢复\",\n  \"milestones\": [\n    {\n      \"time\": \"2026-01-27T14:57:41.131Z\",\n      \"text\": \"实现自动巡检功能(Auto-Pilot)\"\n    },\n    {\n      \"time\": \"2026-01-27T14:57:41.179Z\",\n      \"text\": \"实现记忆系统v1\"\n    },\n    {\n      \"time\": \"2026-01-27T14:57:41.227Z\",\n      \"text\": \"升级为多项目记忆系统v2\"\n    },\n    {\n      \"time\": \"2026-01-27T16:11:46.135Z\",\n      \"text\": \"支持本地/云端服务器切换(面板按钮)\"\n    },\n    {\n      \"time\": \"2026-01-27T16:43:34.223Z\",\n      \"text\": \"实现智能历史压缩器(history_compressor)",
+      "error": null
+    },
+    {
+      "id": 2696,
+      "timestamp": "2026-01-29T11:13:51.172Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/.agent_memory/active_project.txt && echo '---' && ls /Users/yay/workspace/.agent_memory/projects/"
+      },
+      "success": true,
+      "resultPreview": "ezmusicstore---\nenglish_youtube_channel\nezmusicstore\ngenspark\ngenspark-agent\noracle-cloud\n",
+      "error": null
+    },
+    {
+      "id": 2697,
+      "timestamp": "2026-01-29T11:13:59.494Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/.agent_memory/projects/ezmusicstore/session.json | grep -A2 'milestones' | head -20"
+      },
+      "success": true,
+      "resultPreview": "  \"milestones\": [\n    {\n      \"time\": \"2026-01-28T10:09:41.854Z\",\n",
+      "error": null
+    },
+    {
+      "id": 2698,
+      "timestamp": "2026-01-29T11:14:09.716Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/.agent_memory/projects/ezmusicstore/session.json"
+      },
+      "success": true,
+      "resultPreview": "{\n  \"task\": \"钢琴乐谱电商平台开发 - 参考PianoWorks风格\",\n  \"milestones\": [\n    {\n      \"time\": \"2026-01-28T10:09:41.854Z\",\n      \"text\": \"Phase 1.1 完成: A-Z导航 + 著名作曲家置顶 + PianoWorks风格UI\"\n    },\n    {\n      \"time\": \"2026-01-28T10:26:46.860Z\",\n      \"text\": \"Phase 1.1 完善: PianoWorks深色主题 + 难度颜色编码\"\n    },\n    {\n      \"time\": \"2026-01-28T10:30:20.854Z\",\n      \"text\": \"Phase 1.2 完成: 时期分类筛选(巴洛克/古典/浪漫/现代) + 作曲家元数据\"\n    },\n    {\n      \"time\": \"2026-01-28T10:35:53.660Z\",\n      \"text\": \"Phase 2.1-2.2 完成: 购物车系统 + 结账流程UI\"\n",
+      "error": null
+    },
+    {
+      "id": 2699,
+      "timestamp": "2026-01-29T11:15:14.922Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch genspark-agent && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '多SSH服务器MCP配置(ssh-oracle/ssh-cpanel) + 环境变量展开' && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '里程碑自动记录规则 + 新对话自动恢复上下文规则' && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'SSH MCP工具说明加入系统提示'"
+      },
+      "success": true,
+      "resultPreview": "✅ 已切换到项目: genspark-agent\n里程碑已添加: 多SSH服务器MCP配置(ssh-oracle/ssh-cpanel) + 环境变量展开\n里程碑已添加: 里程碑自动记录规则 + 新对话自动恢复上下文规则\n里程碑已添加: SSH MCP工具说明加入系统提示\n",
+      "error": null
+    },
+    {
+      "id": 2700,
+      "timestamp": "2026-01-29T11:15:24.908Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '176,182p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "6. **输出 @DONE 前**，如果完成了重要工作，先记录里程碑：\n   \\`\\`\\`\n   Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \\\"简短描述完成的工作\\\"\"}}\n   \\`\\`\\`\n7. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg')\n8. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \\`@RETRY:#ID\\` 即可重新执行，无需重写代码\n\n",
+      "error": null
+    },
+    {
+      "id": 2701,
+      "timestamp": "2026-01-29T11:15:36.512Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "6. **输出 @DONE 前**，如果完成了重要工作，先记录里程碑：\n   \\`\\`\\`\n   Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \\\"简短描述完成的工作\\\"\"}}\n   \\`\\`\\`",
+            "newText": "6. **输出 @DONE 前**，如果完成了重要工作，先切换到正确项目并记录里程碑：\n   \\`\\`\\`\n   Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch <项目名> && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \\\"简短描述完成的工作\\\"\"}}\n   \\`\\`\\`\n   常用项目名：genspark-agent, ezmusicstore, oracle-cloud"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -172,12 +172,13 @@\n 2. 每次只调用**一个**工具，等待返回结果后再继续\n 3. **不要**自己编造执行结果，等待系统返回\n 4. content 参数内如果有引号，必须转义为 \\\\\"\n 5. 任务全部完成后输出 @DONE\n-6. **输出 @DONE 前**，如果完成了重要工作，先记录里程碑：\n+6. **输出 @DONE 前**，如果完成了重要工作，先切换到正确项目并记录里程碑：\n    \\`\\`\\`",
+      "error": null
     }
   ],
-  "nextId": 2692
+  "nextId": 2702
 }
