@@ -12,7 +12,26 @@ import SkillsManager from './skills.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const config = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
+
+// 展开配置中的环境变量 ${VAR_NAME}
+function expandEnvVars(obj) {
+  if (typeof obj === 'string') {
+    return obj.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] || '');
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(expandEnvVars);
+  }
+  if (obj && typeof obj === 'object') {
+    const result = {};
+    for (const [k, v] of Object.entries(obj)) {
+      result[k] = expandEnvVars(v);
+    }
+    return result;
+  }
+  return obj;
+}
+
+const config = expandEnvVars(JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8')));
 
 // 初始化日志和安全模块
 const logger = new Logger(config.logging);
@@ -253,11 +272,20 @@ class MCPConnection {
 
   async getTools() {
     const r = await this.send('tools/list');
-    return (r.tools || []).map(t => ({ ...t, _server: this.name }));
+    // 对 ssh 开头的 server 添加前缀避免工具名冲突
+    const needsPrefix = this.name.startsWith('ssh');
+    return (r.tools || []).map(t => ({
+      ...t,
+      name: needsPrefix ? `${this.name}:${t.name}` : t.name,
+      _originalName: t.name,
+      _server: this.name
+    }));
   }
 
   call(name, args) {
-    return this.send('tools/call', { name, arguments: args || {} });
+    // 如果工具名有前缀，提取原始名称发送给 MCP server
+    const originalName = name.includes(':') ? name.split(':')[1] : name;
+    return this.send('tools/call', { name: originalName, arguments: args || {} });
   }
 
   stop() {

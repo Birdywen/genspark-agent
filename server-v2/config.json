@@ -31,7 +31,7 @@
       "command": "/Users/yay/.local/bin/mcp-server-tree-sitter",
       "args": []
     },
-    "ssh-mcp": {
+    "ssh-oracle": {
       "command": "npx",
       "args": [
         "-y",
@@ -41,6 +41,20 @@
         "--port=22",
         "--user=ubuntu",
         "--key=/Users/yay/.ssh/oracle-cloud.key",
+        "--timeout=60000",
+        "--maxChars=none"
+      ]
+    },
+    "ssh-cpanel": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ssh-mcp",
+        "--",
+        "--host=ezmusicstore.com",
+        "--port=1394",
+        "--user=ezmusics",
+        "--key=/Users/yay/.ssh/cpanel_ezmusic",
         "--timeout=60000",
         "--maxChars=none"
       ]

@@ -698,3 +698,76 @@ def analyze_local_images(local_paths):
 
 **一句话**: 分析本地图片时，先上传到 AI Drive，然后直接使用 AI Drive 路径调用分析工具。不要尝试本地路径、file:// 协议或 localhost HTTP 服务器。
 
+
+---
+
+## 十三、SSH MCP 工具使用
+
+### 配置的服务器
+
+| 服务器名 | 主机 | 用户 | 认证方式 |
+|----------|------|------|----------|
+| ssh-oracle | 157.151.227.157 | ubuntu | SSH Key |
+| ssh-cpanel | ezmusicstore.com:1394 | ezmusics | SSH Key |
+
+### 工具名称（带服务器前缀）
+
+| 工具 | 用途 | 示例 |
+|------|------|------|
+| `ssh-oracle:exec` | Oracle Cloud 执行命令 | `Ω{"tool":"ssh-oracle:exec","params":{"command":"hostname"}}` |
+| `ssh-oracle:sudo-exec` | Oracle Cloud sudo 命令 | `Ω{"tool":"ssh-oracle:sudo-exec","params":{"command":"systemctl status nginx"}}` |
+| `ssh-cpanel:exec` | cPanel 执行命令 | `Ω{"tool":"ssh-cpanel:exec","params":{"command":"ls ~/public_html"}}` |
+| `ssh-cpanel:sudo-exec` | cPanel sudo 命令 | 通常 cPanel 不支持 sudo |
+
+### 参数说明
+
+- `command` (必填): 要执行的 shell 命令
+- `description` (可选): 命令描述
+
+### 注意事项
+
+- 工具名格式: `服务器名:原始工具名`
+- 新增 SSH 服务器时，在 config.json 的 mcpServers 中添加 `ssh-xxx` 格式的配置
+- 所有 `ssh-` 开头的服务器会自动添加前缀避免工具名冲突
+- 重启 server 后新配置才生效
+
+*最后更新: 2026-01-29*
+
+### [2026-01-29] 配置多 SSH 服务器 MCP
+
+**需求**: 通过 MCP 连接多台 SSH 服务器，避免密码暴露
+
+**问题**: ssh-mcp 包的工具名是固定的 `exec` 和 `sudo-exec`，多个实例会冲突
+
+**解决方案**:
+
+1. **修改 index.js 添加工具名前缀**
+   - `ssh-` 开头的 server 自动给工具名加前缀
+   - 例: `ssh-oracle` 的工具变成 `ssh-oracle:exec`
+   - 调用时自动提取原始名称发送给 MCP server
+
+2. **支持环境变量展开**
+   - 添加 `expandEnvVars()` 函数
+   - config.json 中可用 `${VAR_NAME}` 引用环境变量
+   - 敏感信息存 `~/.env`，AI 看不到真实值
+
+3. **SSH Key 认证（推荐）**
+   - 比密码更安全，无需环境变量
+   - 本地生成无密码 key: `ssh-keygen -t rsa -b 2048 -f ~/.ssh/xxx -N ''`
+   - 公钥上传到服务器并 Authorize
+
+**配置示例** (config.json):
+```json
+"ssh-oracle": {
+  "command": "npx",
+  "args": ["-y", "ssh-mcp", "--", "--host=IP", "--port=22", "--user=ubuntu", "--key=/path/to/key"]
+},
+"ssh-cpanel": {
+  "command": "npx", 
+  "args": ["-y", "ssh-mcp", "--", "--host=domain.com", "--port=1394", "--user=xxx", "--key=/path/to/key"]
+}
+```
+
+**关键改动文件**:
+- `/Users/yay/workspace/genspark-agent/server-v2/index.js` - 工具名前缀 + 环境变量展开
+- `/Users/yay/workspace/genspark-agent/server-v2/config.json` - SSH 服务器配置
