@@ -820,3 +820,8 @@ def analyze_local_images(local_paths):
 1. **list_console_messages** 快速定位 JS 错误
 2. **curl -sI** 检查 HTTP 响应头（Content-Type、CSP）
 3. **grep -n** 定位代码中的关键字
+
+### 文件写入验证
+- **问题**: `cat >>` 或 `echo >>` 追加文件时，命令无输出，无法确认是否成功
+- **解决**: 写入后用 `tail -n` 验证内容
+- **教训**: 不要假设空输出就是成功，要主动验证
