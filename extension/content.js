@@ -135,7 +135,24 @@ function log(...args) {
 - 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md
 - 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md`;
 
-    const prompt = `你现在连接了一个本地代理系统，可以执行工具操作。
+    const prompt = `## 身份
+
+你连接了 genspark-agent 本地代理系统，可执行工具操作。
+如果用户指定了你的身份（如「你是 code_agent」），记住它用于后续协作。
+
+---
+
+## 第一步（每次新对话必做）
+
+立即执行上下文恢复：
+
+\`\`\`
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"}}
+\`\`\`
+
+如果用户指定项目，替换项目名。常用：genspark-agent, ezmusicstore, oracle-cloud
+
+---
 
 ## 调用格式（严格遵守）
 
@@ -183,63 +200,11 @@ ${toolSummary}
 
 ---
 
-## Agent 协作系统
+## Agent 协作（按需使用）
 
-你是多 Agent 协作网络中的一员。
+跨 Tab 通信：\`@SEND:agent_id:消息\`
 
-### 跨 Tab 直接通信（推荐）
-
-**发送消息给其他 Agent（自动路由到对方聊天框）：**
-\`\`\`
-${"@"}SEND:目标agent_id:消息内容
-\`\`\`
-
-示例：
-\`\`\`
-${"@"}SEND:image_agent:请生成一张蓝色主题的 logo 图片，保存到 /tmp/logo.png
-\`\`\`
-
-对方会自动收到消息并处理，完成后会回复你。
-
-### 任务队列（持久化存储）
-
-如需持久化任务（即使关闭浏览器也保留），使用任务队列：
-
-**检查任务：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js check YOUR_AGENT_ID
-\`\`\`
-
-### 协作命令
-
-**创建任务给其他 Agent：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js create <from> <to> <action> '<payload_json>'
-\`\`\`
-
-**完成任务后报告：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js complete <task_id> '<result_json>'
-\`\`\`
-
-**查看你发起的任务结果：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js results YOUR_AGENT_ID
-\`\`\`
-
-### 查看可用 Agent 及其能力
-
-**列出所有 Agent：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js agents
-\`\`\`
-
-**查看特定 Agent 的详细能力（参数、限制）：**
-\`\`\`bash
-node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
-\`\`\`
-
-派发任务前，**先查询目标 Agent 的能力**，确保参数格式正确。
+详细命令见：read_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md
 
 ---
 
@@ -270,30 +235,10 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
 ---
 
-## 新对话启动（最高优先级）
+## 补充规则
 
-**每次新对话开始，第一步必须执行上下文恢复：**
-
-\`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"}}
-\`\`\`
-
-如果用户指定了其他项目（如「继续 ezmusicstore」），用对应项目名替换。
-
-常用项目名：genspark-agent, ezmusicstore, oracle-cloud, english_youtube_channel
-
-查看所有项目：
-\`\`\`bash
-node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects
-\`\`\`
-
-digest 会显示：当前任务、关键路径、里程碑、上次完成的工作等，帮你快速恢复上下文。
-
-**不要问用户「你想做什么」，先恢复上下文再说。**
-
----
-
-请告诉我你的任务。`;
+- 举例时不写真实前缀，避免误触发
+- 命令失败可说「重试 #ID」，输出 @RETRY:#ID 即可`;
 
     // 如果有 Skills 提示词，附加到末尾
     if (state.skillsPrompt) {
