@@ -115,6 +115,8 @@ class Safety {
   }
 
   async checkOperation(operation, params, broadcastConfirmRequest) {
+    this.logger.info(`[Safety] checkOperation: operation=${operation}, isRemote=${operation.startsWith('ssh-')}`);
+    
     // 路径检查
     if (params.path) {
       const pathCheck = this.isPathAllowed(params.path);
@@ -124,7 +126,9 @@ class Safety {
     }
 
     // 命令检查 (针对 shell/command 类工具)
-    if (params.command) {
+    // SSH 远程工具跳过本地白名单检查
+    const isRemoteTool = operation.startsWith('ssh-');
+    if (params.command && !isRemoteTool) {
       const cmdCheck = this.isCommandSafe(params.command);
       if (!cmdCheck.safe) {
         return { allowed: false, reason: cmdCheck.reason };

@@ -172,6 +172,7 @@
       "sleep",
       "killall",
       "pkill",
+      "kill",
       "ps",
       "mega-attr",
       "mega-backup",

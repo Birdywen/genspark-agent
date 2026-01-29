@@ -771,3 +771,27 @@ def analyze_local_images(local_paths):
 **关键改动文件**:
 - `/Users/yay/workspace/genspark-agent/server-v2/index.js` - 工具名前缀 + 环境变量展开
 - `/Users/yay/workspace/genspark-agent/server-v2/config.json` - SSH 服务器配置
+
+
+### [2026-01-29] 长内容写入最佳方案
+
+**问题**：heredoc 和直接命令写入时，特殊字符（反引号、${}、括号等）会被 shell 解析导致失败
+
+**解决方案**：使用 `run_command` 的 `stdin` 参数
+
+```json
+Ω{"tool":"run_command","params":{"command":"cat > /path/to/file.txt","stdin":"任意内容，包括 `反引号` ${变量} (括号) 都不会被解析"}}
+```
+
+**对比测试结果**：
+
+| 方案 | 特殊字符 | 结果 |
+|------|----------|------|
+| heredoc | `` ` `` `${}` `()` | ❌ 被 shell 解析 |
+| run_command + stdin | `` ` `` `${}` `()` | ✅ 原样写入 |
+| write_file | `` ` `` `${}` `()` | ✅ 原样写入 |
+
+**推荐用法**：
+- 短内容 → `write_file`
+- 长内容/复杂代码 → `run_command` + `stdin`
+- 避免用 heredoc 写入包含特殊字符的内容
