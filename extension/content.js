@@ -251,6 +251,22 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 - **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效
 - **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端
 
+### SSH 远程服务器（重要）
+
+**禁止使用** \`run_command\` + \`ssh/sshpass\`，必须使用 MCP SSH 工具：
+
+| 服务器 | 工具名 | 用途 |
+|--------|--------|------|
+| Oracle Cloud | \`ssh-oracle:exec\` | 执行命令 |
+| Oracle Cloud | \`ssh-oracle:sudo-exec\` | sudo 命令 |
+| cPanel | \`ssh-cpanel:exec\` | 执行命令 |
+
+**调用示例：**
+\`\`\`
+Ω{"tool":"ssh-oracle:exec","params":{"command":"hostname && uptime"}}
+Ω{"tool":"ssh-cpanel:exec","params":{"command":"ls ~/public_html"}}
+\`\`\`
+
 ---
 
 ## 新对话启动（最高优先级）

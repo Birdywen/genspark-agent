@@ -5286,7 +5286,57 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -252,25 +252,29 @@\n - **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n \n ---\n \n-## 上下文恢复（最高优先级）\n+## 新对话启动（最高优先级）\n \n-**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**\n+**每次新对话开始，第一步必须执行上下文恢复：**\n \n-\\`\\`\\`bash\n-node /Users/yay/workspace/.ag",
       "error": null
+    },
+    {
+      "id": 2688,
+      "timestamp": "2026-01-29T11:07:26.767Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: 新对话启动时自动恢复上下文，不再问东问西' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main 2e8e40d] feat: 新对话启动时自动恢复上下文，不再问东问西\n 2 files changed, 82 insertions(+), 6 deletions(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   cdbc396..2e8e40d  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2689,
+      "timestamp": "2026-01-29T11:07:37.152Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '新对话自动恢复上下文规则 + @DONE前记录里程碑规则'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 新对话自动恢复上下文规则 + @DONE前记录里程碑规则\n",
+      "error": null
+    },
+    {
+      "id": 2690,
+      "timestamp": "2026-01-29T11:10:20.514Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '245,255p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "## 系统架构\n\n本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。\n\n- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json\n- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n\n---\n\n",
+      "error": null
+    },
+    {
+      "id": 2691,
+      "timestamp": "2026-01-29T11:10:34.295Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n\n---",
+            "newText": "- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n\n### SSH 远程服务器（重要）\n\n**禁止使用** \\`run_command\\` + \\`ssh/sshpass\\`，必须使用 MCP SSH 工具：\n\n| 服务器 | 工具名 | 用途 |\n|--------|--------|------|\n| Oracle Cloud | \\`ssh-oracle:exec\\` | 执行命令 |\n| Oracle Cloud | \\`ssh-oracle:sudo-exec\\` | sudo 命令 |\n| cPanel | \\`ssh-cpanel:exec\\` | 执行命令 |\n\n**调用示例：**\n\\`\\`\\`\nΩ{\"tool\":\"ssh-oracle:exec\",\"params\":{\"command\":\"hostname && uptime\"}}\nΩ{\"tool\":\"ssh-cpanel:exec\",\"params\":{\"command\":\"ls ~/public_html\"}}\n\\`\\`\\`\n\n---"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -250,8 +250,24 @@\n - **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n - **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n - **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n \n+### SSH 远",
+      "error": null
     }
   ],
-  "nextId": 2688
+  "nextId": 2692
 }
