@@ -5214,7 +5214,79 @@
       "success": true,
       "resultPreview": "4. content 参数内如果有引号，必须转义为 \\\\\"\n5. 任务全部完成后输出 @DONE\n6. **输出 @DONE 前**，如果完成了重要工作，先记录里程碑：\n   \\`\\`\\`\n   Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \\\"简短描述完成的工作\\\"\"}}\n   \\`\\`\\`\n7. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg')\n8. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \\`@RETRY:#ID\\` 即可重新执行，无需重写代码\n\n---\n\n## Agent 协作系统\n",
       "error": null
+    },
+    {
+      "id": 2682,
+      "timestamp": "2026-01-29T11:05:18.706Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: @DONE前自动记录里程碑的提示规则' && git push origin main"
+      },
+      "success": true,
+      "resultPreview": "[main cdbc396] feat: @DONE前自动记录里程碑的提示规则\n 2 files changed, 151 insertions(+), 3 deletions(-)\n\nTo https://github.com/Birdywen/genspark-agent.git\n   41f1ac4..cdbc396  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 2683,
+      "timestamp": "2026-01-29T11:05:29.259Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"多SSH服务器MCP配置(ssh-oracle/ssh-cpanel) + 里程碑自动记录规则\""
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 多SSH服务器MCP配置(ssh-oracle/ssh-cpanel) + 里程碑自动记录规则\n",
+      "error": null
+    },
+    {
+      "id": 2684,
+      "timestamp": "2026-01-29T11:06:44.690Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '100,250p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "        if (btn && btn.offsetParent !== null) return true;\n      } catch (e) {}\n    }\n    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');\n    if (lastMsg) {\n      const cl = lastMsg.className.toLowerCase();\n      if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;\n      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*=\"loading\"], [class*=\"typing\"]').length > 0) ",
+      "error": null
+    },
+    {
+      "id": 2685,
+      "timestamp": "2026-01-29T11:06:53.089Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '250,350p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等\n- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效\n- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n\n---\n\n## 上下文恢复（最高优先级）\n\n**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**\n\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json\n\\`\\`\\`\n\n常用项目名：genspark-agent, oracle-cloud, english_youtube_channel\n\n查看所有项目：\n\\`\\`\\`bash\nnode /Users/ya",
+      "error": null
+    },
+    {
+      "id": 2686,
+      "timestamp": "2026-01-29T11:07:03.302Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '255,275p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "\n## 上下文恢复（最高优先级）\n\n**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**\n\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json\n\\`\\`\\`\n\n常用项目名：genspark-agent, oracle-cloud, english_youtube_channel\n\n查看所有项目：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects\n\\`\\`\\`\n\ndigest 会显示：当前任务、关键路径、里程碑、上次完成的工作等，帮你快速恢复上下文。\n\n---\n\n请告诉我你的任务。`;\n",
+      "error": null
+    },
+    {
+      "id": 2687,
+      "timestamp": "2026-01-29T11:07:17.483Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "## 上下文恢复（最高优先级）\n\n**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**\n\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json\n\\`\\`\\`\n\n常用项目名：genspark-agent, oracle-cloud, english_youtube_channel\n\n查看所有项目：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects\n\\`\\`\\`\n\ndigest 会显示：当前任务、关键路径、里程碑、上次完成的工作等，帮你快速恢复上下文。\n\n---\n\n请告诉我你的任务。",
+            "newText": "## 新对话启动（最高优先级）\n\n**每次新对话开始，第一步必须执行上下文恢复：**\n\n\\`\\`\\`\nΩ{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json\"}}\n\\`\\`\\`\n\n如果用户指定了其他项目（如「继续 ezmusicstore」），用对应项目名替换。\n\n常用项目名：genspark-agent, ezmusicstore, oracle-cloud, english_youtube_channel\n\n查看所有项目：\n\\`\\`\\`bash\nnode /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects\n\\`\\`\\`\n\ndigest 会显示：当前任务、关键路径、里程碑、上次完成的工作等，帮你快速恢复上下文。\n\n**不要问用户「你想做什么」，先恢复上下文再说。**\n\n---\n\n请告诉我你的任务。"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -252,25 +252,29 @@\n - **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端\n \n ---\n \n-## 上下文恢复（最高优先级）\n+## 新对话启动（最高优先级）\n \n-**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**\n+**每次新对话开始，第一步必须执行上下文恢复：**\n \n-\\`\\`\\`bash\n-node /Users/yay/workspace/.ag",
+      "error": null
     }
   ],
-  "nextId": 2682
+  "nextId": 2688
 }

@@ -253,15 +253,17 @@ node /Users/yay/workspace/.agent_hub/task_manager.js agents <agent_id>
 
 ---
 
-## 上下文恢复（最高优先级）
+## 新对话启动（最高优先级）
 
-**当用户说「继续 xxx 项目」或「恢复上下文」时，第一步必须执行：**
+**每次新对话开始，第一步必须执行上下文恢复：**
 
-\`\`\`bash
-node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名> /Users/yay/workspace/genspark-agent/server-v2/command-history.json
+\`\`\`
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"}}
 \`\`\`
 
-常用项目名：genspark-agent, oracle-cloud, english_youtube_channel
+如果用户指定了其他项目（如「继续 ezmusicstore」），用对应项目名替换。
+
+常用项目名：genspark-agent, ezmusicstore, oracle-cloud, english_youtube_channel
 
 查看所有项目：
 \`\`\`bash
@@ -269,6 +271,8 @@ node /Users/yay/workspace/.agent_memory/memory_manager_v2.js projects
 \`\`\`
 
 digest 会显示：当前任务、关键路径、里程碑、上次完成的工作等，帮你快速恢复上下文。
+
+**不要问用户「你想做什么」，先恢复上下文再说。**
 
 ---
 
