@@ -825,3 +825,29 @@ def analyze_local_images(local_paths):
 - **问题**: `cat >>` 或 `echo >>` 追加文件时，命令无输出，无法确认是否成功
 - **解决**: 写入后用 `tail -n` 验证内容
 - **教训**: 不要假设空输出就是成功，要主动验证
+
+---
+
+### 2026-01-30: 文件传输到远程服务器
+
+**问题**: 需要将本地文件同步到 cpanel 服务器
+
+**错误尝试**:
+- `ssh-cpanel:exec` + heredoc：大文件会被截断，特殊字符转义问题
+- `scp` 默认端口 22：Connection refused
+
+**正确方案**: 使用 scp 指定端口和密钥
+```bash
+scp -P 1394 -i /Users/yay/.ssh/cpanel_ezmusic <本地文件> ezmusics@ezmusicstore.com:~/<远程路径>
+```
+
+**关键配置** (来自 config.json):
+- 主机: ezmusicstore.com
+- 端口: 1394 (非标准)
+- 用户: ezmusics
+- 密钥: /Users/yay/.ssh/cpanel_ezmusic
+
+**教训**:
+1. 传输文件优先用 `scp`，不要用 heredoc
+2. cpanel 服务器通常使用非标准 SSH 端口
+3. 查看 MCP 配置文件获取正确的连接参数
