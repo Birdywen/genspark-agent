@@ -1378,9 +1378,22 @@ ${tip}
       });
     };
 
-    // 点击 Agent ID 也显示在线列表
+    // 点击 Agent ID: 如果未设置则提示输入，否则显示在线列表
     document.getElementById('agent-id').onclick = () => {
-      document.getElementById('agent-list').click();
+      if (!agentId) {
+        const newId = prompt('请输入 Agent ID (例如: kimi_agent):');
+        if (newId && newId.trim()) {
+          const id = newId.trim();
+          if (!id.endsWith('_agent')) {
+            alert('Agent ID 必须以 _agent 结尾，例如: kimi_agent');
+            return;
+          }
+          setAgentId(id);
+          addLog(`🏷️ 已设置 Agent ID: ${id}`, 'success');
+        }
+      } else {
+        document.getElementById('agent-list').click();
+      }
     };
 
     makeDraggable(panel);
@@ -1562,6 +1575,16 @@ ${tip}
         updateStatus();
         break;
       
+      // 服务器返回的在线 agents 列表
+      case 'online_agents':
+        if (msg.agents && msg.agents.length > 0) {
+          const list = msg.agents.map(a => `${a.agentId}@${a.site || 'unknown'}`).join(', ');
+          addLog(`👥 服务器在线: ${list}`, 'info');
+        } else {
+          addLog('📭 服务器暂无在线 Agent', 'info');
+        }
+        break;
+
       // 跨 Tab 消息
       case 'CROSS_TAB_MESSAGE':
         // 检查是否是回执消息（不注入聊天框，只显示日志）

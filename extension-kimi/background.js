@@ -1,4 +1,4 @@
-// Kimi AI Agent Bridge - Background Service Worker v1 (基于 Genspark v5)
+// Galaxy AI Agent Bridge - Background Service Worker v1 (基于 Genspark v5)
 
 let socket = null;
 let reconnectTimer = null;
@@ -83,6 +83,34 @@ function connectWebSocket() {
       
       if (data.type === 'pong') return;
       
+      // 跨扩展消息：转发给目标 agent 的 Tab
+      if (data.type === 'cross_extension_message') {
+        console.log('[BG] 收到跨扩展消息:', data.from, '->', data.to);
+        // 查找本地是否有这个 agent
+        const targetTabId = agentTabs.get(data.to);
+        if (targetTabId) {
+          sendToTab(targetTabId, {
+            type: 'CROSS_TAB_MESSAGE',
+            from: data.from,
+            message: data.message,
+            timestamp: data.timestamp,
+            via: 'server'
+          });
+          console.log('[BG] 跨扩展消息已转发到 Tab:', targetTabId);
+        } else {
+          console.log('[BG] 目标 agent 不在本扩展:', data.to);
+        }
+        return;
+      }
+      
+      // 在线 agent 列表（来自服务器）
+      if (data.type === 'online_agents') {
+        console.log('[BG] 服务器在线 agents:', data.agents);
+        // 广播给所有 Tab，让 UI 可以显示
+        broadcastToAllTabs(data);
+        return;
+      }
+      
       // 工具执行结果：只发送给发起调用的 Tab
       if (data.type === 'tool_result' && data.id) {
         // 去重检查
@@ -152,7 +180,7 @@ function sendToTab(tabId, message) {
   });
 }
 
-// 广播给所有 Kimi Tab
+// 广播给所有 Galaxy Tab
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
   chrome.tabs.query({ url: ['https://kimi.moonshot.cn/*', 'https://kimi.com/*', 'https://www.kimi.com/*'] }, (tabs) => {
@@ -285,7 +313,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     case 'REGISTER_AGENT':
       if (message.agentId && sender.tab?.id) {
+        // 本地注册
         registerAgent(message.agentId, sender.tab.id);
+        // 同时向服务器注册（支持跨扩展）
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'register_agent',
+            agentId: message.agentId,
+            site: 'kimi.ai'
+          }));
+        }
         sendResponse({ success: true, tabId: sender.tab.id });
       } else {
         sendResponse({ success: false, error: 'Missing agentId or tabId' });
@@ -295,14 +332,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'CROSS_TAB_SEND':
       if (message.to && message.message) {
         const fromAgent = tabAgents.get(sender.tab?.id) || 'unknown';
-        const result = sendCrossTabMessage(fromAgent, message.to, message.message);
-        sendResponse(result);
+        // 优先通过服务器发送（支持跨扩展）
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            type: 'cross_extension_send',
+            from: fromAgent,
+            to: message.to,
+            message: message.message
+          }));
+          console.log('[BG] 跨扩展消息已发送到服务器:', fromAgent, '->', message.to);
+          sendResponse({ success: true, via: 'server' });
+        } else {
+          // 服务器不可用，尝试本地发送（同扩展内）
+          const localResult = sendCrossTabMessage(fromAgent, message.to, message.message);
+          if (localResult.success) {
+            sendResponse(localResult);
+          } else {
+            sendResponse({ success: false, error: `Agent "${message.to}" 不在线且服务器未连接` });
+          }
+        }
       } else {
         sendResponse({ success: false, error: 'Missing to or message' });
       }
       break;
     
     case 'GET_REGISTERED_AGENTS':
+      // 请求服务器的在线 agent 列表
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'list_online_agents' }));
+      }
+      // 同时返回本地列表
       sendResponse({ success: true, agents: getRegisteredAgents() });
       break;
     

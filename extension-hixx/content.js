@@ -1,13 +1,13 @@
-// content.js v34 - Galaxy AI Agent Bridge
+// content.js v34 - HIXX AI Agent Bridge
 (function() {
   'use strict';
 
   // 防止脚本重复加载
-  if (window.__GALAXY_AGENT_LOADED__) {
+  if (window.__HIXX_AGENT_LOADED__) {
     console.log('[Agent] 已加载，跳过重复初始化');
     return;
   }
-  window.__GALAXY_AGENT_LOADED__ = true;
+  window.__HIXX_AGENT_LOADED__ = true;
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
@@ -89,10 +89,10 @@ function log(...args) {
   // ============== AI 生成状态检测 ==============
   
   function isAIGenerating() {
+    // HIXX AI: 只检测消息区域内的加载状态，避免误判页面其他加载器
     const stopBtnSelectors = [
       'button[aria-label*="stop" i]', 'button[aria-label*="停止" i]',
-      'button.stop-button', 'button[class*="stop"]', '.stop-generating',
-      '[data-testid="stop-button"]', '.generating-indicator', '.typing-indicator'
+      'button.stop-button', 'button[class*="stop"]'
     ];
     for (const sel of stopBtnSelectors) {
       try {
@@ -100,14 +100,23 @@ function log(...args) {
         if (btn && btn.offsetParent !== null) return true;
       } catch (e) {}
     }
-    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');
-    if (lastMsg) {
-      const cl = lastMsg.className.toLowerCase();
-      if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;
-      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*="loading"], [class*="typing"]').length > 0) return true;
+    
+    // HIXX: 只检查消息容器内的加载状态
+    const msgContainer = document.querySelector('.arco-scrollbar-container');
+    if (msgContainer) {
+      // 检查消息区域内是否有 arco-spin（不是外部的）
+      const loadingEls = msgContainer.querySelectorAll('.arco-spin, [class*="typing"]');
+      for (const el of loadingEls) {
+        if (el.offsetParent !== null) return true;
+      }
     }
-    const globalInd = document.querySelectorAll('.generating, .loading-response, [class*="generating"], [class*="streaming"]');
-    for (const el of globalInd) { if (el.offsetParent !== null) return true; }
+    
+    // 检查是否有全局的生成中指示器
+    const globalInd = document.querySelectorAll('[class*="generating"], [class*="streaming"]');
+    for (const el of globalInd) {
+      if (el.offsetParent !== null) return true;
+    }
+    
     return false;
   }
 
@@ -248,46 +257,76 @@ ${toolSummary}
   }
 
 
-    // ============== DOM 操作 (Galaxy AI 专用) ==============
+    // ============== DOM 操作 (HIXX AI 专用) ==============
   
   function getAIMessages() {
-    return Array.from(document.querySelectorAll('main [data-testid="message-content"], main div.user-message'));
+    // HIXX AI: 消息在 .arco-scrollbar-container 内，AI 回复有 markdown-body 类
+    const container = document.querySelector('.arco-scrollbar-container');
+    if (!container) return [];
+    // 获取所有消息块（用户和AI）
+    return Array.from(container.querySelectorAll('.flex.relative.flex-row.justify-start.items-start'));
   }
 
   function getLatestAIMessage() {
-    const messages = getAIMessages();
-    if (messages.length === 0) return { text: '', index: -1, element: null };
-    const lastMsg = messages[messages.length - 1];
+    // HIXX AI: AI 回复在 bg-[#6B666679] 容器内的 .markdown-body.text-sm
+    const aiContainers = document.querySelectorAll('div[class*="bg-[#6B666679]"]');
     
-    const contentEl = lastMsg.querySelector('div.not-prose') ||
-                      lastMsg.querySelector('div#math-root') ||
-                      lastMsg.querySelector('p.overflow-wrap-anywhere') ||
-                      lastMsg.querySelector('div.overflow-wrap-anywhere') ||
-                      lastMsg.querySelector('[class*="markdown"]') || 
-                      lastMsg;
+    if (aiContainers.length > 0) {
+      const lastContainer = aiContainers[aiContainers.length - 1];
+      const markdownBody = lastContainer.querySelector('.markdown-body.text-sm');
+      if (markdownBody) {
+        let text = markdownBody.innerText || '';
+        
+        // 提取代码块内容（code.hljs 或 pre.code-block-wrapper）
+        const codeBlocks = markdownBody.querySelectorAll('code.hljs, pre.code-block-wrapper code, pre code');
+        codeBlocks.forEach(cb => {
+          const codeText = cb.innerText || cb.textContent || '';
+          // 确保包含工具调用标记的代码块被正确捕获
+          if (codeText.includes('Ω{') || codeText.includes('"tool"')) {
+            if (!text.includes(codeText)) {
+              text += '\n```\n' + codeText + '\n```';
+            }
+          }
+        });
+        
+        return { 
+          text: text, 
+          index: aiContainers.length - 1,
+          element: markdownBody
+        };
+      }
+    }
     
-    return { 
-      text: contentEl?.innerText || lastMsg.innerText || '', 
-      index: messages.length - 1,
-      element: lastMsg
-    };
+    // 回退：直接查找所有 .markdown-body
+    const markdownBodies = document.querySelectorAll('div.markdown-body');
+    if (markdownBodies.length > 0) {
+      const lastEl = markdownBodies[markdownBodies.length - 1];
+      let text = lastEl.innerText || '';
+      
+      // 提取代码块
+      const codeBlocks = lastEl.querySelectorAll('code.hljs, pre.code-block-wrapper code, pre code');
+      codeBlocks.forEach(cb => {
+        const codeText = cb.innerText || cb.textContent || '';
+        if (codeText.includes('Ω{') || codeText.includes('"tool"')) {
+          if (!text.includes(codeText)) {
+            text += '\n```\n' + codeText + '\n```';
+          }
+        }
+      });
+      
+      return { 
+        text: text, 
+        index: markdownBodies.length - 1,
+        element: lastEl
+      };
+    }
+    
+    return { text: '', index: -1, element: null };
   }
 
   function getInputBox() {
-    const selectors = [
-      'textarea[placeholder="Send a message..."]',
-      'textarea[placeholder*="消息"]',
-      'textarea[placeholder*="message" i]',
-      'div[contenteditable="true"].search-input',
-      'div[contenteditable="true"]',
-      'textarea'
-    ];
-    
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      if (el && el.offsetParent !== null) return el;
-    }
-    return null;
+    // HIXX AI: 输入框是 textarea.arco-textarea
+    return document.querySelector('textarea.arco-textarea');
   }
 
   // ============== 消息队列处理 ==============
@@ -343,15 +382,11 @@ ${toolSummary}
     }
 
     const trySend = (attempt = 1) => {
+      // HIXX AI: 发送按钮是 button.arco-btn-shape-circle
       const btnSelectors = [
-        '.enter-icon-wrapper',
-        'div[class*=enter-icon]',
-        'button[type="submit"]',
-        'button.send-button',
-        'button[aria-label*="send" i]',
-        'button[aria-label*="发送"]',
-        '.search-input-container button',
-        'form button:not([type="button"])'
+        'button.arco-btn-shape-circle',
+        'button.arco-btn-primary.arco-btn-only-icon',
+        'button.arco-btn-primary'
       ];
       
       // 按 Enter 发送
@@ -1114,7 +1149,7 @@ ${tip}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Galaxy Agent v34</span>
+        <span id="agent-title">🤖 HIXX Agent v1</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
@@ -1556,16 +1591,6 @@ ${tip}
         updateStatus();
         break;
       
-      // 服务器返回的在线 agents 列表
-      case 'online_agents':
-        if (msg.agents && msg.agents.length > 0) {
-          const list = msg.agents.map(a => `${a.agentId}@${a.site || 'unknown'}`).join(', ');
-          addLog(`👥 服务器在线: ${list}`, 'info');
-        } else {
-          addLog('📭 服务器暂无在线 Agent', 'info');
-        }
-        break;
-
       // 跨 Tab 消息
       case 'CROSS_TAB_MESSAGE':
         // 检查是否是回执消息（不注入聊天框，只显示日志）
@@ -1788,7 +1813,7 @@ ${tip}
   }
 
   function init() {
-    log('初始化 Agent v34 (Genspark)');
+    log('初始化 Agent v1 (HIXX)');
     
     createPanel();
 
@@ -1829,7 +1854,7 @@ ${tip}
       });
     }, 500);
 
-    addLog('🚀 Agent v34 已启动', 'success');
+    addLog('🚀 Agent v1 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
     // 恢复之前保存的 Agent 身份

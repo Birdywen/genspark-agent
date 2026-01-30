@@ -1,25 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "Galaxy AI Agent Bridge",
+  "name": "HIXX AI Agent Bridge",
   "version": "1.0.0",
-  "description": "将 Galaxy AI 聊天窗口转变为 AI Agent 运行时",
+  "description": "将 HIXX AI 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
     "storage",
     "scripting"
   ],
   "host_permissions": [
-    "https://chat.galaxy.ai/*",
-    "https://galaxy.ai/*",
-    "https://www.genspark.ai/*",
-    "https://genspark.ai/*"
+    "https://www.hixx.ai/*",
+    "https://hixx.ai/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://chat.galaxy.ai/*", "https://www.genspark.ai/*", "https://genspark.ai/*"],
+      "matches": ["https://www.hixx.ai/*", "https://hixx.ai/*"],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"

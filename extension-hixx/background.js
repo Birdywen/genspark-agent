@@ -183,7 +183,7 @@ function sendToTab(tabId, message) {
 // 广播给所有 Galaxy Tab
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
-  chrome.tabs.query({ url: ['https://chat.galaxy.ai/*', 'https://galaxy.ai/*', 'https://www.genspark.ai/*', 'https://genspark.ai/*'] }, (tabs) => {
+  chrome.tabs.query({ url: ['https://www.hixx.ai/*', 'https://hixx.ai/*'] }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
     tabs.forEach((tab) => {
       chrome.tabs.sendMessage(tab.id, message).catch((e) => {
@@ -320,7 +320,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           socket.send(JSON.stringify({
             type: 'register_agent',
             agentId: message.agentId,
-            site: 'galaxy.ai'
+            site: 'hixx.ai'
           }));
         }
         sendResponse({ success: true, tabId: sender.tab.id });
