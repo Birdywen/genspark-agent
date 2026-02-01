@@ -385,6 +385,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
     
+    case 'RESTART_SERVER':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'restart_server' }));
+        console.log('[BG] 发送服务器重启请求');
+        sendResponse({ success: true, message: '服务器将在2秒后重启' });
+        
+        // 预期连接会断开，清理状态
+        reconnectAttempts = 0;
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
     case 'RESUME_TASK':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'resume_task', taskId: message.taskId }));

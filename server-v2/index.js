@@ -701,6 +701,66 @@ async function main() {
             }
             break;
           
+          // ===== 服务器重启 =====
+          case 'restart_server':
+            try {
+              logger.info('[WS] 收到服务器重启请求');
+              
+              // 立即回复客户端
+              ws.send(JSON.stringify({
+                type: 'restart_initiated',
+                message: '服务器将在 2 秒后重启',
+                timestamp: Date.now()
+              }));
+              
+              // 广播给所有客户端
+              broadcast({
+                type: 'server_restarting',
+                message: '服务器正在重启，请稍候...',
+                timestamp: Date.now()
+              });
+              
+              // 延迟关闭，确保消息发送完成
+              setTimeout(() => {
+                logger.info('[WS] 开始重启流程...');
+                
+                // 关闭所有连接
+                clients.forEach(client => {
+                  try {
+                    client.close();
+                  } catch(e) {}
+                });
+                
+                // 关闭 WebSocket 服务器
+                wss.close(() => {
+                  logger.info('[WS] WebSocket 服务器已关闭');
+                });
+                
+                // 触发外部重启
+                const { exec } = require('child_process');
+                exec('touch /tmp/agent-restart-trigger', (err) => {
+                  if (err) {
+                    logger.error('[WS] 触发重启失败:', err.message);
+                  } else {
+                    logger.info('[WS] 重启触发器已创建');
+                  }
+                  
+                  // 退出进程
+                  setTimeout(() => {
+                    process.exit(0);
+                  }, 500);
+                });
+              }, 2000);
+              
+            } catch (e) {
+              logger.error('[WS] restart_server 失败:', e.message);
+              ws.send(JSON.stringify({
+                type: 'restart_failed',
+                error: e.message
+              }));
+            }
+            break;
+          
           case 'health_check':
             try {
               const status = await healthChecker.runAll(hub);
