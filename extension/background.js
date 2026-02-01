@@ -89,6 +89,30 @@ function connectWebSocket() {
       
       if (data.type === 'pong') return;
       
+      // 工具列表更新：更新缓存并广播给所有 Tab
+      if (data.type === 'tools_updated') {
+        cachedTools = data.tools || [];
+        console.log('[BG] 工具列表已更新:', cachedTools.length);
+        broadcastToAllTabs({
+          type: 'tools_updated',
+          tools: cachedTools,
+          timestamp: data.timestamp
+        });
+        return;
+      }
+      
+      // reload_tools 结果
+      if (data.type === 'reload_tools_result') {
+        if (data.success) {
+          cachedTools = data.tools || [];
+          console.log('[BG] reload_tools 成功:', cachedTools.length);
+        } else {
+          console.error('[BG] reload_tools 失败:', data.error);
+        }
+        broadcastToAllTabs(data);
+        return;
+      }
+      
       // 工具执行结果：只发送给发起调用的 Tab
       if (data.type === 'tool_result' && data.id) {
         // 去重检查
@@ -285,6 +309,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       reconnectAttempts = 0;
       connectWebSocket();
       sendResponse({ success: true });
+      break;
+    
+    case 'RELOAD_TOOLS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'reload_tools' }));
+        console.log('[BG] 发送 reload_tools 请求');
+        sendResponse({ success: true, message: '已发送刷新请求' });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
       break;
     
     // ===== 跨 Tab 通信 =====

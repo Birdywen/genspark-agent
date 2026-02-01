@@ -284,6 +284,14 @@ class MCPConnection {
     this.tools = await this.getTools();
     this.ready = true;
     logger.success(`[${this.name}] 就绪, ${this.tools.length} 个工具`);
+    // 打印工具名（截断），方便在日志中确认每个 MCP server 暴露了哪些 tools
+    try {
+      const names = this.tools.map(t => t.name);
+      const preview = names.slice(0, 40);
+      logger.info(`[${this.name}] tools: ${preview.join(', ')}${names.length > preview.length ? ` ... (+${names.length - preview.length})` : ''}`);
+    } catch (e) {
+      logger.warning(`[${this.name}] tools 列表打印失败: ${e.message}`);
+    }
   }
 
   onData(data) {
@@ -390,6 +398,43 @@ class MCPHub {
 
   stop() {
     for (const [, c] of this.conns) c.stop();
+  }
+
+  // 热刷新：重新加载所有 MCP 连接和工具
+  async reload() {
+    logger.info('[MCPHub] 开始热刷新...');
+    
+    // 1. 停止所有现有连接
+    for (const [name, c] of this.conns) {
+      logger.info(`[MCPHub] 停止 ${name}`);
+      c.stop();
+    }
+    this.conns.clear();
+    this.tools = [];
+    
+    // 2. 重新读取配置
+    const newConfig = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
+    const expandedConfig = expandEnvVars(newConfig);
+    
+    // 3. 重新启动所有 MCP server
+    for (const [name, cfg] of Object.entries(expandedConfig.mcpServers)) {
+      const options = {
+        startupTimeout: cfg.startupTimeout || 5000,
+        requestTimeout: cfg.requestTimeout || 60000
+      };
+      
+      const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options);
+      try {
+        await c.start();
+        this.conns.set(name, c);
+        this.tools.push(...c.tools);
+      } catch (e) {
+        logger.error(`[${name}] 重启失败: ${e.message}`);
+      }
+    }
+    
+    logger.success(`[MCPHub] 热刷新完成, 总工具数: ${this.tools.length}`);
+    return { success: true, toolCount: this.tools.length };
   }
 }
 
@@ -537,6 +582,38 @@ async function main() {
             
           case 'list_tools':
             ws.send(JSON.stringify({ type: 'tools_list', tools: hub.tools }));
+            break;
+          
+          // ===== 新增: 工具热刷新 =====
+          case 'reload_tools':
+            try {
+              logger.info('[WS] 收到 reload_tools 请求');
+              const reloadResult = await hub.reload();
+              
+              // 通知请求方
+              ws.send(JSON.stringify({
+                type: 'reload_tools_result',
+                success: true,
+                toolCount: reloadResult.toolCount,
+                tools: hub.tools
+              }));
+              
+              // 广播给所有客户端
+              broadcast({
+                type: 'tools_updated',
+                tools: hub.tools,
+                timestamp: Date.now()
+              });
+              
+              logger.success(`[WS] 工具刷新完成，已广播给 ${clients.size} 个客户端`);
+            } catch (e) {
+              logger.error('[WS] reload_tools 失败:', e.message);
+              ws.send(JSON.stringify({
+                type: 'reload_tools_result',
+                success: false,
+                error: e.message
+              }));
+            }
             break;
           
           // ===== 新增: 历史记录相关 =====

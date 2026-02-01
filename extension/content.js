@@ -1124,6 +1124,7 @@ ${tip}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-minimize" title="最小化">➖</button>
@@ -1288,6 +1289,21 @@ ${tip}
     document.getElementById('agent-reconnect').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
       addLog('🔄 重连中...', 'info');
+    };
+
+    // 刷新工具列表
+    document.getElementById('agent-reload-tools').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'RELOAD_TOOLS' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 发送刷新请求失败', 'error');
+          return;
+        }
+        if (resp?.success) {
+          addLog('🔧 正在刷新工具列表...', 'info');
+        } else {
+          addLog('❌ ' + (resp?.error || '刷新失败'), 'error');
+        }
+      });
     };
 
     // 切换本地/云端服务器
@@ -1501,6 +1517,25 @@ ${tip}
         }
         if (msg.skills) { state.availableSkills = msg.skills; }
         if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
+        break;
+
+      case 'tools_updated':
+        // 服务端热刷新后推送的工具更新
+        if (msg.tools && msg.tools.length > 0) {
+          const oldCount = state.availableTools.length;
+          state.availableTools = msg.tools;
+          updateToolsDisplay();
+          addLog(`🔄 工具已刷新: ${oldCount} → ${msg.tools.length}`, 'success');
+        }
+        break;
+
+      case 'reload_tools_result':
+        // reload_tools 请求的结果
+        if (msg.success) {
+          addLog(`✅ 工具刷新成功: ${msg.toolCount} 个工具`, 'success');
+        } else {
+          addLog(`❌ 工具刷新失败: ${msg.error}`, 'error');
+        }
         break;
 
       case 'tool_result':

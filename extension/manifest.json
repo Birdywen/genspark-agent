@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Genspark Agent Bridge",
-  "version": "1.0.32",
+  "version": "1.0.33",
   "description": "将 Genspark 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
