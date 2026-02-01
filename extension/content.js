@@ -168,8 +168,10 @@ function log(...args) {
 ### 批量执行
 
 \`\`\`
-前缀ΩBATCH + {"steps":[{"tool":"t1","params":{}},{"tool":"t2","params":{}}]}
+前缀ΩBATCH + {"steps":[...]} + 结尾ΩEND
 \`\`\`
+
+多行格式：前缀ΩBATCH + JSON对象 + 结尾ΩEND
 
 适用：读取多文件、执行多命令、并行获取信息
 高级：saveAs 保存变量、when 条件执行、stopOnError
@@ -629,31 +631,42 @@ ${toolSummary}
   }
 
     function parseToolCalls(text) {
-    // 优先检查 ΩBATCH 批量格式
-    const batchRegex = /ΩBATCH\s*(\{[\s\S]*?\})(?=\s*```|\s*$|\n\n)/;
-    const batchMatch = text.match(batchRegex);
-    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {
-      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）
-      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);
-      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || 
-                        beforeBatch.includes('示例') || beforeBatch.includes('用法') ||
-                        beforeBatch.includes('如下') || beforeBatch.includes('Example');
+    // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
+    const batchStartIdx = text.indexOf('ΩBATCH');
+    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
+      // 跳过示例中的 ΩBATCH
+      const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
+      const isExample = /格式[：:]|示例|用法|如下|Example|前缀/.test(beforeBatch);
       if (!isExample) {
         try {
-          const batchJson = batchMatch[1].replace(/[""]/g, '"').replace(/['']/g, "'");
-          const batch = safeJsonParse(batchJson);
-          if (batch.steps && Array.isArray(batch.steps)) {
-            return [{
-              name: '__BATCH__',
-              params: batch,
-              raw: batchMatch[0],
-              start: batchMatch.index,
-              end: batchMatch.index + batchMatch[0].length,
-              isBatch: true
-            }];
+          // 尝试找 ΩEND 结束标记
+          const jsonStart = text.indexOf('{', batchStartIdx);
+          let jsonEnd = text.indexOf('ΩEND', jsonStart);
+          let batchJson;
+          if (jsonEnd !== -1) {
+            // 有 ΩEND 标记，直接截取
+            batchJson = text.substring(jsonStart, jsonEnd).trim();
+          } else {
+            // 没有 ΩEND，使用平衡括号匹配
+            const batchData = extractBalancedJson(text, 'ΩBATCH');
+            if (batchData) batchJson = batchData.json;
+          }
+          if (batchJson) {
+            batchJson = batchJson.replace(/[""]/g, '"').replace(/['']/g, "'");
+            const batch = safeJsonParse(batchJson);
+            if (batch.steps && Array.isArray(batch.steps)) {
+              const endPos = jsonEnd !== -1 ? jsonEnd + 4 : batchStartIdx + 6 + batchJson.length;
+              return [{
+                name: '__BATCH__',
+                params: batch,
+                raw: text.substring(batchStartIdx, endPos),
+                start: batchStartIdx,
+                end: endPos,
+                isBatch: true
+              }];
+            }
           }
         } catch (e) {
-          // 静默忽略解析错误（可能是示例或不完整的输入）
           if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
         }
       }
