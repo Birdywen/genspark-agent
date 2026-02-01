@@ -126,121 +126,98 @@ function log(...args) {
   function generateSystemPrompt() {
     const toolCount = state.availableTools.length || 67;
     const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：
-- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等
-- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  
+- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
+- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
 - **命令执行** (1个): run_command
-- **代码分析** (26个): register_project_tool, find_text, get_symbols 等
-
-**需要查看完整工具文档时：**
-- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/docs/TOOLS_QUICK_REFERENCE.md
-- 不能联网: 用 read_file 读取 /Users/yay/workspace/genspark-agent/docs/TOOLS_QUICK_REFERENCE.md`;
+- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
 
-你连接了 genspark-agent 本地代理系统，可执行工具操作。
-如果用户指定了你的身份（如「你是 code_agent」），记住它用于后续协作。
+你连接了 **genspark-agent** 本地代理系统 (v1.0.40)，可执行文件操作、命令、浏览器自动化等。
 
 ---
 
-## 第一步（每次新对话必做）
+## 工具调用格式
 
-立即执行上下文恢复：
+### 单个工具
 
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent /Users/yay/workspace/genspark-agent/server-v2/command-history.json"}}
+前缀Ω + {"tool":"工具名","params":{"参数":"值"}}
 \`\`\`
 
-如果用户指定项目，替换项目名。常用：genspark-agent, ezmusicstore, oracle-cloud
+### 批量执行
+
+\`\`\`
+前缀ΩBATCH + {"steps":[{"tool":"t1","params":{}},{"tool":"t2","params":{}}]}
+\`\`\`
+
+适用：读取多文件、执行多命令、并行获取信息
+高级：saveAs 保存变量、when 条件执行、stopOnError
+
+### 智能规划 (ΩPLAN)
+
+\`\`\`
+前缀ΩPLAN + {"goal":"目标描述","context":{...}}
+\`\`\`
+
+自动分解任务、分析依赖、并行优化。内置模式：文件复制、部署、数据库备份等。
+
+### 工作流模板 (ΩFLOW)
+
+\`\`\`
+前缀ΩFLOW + {"template":"模板名","variables":{...}}
+\`\`\`
+
+内置模板：deploy-nodejs, backup-mysql, batch-process, health-check, log-analysis, git-workflow
+
+### 断点续传 (ΩRESUME)
+
+\`\`\`
+前缀ΩRESUME + {"taskId":"任务ID"}
+\`\`\`
+
+恢复中断的任务，从上次失败的步骤继续执行。
 
 ---
-
-## 调用格式（严格遵守）
-
-**必须使用代码块包裹 JSON 格式：**
-
-\`\`\`
-Ω{"tool":"工具名","params":{"参数名":"参数值"}}
-\`\`\`
-
-### 示例
-
-执行命令：
-\`\`\`
-Ω{"tool":"run_command","params":{"command":"ls -la"}}
-\`\`\`
-
-读取文件：
-\`\`\`
-Ω{"tool":"read_file","params":{"path":"/path/to/file"}}
-\`\`\`
-
-写入文件（注意：content 内的引号必须转义为 \\"）：
-\`\`\`
-Ω{"tool":"write_file","params":{"path":"/path/to/file.json","content":"{\\"key\\":\\"value\\"}"}}
-\`\`\`
 
 ## 可用工具
 
 ${toolSummary}
 
-## 规则
+---
 
-1. **必须**用代码块包裹工具调用
-2. 每次只调用**一个**工具，等待返回结果后再继续
-3. **不要**自己编造执行结果，等待系统返回
-4. content 参数内如果有引号，必须转义为 \\"
-5. 任务全部完成后输出 @DONE
-6. **输出 @DONE 前**，如果完成了重要工作，先切换到正确项目并记录里程碑：
-   \`\`\`
-   Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js switch <项目名> && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone \"简短描述完成的工作\""}}
-   \`\`\`
-   常用项目名：genspark-agent, ezmusicstore, oracle-cloud
-7. **举例说明时**，不要在 TOOL 或 SEND 前加 @ 符号，避免系统误执行（写成 'TOOL:{...}' 或 'SEND:agent:msg' 而不是 'Ω{...}' 或 '@SEND:agent:msg')
-8. 如果命令执行失败或超时，用户可以说「重试 #ID」，你只需输出 \`@RETRY:#ID\` 即可重新执行，无需重写代码
+## 核心规则
+
+1. 代码块包裹工具调用
+2. 单工具等结果再继续
+3. 批量执行多个独立操作
+4. 不编造结果
+5. content 引号转义 \\\"
+6. 完成输出 @DONE
+7. 重要工作记录里程碑
 
 ---
 
-## Agent 协作（按需使用）
+## 新对话首步
 
-跨 Tab 通信：\`@SEND:agent_id:消息\`
-
-详细命令见：read_file /Users/yay/workspace/genspark-agent/docs/LESSONS_LEARNED.md
-
----
-
-## 系统架构
-
-本系统是 **genspark-agent**，一个 MCP (Model Context Protocol) 客户端，类似 Claude Desktop 架构。
-
-- **MCP 配置文件**：/Users/yay/workspace/genspark-agent/server-v2/config.json
-- **已集成的 MCP servers**：filesystem, shell, chrome-devtools, tree-sitter, ssh-mcp 等
-- **添加新 MCP**：编辑 config.json 的 mcpServers 字段，重启 server 即可生效
-- **无需安装 Claude Desktop**，本系统本身就是 MCP 客户端
-
-### SSH 远程服务器（重要）
-
-**禁止使用** \`run_command\` + \`ssh/sshpass\`，必须使用 MCP SSH 工具：
-
-| 服务器 | 工具名 | 用途 |
-|--------|--------|------|
-| Oracle Cloud | \`ssh-oracle:exec\` | 执行命令 |
-| Oracle Cloud | \`ssh-oracle:sudo-exec\` | sudo 命令 |
-| cPanel | \`ssh-cpanel:exec\` | 执行命令 |
-
-**调用示例：**
 \`\`\`
-Ω{"tool":"ssh-oracle:exec","params":{"command":"hostname && uptime"}}
-Ω{"tool":"ssh-cpanel:exec","params":{"command":"ls ~/public_html"}}
+前缀Ω + {"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}
 \`\`\`
 
 ---
 
-## 补充规则
+## SSH 远程
 
-- 举例时不写真实前缀，避免误触发
-- 命令失败可说「重试 #ID」，输出 @RETRY:#ID 即可`;
+禁止 run_command+ssh，用：ssh-oracle:exec, ssh-cpanel:exec
 
-    // 如果有 Skills 提示词，附加到末尾
+---
+
+## 其他
+
+- 重试：@RETRY:#ID
+- 长内容：heredoc
+- 协作：@SEND:agent:msg`;
+
     if (state.skillsPrompt) {
       return prompt + "\n\n---\n\n" + state.skillsPrompt;
     }

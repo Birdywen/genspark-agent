@@ -4581,7 +4581,238 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -173,8 +173,32 @@\n \n 适用：读取多文件、执行多命令、并行获取信息\n 高级：saveAs 保存变量、when 条件执行、stopOnError\n \n+### 智能规划 (ΩPLAN)\n+\n+\\`\\`\\`\n+前缀ΩPLAN + {\"goal\":\"目标描述\",\"context\":{...}}\n+\\`\\`\\`\n+\n+自动分解任务、分析依赖、并行优化。内置模式：文件复制、部署、数据库备份等。\n+\n+### 工作流模板 (",
       "error": null
+    },
+    {
+      "id": 5446,
+      "timestamp": "2026-02-01T13:16:10.119Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/v1.0.38/v1.0.40/' extension/content.js && sed -i '' 's/\"version\": \"1.0.40\"/\"version\": \"1.0.41\"/' extension/manifest.json && git add -A && git commit -m 'feat: 系统提示词添加高级功能说明\n\n- ΩPLAN 智能规划（任务分解、依赖分析、并行优化）\n- ΩFLOW 工作流模板（6个内置模板）\n- ΩRESUME 断点续传\n- 示例格式改为 前缀+JSON 避免误解析\n- version: 1.0.40 -> 1.0.41'"
+      },
+      "success": true,
+      "resultPreview": "[main 9e2167f] feat: 系统提示词添加高级功能说明\n 4 files changed, 1446 insertions(+), 1273 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5447,
+      "timestamp": "2026-02-01T13:18:39.208Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && rg -n \"JSON parse error: Unexpected token\" -S . && rg -n \"parse error\" extension server-v2 docs scripts -S || true"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5448,
+      "timestamp": "2026-02-01T13:24:58.525Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ls -la /Users/yay/workspace/genspark-agent/ | grep extension"
+      },
+      "success": true,
+      "resultPreview": "drwxr-xr-x  11 yay  staff    352 Feb  1 08:16 extension\ndrwxr-xr-x   7 yay  staff    224 Jan 30 13:00 extension-galaxy\ndrwxr-xr-x@  8 yay  staff    256 Jan 30 12:32 extension-hixx\ndrwxr-xr-x@  7 yay  staff    224 Jan 30 12:45 extension-kimi\ndrwxr-xr-x@  7 yay  staff    224 Jan 29 11:15 extension-vear\n",
+      "error": null
+    },
+    {
+      "id": 5449,
+      "timestamp": "2026-02-01T13:25:07.715Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ls /Users/yay/workspace/genspark-agent/extension/"
+      },
+      "success": true,
+      "resultPreview": "background.js\ncontent.js\ncontent.js.backup\ncontent.js.bak\nicons\nmanifest.json\npanel-enhancer.js\nsmart_tips.js\nstyles.css\n",
+      "error": null
+    },
+    {
+      "id": 5450,
+      "timestamp": "2026-02-01T13:25:16.892Z",
+      "tool": "run_command",
+      "params": {
+        "command": "for ext in extension-galaxy extension-hixx extension-kimi extension-vear; do\n  echo \"=== 同步 $ext ===\"\n  cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/$ext/\n  cp /Users/yay/workspace/genspark-agent/extension/background.js /Users/yay/workspace/genspark-agent/$ext/\n  cp /Users/yay/workspace/genspark-agent/extension/manifest.json /Users/yay/workspace/genspark-agent/$ext/\ndone\necho \"同步完成\""
+      },
+      "success": false,
+      "resultPreview": "",
+      "error": "命令不在白名单: for"
+    },
+    {
+      "id": 5451,
+      "timestamp": "2026-02-01T13:25:26.120Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-galaxy/ && cp /Users/yay/workspace/genspark-agent/extension/background.js /Users/yay/workspace/genspark-agent/extension-galaxy/ && echo 'extension-galaxy 同步完成'"
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5452,
+      "timestamp": "2026-02-01T13:25:35.723Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-hixx/ && cp /Users/yay/workspace/genspark-agent/extension/background.js /Users/yay/workspace/genspark-agent/extension-hixx/ && echo 'extension-hixx 同步完成'"
+      },
+      "success": true,
+      "resultPreview": "extension-hixx 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5453,
+      "timestamp": "2026-02-01T13:25:43.320Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-kimi/ && cp /Users/yay/workspace/genspark-agent/extension/background.js /Users/yay/workspace/genspark-agent/extension-kimi/ && echo 'extension-kimi 同步完成'"
+      },
+      "success": true,
+      "resultPreview": "extension-kimi 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5454,
+      "timestamp": "2026-02-01T13:25:51.918Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-vear/ && cp /Users/yay/workspace/genspark-agent/extension/background.js /Users/yay/workspace/genspark-agent/extension-vear/ && echo 'extension-vear 同步完成'"
+      },
+      "success": true,
+      "resultPreview": "extension-vear 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5455,
+      "timestamp": "2026-02-01T13:26:00.398Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'sync: 同步 content.js 和 background.js 到所有 extension 分支\n\n- extension-galaxy\n- extension-hixx\n- extension-kimi\n- extension-vear'"
+      },
+      "success": true,
+      "resultPreview": "[main e5a7b63] sync: 同步 content.js 和 background.js 到所有 extension 分支\n 9 files changed, 4012 insertions(+), 656 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5456,
+      "timestamp": "2026-02-01T13:27:06.158Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git reset --hard HEAD~1 && echo '已回滚'"
+      },
+      "success": true,
+      "resultPreview": "HEAD is now at 9e2167f feat: 系统提示词添加高级功能说明\n已回滚\n",
+      "error": null
+    },
+    {
+      "id": 5457,
+      "timestamp": "2026-02-01T13:27:32.732Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "126:  function generateSystemPrompt() {\n",
+      "error": null
+    },
+    {
+      "id": 5458,
+      "timestamp": "2026-02-01T13:27:42.115Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '126,220p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等\n- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols 等\n\n**需要查看完整工具文档时：**\n- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/",
+      "error": null
+    },
+    {
+      "id": 5459,
+      "timestamp": "2026-02-01T13:27:51.116Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '146,230p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.",
+      "error": null
+    },
+    {
+      "id": 5460,
+      "timestamp": "2026-02-01T13:27:59.112Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '230,250p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "\n禁止 run_command+ssh，用：ssh-oracle:exec, ssh-cpanel:exec\n\n---\n\n## 其他\n\n- 重试：@RETRY:#ID\n- 长内容：heredoc\n- 协作：@SEND:agent:msg`;\n\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\n\n\n\n    // ============== DOM 操作 (Genspark 专用) ==============\n  \n",
+      "error": null
+    },
+    {
+      "id": 5461,
+      "timestamp": "2026-02-01T13:28:07.912Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '220,280p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "### SSH 远程服务器（重要）\n\n**禁止使用** \\`run_command\\` + \\`ssh/sshpass\\`，必须使用 MCP SSH 工具：\n\n| 服务器 | 工具名 | 用途 |\n|--------|--------|------|\n| Oracle Cloud | \\`ssh-oracle:exec\\` | 执行命令 |\n| Oracle Cloud | \\`ssh-oracle:sudo-exec\\` | sudo 命令 |\n| cPanel | \\`ssh-cpanel:exec\\` | 执行命令 |\n\n**调用示例：**\n\\`\\`\\`\nΩ{\"tool\":\"ssh-oracle:exec\",\"params\":{\"command\":\"hostname && uptime\"}}\nΩ{\"tool\":\"ssh-cpanel:exec\",\"params\":{\"command\":\"ls ~/public_html\"}}\n\\`\\`\\`\n\n---\n\n## 补充规则\n\n- 举例时不写真实前缀，避免误触发\n- 命令失败可说「重试 #ID」，输出 @RETRY:#ID 即可`;\n\n ",
+      "error": null
+    },
+    {
+      "id": 5462,
+      "timestamp": "2026-02-01T13:28:23.485Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\n\n// 读取主 extension 的函数\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nconst mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\nconsole.log('主函数长度:', newFunc.length);\n\""
+      },
+      "success": true,
+      "resultPreview": "主函数长度: 1690\n",
+      "error": null
+    },
+    {
+      "id": 5463,
+      "timestamp": "2026-02-01T13:28:34.966Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\n\n// 读取主 extension 的函数\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nlet mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\n\n// 读取 vear 的文件并替换\nconst vearContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\nlet vearStart = vearContent.indexOf('function generateSystemPrompt()');\ndepth = 0; inFunc = false; let vearEnd = vearStart;\nfor (let i = vearStart; i < vearContent.length; i++) {\n  if (vearContent[i] === '{') { depth++; inFunc = true; }\n  if (vearContent[i] === '}') { depth--; if (inFunc && depth === 0) { vearEnd = i + 1; break; } }\n}\n\nconst newVear = vearContent.substring(0, vearStart) + newFunc + vearContent.substring(vearEnd);\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', newVear);\nconsole.log('extension-vear 同步完成');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5464,
+      "timestamp": "2026-02-01T13:28:48.170Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\n\n// 读取主 extension 的函数\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nlet mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\n\n// 读取 galaxy 的文件并替换\nconst targetContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', 'utf8');\nlet targetStart = targetContent.indexOf('function generateSystemPrompt()');\ndepth = 0; inFunc = false; let targetEnd = targetStart;\nfor (let i = targetStart; i < targetContent.length; i++) {\n  if (targetContent[i] === '{') { depth++; inFunc = true; }\n  if (targetContent[i] === '}') { depth--; if (inFunc && depth === 0) { targetEnd = i + 1; break; } }\n}\n\nconst newContent = targetContent.substring(0, targetStart) + newFunc + targetContent.substring(targetEnd);\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', newContent);\nconsole.log('extension-galaxy 同步完成');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5465,
+      "timestamp": "2026-02-01T13:28:58.768Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\n\n// 读取主 extension 的函数\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nlet mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\n\n// 读取 hixx 的文件并替换\nconst targetContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nlet targetStart = targetContent.indexOf('function generateSystemPrompt()');\ndepth = 0; inFunc = false; let targetEnd = targetStart;\nfor (let i = targetStart; i < targetContent.length; i++) {\n  if (targetContent[i] === '{') { depth++; inFunc = true; }\n  if (targetContent[i] === '}') { depth--; if (inFunc && depth === 0) { targetEnd = i + 1; break; } }\n}\n\nconst newContent = targetContent.substring(0, targetStart) + newFunc + targetContent.substring(targetEnd);\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', newContent);\nconsole.log('extension-hixx 同步完成');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-hixx 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5466,
+      "timestamp": "2026-02-01T13:29:17.363Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\n\n// 读取主 extension 的函数\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nlet mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\n\n// 读取 kimi 的文件并替换\nconst targetContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', 'utf8');\nlet targetStart = targetContent.indexOf('function generateSystemPrompt()');\ndepth = 0; inFunc = false; let targetEnd = targetStart;\nfor (let i = targetStart; i < targetContent.length; i++) {\n  if (targetContent[i] === '{') { depth++; inFunc = true; }\n  if (targetContent[i] === '}') { depth--; if (inFunc && depth === 0) { targetEnd = i + 1; break; } }\n}\n\nconst newContent = targetContent.substring(0, targetStart) + newFunc + targetContent.substring(targetEnd);\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', newContent);\nconsole.log('extension-kimi 同步完成');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-kimi 同步完成\n",
+      "error": null
     }
   ],
-  "nextId": 5446
+  "nextId": 5467
 }
