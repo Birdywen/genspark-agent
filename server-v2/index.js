@@ -14,6 +14,8 @@ import ErrorClassifier from './error-classifier.js';
 import RetryManager from './retry-manager.js';
 import TaskEngine from './task-engine.js';
 import Recorder from './recorder.js';
+import SelfValidator from './self-validator.js';
+import GoalManager from './goal-manager.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -600,6 +602,11 @@ async function main() {
   taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);
   logger.info('[Main] TaskEngine 已初始化');
 
+  // 初始化自验证器和目标管理器
+  const selfValidator = new SelfValidator(logger, hub);
+  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
+  logger.info('[Main] SelfValidator 和 GoalManager 已初始化');
+
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
   if (!healthStatus.healthy) {
@@ -762,6 +769,61 @@ async function main() {
             }
             const status = taskEngine.getTaskStatus(msg.taskId);
             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
+            break;
+          
+          // ===== 目标驱动执行 =====
+          case 'create_goal':
+            {
+              const goal = goalManager.createGoal(
+                msg.goalId || `goal-${Date.now()}`,
+                msg.definition
+              );
+              ws.send(JSON.stringify({ type: 'goal_created', goal }));
+            }
+            break;
+          
+          case 'execute_goal':
+            {
+              logger.info(`[WS] 执行目标: ${msg.goalId}`);
+              const result = await goalManager.executeGoal(
+                msg.goalId,
+                (progress) => {
+                  ws.send(JSON.stringify({ type: 'goal_progress', ...progress }));
+                }
+              );
+              ws.send(JSON.stringify({ type: 'goal_complete', ...result }));
+            }
+            break;
+          
+          case 'goal_status':
+            {
+              const status = goalManager.getGoalStatus(msg.goalId);
+              ws.send(JSON.stringify({ type: 'goal_status_result', ...status }));
+            }
+            break;
+          
+          case 'list_goals':
+            {
+              const goals = goalManager.listGoals();
+              ws.send(JSON.stringify({ type: 'goals_list', ...goals }));
+            }
+            break;
+          
+          case 'validated_execute':
+            {
+              // 带验证的单工具执行
+              logger.info(`[WS] 验证执行: ${msg.tool}`);
+              const result = await selfValidator.executeWithValidation(
+                msg.tool,
+                msg.params,
+                msg.options || {}
+              );
+              ws.send(JSON.stringify({ 
+                type: 'validated_result', 
+                tool: msg.tool,
+                ...result 
+              }));
+            }
             break;
           
           // ===== 录制相关 =====

@@ -115,6 +115,15 @@ function connectWebSocket() {
         return;
       }
       
+      // 目标驱动执行结果
+      if (data.type === 'goal_created' || data.type === 'goal_progress' || 
+          data.type === 'goal_complete' || data.type === 'goal_status_result' ||
+          data.type === 'goals_list' || data.type === 'validated_result') {
+        console.log('[BG] 目标执行消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
       // reload_tools 结果
       if (data.type === 'reload_tools_result') {
         if (data.success) {
@@ -404,6 +413,61 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'REPLAY_RECORDING':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    // ===== 目标驱动执行 =====
+    case 'CREATE_GOAL':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'create_goal', 
+          goalId: message.goalId,
+          definition: message.definition 
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'EXECUTE_GOAL':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'execute_goal', goalId: message.goalId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'GOAL_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'goal_status', goalId: message.goalId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'LIST_GOALS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'list_goals' }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'VALIDATED_EXECUTE':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'validated_execute', 
+          tool: message.tool,
+          params: message.params,
+          options: message.options
+        }));
         sendResponse({ success: true });
       } else {
         sendResponse({ success: false, error: '未连接到服务器' });

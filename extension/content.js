@@ -1640,6 +1640,64 @@ ${tip}
         addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');
         break;
 
+      // ===== 目标驱动执行 =====
+      case 'goal_created':
+        addLog(`🎯 目标已创建: ${msg.goal?.id || msg.goalId}`, 'success');
+        break;
+
+      case 'goal_progress':
+        if (msg.step !== undefined) {
+          addLog(`🎯 目标进度: 步骤 ${msg.step} - ${msg.status || '执行中'}`, 'info');
+        }
+        break;
+
+      case 'goal_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          addLog(`✅ 目标完成: ${msg.goalId} (${msg.attempts || 1} 次尝试)`, 'success');
+        } else {
+          addLog(`❌ 目标失败: ${msg.goalId} - ${msg.error || '未知错误'}`, 'error');
+        }
+        // 生成目标完成摘要
+        const goalSummary = `**[目标执行完成]** ${msg.success ? '✓ 成功' : '✗ 失败'}\n` +
+          `- 目标ID: ${msg.goalId}\n` +
+          `- 尝试次数: ${msg.attempts || 1}\n` +
+          (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(goalSummary);
+        break;
+
+      case 'goal_status_result':
+        addLog(`📊 目标状态: ${msg.status?.status || '未知'} (${msg.status?.progress || 0}%)`, 'info');
+        break;
+
+      case 'goals_list':
+        addLog(`📋 活跃目标: ${msg.goals?.active?.length || 0}, 已完成: ${msg.goals?.completed || 0}`, 'info');
+        break;
+
+      case 'validated_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const vr = msg.result;
+        if (vr?.success && vr?.validated) {
+          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');
+        } else if (vr?.success && !vr?.validated) {
+          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');
+        } else {
+          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');
+        }
+        // 生成验证结果摘要
+        const vrSummary = `**[验证执行结果]** ${msg.tool}\n` +
+          `- 执行: ${vr?.success ? '✓' : '✗'}\n` +
+          `- 验证: ${vr?.validated ? '✓' : '✗'}\n` +
+          (vr?.result ? `\`\`\`\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\n\`\`\`\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(vrSummary);
+        break;
+
       // ===== 录制相关 =====
       case 'recording_started':
         addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');
