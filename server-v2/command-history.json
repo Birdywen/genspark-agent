@@ -5649,7 +5649,112 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -349,9 +349,9 @@\n     \n     const files = readdirSync(this.logDir);\n     for (const file of files) {\n       const filePath = path.join(this.logDir, file);\n-      const stat = require('fs').statSyn",
       "error": null
+    },
+    {
+      "id": 5009,
+      "timestamp": "2026-02-01T03:05:04.395Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: async-executor ES module兼容性修复' && pkill -f 'node index.js' 2>/dev/null; sleep 1 && cd server-v2 && node index.js &"
+      },
+      "success": true,
+      "resultPreview": "[main 9a0bc1c] fix: async-executor ES module兼容性修复\n 2 files changed, 117 insertions(+), 5 deletions(-)\n🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:04:34] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:04:34] [INFO]\u001b[0m 加载了 472 条历史记录\n\u001b[36m[03:04:34] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:04:35] [WARNING]\u001b[0m [filesystem] stderr: S",
+      "error": null
+    },
+    {
+      "id": 5010,
+      "timestamp": "2026-02-01T03:05:45.116Z",
+      "tool": "run_command",
+      "params": {
+        "command": "pkill -9 -f 'node.*index.js' 2>/dev/null; sleep 2 && cd /Users/yay/workspace/genspark-agent/server-v2 && nohup node index.js > /tmp/server.log 2>&1 & sleep 3 && cat /tmp/server.log | tail -30"
+      },
+      "success": true,
+      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:05:14] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:05:14] [INFO]\u001b[0m 加载了 473 条历史记录\n\u001b[36m[03:05:14] [INFO]\u001b[0m [filesystem] 启动中...\n",
+      "error": null
+    },
+    {
+      "id": 5011,
+      "timestamp": "2026-02-01T03:06:18.187Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sleep 25 && cat /tmp/server.log | tail -50"
+      },
+      "success": true,
+      "resultPreview": "\u001b[36m[03:05:35] [INFO]\u001b[0m [ssh-oracle] 启动中...\n\u001b[33m[03:05:36] [WARNING]\u001b[0m [ssh-oracle] stderr: SSH MCP Server running on stdio\n\u001b[32m[03:05:40] [SUCCESS]\u001b[0m [ssh-oracle] 就绪, 2 个工具\n\u001b[36m[03:05:40] [INFO]\u001b[0m [ssh-oracle] tools: ssh-oracle:exec, ssh-oracle:sudo-exec\n\u001b[36m[03:05:40] [INFO]\u001b[0m [ssh-cpanel] 启动中...\n\u001b[33m[03:05:41] [WARNING]\u001b[0m [ssh-cpanel] stderr: SSH MCP Server running on stdio\n\u001b[32m[03:05:45] [SUCCESS]\u001b[0m [ssh-cpanel] 就绪, 2 个工具\n\u001b[36m[03:05:45] [INFO]\u001b[0m [ssh-cpanel] tools: ss",
+      "error": null
+    },
+    {
+      "id": 5012,
+      "timestamp": "2026-02-01T03:08:28.103Z",
+      "tool": "run_command",
+      "params": {
+        "command": "lsof -i :8765 2>/dev/null | head -5 && ps aux | grep 'node.*index.js' | grep -v grep | head -3"
+      },
+      "success": true,
+      "resultPreview": "COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nGenspark  16180  yay   22u  IPv6 0x15b88677fad32a2f      0t0  TCP localhost:59298->localhost:ultraseek-http (ESTABLISHED)\nnode      16192  yay   34u  IPv6 0xa3794a7c1a544ef1      0t0  TCP localhost:ultraseek-http (LISTEN)\nnode      16192  yay   35u  IPv6 0xc87f56a766740364      0t0  TCP localhost:ultraseek-http->localhost:59298 (ESTABLISHED)\nyay              16192   2.5  0.6 435765104  47648 s000  S    10:06PM   0:00.32 node ",
+      "error": null
+    },
+    {
+      "id": 5013,
+      "timestamp": "2026-02-01T03:08:35.977Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo '测试基础命令执行' && date && hostname"
+      },
+      "success": true,
+      "resultPreview": "测试基础命令执行\nSat Jan 31 22:08:35 EST 2026\nYAOs-MacBook-Air.local\n",
+      "error": null
+    },
+    {
+      "id": 5014,
+      "timestamp": "2026-02-01T03:14:10.582Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rm -f /private/tmp/batch-test-* && ls /private/tmp/batch-test-* 2>&1 || echo '✓ 测试文件已清理完毕'"
+      },
+      "success": true,
+      "resultPreview": "ls: /private/tmp/batch-test-*: No such file or directory\n✓ 测试文件已清理完毕\n",
+      "error": null
+    },
+    {
+      "id": 5015,
+      "timestamp": "2026-02-01T03:19:03.993Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'TOOL_BATCH' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "356:    case 'TOOL_BATCH':\n",
+      "error": null
+    },
+    {
+      "id": 5016,
+      "timestamp": "2026-02-01T03:19:13.369Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '354,385p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      break;\n    \n    case 'TOOL_BATCH':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        const batchMsg = {\n          type: 'tool_batch',\n          id: message.batchId || `batch-${Date.now()}`,\n          steps: message.steps || [],\n          options: message.options || {}\n        };\n        socket.send(JSON.stringify(batchMsg));\n        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');\n        sendResponse({ success: true, batchId: batchMsg.id });\n      } ",
+      "error": null
+    },
+    {
+      "id": 5017,
+      "timestamp": "2026-02-01T03:19:21.968Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'TOOL_BATCH':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        const batchMsg = {\n          type: 'tool_batch',\n          id: message.batchId || `batch-${Date.now()}`,\n          steps: message.steps || [],\n          options: message.options || {}\n        };\n        socket.send(JSON.stringify(batchMsg));\n        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');\n        sendResponse({ success: true, batchId: batchMsg.id });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'RESUME_TASK':",
+            "newText": "    case 'RESUME_TASK':"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -352,24 +352,8 @@\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n     \n-    case 'TOOL_BATCH':\n-      if (socket && socket.readyState === WebSocket.OPEN) {\n-        const ",
+      "error": null
     }
   ],
-  "nextId": 5009
+  "nextId": 5018
 }

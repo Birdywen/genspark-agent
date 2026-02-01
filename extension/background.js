@@ -353,22 +353,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
     
-    case 'TOOL_BATCH':
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        const batchMsg = {
-          type: 'tool_batch',
-          id: message.batchId || `batch-${Date.now()}`,
-          steps: message.steps || [],
-          options: message.options || {}
-        };
-        socket.send(JSON.stringify(batchMsg));
-        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');
-        sendResponse({ success: true, batchId: batchMsg.id });
-      } else {
-        sendResponse({ success: false, error: '未连接到服务器' });
-      }
-      break;
-    
     case 'RESUME_TASK':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'resume_task', taskId: message.taskId }));
