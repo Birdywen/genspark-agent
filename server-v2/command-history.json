@@ -4787,7 +4787,68 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1668,15 +1668,25 @@\n           addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n         } else {\n           addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFaile",
       "error": null
+    },
+    {
+      "id": 4941,
+      "timestamp": "2026-02-01T02:01:17.818Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.36\"/\"version\": \"1.0.37\"/' extension/manifest.json && git add -A && git commit -m 'feat: 批量执行返回详细结果内容\n\n- batch_step_result 存储每步结果\n- batch_complete 生成包含详细输出的汇总\n- 每步结果限制2000字符防止过长\n- version: 1.0.36 -> 1.0.37'"
+      },
+      "success": true,
+      "resultPreview": "[main 86f7753] feat: 批量执行返回详细结果内容\n 4 files changed, 1247 insertions(+), 1111 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4942,
+      "timestamp": "2026-02-01T02:02:22.358Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git status --short && echo '---' && cat extension/manifest.json | head -5"
+      },
+      "success": true,
+      "resultPreview": " M server-v2/command-history.json\n---\n{\n  \"manifest_version\": 3,\n  \"name\": \"Genspark Agent Bridge\",\n  \"version\": \"1.0.37\",\n  \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n",
+      "error": null
+    },
+    {
+      "id": 4943,
+      "timestamp": "2026-02-01T02:04:22.242Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'ΩBATCH' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "198:当需要执行多个**相互独立**的工具时，使用 ΩBATCH 格式：\n201:ΩBATCH{\"steps\":[{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/a.txt\"}},{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/b.txt\"}},{\"tool\":\"run_command\",\"params\":{\"command\":\"date\"}}]}\n207:ΩBATCH{\"steps\":[{\"tool\":\"read_file\",\"params\":{\"path\":\"/config.json\"},\"saveAs\":\"cfg\"},{\"tool\":\"run_command\",\"params\":{\"command\":\"echo done\"},\"when\":\"{{cfg.success}}\"}],\"options\":{\"stopOnError\":true}}\n636:    // 优先检查 ΩBATCH 批量格式\n637:    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(",
+      "error": null
+    },
+    {
+      "id": 4944,
+      "timestamp": "2026-02-01T02:04:31.427Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '636,660p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      try {\n        const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n        const batch = safeJsonParse(batchJson);\n        if (batch.steps && Array.isArray(batch.steps)) {\n          return [{\n            name: '__BATCH__',\n            params: batch,\n",
+      "error": null
+    },
+    {
+      "id": 4945,
+      "timestamp": "2026-02-01T02:04:48.042Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      try {\n        const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n        const batch = safeJsonParse(batchJson);\n        if (batch.steps && Array.isArray(batch.steps)) {\n          return [{\n            name: '__BATCH__',\n            params: batch,\n            raw: batchMatch[0],\n            start: batchMatch.index,\n            end: batchMatch.index + batchMatch[0].length,\n            isBatch: true\n          }];\n        }\n      } catch (e) {\n        console.error('[Agent] ΩBATCH parse error:', e.message);\n        addLog('ΩBATCH 解析错误: ' + e.message, 'error');\n      }\n    }",
+            "newText": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n                        beforeBatch.includes('示例') || beforeBatch.includes('用法') ||\n                        beforeBatch.includes('如下') || beforeBatch.includes('Example');\n      if (!isExample) {\n        try {\n          const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n          const batch = safeJsonParse(batchJson);\n          if (batch.steps && Array.isArray(batch.steps)) {\n            return [{\n              name: '__BATCH__',\n              params: batch,\n              raw: batchMatch[0],\n              start: batchMatch.index,\n              end: batchMatch.index + batchMatch[0].length,\n              isBatch: true\n            }];\n          }\n        } catch (e) {\n          // 静默忽略解析错误（可能是示例或不完整的输入）\n          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);\n        }\n      }\n    }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "````diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -636,24 +636,31 @@\n     // 优先检查 ΩBATCH 批量格式\n     const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n     const batchMatch = text.match(batchRegex);\n     if (batchMatch && !state.executedCalls.has('batc",
+      "error": null
     }
   ],
-  "nextId": 4941
+  "nextId": 4946
 }

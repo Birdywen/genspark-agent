@@ -637,22 +637,29 @@ ${toolSummary}
     const batchRegex = /ΩBATCH\s*(\{[\s\S]*?\})(?=\s*```|\s*$|\n\n)/;
     const batchMatch = text.match(batchRegex);
     if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {
-      try {
-        const batchJson = batchMatch[1].replace(/[""]/g, '"').replace(/['']/g, "'");
-        const batch = safeJsonParse(batchJson);
-        if (batch.steps && Array.isArray(batch.steps)) {
-          return [{
-            name: '__BATCH__',
-            params: batch,
-            raw: batchMatch[0],
-            start: batchMatch.index,
-            end: batchMatch.index + batchMatch[0].length,
-            isBatch: true
-          }];
+      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）
+      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);
+      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || 
+                        beforeBatch.includes('示例') || beforeBatch.includes('用法') ||
+                        beforeBatch.includes('如下') || beforeBatch.includes('Example');
+      if (!isExample) {
+        try {
+          const batchJson = batchMatch[1].replace(/[""]/g, '"').replace(/['']/g, "'");
+          const batch = safeJsonParse(batchJson);
+          if (batch.steps && Array.isArray(batch.steps)) {
+            return [{
+              name: '__BATCH__',
+              params: batch,
+              raw: batchMatch[0],
+              start: batchMatch.index,
+              end: batchMatch.index + batchMatch[0].length,
+              isBatch: true
+            }];
+          }
+        } catch (e) {
+          // 静默忽略解析错误（可能是示例或不完整的输入）
+          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
         }
-      } catch (e) {
-        console.error('[Agent] ΩBATCH parse error:', e.message);
-        addLog('ΩBATCH 解析错误: ' + e.message, 'error');
       }
     }
 
