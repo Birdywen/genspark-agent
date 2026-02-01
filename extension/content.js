@@ -38,8 +38,28 @@
     isProcessingQueue: false,
     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
-    lastToolCall: null
+    lastToolCall: null,
+    // 批量任务状态
+    batchResults: [],
+    currentBatchId: null,
+    currentBatchTotal: 0,
+    // 统计
+    totalCalls: 0,
+    sessionStart: Date.now()
   };
+
+  // 加载面板增强模块
+  function loadPanelEnhancer() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('panel-enhancer.js');
+    script.onload = () => {
+      if (window.PanelEnhancer) {
+        window.PanelEnhancer.init();
+        console.log('[Agent] PanelEnhancer 已加载');
+      }
+    };
+    document.head.appendChild(script);
+  }
 
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
@@ -807,29 +827,43 @@ ${toolSummary}
     
     state.agentRunning = true;
     state.executedCalls.add(callHash);
+    state.batchResults = [];  // 重置批量结果
+    state.currentBatchId = batchId;
+    state.currentBatchTotal = batch.steps.length;
+    
     showExecutingIndicator(`批量 (${batch.steps.length} 步)`);
     updateStatus();
+    
+    // 显示进度条
+    if (window.PanelEnhancer) {
+      window.PanelEnhancer.showBatchProgress(batchId, batch.steps.length);
+    }
     
     addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');
     
     chrome.runtime.sendMessage({
-      type: 'TOOL_BATCH',
-      batchId: batchId,
-      steps: batch.steps,
-      options: batch.options || { stopOnError: true }
+      type: 'SEND_TO_SERVER',
+      payload: {
+        type: 'tool_batch',
+        id: batchId,
+        steps: batch.steps,
+        options: batch.options || { stopOnError: true }
+      }
     }, (response) => {
       if (chrome.runtime.lastError) {
         addLog(`❌ 批量发送失败: ${chrome.runtime.lastError.message}`, 'error');
         state.agentRunning = false;
         hideExecutingIndicator();
         updateStatus();
+        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();
       } else if (response?.success) {
-        addLog(`📤 批量任务已提交: ${response.batchId}`, 'info');
+        addLog(`📤 批量任务已提交: ${batchId}`, 'info');
       } else {
         addLog('❌ 批量任务提交失败', 'error');
         state.agentRunning = false;
         hideExecutingIndicator();
         updateStatus();
+        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();
       }
     });
   }
@@ -1571,27 +1605,38 @@ ${tip}
 
       // ===== 批量任务消息 =====
       case 'batch_step_result':
+        state.totalCalls++;  // 统计调用次数
         if (msg.success) {
           addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');
-          // 存储结果供汇总使用
-          if (!state.batchResults) state.batchResults = [];
           state.batchResults.push({
             stepIndex: msg.stepIndex,
             tool: msg.tool,
             success: true,
             result: msg.result
           });
+          // 更新进度条
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'success', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal);
+          }
         } else if (msg.skipped) {
           addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'skipped', msg.tool);
+          }
         } else {
           addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
-          if (!state.batchResults) state.batchResults = [];
           state.batchResults.push({
             stepIndex: msg.stepIndex,
             tool: msg.tool,
             success: false,
             error: msg.error
           });
+          // 更新进度条（错误状态）
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'error', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal, true);
+          }
         }
         break;
 
@@ -1599,6 +1644,16 @@ ${tip}
         state.agentRunning = false;
         hideExecutingIndicator();
         updateStatus();
+        // 隐藏进度条
+        if (window.PanelEnhancer) {
+          window.PanelEnhancer.hideProgress();
+          // 显示 Toast 通知
+          if (msg.success) {
+            window.PanelEnhancer.showToast(`批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+          } else {
+            window.PanelEnhancer.showToast(`批量任务部分失败: ${msg.stepsFailed} 个错误`, 'error');
+          }
+        }
         if (msg.success) {
           addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');
         } else {
@@ -2079,6 +2134,9 @@ ${tip}
     log('初始化 Agent v34 (Genspark)');
     
     createPanel();
+    
+    // 加载面板增强模块
+    loadPanelEnhancer();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
     

@@ -19,6 +19,7 @@ import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
 import ResultCache from './result-cache.js';
+import ContextCompressor from './context-compressor.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -611,7 +612,8 @@ async function main() {
   const asyncExecutor = new AsyncExecutor(logger);
   const autoHealer = new AutoHealer(logger, hub);
   const resultCache = new ResultCache(logger);
-  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化');
+  const contextCompressor = new ContextCompressor(logger);
+  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor 已初始化');
 
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
@@ -966,6 +968,58 @@ async function main() {
                 type: 'cache_invalidate_result',
                 pattern: msg.pattern,
                 invalidated
+              }));
+            }
+            break;
+
+          // ===== 上下文压缩 =====
+          case 'compress_context':
+            {
+              logger.info(`[WS] 压缩上下文: ${msg.messages?.length || 0} 条消息`);
+              const result = contextCompressor.compress(msg.messages || []);
+              ws.send(JSON.stringify({
+                type: 'compress_result',
+                ...result
+              }));
+            }
+            break;
+
+          case 'compress_message':
+            {
+              const compressed = contextCompressor.compressMessage(
+                msg.content,
+                msg.maxLength || 2000
+              );
+              ws.send(JSON.stringify({
+                type: 'compress_message_result',
+                original: msg.content?.length || 0,
+                compressed: compressed.length,
+                content: compressed
+              }));
+            }
+            break;
+
+          case 'summarize_result':
+            {
+              const summary = contextCompressor.summarizeToolResult(
+                msg.result,
+                msg.toolName
+              );
+              ws.send(JSON.stringify({
+                type: 'summarize_result_result',
+                original: msg.result?.length || 0,
+                summarized: summary.length,
+                content: summary
+              }));
+            }
+            break;
+
+          case 'context_stats':
+            {
+              const stats = contextCompressor.getStats(msg.messages || []);
+              ws.send(JSON.stringify({
+                type: 'context_stats_result',
+                ...stats
               }));
             }
             break;

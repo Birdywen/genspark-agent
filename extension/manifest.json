@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Genspark Agent Bridge",
-  "version": "1.0.41",
+  "version": "1.0.42",
   "description": "将 Genspark 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
@@ -26,5 +26,11 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["panel-enhancer.js"],
+      "matches": ["https://www.genspark.ai/*"]
+    }
+  ]
 }
