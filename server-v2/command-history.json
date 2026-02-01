@@ -5661,7 +5661,118 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/manifest.json\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/manifest.json\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/manifest.json\tmodified\n@@ -1,8 +1,8 @@\n {\n   \"manifest_version\": 3,\n   \"name\": \"Genspark Agent Bridge\",\n-  \"version\": \"1.0.35\",\n+  \"version\": \"1.0.36\",\n   \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n   \"permissions\": [\n     \"act",
       "error": null
+    },
+    {
+      "id": 4923,
+      "timestamp": "2026-02-01T01:52:42.553Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: AI 批量执行支持 - ΩBATCH 格式\n\n- 系统提示词新增批量执行说明和格式\n- parseToolCalls 支持解析 ΩBATCH{steps:[...]} 格式\n- 新增 executeBatchCall 函数处理批量任务\n- scanForToolCalls 判断并分发批量/单个调用\n- SmartTips 更新为批量执行提示\n- version: 1.0.35 -> 1.0.36'"
+      },
+      "success": true,
+      "resultPreview": "[main 6dade26] feat: AI 批量执行支持 - ΩBATCH 格式\n 3 files changed, 585 insertions(+), 7 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4924,
+      "timestamp": "2026-02-01T01:52:50.524Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'AI批量执行支持: ΩBATCH格式解析、executeBatchCall函数、系统提示词更新 (v1.0.36)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: AI批量执行支持: ΩBATCH格式解析、executeBatchCall函数、系统提示词更新 (v1.0.36)\n",
+      "error": null
+    },
+    {
+      "id": 4925,
+      "timestamp": "2026-02-01T01:56:20.469Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ps aux | grep 'node.*index.js' | grep -v grep"
+      },
+      "success": true,
+      "resultPreview": "yay              13937   0.0  0.3 435767168  26704 s000  S+    8:26PM   0:01.00 node index.js\n",
+      "error": null
+    },
+    {
+      "id": 4926,
+      "timestamp": "2026-02-01T01:56:29.182Z",
+      "tool": "run_command",
+      "params": {
+        "command": "tail -30 /Users/yay/workspace/genspark-agent/server-v2/logs/agent.log 2>/dev/null || echo '日志文件不存在或为空'"
+      },
+      "success": true,
+      "resultPreview": "{\"timestamp\":\"2026-02-01T01:52:42.556Z\",\"level\":\"info\",\"message\":\"[WS] 发送结果: id=1769910762417-qxje1u, tool=run_command, historyId=4923\"}\n{\"timestamp\":\"2026-02-01T01:52:50.423Z\",\"level\":\"info\",\"message\":\"工具调用: run_command\",\"data\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'AI批量执行支持: ΩBATCH格式解析、executeBatchCall函数、系统提示词更新 (v1.0.36)'\"}}\n{\"timestamp\":\"2026-02-01T01:52:50.424Z\",\"level\":\"info\",\"message\":\"[Safety] checkOperation: operation=run_command, isRemote=fa",
+      "error": null
+    },
+    {
+      "id": 4927,
+      "timestamp": "2026-02-01T01:56:38.578Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batch_complete' /Users/yay/workspace/genspark-agent/extension/content.js | head -5"
+      },
+      "success": true,
+      "resultPreview": "1648:      case 'batch_complete':\n",
+      "error": null
+    },
+    {
+      "id": 4928,
+      "timestamp": "2026-02-01T01:56:45.975Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1648,1680p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      case 'batch_complete':\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }\n        // 发送汇总结果给 AI\n        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'}\\n` +\n          `- 总步骤: ${msg.totalSteps}\\n` +\n          `- 成功: ${msg.stepsCompleted}\\n` +\n          `- 失败: ${msg.stepsFaile",
+      "error": null
+    },
+    {
+      "id": 4929,
+      "timestamp": "2026-02-01T01:56:55.177Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n -A 5 'batch_complete' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "1648:      case 'batch_complete':\n1649-        if (msg.success) {\n1650-          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n1651-        } else {\n1652-          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n1653-        }\n",
+      "error": null
+    },
+    {
+      "id": 4930,
+      "timestamp": "2026-02-01T01:57:05.371Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'batch_complete':\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }",
+            "newText": "      case 'batch_complete':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1645,8 +1645,11 @@\n         }\n         break;\n \n       case 'batch_complete':\n+        state.agentRunning = false;\n+        hideExecutingIndicator();\n+        updateStatus();\n         if (msg.success) {\n           ad",
+      "error": null
+    },
+    {
+      "id": 4931,
+      "timestamp": "2026-02-01T01:57:13.759Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'batch_error':\n        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');\n        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);",
+            "newText": "      case 'batch_error':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');\n        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1664,8 +1664,11 @@\n         sendMessageSafe(batchSummary);\n         break;\n \n       case 'batch_error':\n+        state.agentRunning = false;\n+        hideExecutingIndicator();\n+        updateStatus();\n         addLog",
+      "error": null
     }
   ],
-  "nextId": 4923
+  "nextId": 4932
 }

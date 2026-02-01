@@ -1646,6 +1646,9 @@ ${tip}
         break;
 
       case 'batch_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
         if (msg.success) {
           addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');
         } else {
@@ -1662,6 +1665,9 @@ ${tip}
         break;
 
       case 'batch_error':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
         addLog(`❌ 批量任务错误: ${msg.error}`, 'error');
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
