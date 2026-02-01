@@ -1586,6 +1586,47 @@ ${tip}
         addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');
         break;
 
+      // ===== 录制相关 =====
+      case 'recording_started':
+        addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');
+        break;
+
+      case 'recording_stopped':
+        addLog(`⏹️ 录制已停止: ${msg.recordingId} (${msg.summary?.totalSteps || 0} 步)`, 'success');
+        break;
+
+      case 'recordings_list':
+        if (msg.recordings?.length > 0) {
+          addLog(`📼 录制列表: ${msg.recordings.length} 个`, 'info');
+          msg.recordings.forEach(r => {
+            addLog(`  - ${r.id}: ${r.name || '未命名'} (${r.totalSteps} 步)`, 'info');
+          });
+        } else {
+          addLog('📼 暂无录制', 'info');
+        }
+        break;
+
+      case 'recording_loaded':
+        if (msg.success) {
+          addLog(`📂 录制已加载: ${msg.recording?.id}`, 'success');
+        } else {
+          addLog(`❌ 加载录制失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'replay_step_result':
+        const replayStatus = msg.success ? '✓' : '✗';
+        addLog(`▶️ 回放步骤 ${msg.stepIndex}: ${msg.tool} ${replayStatus}`, msg.success ? 'info' : 'warning');
+        break;
+
+      case 'replay_complete':
+        addLog(`🏁 回放完成: ${msg.result?.stepsCompleted || 0}/${msg.result?.totalSteps || 0} 成功`, 'success');
+        break;
+
+      case 'replay_error':
+        addLog(`❌ 回放错误: ${msg.error}`, 'error');
+        break;
+
       case 'tool_result':
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;

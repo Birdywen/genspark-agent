@@ -4785,7 +4785,271 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/manifest.json\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/manifest.json\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/manifest.json\tmodified\n@@ -1,8 +1,8 @@\n {\n   \"manifest_version\": 3,\n   \"name\": \"Genspark Agent Bridge\",\n-  \"version\": \"1.0.33\",\n+  \"version\": \"1.0.34\",\n   \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n   \"permissions\": [\n     \"act",
       "error": null
+    },
+    {
+      "id": 4852,
+      "timestamp": "2026-02-01T00:59:07.221Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add server-v2/ extension/ && git commit -m 'feat: 阶段2-3 闭环自验证与批量执行引擎\n\n阶段2 - 闭环自验证:\n- 新增 retry-manager.js: 自动重试策略、修复动作执行\n- 新增 state-manager.js: 任务状态机、检查点、变量存储、模板注入、条件评估\n\n阶段3 - 批量执行引擎:\n- 新增 task-engine.js: tool_batch批量执行、条件跳过、断点续传\n- server-v2: tool_batch/resume_task/task_status 消息处理\n- extension: TOOL_BATCH/RESUME_TASK支持、批量结果展示\n\n- version: 1.0.33 -> 1.0.34'"
+      },
+      "success": true,
+      "resultPreview": "[main aa61502] feat: 阶段2-3 闭环自验证与批量执行引擎\n 13 files changed, 10278 insertions(+), 2580 deletions(-)\n create mode 100644 server-v2/batch_pid.txt\n create mode 100644 server-v2/history-archives/archive-2026-01-31.json\n create mode 100644 server-v2/history-archives/archive-2026-02-01.json\n create mode 100644 server-v2/retry-manager.js\n create mode 100644 server-v2/state-manager.js\n create mode 100644 server-v2/task-engine.js\n",
+      "error": null
+    },
+    {
+      "id": 4853,
+      "timestamp": "2026-02-01T00:59:36.662Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/recorder.js",
+        "stdin": "// Recorder - 执行录制模块\n\nimport { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';\nimport path from 'path';\n\nclass Recorder {\n  constructor(logger, storagePath = './recordings') {\n    this.logger = logger;\n    this.storagePath = storagePath;\n    this.activeRecordings = new Map(); // recordingId -> recording data\n    \n    // 确保存储目录存在\n    if (!existsSync(this.storagePath)) {\n      mkdirSync(this.storagePath, { recursive: true });\n    }\n  }\n\n  // 开始新录制\n  startRecording(recordingId, name = '') {\n    if (this.activeRecordings.has(recordingId)) {\n      return { success: false, error: '录制已存在' };\n    }\n    \n    const recording = {\n      id: recordingId,\n      name: name || `Recording ${recordingId}`,\n      createdAt: new Date().toISOString(),\n      status: 'recording',\n      steps: [],\n      metadata: {\n        startTime: Date.now()\n      }\n    };\n    \n    this.activeRecordings.set(recordingId, recording);\n    this.logger.info(`[Recorder] 开始录制: ${recordingId}`);\n    \n    return { success: true, recordingId };\n  }\n\n  // 记录一个步骤\n  recordStep(recordingId, step) {\n    const recording = this.activeRecordings.get(recordingId);\n    if (!recording) {\n      return { success: false, error: '录制不存在' };\n    }\n    \n    if (recording.status !== 'recording') {\n      return { success: false, error: '录制已停止' };\n    }\n    \n    const stepData = {\n      index: recording.steps.length,\n      tool: step.tool,\n      params: step.params,\n      result: step.result ? {\n        success: step.result.success,\n        // 只保存结果摘要，避免录制文件过大\n        preview: typeof step.result.result === 'string' \n          ? step.result.result.substring(0, 500) \n          : JSON.stringify(step.result.result).substring(0, 500),\n        errorType: step.result.errorType\n      } : null,\n      timestamp: new Date().toISOString(),\n      duration: step.duration || 0\n    };\n    \n    recording.steps.push(stepData);\n    this.logger.info(`[Recorder] 记录步骤 ${stepData.index}: ${step.tool}`);\n    \n    return { success: true, stepIndex: stepData.index };\n  }\n\n  // 停止录制\n  stopRecording(recordingId) {\n    const recording = this.activeRecordings.get(recordingId);\n    if (!recording) {\n      return { success: false, error: '录制不存在' };\n    }\n    \n    recording.status = 'completed';\n    recording.completedAt = new Date().toISOString();\n    recording.metadata.endTime = Date.now();\n    recording.metadata.totalDuration = recording.metadata.endTime - recording.metadata.startTime;\n    recording.metadata.totalSteps = recording.steps.length;\n    recording.metadata.successSteps = recording.steps.filter(s => s.result?.success).length;\n    \n    // 保存到文件\n    const filePath = this.saveRecording(recording);\n    \n    // 从活跃录制中移除\n    this.activeRecordings.delete(recordingId);\n    \n    this.logger.success(`[Recorder] 录制完成: ${recordingId}, ${recording.steps.length} 步`);\n    \n    return { \n      success: true, \n      recordingId,\n      filePath,\n      summary: {\n        totalSteps: recording.metadata.totalSteps,\n        successSteps: recording.metadata.successSteps,\n        duration: recording.metadata.totalDuration\n      }\n    };\n  }\n\n  // 保存录制到文件\n  saveRecording(recording) {\n    const fileName = `${recording.id}.json`;\n    const filePath = path.join(this.storagePath, fileName);\n    \n    writeFileSync(filePath, JSON.stringify(recording, null, 2));\n    this.logger.info(`[Recorder] 录制已保存: ${filePath}`);\n    \n    return filePath;\n  }\n\n  // 加载录制\n  loadRecording(recordingId) {\n    const filePath = path.join(this.storagePath, `${recordingId}.json`);\n    \n    if (!existsSync(filePath)) {\n      return { success: false, error: '录制文件不存在' };\n    }\n    \n    try {\n      const data = JSON.parse(readFileSync(filePath, 'utf-8'));\n      return { success: true, recording: data };\n    } catch (e) {\n      return { success: false, error: `加载失败: ${e.message}` };\n    }\n  }\n\n  // 转换录制为 tool_batch 格式\n  toToolBatch(recording) {\n    return {\n      id: `replay-${recording.id}-${Date.now()}`,\n      steps: recording.steps.map(step => ({\n        tool: step.tool,\n        params: step.params\n      })),\n      options: {\n        stopOnError: true\n      },\n      source: {\n        type: 'recording',\n        recordingId: recording.id,\n        recordingName: recording.name\n      }\n    };\n  }\n\n  // 列出所有录制\n  listRecordings() {\n    const files = [];\n    \n    try {\n      const entries = require('fs').readdirSync(this.storagePath);\n      for (const entry of entries) {\n        if (entry.endsWith('.json')) {\n          const filePath = path.join(this.storagePath, entry);\n          try {\n            const data = JSON.parse(readFileSync(filePath, 'utf-8'));\n            files.push({\n              id: data.id,\n              name: data.name,\n              createdAt: data.createdAt,\n              totalSteps: data.metadata?.totalSteps || data.steps?.length || 0,\n              status: data.status\n            });\n          } catch (e) {\n            // 跳过无效文件\n          }\n        }\n      }\n    } catch (e) {\n      this.logger.error(`[Recorder] 列出录制失败: ${e.message}`);\n    }\n    \n    return files;\n  }\n\n  // 删除录制\n  deleteRecording(recordingId) {\n    const filePath = path.join(this.storagePath, `${recordingId}.json`);\n    \n    if (!existsSync(filePath)) {\n      return { success: false, error: '录制不存在' };\n    }\n    \n    try {\n      require('fs').unlinkSync(filePath);\n      this.logger.info(`[Recorder] 已删除录制: ${recordingId}`);\n      return { success: true };\n    } catch (e) {\n      return { success: false, error: e.message };\n    }\n  }\n\n  // 获取活跃录制状态\n  getActiveRecording(recordingId) {\n    return this.activeRecordings.get(recordingId) || null;\n  }\n\n  // 检查是否正在录制\n  isRecording(recordingId) {\n    const recording = this.activeRecordings.get(recordingId);\n    return recording && recording.status === 'recording';\n  }\n}\n\nexport default Recorder;\n"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4854,
+      "timestamp": "2026-02-01T00:59:45.424Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import TaskEngine from './task-engine.js';",
+            "newText": "import TaskEngine from './task-engine.js';\nimport Recorder from './recorder.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -12,8 +12,9 @@\n import HealthChecker from './health-checker.js';\n import ErrorClassifier from './error-classifier.js';\n import RetryManager from './retry-manager.js';\n import TaskEngine from './task-engine.js';\n+import Reco",
+      "error": null
+    },
+    {
+      "id": 4855,
+      "timestamp": "2026-02-01T00:59:54.806Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "// TaskEngine 将在 main() 中 hub.start() 后初始化\nlet taskEngine = null;",
+            "newText": "// TaskEngine 将在 main() 中 hub.start() 后初始化\nlet taskEngine = null;\n\n// 初始化录制器\nconst recorder = new Recorder(logger, path.join(__dirname, 'recordings'));"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -456,8 +456,11 @@\n \n // TaskEngine 将在 main() 中 hub.start() 后初始化\n let taskEngine = null;\n \n+// 初始化录制器\n+const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));\n+\n // ==================== 工具调用处理（含历史记录）======",
+      "error": null
+    },
+    {
+      "id": 4856,
+      "timestamp": "2026-02-01T01:00:03.434Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'task_status'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "733:          case 'task_status':\n",
+      "error": null
+    },
+    {
+      "id": 4857,
+      "timestamp": "2026-02-01T01:00:10.623Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '733,750p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'task_status':\n            if (!taskEngine) {\n              ws.send(JSON.stringify({ type: 'task_status_result', error: 'TaskEngine 未初始化' }));\n              break;\n            }\n            const status = taskEngine.getTaskStatus(msg.taskId);\n            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 新增: 历史记录相关 =====\n          case 'list_history':\n            const count = msg.count || 20;\n            const hist",
+      "error": null
+    },
+    {
+      "id": 4858,
+      "timestamp": "2026-02-01T01:00:25.227Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 新增: 历史记录相关 =====\n          case 'list_history':",
+            "newText": "            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 录制相关 =====\n          case 'start_recording':\n            {\n              const result = recorder.startRecording(\n                msg.recordingId || `rec-${Date.now()}`,\n                msg.name\n              );\n              ws.send(JSON.stringify({ type: 'recording_started', ...result }));\n            }\n            break;\n          \n          case 'stop_recording':\n            {\n              const result = recorder.stopRecording(msg.recordingId);\n              ws.send(JSON.stringify({ type: 'recording_stopped', ...result }));\n            }\n            break;\n          \n          case 'list_recordings':\n            {\n              const recordings = recorder.listRecordings();\n              ws.send(JSON.stringify({ type: 'recordings_list', recordings }));\n            }\n            break;\n          \n          case 'load_recording':\n            {\n              const result = recorder.loadRecording(msg.recordingId);\n              ws.send(JSON.stringify({ type: 'recording_loaded', ...result }));\n            }\n            break;\n          \n          case 'replay_recording':\n            {\n              const loadResult = recorder.loadRecording(msg.recordingId);\n              if (!loadResult.success) {\n                ws.send(JSON.stringify({ type: 'replay_error', error: loadResult.error }));\n                break;\n              }\n              \n              // 转换为 tool_batch 格式并执行\n              const batch = recorder.toToolBatch(loadResult.recording);\n              logger.info(`[WS] 回放录制: ${msg.recordingId}, ${batch.steps.length} 步`);\n              \n              const result = await taskEngine.executeBatch(\n                batch.id,\n                batch.steps,\n                batch.options,\n                (stepResult) => {\n                  ws.send(JSON.stringify({\n                    type: 'replay_step_result',\n                    recordingId: msg.recordingId,\n                    ...stepResult\n                  }));\n                }\n              );\n              \n              ws.send(JSON.stringify({\n                type: 'replay_complete',\n                recordingId: msg.recordingId,\n                ...result\n              }));\n            }\n            break;\n          \n          case 'delete_recording':\n            {\n              const result = recorder.deleteRecording(msg.recordingId);\n              ws.send(JSON.stringify({ type: 'recording_deleted', ...result }));\n            }\n            break;\n          \n          // ===== 新增: 历史记录相关 =====\n          case 'list_history':"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -738,8 +738,80 @@\n             const status = taskEngine.getTaskStatus(msg.taskId);\n             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n             break;\n           \n+          // ===== 录制相关 =",
+      "error": null
+    },
+    {
+      "id": 4859,
+      "timestamp": "2026-02-01T01:00:34.635Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'logger.tool.*tool.*params' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "523:    logger.tool(tool, params, resultStr.slice(0, 200));\n",
+      "error": null
+    },
+    {
+      "id": 4860,
+      "timestamp": "2026-02-01T01:00:42.427Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '515,540p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "        entry.success = true;\n        entry.resultPreview = resultStr.substring(0, 500);\n        entry.retriedAt = new Date().toISOString();\n        entry.error = null;\n        saveHistory();\n      }\n    }\n    \n    logger.tool(tool, params, resultStr.slice(0, 200));\n    \n    const response = {\n      type: 'tool_result',\n      id,\n      historyId,\n      tool,\n      success: true,\n      result: isRetry ? `[重试 #${historyId}] ${resultStr}` : `[#${historyId}] ${resultStr}`\n    };\n    ws.send(JSON.str",
+      "error": null
+    },
+    {
+      "id": 4861,
+      "timestamp": "2026-02-01T01:00:51.838Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "    logger.tool(tool, params, resultStr.slice(0, 200));\n    \n    const response = {",
+            "newText": "    logger.tool(tool, params, resultStr.slice(0, 200));\n    \n    // 如果有活跃录制，记录此步骤\n    for (const [recId, rec] of recorder.activeRecordings) {\n      if (rec.status === 'recording') {\n        recorder.recordStep(recId, {\n          tool,\n          params,\n          result: { success: true, result: resultStr },\n          duration: Date.now() - (message.startTime || Date.now())\n        });\n      }\n    }\n    \n    const response = {"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -521,8 +521,20 @@\n     }\n     \n     logger.tool(tool, params, resultStr.slice(0, 200));\n     \n+    // 如果有活跃录制，记录此步骤\n+    for (const [recId, rec] of recorder.activeRecordings) {\n+      if (rec.status === 'recording') {\n+    ",
+      "error": null
+    },
+    {
+      "id": 4862,
+      "timestamp": "2026-02-01T01:01:00.032Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"logger.error.*工具执行失败.*classified.errorType\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "564:    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n",
+      "error": null
+    },
+    {
+      "id": 4863,
+      "timestamp": "2026-02-01T01:01:09.432Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    ws.send(JSON.stringify({",
+            "newText": "    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    \n    // 如果有活跃录制，记录失败步骤\n    for (const [recId, rec] of recorder.activeRecordings) {\n      if (rec.status === 'recording') {\n        recorder.recordStep(recId, {\n          tool,\n          params,\n          result: { success: false, error: e.message, errorType: classified.errorType },\n          duration: Date.now() - (message.startTime || Date.now())\n        });\n      }\n    }\n    \n    ws.send(JSON.stringify({"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -561,8 +561,21 @@\n       }\n     }\n     \n     logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n+    \n+    // 如果有活跃录制，记录失败步骤\n+    for (const [recId, rec] of recorder.activeRecordings) {\n+      ",
+      "error": null
+    },
+    {
+      "id": 4864,
+      "timestamp": "2026-02-01T01:04:01.387Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    ws.send(JSON.stringify({",
+            "newText": "    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    \n    // 如果有活跃录制，记录失败步骤\n    for (const [recId, rec] of recorder.activeRecordings) {\n      if (rec.status === 'recording') {\n        recorder.recordStep(recId, {\n          tool,\n          params,\n          result: { success: false, error: e.message, errorType: classified.errorType },\n          duration: Date.now() - (message.startTime || Date.now())\n        });\n      }\n    }\n    \n    ws.send(JSON.stringify({"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "Could not find exact match for edit:\n    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    ws.send(JSON.stringify({",
+      "error": null
+    },
+    {
+      "id": 4865,
+      "timestamp": "2026-02-01T01:04:09.565Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '562,580p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "    }\n    \n    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });\n    \n    // 如果有活跃录制，记录失败步骤\n    for (const [recId, rec] of recorder.activeRecordings) {\n      if (rec.status === 'recording') {\n        recorder.recordStep(recId, {\n          tool,\n          params,\n          result: { success: false, error: e.message, errorType: classified.errorType },\n          duration: Date.now() - (message.startTime || Date.now())\n        });\n      }\n    }\n    \n    ws.send(JSON.st",
+      "error": null
+    },
+    {
+      "id": 4866,
+      "timestamp": "2026-02-01T01:04:24.140Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'TASK_STATUS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'task_status', taskId: message.taskId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====",
+            "newText": "    case 'TASK_STATUS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'task_status', taskId: message.taskId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 录制相关 =====\n    case 'START_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({\n          type: 'start_recording',\n          recordingId: message.recordingId,\n          name: message.name\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'STOP_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'stop_recording', recordingId: message.recordingId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'LIST_RECORDINGS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'list_recordings' }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'REPLAY_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -368,8 +368,49 @@\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n     \n+    // ===== 录制相关 =====\n+    case 'START_RECORDING':\n+      if (socket && socket.readyState === Web",
+      "error": null
+    },
+    {
+      "id": 4867,
+      "timestamp": "2026-02-01T01:09:05.772Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'resume_error'\" /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1585:      case 'resume_error':\n",
+      "error": null
+    },
+    {
+      "id": 4868,
+      "timestamp": "2026-02-01T01:09:12.953Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1585,1600p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      case 'tool_result':\n        // 去重：用 tool + 结果内容生成 hash\n        const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;\n        if (state.executedCalls.has(resultHash)) {\n          log('跳过重复的 tool_result:', msg.tool);\n          break;\n        }\n        state.executedCalls.add(resultHash);\n        \n        // 用 msg.id 精确匹配，而不是用 tool 名称\n       ",
+      "error": null
+    },
+    {
+      "id": 4869,
+      "timestamp": "2026-02-01T01:09:25.955Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      case 'tool_result':",
+            "newText": "      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      // ===== 录制相关 =====\n      case 'recording_started':\n        addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');\n        break;\n\n      case 'recording_stopped':\n        addLog(`⏹️ 录制已停止: ${msg.recordingId} (${msg.summary?.totalSteps || 0} 步)`, 'success');\n        break;\n\n      case 'recordings_list':\n        if (msg.recordings?.length > 0) {\n          addLog(`📼 录制列表: ${msg.recordings.length} 个`, 'info');\n          msg.recordings.forEach(r => {\n            addLog(`  - ${r.id}: ${r.name || '未命名'} (${r.totalSteps} 步)`, 'info');\n          });\n        } else {\n          addLog('📼 暂无录制', 'info');\n        }\n        break;\n\n      case 'recording_loaded':\n        if (msg.success) {\n          addLog(`📂 录制已加载: ${msg.recording?.id}`, 'success');\n        } else {\n          addLog(`❌ 加载录制失败: ${msg.error}`, 'error');\n        }\n        break;\n\n      case 'replay_step_result':\n        const replayStatus = msg.success ? '✓' : '✗';\n        addLog(`▶️ 回放步骤 ${msg.stepIndex}: ${msg.tool} ${replayStatus}`, msg.success ? 'info' : 'warning');\n        break;\n\n      case 'replay_complete':\n        addLog(`🏁 回放完成: ${msg.result?.stepsCompleted || 0}/${msg.result?.totalSteps || 0} 成功`, 'success');\n        break;\n\n      case 'replay_error':\n        addLog(`❌ 回放错误: ${msg.error}`, 'error');\n        break;\n\n      case 'tool_result':"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1585,8 +1585,49 @@\n       case 'resume_error':\n         addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n         break;\n \n+      // ===== 录制相关 =====\n+      case 'recording_started':\n+        addLog(`🎬 录制已开始: ${msg.record",
+      "error": null
+    },
+    {
+      "id": 4870,
+      "timestamp": "2026-02-01T01:09:32.926Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/manifest.json",
+        "edits": [
+          {
+            "oldText": "\"version\": \"1.0.34\"",
+            "newText": "\"version\": \"1.0.35\""
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/manifest.json\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/manifest.json\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/manifest.json\tmodified\n@@ -1,8 +1,8 @@\n {\n   \"manifest_version\": 3,\n   \"name\": \"Genspark Agent Bridge\",\n-  \"version\": \"1.0.34\",\n+  \"version\": \"1.0.35\",\n   \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n   \"permissions\": [\n     \"act",
+      "error": null
     }
   ],
-  "nextId": 4852
+  "nextId": 4871
 }

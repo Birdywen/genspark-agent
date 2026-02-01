@@ -369,6 +369,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
     
+    // ===== 录制相关 =====
+    case 'START_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'start_recording',
+          recordingId: message.recordingId,
+          name: message.name
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'STOP_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'stop_recording', recordingId: message.recordingId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'LIST_RECORDINGS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'list_recordings' }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'REPLAY_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
     // ===== 跨 Tab 通信 =====
     
     case 'REGISTER_AGENT':

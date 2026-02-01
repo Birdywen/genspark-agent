@@ -13,6 +13,7 @@ import HealthChecker from './health-checker.js';
 import ErrorClassifier from './error-classifier.js';
 import RetryManager from './retry-manager.js';
 import TaskEngine from './task-engine.js';
+import Recorder from './recorder.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -456,6 +457,9 @@ const retryManager = new RetryManager(logger, errorClassifier);
 // TaskEngine 将在 main() 中 hub.start() 后初始化
 let taskEngine = null;
 
+// 初始化录制器
+const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));
+
 // ==================== 工具调用处理（含历史记录）====================
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   const { tool, params, id } = message;
@@ -518,6 +522,18 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     
     logger.tool(tool, params, resultStr.slice(0, 200));
     
+    // 如果有活跃录制，记录此步骤
+    for (const [recId, rec] of recorder.activeRecordings) {
+      if (rec.status === 'recording') {
+        recorder.recordStep(recId, {
+          tool,
+          params,
+          result: { success: true, result: resultStr },
+          duration: Date.now() - (message.startTime || Date.now())
+        });
+      }
+    }
+    
     const response = {
       type: 'tool_result',
       id,
@@ -546,6 +562,19 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
     
     logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });
+    
+    // 如果有活跃录制，记录失败步骤
+    for (const [recId, rec] of recorder.activeRecordings) {
+      if (rec.status === 'recording') {
+        recorder.recordStep(recId, {
+          tool,
+          params,
+          result: { success: false, error: e.message, errorType: classified.errorType },
+          duration: Date.now() - (message.startTime || Date.now())
+        });
+      }
+    }
+    
     ws.send(JSON.stringify({
       type: 'tool_result',
       id,
@@ -733,6 +762,78 @@ async function main() {
             }
             const status = taskEngine.getTaskStatus(msg.taskId);
             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
+            break;
+          
+          // ===== 录制相关 =====
+          case 'start_recording':
+            {
+              const result = recorder.startRecording(
+                msg.recordingId || `rec-${Date.now()}`,
+                msg.name
+              );
+              ws.send(JSON.stringify({ type: 'recording_started', ...result }));
+            }
+            break;
+          
+          case 'stop_recording':
+            {
+              const result = recorder.stopRecording(msg.recordingId);
+              ws.send(JSON.stringify({ type: 'recording_stopped', ...result }));
+            }
+            break;
+          
+          case 'list_recordings':
+            {
+              const recordings = recorder.listRecordings();
+              ws.send(JSON.stringify({ type: 'recordings_list', recordings }));
+            }
+            break;
+          
+          case 'load_recording':
+            {
+              const result = recorder.loadRecording(msg.recordingId);
+              ws.send(JSON.stringify({ type: 'recording_loaded', ...result }));
+            }
+            break;
+          
+          case 'replay_recording':
+            {
+              const loadResult = recorder.loadRecording(msg.recordingId);
+              if (!loadResult.success) {
+                ws.send(JSON.stringify({ type: 'replay_error', error: loadResult.error }));
+                break;
+              }
+              
+              // 转换为 tool_batch 格式并执行
+              const batch = recorder.toToolBatch(loadResult.recording);
+              logger.info(`[WS] 回放录制: ${msg.recordingId}, ${batch.steps.length} 步`);
+              
+              const result = await taskEngine.executeBatch(
+                batch.id,
+                batch.steps,
+                batch.options,
+                (stepResult) => {
+                  ws.send(JSON.stringify({
+                    type: 'replay_step_result',
+                    recordingId: msg.recordingId,
+                    ...stepResult
+                  }));
+                }
+              );
+              
+              ws.send(JSON.stringify({
+                type: 'replay_complete',
+                recordingId: msg.recordingId,
+                ...result
+              }));
+            }
+            break;
+          
+          case 'delete_recording':
+            {
+              const result = recorder.deleteRecording(msg.recordingId);
+              ws.send(JSON.stringify({ type: 'recording_deleted', ...result }));
+            }
             break;
           
           // ===== 新增: 历史记录相关 =====
