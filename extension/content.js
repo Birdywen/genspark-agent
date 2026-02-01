@@ -186,9 +186,35 @@ ${toolSummary}
 ## 规则
 
 1. **必须**用代码块包裹工具调用
-2. 每次只调用**一个**工具，等待返回结果后再继续
-3. **不要**自己编造执行结果，等待系统返回
-4. content 参数内如果有引号，必须转义为 \\"
+2. **单工具调用**：等待返回结果后再继续
+3. **批量执行**：多个独立工具可一次提交（见下方格式）
+4. **不要**自己编造执行结果，等待系统返回
+5. content 参数内如果有引号，必须转义为 \\"
+
+---
+
+## 批量执行（多工具并行）
+
+当需要执行多个**相互独立**的工具时，使用 ΩBATCH 格式：
+
+\`\`\`
+ΩBATCH{"steps":[{"tool":"read_file","params":{"path":"/path/a.txt"}},{"tool":"read_file","params":{"path":"/path/b.txt"}},{"tool":"run_command","params":{"command":"date"}}]}
+\`\`\`
+
+### 高级用法
+
+\`\`\`
+ΩBATCH{"steps":[{"tool":"read_file","params":{"path":"/config.json"},"saveAs":"cfg"},{"tool":"run_command","params":{"command":"echo done"},"when":"{{cfg.success}}"}],"options":{"stopOnError":true}}
+\`\`\`
+
+- **saveAs**: 保存结果到变量
+- **when**: 条件执行（引用变量如 {{cfg.success}}）
+- **stopOnError**: 遇错停止（默认 true）
+
+### 何时使用
+- ✅ 读取多个独立文件
+- ✅ 执行多个独立命令
+- ❌ 后续依赖前一步具体内容（仍需逐个调用）
 5. 任务全部完成后输出 @DONE
 6. **输出 @DONE 前**，如果完成了重要工作，先切换到正确项目并记录里程碑：
    \`\`\`
@@ -607,6 +633,29 @@ ${toolSummary}
   }
 
   function parseToolCalls(text) {
+    // 优先检查 ΩBATCH 批量格式
+    const batchRegex = /ΩBATCH\s*(\{[\s\S]*?\})(?=\s*```|\s*$|\n\n)/;
+    const batchMatch = text.match(batchRegex);
+    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {
+      try {
+        const batchJson = batchMatch[1].replace(/[""]/g, '"').replace(/['']/g, "'");
+        const batch = safeJsonParse(batchJson);
+        if (batch.steps && Array.isArray(batch.steps)) {
+          return [{
+            name: '__BATCH__',
+            params: batch,
+            raw: batchMatch[0],
+            start: batchMatch.index,
+            end: batchMatch.index + batchMatch[0].length,
+            isBatch: true
+          }];
+        }
+      } catch (e) {
+        console.error('[Agent] ΩBATCH parse error:', e.message);
+        addLog('ΩBATCH 解析错误: ' + e.message, 'error');
+      }
+    }
+
     // 方案3: 优先解析 ```tool 代码块
     const toolBlockCalls = parseToolCodeBlock(text);
     if (toolBlockCalls.length > 0) return toolBlockCalls;
@@ -817,6 +866,40 @@ ${toolSummary}
     }, CONFIG.TIMEOUT_MS);
   }
 
+  // 执行批量工具调用
+  function executeBatchCall(batch, callHash) {
+    const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    
+    state.agentRunning = true;
+    state.executedCalls.add(callHash);
+    showExecutingIndicator(`批量 (${batch.steps.length} 步)`);
+    updateStatus();
+    
+    addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');
+    
+    chrome.runtime.sendMessage({
+      type: 'TOOL_BATCH',
+      batchId: batchId,
+      steps: batch.steps,
+      options: batch.options || { stopOnError: true }
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        addLog(`❌ 批量发送失败: ${chrome.runtime.lastError.message}`, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+      } else if (response?.success) {
+        addLog(`📤 批量任务已提交: ${response.batchId}`, 'info');
+      } else {
+        addLog('❌ 批量任务提交失败', 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+      }
+    });
+  }
+
+
   function executeToolCall(tool, callHash) {
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
@@ -978,7 +1061,12 @@ ${toolSummary}
       
       log('检测到工具调用:', tool.name, tool.params);
       
-      executeToolCall(tool, callHash);
+      // 判断是否为批量调用
+      if (tool.isBatch && tool.name === '__BATCH__') {
+        executeBatchCall(tool.params, callHash);
+      } else {
+        executeToolCall(tool, callHash);
+      }
       return;
     }
     
@@ -1050,7 +1138,7 @@ ${toolSummary}
       'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
-      '每次只调用一个工具，等结果后再继续',
+      '支持批量执行: ΩBATCH{"steps":[...]}',
       '长内容用 run_command + heredoc 写入',
       '项目记忆: memory_manager_v2.js projects',
     ],
