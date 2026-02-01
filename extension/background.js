@@ -365,6 +365,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
     
+    case 'CHECK_CONNECTION':
+      sendResponse({
+        connected: socket && socket.readyState === WebSocket.OPEN,
+        readyState: socket?.readyState,
+        readyStateText: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][socket?.readyState || 3],
+        reconnectAttempts: reconnectAttempts,
+        serverUrl: SERVERS[currentServer]
+      });
+      break;
+    
     case 'RELOAD_TOOLS':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'reload_tools' }));
