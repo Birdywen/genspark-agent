@@ -1,5 +1,5 @@
-// content.js v34 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
-(function() {
+// content.js v35 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+(function() { console.log('=== GENSPARK AGENT v35 LOADED ===');
   'use strict';
 
   // 防止脚本重复加载
@@ -1058,6 +1058,70 @@ ${toolSummary}
       }
     }
     
+    // 检查录制命令 @REC:action:name
+    const recMatch = text.match(/@REC:(start|stop|list|play)(?::([^:\s]+))?(?::([\{\[][^\s]*))?/);
+    if (recMatch) {
+      const recHash = `${index}:rec:${recMatch[0]}`;
+      if (!state.executedCalls.has(recHash)) {
+        state.executedCalls.add(recHash);
+        const action = recMatch[1];
+        const name = recMatch[2] || '';
+        
+        switch (action) {
+          case 'start':
+            if (name) {
+              addLog(`🎬 开始录制: ${name}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'start_recording', name: name, description: '' } });
+              state.currentRecordingId = name;
+            } else {
+              addLog('❌ 请指定录制名称: @REC:start:名称', 'error');
+            }
+            break;
+          case 'stop':
+            addLog('⏹️ 停止录制', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'stop_recording', recordingId: state.currentRecordingId || name } });
+            state.currentRecordingId = null;
+            break;
+          case 'list':
+            addLog('📼 获取录制列表...', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'list_recordings' } });
+            break;
+          case 'play':
+            if (name) {
+              console.log('[REC DEBUG] recMatch:', recMatch);
+              const extraParam = recMatch[3];
+              console.log('[REC DEBUG] extraParam:', extraParam);
+              let playMsg = { type: 'replay_recording', recordingId: name };
+              let paramInfo = '';
+              
+              if (extraParam) {
+                try {
+                  const parsed = JSON.parse(extraParam);
+                  if (Array.isArray(parsed)) {
+                    // 循环模式: @REC:play:名称:["a","b","c"]
+                    playMsg.foreach = parsed;
+                    paramInfo = ` (循环 ${parsed.length} 次)`;
+                  } else if (typeof parsed === 'object') {
+                    // 参数模式: @REC:play:名称:{"server":"oracle"}
+                    playMsg.variables = parsed;
+                    paramInfo = ` (参数: ${Object.keys(parsed).join(', ')})`;
+                  }
+                } catch (e) {
+                  addLog(`⚠️ 参数解析失败: ${e.message}`, 'warning');
+                }
+              }
+              
+              addLog(`▶️ 回放录制: ${name}${paramInfo}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: playMsg });
+            } else {
+              addLog('❌ 请指定录制名称: @REC:play:名称', 'error');
+            }
+            break;
+        }
+        return;
+      }
+    }
+    
     // 先检查跨 Tab 发送命令 @SEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
     const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|Ω|@DONE|$)/);
@@ -2009,7 +2073,7 @@ ${tip}
         break;
 
       case 'replay_complete':
-        addLog(`🏁 回放完成: ${msg.result?.stepsCompleted || 0}/${msg.result?.totalSteps || 0} 成功`, 'success');
+        addLog(`🏁 回放完成: ${msg.stepsCompleted || 0}/${msg.totalSteps || 0} 成功`, 'success');
         break;
 
       case 'replay_error':

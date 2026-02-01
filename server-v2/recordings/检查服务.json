@@ -1,0 +1,49 @@
+{
+  "id": "检查服务",
+  "name": "检查服务",
+  "description": "",
+  "createdAt": "2026-02-01T07:04:20.181Z",
+  "status": "completed",
+  "steps": [
+    {
+      "index": 0,
+      "tool": "run_command",
+      "params": {
+        "command": "echo '正在检查 {{item}} 服务...'"
+      },
+      "result": {
+        "success": true,
+        "preview": "正在检查 {{item}} 服务...\n"
+      },
+      "timestamp": "2026-02-01T07:05:04.212Z",
+      "duration": 0
+    },
+    {
+      "index": 1,
+      "tool": "run_command",
+      "params": {
+        "command": "echo '{{item}} 服务状态: 运行中 ✓'"
+      },
+      "result": {
+        "success": true,
+        "preview": "{{item}} 服务状态: 运行中 ✓\n"
+      },
+      "timestamp": "2026-02-01T07:05:12.200Z",
+      "duration": 0
+    }
+  ],
+  "parameters": {
+    "item": {
+      "detected": true,
+      "defaultValue": null
+    }
+  },
+  "metadata": {
+    "startTime": 1769929460181,
+    "endTime": 1769929521380,
+    "totalDuration": 61199,
+    "totalSteps": 2,
+    "successSteps": 2
+  },
+  "completedAt": "2026-02-01T07:05:21.379Z"
+}

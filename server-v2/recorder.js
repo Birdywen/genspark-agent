@@ -1,22 +1,21 @@
-// Recorder - 执行录制模块
+// Recorder - 执行录制模块 (增强版: 支持参数化和循环)
 
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs';
 import path from 'path';
 
 class Recorder {
   constructor(logger, storagePath = './recordings') {
     this.logger = logger;
     this.storagePath = storagePath;
-    this.activeRecordings = new Map(); // recordingId -> recording data
+    this.activeRecordings = new Map();
     
-    // 确保存储目录存在
     if (!existsSync(this.storagePath)) {
       mkdirSync(this.storagePath, { recursive: true });
     }
   }
 
   // 开始新录制
-  startRecording(recordingId, name = '') {
+  startRecording(recordingId, name = '', description = '') {
     if (this.activeRecordings.has(recordingId)) {
       return { success: false, error: '录制已存在' };
     }
@@ -24,9 +23,12 @@ class Recorder {
     const recording = {
       id: recordingId,
       name: name || `Recording ${recordingId}`,
+      description: description,
       createdAt: new Date().toISOString(),
       status: 'recording',
       steps: [],
+      // 参数定义 (回放时可覆盖)
+      parameters: {},
       metadata: {
         startTime: Date.now()
       }
@@ -49,13 +51,22 @@ class Recorder {
       return { success: false, error: '录制已停止' };
     }
     
+    // 检测参数中的变量并记录
+    const detectedVars = this._detectVariables(step.params);
+    if (detectedVars.length > 0) {
+      detectedVars.forEach(v => {
+        if (!recording.parameters[v]) {
+          recording.parameters[v] = { detected: true, defaultValue: null };
+        }
+      });
+    }
+    
     const stepData = {
       index: recording.steps.length,
       tool: step.tool,
       params: step.params,
       result: step.result ? {
         success: step.result.success,
-        // 只保存结果摘要，避免录制文件过大
         preview: typeof step.result.result === 'string' 
           ? step.result.result.substring(0, 500) 
           : JSON.stringify(step.result.result).substring(0, 500),
@@ -69,6 +80,24 @@ class Recorder {
     this.logger.info(`[Recorder] 记录步骤 ${stepData.index}: ${step.tool}`);
     
     return { success: true, stepIndex: stepData.index };
+  }
+
+  // 检测参数中的变量 {{varName}}
+  _detectVariables(obj, vars = []) {
+    if (typeof obj === 'string') {
+      const matches = obj.match(/\{\{(\w+)\}\}/g);
+      if (matches) {
+        matches.forEach(m => {
+          const varName = m.replace(/\{\{|\}\}/g, '');
+          if (!vars.includes(varName)) vars.push(varName);
+        });
+      }
+    } else if (Array.isArray(obj)) {
+      obj.forEach(item => this._detectVariables(item, vars));
+    } else if (obj && typeof obj === 'object') {
+      Object.values(obj).forEach(val => this._detectVariables(val, vars));
+    }
+    return vars;
   }
 
   // 停止录制
@@ -85,10 +114,7 @@ class Recorder {
     recording.metadata.totalSteps = recording.steps.length;
     recording.metadata.successSteps = recording.steps.filter(s => s.result?.success).length;
     
-    // 保存到文件
     const filePath = this.saveRecording(recording);
-    
-    // 从活跃录制中移除
     this.activeRecordings.delete(recordingId);
     
     this.logger.success(`[Recorder] 录制完成: ${recordingId}, ${recording.steps.length} 步`);
@@ -97,6 +123,7 @@ class Recorder {
       success: true, 
       recordingId,
       filePath,
+      parameters: Object.keys(recording.parameters),
       summary: {
         totalSteps: recording.metadata.totalSteps,
         successSteps: recording.metadata.successSteps,
@@ -109,10 +136,8 @@ class Recorder {
   saveRecording(recording) {
     const fileName = `${recording.id}.json`;
     const filePath = path.join(this.storagePath, fileName);
-    
     writeFileSync(filePath, JSON.stringify(recording, null, 2));
     this.logger.info(`[Recorder] 录制已保存: ${filePath}`);
-    
     return filePath;
   }
 
@@ -132,21 +157,62 @@ class Recorder {
     }
   }
 
-  // 转换录制为 tool_batch 格式
-  toToolBatch(recording) {
+  // 替换参数变量
+  _replaceVariables(obj, variables) {
+    if (typeof obj === 'string') {
+      let result = obj;
+      for (const [key, value] of Object.entries(variables)) {
+        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+      }
+      return result;
+    } else if (Array.isArray(obj)) {
+      return obj.map(item => this._replaceVariables(item, variables));
+    } else if (obj && typeof obj === 'object') {
+      const result = {};
+      for (const [key, value] of Object.entries(obj)) {
+        result[key] = this._replaceVariables(value, variables);
+      }
+      return result;
+    }
+    return obj;
+  }
+
+  // 转换录制为 tool_batch 格式 (支持参数化和循环)
+  toToolBatch(recording, options = {}) {
+    const { variables = {}, foreach = null, foreachVar = 'item' } = options;
+    
+    let steps = recording.steps.map(step => ({
+      tool: step.tool,
+      params: this._replaceVariables(step.params, variables)
+    }));
+    
+    // 如果有 foreach，展开循环
+    if (foreach && Array.isArray(foreach)) {
+      const expandedSteps = [];
+      foreach.forEach((item, idx) => {
+        const loopVars = { ...variables, [foreachVar]: item, __index__: idx };
+        recording.steps.forEach(step => {
+          expandedSteps.push({
+            tool: step.tool,
+            params: this._replaceVariables(step.params, loopVars)
+          });
+        });
+      });
+      steps = expandedSteps;
+    }
+    
     return {
       id: `replay-${recording.id}-${Date.now()}`,
-      steps: recording.steps.map(step => ({
-        tool: step.tool,
-        params: step.params
-      })),
+      steps: steps,
       options: {
-        stopOnError: true
+        stopOnError: options.stopOnError !== false
       },
       source: {
         type: 'recording',
         recordingId: recording.id,
-        recordingName: recording.name
+        recordingName: recording.name,
+        variables: variables,
+        foreach: foreach
       }
     };
   }
@@ -156,7 +222,7 @@ class Recorder {
     const files = [];
     
     try {
-      const entries = require('fs').readdirSync(this.storagePath);
+      const entries = readdirSync(this.storagePath);
       for (const entry of entries) {
         if (entry.endsWith('.json')) {
           const filePath = path.join(this.storagePath, entry);
@@ -165,8 +231,10 @@ class Recorder {
             files.push({
               id: data.id,
               name: data.name,
+              description: data.description,
               createdAt: data.createdAt,
               totalSteps: data.metadata?.totalSteps || data.steps?.length || 0,
+              parameters: Object.keys(data.parameters || {}),
               status: data.status
             });
           } catch (e) {
@@ -190,7 +258,7 @@ class Recorder {
     }
     
     try {
-      require('fs').unlinkSync(filePath);
+      unlinkSync(filePath);
       this.logger.info(`[Recorder] 已删除录制: ${recordingId}`);
       return { success: true };
     } catch (e) {
@@ -207,6 +275,17 @@ class Recorder {
   isRecording(recordingId) {
     const recording = this.activeRecordings.get(recordingId);
     return recording && recording.status === 'recording';
+  }
+  
+  // 获取录制的参数列表
+  getParameters(recordingId) {
+    const result = this.loadRecording(recordingId);
+    if (!result.success) return result;
+    return { 
+      success: true, 
+      parameters: result.recording.parameters || {},
+      description: result.recording.description
+    };
   }
 }
 

@@ -1334,7 +1334,7 @@ async function main() {
           case 'start_recording':
             {
               const result = recorder.startRecording(
-                msg.recordingId || `rec-${Date.now()}`,
+                msg.name || msg.recordingId || `rec-${Date.now()}`,
                 msg.name
               );
               ws.send(JSON.stringify({ type: 'recording_started', ...result }));
@@ -1370,9 +1370,20 @@ async function main() {
                 break;
               }
               
-              // 转换为 tool_batch 格式并执行
-              const batch = recorder.toToolBatch(loadResult.recording);
-              logger.info(`[WS] 回放录制: ${msg.recordingId}, ${batch.steps.length} 步`);
+              // 转换为 tool_batch 格式并执行 (支持参数化和循环)
+              const replayOptions = {
+                variables: msg.variables || {},
+                foreach: msg.foreach || null,
+                foreachVar: msg.foreachVar || 'item',
+                stopOnError: msg.stopOnError !== false
+              };
+              const batch = recorder.toToolBatch(loadResult.recording, replayOptions);
+              
+              const paramInfo = Object.keys(replayOptions.variables).length > 0 
+                ? `, 参数: ${JSON.stringify(replayOptions.variables)}` : '';
+              const loopInfo = replayOptions.foreach 
+                ? `, 循环: ${replayOptions.foreach.length} 次` : '';
+              logger.info(`[WS] 回放录制: ${msg.recordingId}, ${batch.steps.length} 步${paramInfo}${loopInfo}`);
               
               const result = await taskEngine.executeBatch(
                 batch.id,
