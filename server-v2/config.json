@@ -250,7 +250,14 @@
       "mega-whoami",
       "lsof",
       "scp",
-      "rsync"
+      "rsync",
+      "for",
+      "while",
+      "if",
+      "test",
+      "[",
+      "time",
+      "seq"
     ],
     "dangerousOperations": [
       "write_file",

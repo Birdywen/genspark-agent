@@ -11,98 +11,164 @@ class TaskEngine {
     this.stateManager = new StateManager(logger);
   }
 
-  // 执行批量任务
+  /**
+   * 将步骤按 parallel 标记分组
+   * 连续的 parallel:true 步骤会被分到同一组
+   */
+  groupStepsByParallel(steps) {
+    const groups = [];
+    let currentGroup = [];
+    
+    for (let i = 0; i < steps.length; i++) {
+      const step = { ...steps[i], originalIndex: i };
+      
+      if (step.parallel && currentGroup.length > 0 && currentGroup[0].parallel) {
+        // 加入当前并行组
+        currentGroup.push(step);
+      } else {
+        // 开始新组
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+        }
+        currentGroup = [step];
+      }
+    }
+    
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+    
+    return groups;
+  }
+
+  /**
+   * 执行单个步骤
+   */
+  async executeStep(batchId, step, options, onStepComplete) {
+    const i = step.originalIndex;
+    
+    // 检查条件
+    if (step.when && !this.stateManager.evaluateCondition(batchId, step.when)) {
+      this.logger.info(`[TaskEngine] 跳过步骤 ${i}: 条件不满足`);
+      const result = {
+        stepIndex: i,
+        skipped: true,
+        reason: 'condition_not_met'
+      };
+      if (onStepComplete) onStepComplete(result);
+      return result;
+    }
+    
+    // 解析模板
+    const resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
+    
+    // 安全检查
+    const safetyCheck = await this.safety.checkOperation(step.tool, resolvedParams);
+    if (!safetyCheck.allowed) {
+      const stepResult = {
+        stepIndex: i,
+        tool: step.tool,
+        success: false,
+        error: safetyCheck.reason
+      };
+      this.stateManager.recordStepResult(batchId, i, stepResult);
+      if (onStepComplete) onStepComplete(stepResult);
+      return stepResult;
+    }
+    
+    // 执行工具调用
+    try {
+      this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);
+      const result = await this.hub.call(step.tool, resolvedParams);
+      
+      let resultStr = result;
+      if (result && result.content && Array.isArray(result.content)) {
+        resultStr = result.content.map(c => c.text || c).join('\n');
+      }
+      
+      const stepResult = {
+        stepIndex: i,
+        tool: step.tool,
+        success: true,
+        result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr)
+      };
+      
+      this.stateManager.recordStepResult(batchId, i, stepResult);
+      if (onStepComplete) onStepComplete(stepResult);
+      
+      return stepResult;
+      
+    } catch (e) {
+      const classified = this.errorClassifier.wrapError(e, step.tool);
+      
+      const stepResult = {
+        stepIndex: i,
+        tool: step.tool,
+        success: false,
+        error: e.message,
+        errorType: classified.errorType,
+        recoverable: classified.recoverable,
+        suggestion: classified.suggestion
+      };
+      
+      this.stateManager.recordStepResult(batchId, i, stepResult);
+      if (onStepComplete) onStepComplete(stepResult);
+      
+      return stepResult;
+    }
+  }
+
+  /**
+   * 执行批量任务（支持并行）
+   */
   async executeBatch(batchId, steps, options = {}, onStepComplete = null) {
     const task = this.stateManager.createTask(batchId, steps, options);
     this.stateManager.updateState(batchId, TaskState.RUNNING);
     
+    // 按 parallel 标记分组
+    const groups = this.groupStepsByParallel(steps);
+    this.logger.info(`[TaskEngine] 批量任务分组: ${groups.length} 组，总计 ${steps.length} 步`);
+    
     const results = [];
     let success = true;
     
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+      const group = groups[groupIndex];
+      const isParallelGroup = group.length > 1 && group[0].parallel;
       
-      // 检查条件
-      if (step.when && !this.stateManager.evaluateCondition(batchId, step.when)) {
-        this.logger.info(`[TaskEngine] 跳过步骤 ${i}: 条件不满足`);
-        results.push({
-          stepIndex: i,
-          skipped: true,
-          reason: 'condition_not_met'
-        });
-        continue;
-      }
-      
-      // 解析模板
-      const resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
-      
-      // 安全检查
-      const safetyCheck = await this.safety.checkOperation(step.tool, resolvedParams);
-      if (!safetyCheck.allowed) {
-        const stepResult = {
-          stepIndex: i,
-          tool: step.tool,
-          success: false,
-          error: safetyCheck.reason
-        };
-        results.push(stepResult);
-        this.stateManager.recordStepResult(batchId, i, stepResult);
+      if (isParallelGroup) {
+        this.logger.info(`[TaskEngine] 并行执行组 ${groupIndex + 1}: ${group.length} 步`);
         
-        if (options.stopOnError !== false) {
+        // 并行执行
+        const groupResults = await Promise.all(
+          group.map(step => this.executeStep(batchId, step, options, onStepComplete))
+        );
+        
+        results.push(...groupResults);
+        
+        // 检查是否有失败
+        const hasFailure = groupResults.some(r => !r.skipped && !r.success);
+        if (hasFailure && options.stopOnError !== false) {
           success = false;
           break;
         }
-        continue;
-      }
-      
-      // 执行工具调用
-      try {
-        this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);
-        const result = await this.hub.call(step.tool, resolvedParams);
         
-        let resultStr = result;
-        if (result && result.content && Array.isArray(result.content)) {
-          resultStr = result.content.map(c => c.text || c).join('\n');
+      } else {
+        // 顺序执行
+        this.logger.info(`[TaskEngine] 顺序执行组 ${groupIndex + 1}: ${group.length} 步`);
+        
+        for (const step of group) {
+          const stepResult = await this.executeStep(batchId, step, options, onStepComplete);
+          results.push(stepResult);
+          
+          // 检查是否需要停止
+          if (!stepResult.skipped && !stepResult.success && options.stopOnError !== false) {
+            success = false;
+            break;
+          }
         }
         
-        const stepResult = {
-          stepIndex: i,
-          tool: step.tool,
-          success: true,
-          result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr)
-        };
-        
-        results.push(stepResult);
-        this.stateManager.recordStepResult(batchId, i, stepResult);
-        
-        // 回调
-        if (onStepComplete) {
-          onStepComplete(stepResult);
-        }
-        
-      } catch (e) {
-        const classified = this.errorClassifier.wrapError(e, step.tool);
-        
-        const stepResult = {
-          stepIndex: i,
-          tool: step.tool,
-          success: false,
-          error: e.message,
-          errorType: classified.errorType,
-          recoverable: classified.recoverable,
-          suggestion: classified.suggestion
-        };
-        
-        results.push(stepResult);
-        this.stateManager.recordStepResult(batchId, i, stepResult);
-        
-        // 回调
-        if (onStepComplete) {
-          onStepComplete(stepResult);
-        }
-        
-        if (options.stopOnError !== false) {
-          success = false;
+        if (!success && options.stopOnError !== false) {
           break;
         }
       }
