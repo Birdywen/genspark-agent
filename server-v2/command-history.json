@@ -4971,7 +4971,284 @@
       "success": true,
       "resultPreview": "    2466 /Users/yay/workspace/genspark-agent/extension/content.js\n    2470 /Users/yay/workspace/genspark-agent/extension-galaxy/content.js\n    2499 /Users/yay/workspace/genspark-agent/extension-hixx/content.js\n    2475 /Users/yay/workspace/genspark-agent/extension-kimi/content.js\n    2505 /Users/yay/workspace/genspark-agent/extension-vear/content.js\n   12415 total\n",
       "error": null
+    },
+    {
+      "id": 5578,
+      "timestamp": "2026-02-01T14:34:55.384Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'sync: 完整同步 content.js 到所有分支（只保留各自的 DOM 函数）\n\n- 复制主 extension 的完整代码\n- 保留各分支特有的 DOM 选择器\n- 现在所有分支功能完全一致\n- 包含: 批量执行、ΩPLAN、ΩFLOW、ΩRESUME 等'"
+      },
+      "success": true,
+      "resultPreview": "[main 4230eb5] sync: 完整同步 content.js 到所有分支（只保留各自的 DOM 函数）\n 5 files changed, 2420 insertions(+), 96 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5579,
+      "timestamp": "2026-02-01T14:35:44.080Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 || echo '语法错误'"
+      },
+      "success": true,
+      "resultPreview": "/Users/yay/workspace/genspark-agent/extension-vear/content.js:2505\n})();\n ^\n\nSyntaxError: Unexpected token ')'\n    at wrapSafe (node:internal/modules/cjs/loader:1666:18)\n    at checkSyntax (node:internal/main/check_syntax:76:3)\n\nNode.js v23.9.0\n语法错误\n",
+      "error": null
+    },
+    {
+      "id": 5580,
+      "timestamp": "2026-02-01T14:35:55.219Z",
+      "tool": "run_command",
+      "params": {
+        "command": "tail -20 /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "    addLog('🚀 Agent v34 已启动', 'success');\n    addLog('💡 点击「📋 提示词」复制给AI', 'info');\n    \n    // 恢复之前保存的 Agent 身份\n    restoreAgentId();\n    \n    // 启动 AI 响应超时监控\n    startWakeupMonitor();\n    \n    // 初始化 Agent ID 显示\n    setTimeout(updateAgentIdDisplay, 100);\n  }\n\n  if (document.readyState === 'loading') {\n    document.addEventListener('DOMContentLoaded', init);\n  } else {\n    setTimeout(init, 100);\n  }\n\n})();\n",
+      "error": null
+    },
+    {
+      "id": 5581,
+      "timestamp": "2026-02-01T14:36:05.413Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '250,295p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "\n\n\n    // ============== DOM 操作 (Genspark 专用) ==============\n  \n  function getAIMessages() {\n    return Array.from(document.querySelectorAll('.chata'));\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n    if (messages.length === 0) return { text: '', index: -1, element: null };\n    const lastMsg = messages[messages.length - 1];\n    \n    // Vear.com 使用 .answerContent 类\n    const contentEl = lastMsg.querySelector('.answerContent') ||\n                      lastMsg.query",
+      "error": null
+    },
+    {
+      "id": 5582,
+      "timestamp": "2026-02-01T14:36:15.013Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '245,260p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\n\n\n\n    // ============== DOM 操作 (Genspark 专用) ==============\n  \n  function getAIMessages() {\n    return Array.from(document.querySelectorAll('.chata'));\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n",
+      "error": null
+    },
+    {
+      "id": 5583,
+      "timestamp": "2026-02-01T14:36:26.044Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git checkout HEAD~1 -- extension-vear/content.js && echo '已回滚 extension-vear'"
+      },
+      "success": true,
+      "resultPreview": "已回滚 extension-vear\n",
+      "error": null
+    },
+    {
+      "id": 5584,
+      "timestamp": "2026-02-01T14:36:35.676Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 && echo '语法正确'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
+    },
+    {
+      "id": 5585,
+      "timestamp": "2026-02-01T14:36:48.016Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'batch\" /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "1",
+      "error": null
+    },
+    {
+      "id": 5586,
+      "timestamp": "2026-02-01T14:36:59.228Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'tool_result'\\|switch.*msg.type\\|case 'recording\" /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "1601:    switch (msg.type) {\n1630:      case 'tool_result':\n",
+      "error": null
+    },
+    {
+      "id": 5587,
+      "timestamp": "2026-02-01T14:37:10.029Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'batch_step_result'\\|case 'tool_result'\" /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1807:      case 'batch_step_result':\n2131:      case 'tool_result':\n",
+      "error": null
+    },
+    {
+      "id": 5588,
+      "timestamp": "2026-02-01T14:37:21.819Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1625,1635p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "        }\n        if (msg.skills) { state.availableSkills = msg.skills; }\n        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }\n        break;\n\n      case 'tool_result':\n        // 去重：用 tool + 结果内容生成 hash\n        const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;\n        if (state.executedCalls.has(resultHash)) {\n          log('跳过重复的 tool_result:', msg.tool);\n          break;\n",
+      "error": null
+    },
+    {
+      "id": 5589,
+      "timestamp": "2026-02-01T14:37:34.239Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1807,1895p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/batch_cases.js && wc -l /tmp/batch_cases.js"
+      },
+      "success": true,
+      "resultPreview": "      89 /tmp/batch_cases.js\n",
+      "error": null
+    },
+    {
+      "id": 5590,
+      "timestamp": "2026-02-01T14:37:45.732Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst batchCases = fs.readFileSync('/tmp/batch_cases.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\n\n// 在 case 'tool_result': 前面插入\nconst insertPoint = \\\"      case 'tool_result':\";\nif (content.includes(insertPoint)) {\n  content = content.replace(insertPoint, batchCases + '\\\\n\\\\n' + insertPoint);\n  fs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', content);\n  console.log('batch cases 已插入');\n} else {\n  console.log('未找到插入点');\n}\n\""
+      },
+      "success": true,
+      "resultPreview": "2\n[eval]:7\nconst insertPoint = \"      case 'tool_result':\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  x Unterminated string constant\n   ,-[7:1]\n 4 | let content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\n 5 | \n 6 | // 在 case 'tool_result': 前面插入\n 7 | const insertPoint = \"      case 'tool_result':\n   :                     ^^^^^^^^^^^^^^^^^^^^^^^^^^\n   `----\n\n\nSyntaxError: Invalid or unexpected token\n    at makeContextifyScript (node:internal/vm",
+      "error": null
+    },
+    {
+      "id": 5591,
+      "timestamp": "2026-02-01T14:37:57.889Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'EOF'\nconst fs = require('fs');\nconst batchCases = fs.readFileSync('/tmp/batch_cases.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\n\nconst insertPoint = \"case 'tool_result':\";\nif (content.includes(insertPoint)) {\n  content = content.replace(insertPoint, batchCases + '\\n\\n      ' + insertPoint);\n  fs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', content);\n  console.log('batch cases 已插入');\n} else {\n  console.log('未找到插入点');\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "batch cases 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5592,
+      "timestamp": "2026-02-01T14:38:07.274Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 && echo '语法正确'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
+    },
+    {
+      "id": 5593,
+      "timestamp": "2026-02-01T14:38:18.029Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batchResults\\|executeBatchCall' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "891:  function executeBatchCall(batch, callHash) {\n896:    state.batchResults = [];  // 重置批量结果\n1102:        executeBatchCall(tool.params, callHash);\n1634:          state.batchResults.push({\n1643:            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal);\n1652:          state.batchResults.push({\n1661:            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal, true);\n1687:        if (state.batchResults && state.batchR",
+      "error": null
+    },
+    {
+      "id": 5594,
+      "timestamp": "2026-02-01T14:38:28.622Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batchResults.*\\[\\]\\|state = {' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -5"
+      },
+      "success": true,
+      "resultPreview": "24:  const state = {\n896:    state.batchResults = [];  // 重置批量结果\n1697:          state.batchResults = []; // 清空\n",
+      "error": null
+    },
+    {
+      "id": 5595,
+      "timestamp": "2026-02-01T14:38:42.009Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '24,50p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "  const state = {\n    wsConnected: false,\n    agentRunning: false,\n    availableTools: [],\n    availableSkills: [],\n    skillsPrompt: \"\",\n    executedCalls: new Set(),\n    pendingCalls: new Map(),\n    lastMessageText: '',\n    lastStableTime: 0,\n    execTimer: null,\n    execStartTime: 0,\n    // 消息队列\n    messageQueue: [],\n    isProcessingQueue: false,\n    roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),\n    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null\n  };\n\n  \n  // 改进的 JSON 解",
+      "error": null
+    },
+    {
+      "id": 5596,
+      "timestamp": "2026-02-01T14:38:55.216Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-vear/content.js",
+        "edits": [
+          {
+            "oldText": "    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null\n  };",
+            "newText": "    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null,\n    // 批量执行\n    batchResults: [],\n    currentBatchTotal: 0,\n    totalCalls: 0\n  };"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-vear/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-vear/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-vear/content.js\tmodified\n@@ -37,9 +37,13 @@\n     messageQueue: [],\n     isProcessingQueue: false,\n     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),\n     // 本地命令缓存（用于发送失败时重试）\n-    lastToolCall: null\n+    ",
+      "error": null
+    },
+    {
+      "id": 5597,
+      "timestamp": "2026-02-01T14:39:05.287Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 && echo '语法正确'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
+    },
+    {
+      "id": 5598,
+      "timestamp": "2026-02-01T14:39:19.274Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-galaxy/content.js 2>&1 && echo '语法正确' || echo '有语法错误'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
+    },
+    {
+      "id": 5599,
+      "timestamp": "2026-02-01T14:40:18.688Z",
+      "tool": "register_project_tool",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent",
+        "name": "genspark-agent"
+      },
+      "success": true,
+      "resultPreview": "{\n  \"name\": \"genspark-agent\",\n  \"root_path\": \"/Users/yay/workspace/genspark-agent\",\n  \"description\": null,\n  \"languages\": {\n    \"markdown\": 40,\n    \"css\": 5,\n    \"javascript\": 49,\n    \"json\": 20,\n    \"html\": 1\n  },\n  \"last_scan_time\": 1769956818\n}",
+      "error": null
+    },
+    {
+      "id": 5600,
+      "timestamp": "2026-02-01T14:40:28.224Z",
+      "tool": "get_symbols",
+      "params": {
+        "project": "genspark-agent",
+        "file_path": "extension-vear/content.js",
+        "symbol_types": [
+          "variable"
+        ]
+      },
+      "success": true,
+      "resultPreview": "Error executing tool get_symbols: No query templates available for javascript and ['variable']",
+      "error": null
+    },
+    {
+      "id": 5601,
+      "timestamp": "2026-02-01T14:40:37.412Z",
+      "tool": "find_text",
+      "params": {
+        "project": "genspark-agent",
+        "pattern": "const state = {",
+        "file_pattern": "*.js"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
     }
   ],
-  "nextId": 5578
+  "nextId": 5602
 }
