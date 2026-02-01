@@ -4,7 +4,7 @@
  */
 
 import { spawn, exec } from 'child_process';
-import { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';
+import { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile, mkdirSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 
 export default class AsyncExecutor {
@@ -30,7 +30,7 @@ export default class AsyncExecutor {
     
     // 确保日志目录存在
     if (!existsSync(this.logDir)) {
-      require('fs').mkdirSync(this.logDir, { recursive: true });
+      mkdirSync(this.logDir, { recursive: true });
     }
   }
 
@@ -347,10 +347,10 @@ export default class AsyncExecutor {
     
     if (!existsSync(this.logDir)) return { cleaned: 0 };
     
-    const files = require('fs').readdirSync(this.logDir);
+    const files = readdirSync(this.logDir);
     for (const file of files) {
       const filePath = path.join(this.logDir, file);
-      const stat = require('fs').statSync(filePath);
+      const stat = statSync(filePath);
       if (now - stat.mtimeMs > maxAge) {
         unlinkSync(filePath);
         cleaned++;

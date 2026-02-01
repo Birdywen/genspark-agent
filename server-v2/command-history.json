@@ -5537,7 +5537,119 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1697,8 +1697,73 @@\n           `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n         sendMessageToAI(vrSummary);\n         break;\n \n+      // ===== 异步命令执行 =====\n+      case 'async_result':\n+        state.agentRunning = false;\n+   ",
       "error": null
+    },
+    {
+      "id": 5001,
+      "timestamp": "2026-02-01T02:48:29.029Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.39\"/\"version\": \"1.0.40\"/' extension/manifest.json && git add -A && git commit -m 'feat: 异步命令执行器 - 解决长时间运行命令超时问题\n\n新增模块:\n- async-executor.js: 智能检测并后台执行长时间命令\n\n功能:\n- 自动检测需要后台执行的命令模式 (node server, npm, docker等)\n- 后台执行 + 日志文件监控\n- 实时输出流式返回\n- 成功/错误模式自动检测\n- 进程状态查询、停止、日志读取\n\n消息类型:\n- async_execute: 执行命令(自动选择模式)\n- async_status: 查询进程状态\n- async_stop: 停止进程\n- async_log: 读取进程日志\n\nversion: 1.0.39 -> 1.0.40'"
+      },
+      "success": true,
+      "resultPreview": "[main 86ea80e] feat: 异步命令执行器 - 解决长时间运行命令超时问题\n 6 files changed, 807 insertions(+), 3 deletions(-)\n create mode 100644 server-v2/async-executor.js\n",
+      "error": null
+    },
+    {
+      "id": 5002,
+      "timestamp": "2026-02-01T02:48:37.173Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '异步命令执行器: 自动检测长时间命令、后台执行+日志监控、解决超时问题 (v1.0.40)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 异步命令执行器: 自动检测长时间命令、后台执行+日志监控、解决超时问题 (v1.0.40)\n",
+      "error": null
+    },
+    {
+      "id": 5003,
+      "timestamp": "2026-02-01T03:03:43.767Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && pkill -f 'node index.js' 2>/dev/null; sleep 1 && node index.js &"
+      },
+      "success": true,
+      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:03:13] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:03:13] [INFO]\u001b[0m 加载了 466 条历史记录\n\u001b[36m[03:03:13] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:03:15] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdio\n\u001b[33m[03:03:18] [WARNING]\u001b[0m [filesystem] stderr: Client",
+      "error": null
+    },
+    {
+      "id": 5004,
+      "timestamp": "2026-02-01T03:03:52.159Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'require(' /Users/yay/workspace/genspark-agent/server-v2/async-executor.js"
+      },
+      "success": true,
+      "resultPreview": "33:      require('fs').mkdirSync(this.logDir, { recursive: true });\n350:    const files = require('fs').readdirSync(this.logDir);\n353:      const stat = require('fs').statSync(filePath);\n",
+      "error": null
+    },
+    {
+      "id": 5005,
+      "timestamp": "2026-02-01T03:04:01.150Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "import { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\nimport path from 'path';",
+            "newText": "import { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile, mkdirSync, readdirSync, statSync } from 'fs';\nimport path from 'path';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -3,9 +3,9 @@\n  * 自动检测长时间运行的命令，转为后台执行并监控日志\n  */\n \n import { spawn, exec } from 'child_process';\n-import { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\n+i",
+      "error": null
+    },
+    {
+      "id": 5006,
+      "timestamp": "2026-02-01T03:04:09.141Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "      require('fs').mkdirSync(this.logDir, { recursive: true });",
+            "newText": "      mkdirSync(this.logDir, { recursive: true });"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -29,9 +29,9 @@\n     ];\n     \n     // 确保日志目录存在\n     if (!existsSync(this.logDir)) {\n-      require('fs').mkdirSync(this.logDir, { recursive: true });\n+      mkdirSync(this.logDir, { recursive: true",
+      "error": null
+    },
+    {
+      "id": 5007,
+      "timestamp": "2026-02-01T03:04:17.341Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "    const files = require('fs').readdirSync(this.logDir);",
+            "newText": "    const files = readdirSync(this.logDir);"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -346,9 +346,9 @@\n     let cleaned = 0;\n     \n     if (!existsSync(this.logDir)) return { cleaned: 0 };\n     \n-    const files = require('fs').readdirSync(this.logDir);\n+    const files = readdirSy",
+      "error": null
+    },
+    {
+      "id": 5008,
+      "timestamp": "2026-02-01T03:04:24.739Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "      const stat = require('fs').statSync(filePath);",
+            "newText": "      const stat = statSync(filePath);"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -349,9 +349,9 @@\n     \n     const files = readdirSync(this.logDir);\n     for (const file of files) {\n       const filePath = path.join(this.logDir, file);\n-      const stat = require('fs').statSyn",
+      "error": null
     }
   ],
-  "nextId": 5001
+  "nextId": 5009
 }
