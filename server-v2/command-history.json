@@ -4903,7 +4903,123 @@
       "success": true,
       "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.",
       "error": null
+    },
+    {
+      "id": 4951,
+      "timestamp": "2026-02-01T02:10:34.942Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'refactor: 精简系统提示词，整合批量执行说明\n\n- 更清晰的结构和格式\n- 整合 ΩBATCH 批量执行说明\n- 简化规则描述\n- 保留核心功能：里程碑、SSH、协作'"
+      },
+      "success": true,
+      "resultPreview": "[main 65358d1] refactor: 精简系统提示词，整合批量执行说明\n 2 files changed, 86 insertions(+), 103 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4952,
+      "timestamp": "2026-02-01T02:10:43.328Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '系统提示词优化: 精简结构、整合批量执行ΩBATCH说明 (v1.0.38)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 系统提示词优化: 精简结构、整合批量执行ΩBATCH说明 (v1.0.38)\n",
+      "error": null
+    },
+    {
+      "id": 4953,
+      "timestamp": "2026-02-01T02:15:13.992Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'getSkillsPrompt\\|generateSkillsPrompt' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "1",
+      "error": null
+    },
+    {
+      "id": 4954,
+      "timestamp": "2026-02-01T02:15:21.958Z",
+      "tool": "run_command",
+      "params": {
+        "command": "head -100 /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "// Skills 加载模块\n// 自动加载 skills 目录下的所有 Skill，生成系统提示\n\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport path from 'path';\nimport { fileURLToPath } from 'url';\n\nconst __dirname = path.dirname(fileURLToPath(import.meta.url));\nconst SKILLS_DIR = path.join(__dirname, '..', 'skills');\n\nclass SkillsManager {\n  constructor() {\n    this.skills = [];\n    this.systemPrompt = '';\n  }\n\n  /**\n   * 加载所有 Skills\n   */\n  load() {\n    // 检查 skills 目录是否存在\n    if (!existsSync(SKILLS_DIR)) {\n      cons",
+      "error": null
+    },
+    {
+      "id": 4955,
+      "timestamp": "2026-02-01T02:15:34.573Z",
+      "tool": "run_command",
+      "params": {
+        "command": "wc -l /Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md /Users/yay/workspace/genspark-agent/docs/ADVANCED_GUIDE.md /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md 2>/dev/null"
+      },
+      "success": true,
+      "resultPreview": "1\n     306 /Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\n     375 /Users/yay/workspace/genspark-agent/docs/ADVANCED_GUIDE.md\n     681 total\n",
+      "error": null
+    },
+    {
+      "id": 4956,
+      "timestamp": "2026-02-01T02:15:43.374Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '70,110p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "    }\n\n    // 动态生成简短摘要（详细文档按需加载）\n    let prompt = '# 已加载的 Skills\\n\\n';\n    prompt += '以下 Skills 可用。需要详细参数时，读取对应的参考文档。\\n\\n';\n    \n    for (const skill of this.skills) {\n      prompt += `- **${skill.name}**: ${skill.description}`;\n      if (skill.tools && skill.tools.length > 0) {\n        prompt += ` (${skill.tools.length} 个工具)`;\n      }\n      prompt += '\\n';\n    }\n    \n    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n\n    // 添加工具选择指南\n    const toolsGuidePath = p",
+      "error": null
+    },
+    {
+      "id": 4957,
+      "timestamp": "2026-02-01T02:15:54.974Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/skills.js",
+        "edits": [
+          {
+            "oldText": "    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n\n    // 添加工具选择指南\n    const toolsGuidePath = path.join(__dirname, '..', 'docs', 'TOOLS_GUIDE.md');\n    if (existsSync(toolsGuidePath)) {\n      prompt += '\\n---\\n\\n';\n      prompt += readFileSync(toolsGuidePath, 'utf-8');\n      console.log('✅ 已加载工具使用指南 (TOOLS_GUIDE.md)');\n    }\n\n    // 添加进阶指南（错误处理、超时、权限等）\n    const advancedGuidePath = path.join(__dirname, '..', 'docs', 'ADVANCED_GUIDE.md');\n    if (existsSync(advancedGuidePath)) {\n      prompt += '\\n\\n---\\n\\n';\n      prompt += readFileSync(advancedGuidePath, 'utf-8');\n      console.log('✅ 已加载进阶指南 (ADVANCED_GUIDE.md)');\n    }\n    \n    return envInfo + prompt;",
+            "newText": "    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n    prompt += `\\n如需查看完整工具文档，读取 \\`/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\\`\\n`;\n    \n    return envInfo + prompt;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/skills.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/skills.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/skills.js\tmodified\n@@ -81,24 +81,9 @@\n       prompt += '\\n';\n     }\n     \n     prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n-\n-    // 添加工具选择指南\n-    const toolsGuidePath = path.join(__dirname, '..', 'docs', '",
+      "error": null
+    },
+    {
+      "id": 4958,
+      "timestamp": "2026-02-01T02:16:04.772Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'SYSTEM_PROMPT_SKILLS' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "67:    const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');\n",
+      "error": null
+    },
+    {
+      "id": 4959,
+      "timestamp": "2026-02-01T02:16:12.768Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '65,75p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "    \n    // 尝试读取预生成的系统提示\n    const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');\n    if (existsSync(promptPath)) {\n      return envInfo + readFileSync(promptPath, 'utf-8');\n    }\n\n    // 动态生成简短摘要（详细文档按需加载）\n    let prompt = '# 已加载的 Skills\\n\\n';\n    prompt += '以下 Skills 可用。需要详细参数时，读取对应的参考文档。\\n\\n';\n    \n",
+      "error": null
+    },
+    {
+      "id": 4960,
+      "timestamp": "2026-02-01T02:16:21.380Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ls -la /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md 2>/dev/null && wc -l /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md || echo '文件不存在'"
+      },
+      "success": true,
+      "resultPreview": "文件不存在\n",
+      "error": null
     }
   ],
-  "nextId": 4951
+  "nextId": 4961
 }
