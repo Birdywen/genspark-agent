@@ -159,16 +159,16 @@ function log(...args) {
 ### 单个工具
 
 \`\`\`
-前缀Ω + {"tool":"工具名","params":{"参数":"值"}}
+Ω{"tool":"工具名","params":{"参数":"值"}}
 \`\`\`
 
 ### 批量执行
 
 \`\`\`
-前缀ΩBATCH + {"steps":[...]} + 结尾ΩEND
+ΩBATCH{"steps":[...]}ΩEND
 \`\`\`
 
-多行格式：前缀ΩBATCH + JSON对象 + 结尾ΩEND
+支持多行JSON格式
 
 适用：读取多文件、执行多命令、并行获取信息
 高级：saveAs 保存变量、when 条件执行、stopOnError
@@ -176,7 +176,7 @@ function log(...args) {
 ### 智能规划 (ΩPLAN)
 
 \`\`\`
-前缀ΩPLAN + {"goal":"目标描述","context":{...}}
+ΩPLAN{"goal":"目标描述","context":{...}}
 \`\`\`
 
 自动分解任务、分析依赖、并行优化。内置模式：文件复制、部署、数据库备份等。
@@ -184,7 +184,7 @@ function log(...args) {
 ### 工作流模板 (ΩFLOW)
 
 \`\`\`
-前缀ΩFLOW + {"template":"模板名","variables":{...}}
+ΩFLOW{"template":"模板名","variables":{...}}
 \`\`\`
 
 内置模板：deploy-nodejs, backup-mysql, batch-process, health-check, log-analysis, git-workflow
@@ -192,7 +192,7 @@ function log(...args) {
 ### 断点续传 (ΩRESUME)
 
 \`\`\`
-前缀ΩRESUME + {"taskId":"任务ID"}
+ΩRESUME{"taskId":"任务ID"}
 \`\`\`
 
 恢复中断的任务，从上次失败的步骤继续执行。
@@ -221,7 +221,7 @@ ${toolSummary}
 
 恢复上下文（替换 <项目名> 为实际项目）：
 \`\`\`
-前缀Ω + {"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名>"}}
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名>"}}
 \`\`\`
 常用项目：genspark-agent, ezmusicstore, oracle-cloud
 
@@ -636,7 +636,7 @@ ${toolSummary}
     if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
       // 跳过示例中的 ΩBATCH
       const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|前缀/.test(beforeBatch);
+      const isExample = /格式[：:]|示例|用法|如下|Example/.test(beforeBatch);
       if (!isExample) {
         try {
           // 尝试找 ΩEND 结束标记
@@ -725,7 +725,7 @@ ${toolSummary}
       
       // 检查前面100字符是否包含示例关键词
       const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用/.test(beforeMarker);
+      const isExample = /格式[：:]|示例|用法|如下|Example/.test(beforeMarker);
       if (isExample) {
         searchStart = idx + marker.length;
         continue;
