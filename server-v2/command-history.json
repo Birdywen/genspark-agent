@@ -5754,7 +5754,124 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -352,24 +352,8 @@\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n     \n-    case 'TOOL_BATCH':\n-      if (socket && socket.readyState === WebSocket.OPEN) {\n-        const ",
       "error": null
+    },
+    {
+      "id": 5018,
+      "timestamp": "2026-02-01T03:19:29.654Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'refactor: 移除 TOOL_BATCH 控制台接口，改用 ΩBATCH 对话格式'"
+      },
+      "success": true,
+      "resultPreview": "[main cc7d7f1] refactor: 移除 TOOL_BATCH 控制台接口，改用 ΩBATCH 对话格式\n 2 files changed, 106 insertions(+), 17 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5019,
+      "timestamp": "2026-02-01T03:23:12.013Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/auto-healer.js << 'EOF'\n/**\n * 错误自愈模块\n * 自动检测常见错误并尝试修复后重试\n */\n\nimport { existsSync, mkdirSync } from 'fs';\nimport path from 'path';\n\nexport default class AutoHealer {\n  constructor(logger, hub) {\n    this.logger = logger;\n    this.hub = hub;\n    this.maxRetries = 3;\n    this.retryDelay = 1000;\n    \n    // 错误模式 -> 修复策略\n    this.healingStrategies = {\n      // 路径不存在\n      'ENOENT': {\n        detect: (error, tool, params) => {\n          return error.includes('ENOENT') || \n                 error.includes('no such file or directory') ||\n                 error.includes('does not exist');\n        },\n        heal: async (error, tool, params) => {\n          // 如果是写文件，尝试创建目录\n          if (tool === 'write_file' || tool === 'edit_file') {\n            const filePath = params.path;\n            const dir = path.dirname(filePath);\n            if (!existsSync(dir)) {\n              this.logger?.info(`[AutoHealer] 创建目录: ${dir}`);\n              mkdirSync(dir, { recursive: true });\n              return { healed: true, message: `已创建目录: ${dir}` };\n            }\n          }\n          return { healed: false };\n        }\n      },\n      \n      // 文件被占用\n      'EBUSY': {\n        detect: (error) => {\n          return error.includes('EBUSY') || \n                 error.includes('resource busy') ||\n                 error.includes('file is being used');\n        },\n        heal: async (error, tool, params) => {\n          this.logger?.info(`[AutoHealer] 文件被占用，等待 ${this.retryDelay}ms 后重试`);\n          await this.sleep(this.retryDelay);\n          return { healed: true, message: '等待后重试' };\n        }\n      },\n      \n      // 权限不足\n      'EACCES': {\n        detect: (error) => {\n          return error.includes('EACCES') || \n                 error.includes('permission denied');\n        },\n        heal: async (error, tool, params) => {\n          // 权限问题通常无法自动修复，但可以提供建议\n          const filePath = params.path || params.command;\n          return { \n            healed: false, \n            suggestion: `权限不足，请尝试: sudo chmod 755 ${filePath} 或检查文件所有者`\n          };\n        }\n      },\n      \n      // edit_file 匹配失败\n      'MATCH_FAILED': {\n        detect: (error, tool) => {\n          return tool === 'edit_file' && \n                 (error.includes('Could not find') || \n                  error.includes('not found') ||\n                  error.includes('No match'));\n        },\n        heal: async (error, tool, params) => {\n          // 尝试查找相似内容\n          if (params.edits && params.edits[0]?.oldText) {\n            const oldText = params.edits[0].oldText;\n            const firstLine = oldText.split('\\n')[0].trim();\n            if (firstLine.length > 10) {\n              this.logger?.info(`[AutoHealer] 尝试查找: ${firstLine.slice(0, 50)}...`);\n              try {\n                const grepResult = await this.hub.callTool('run_command', {\n                  command: `grep -n \"${firstLine.replace(/\"/g, '\\\\\"').slice(0, 50)}\" \"${params.path}\" | head -5`\n                });\n                if (grepResult.content) {\n                  return {\n                    healed: false,\n                    suggestion: `未找到精确匹配，相似内容:\\n${grepResult.content}`,\n                    context: grepResult.content\n                  };\n                }\n              } catch (e) {\n                // grep 失败，继续\n              }\n            }\n          }\n          return { healed: false, suggestion: '请检查 oldText 是否与文件内容完全匹配（包括空格和换行）' };\n        }\n      },\n      \n      // 命令超时\n      'TIMEOUT': {\n        detect: (error) => {\n          return error.includes('timeout') || \n                 error.includes('ETIMEDOUT') ||\n                 error.includes('timed out');\n        },\n        heal: async (error, tool, params) => {\n          if (tool === 'run_command') {\n            return {\n              healed: false,\n              suggestion: '命令超时，建议:\\n1. 使用 nohup cmd & 后台执行\\n2. 拆分为更小的任务\\n3. 增加超时时间'\n            };\n          }\n          return { healed: false };\n        }\n      },\n      \n      // 端口被占用\n      'EADDRINUSE': {\n        detect: (error) => {\n          return error.includes('EADDRINUSE') || \n                 error.includes('address already in use');\n        },\n        heal: async (error, tool, params) => {\n          // 尝试提取端口号\n          const portMatch = error.match(/:([0-9]+)/);\n          const port = portMatch ? portMatch[1] : '未知';\n          return {\n            healed: false,\n            suggestion: `端口 ${port} 被占用，建议:\\n1. lsof -i :${port} 查看占用进程\\n2. kill -9 $(lsof -t -i :${port}) 强制关闭\\n3. 使用其他端口`\n          };\n        }\n      },\n      \n      // JSON 解析错误\n      'JSON_PARSE': {\n        detect: (error) => {\n          return error.includes('JSON') && \n                 (error.includes('parse') || error.includes('Unexpected'));\n        },\n        heal: async (error, tool, params) => {\n          return {\n            healed: false,\n            suggestion: 'JSON 格式错误，请检查:\\n1. 引号是否正确转义\\n2. 是否有多余的逗号\\n3. 中文引号是否误用'\n          };\n        }\n      },\n\n      // 模块未找到\n      'MODULE_NOT_FOUND': {\n        detect: (error) => {\n          return error.includes('Cannot find module') || \n                 error.includes('MODULE_NOT_FOUND');\n        },\n        heal: async (error, tool, params) => {\n          const moduleMatch = error.match(/Cannot find module ['\"]([^'\"]+)['\"]/);\n          const moduleName = moduleMatch ? moduleMatch[1] : '未知模块';\n          return {\n            healed: false,\n            suggestion: `模块 ${moduleName} 未找到，建议:\\n1. npm install ${moduleName}\\n2. 检查 import/require 路径\\n3. 检查 package.json 依赖`\n          };\n        }\n      }\n    };\n  }\n\n  sleep(ms) {\n    return new Promise(resolve => setTimeout(resolve, ms));\n  }\n\n  /**\n   * 执行工具调用，带自动错误修复\n   */\n  async executeWithHealing(tool, params, options = {}) {\n    const { maxRetries = this.maxRetries } = options;\n    let lastError = null;\n    let lastHealResult = null;\n    \n    for (let attempt = 1; attempt <= maxRetries; attempt++) {\n      try {\n        this.logger?.info(`[AutoHealer] 执行 ${tool} (尝试 ${attempt}/${maxRetries})`);\n        \n        const result = await this.hub.callTool(tool, params);\n        \n        // 检查结果是否包含错误\n        const resultStr = typeof result === 'string' ? result : JSON.stringify(result);\n        if (this.isErrorResult(resultStr)) {\n          throw new Error(resultStr);\n        }\n        \n        // 成功\n        return {\n          success: true,\n          result,\n          attempts: attempt,\n          healed: attempt > 1\n        };\n        \n      } catch (error) {\n        lastError = error.message || String(error);\n        this.logger?.warn(`[AutoHealer] 错误: ${lastError.slice(0, 100)}`);\n        \n        // 尝试修复\n        const healResult = await this.tryHeal(lastError, tool, params);\n        lastHealResult = healResult;\n        \n        if (healResult.healed) {\n          this.logger?.info(`[AutoHealer] 已修复: ${healResult.message}`);\n          // 修复成功，继续重试\n          continue;\n        } else {\n          // 无法修复\n          if (healResult.suggestion) {\n            this.logger?.info(`[AutoHealer] 建议: ${healResult.suggestion}`);\n          }\n          break;\n        }\n      }\n    }\n    \n    // 所有重试都失败\n    return {\n      success: false,\n      error: lastError,\n      attempts: maxRetries,\n      suggestion: lastHealResult?.suggestion,\n      context: lastHealResult?.context\n    };\n  }\n\n  /**\n   * 检查结果是否为错误\n   */\n  isErrorResult(result) {\n    const errorPatterns = [\n      'ENOENT', 'EACCES', 'EBUSY', 'EADDRINUSE',\n      'Error:', 'error:', 'failed', 'Failed',\n      'Could not find', 'not found', 'No such file'\n    ];\n    return errorPatterns.some(p => result.includes(p));\n  }\n\n  /**\n   * 尝试修复错误\n   */\n  async tryHeal(error, tool, params) {\n    for (const [name, strategy] of Object.entries(this.healingStrategies)) {\n      if (strategy.detect(error, tool, params)) {\n        this.logger?.info(`[AutoHealer] 检测到 ${name} 类型错误，尝试修复...`);\n        return await strategy.heal(error, tool, params);\n      }\n    }\n    \n    // 未知错误类型\n    return { healed: false };\n  }\n\n  /**\n   * 获取错误类型\n   */\n  getErrorType(error) {\n    for (const [name, strategy] of Object.entries(this.healingStrategies)) {\n      if (strategy.detect(error, '', {})) {\n        return name;\n      }\n    }\n    return 'UNKNOWN';\n  }\n\n  /**\n   * 获取修复建议\n   */\n  async getSuggestion(error, tool, params) {\n    const healResult = await this.tryHeal(error, tool, params);\n    return healResult.suggestion || '未找到具体建议，请检查错误信息';\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5020,
+      "timestamp": "2026-02-01T03:23:40.387Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/result-cache.js << 'EOF'\n/**\n * 执行结果缓存模块\n * 避免短时间内重复执行相同的只读操作\n */\n\nexport default class ResultCache {\n  constructor(logger) {\n    this.logger = logger;\n    this.cache = new Map();\n    this.stats = { hits: 0, misses: 0 };\n    \n    // 默认 TTL（毫秒）\n    this.defaultTTL = 30000; // 30秒\n    \n    // 可缓存的工具（只读操作）\n    this.cacheableTools = new Set([\n      'read_file',\n      'read_text_file', \n      'read_multiple_files',\n      'list_directory',\n      'list_directory_with_sizes',\n      'directory_tree',\n      'get_file_info',\n      'search_files',\n      'list_allowed_directories',\n      'get_symbols',\n      'get_ast',\n      'find_text',\n      'list_projects_tool',\n      'list_languages',\n      'get_dependencies'\n    ]);\n    \n    // 工具特定的 TTL 配置\n    this.toolTTL = {\n      'read_file': 60000,           // 1分钟\n      'list_directory': 30000,      // 30秒\n      'directory_tree': 60000,      // 1分钟\n      'get_file_info': 30000,       // 30秒\n      'search_files': 20000,        // 20秒（可能变化较快）\n      'get_symbols': 120000,        // 2分钟（代码分析较稳定）\n      'get_ast': 120000,            // 2分钟\n      'list_projects_tool': 300000  // 5分钟\n    };\n    \n    // 自动清理过期缓存\n    this.cleanupInterval = setInterval(() => this.cleanup(), 60000);\n  }\n\n  /**\n   * 生成缓存键\n   */\n  generateKey(tool, params) {\n    const sortedParams = Object.keys(params)\n      .sort()\n      .reduce((acc, key) => {\n        acc[key] = params[key];\n        return acc;\n      }, {});\n    return `${tool}:${JSON.stringify(sortedParams)}`;\n  }\n\n  /**\n   * 检查是否可缓存\n   */\n  isCacheable(tool) {\n    return this.cacheableTools.has(tool);\n  }\n\n  /**\n   * 获取缓存\n   */\n  get(tool, params) {\n    if (!this.isCacheable(tool)) {\n      return null;\n    }\n    \n    const key = this.generateKey(tool, params);\n    const entry = this.cache.get(key);\n    \n    if (!entry) {\n      this.stats.misses++;\n      return null;\n    }\n    \n    // 检查是否过期\n    if (Date.now() > entry.expiresAt) {\n      this.cache.delete(key);\n      this.stats.misses++;\n      return null;\n    }\n    \n    this.stats.hits++;\n    this.logger?.debug(`[Cache] 命中: ${tool} (${key.slice(0, 50)}...)`);\n    \n    return {\n      ...entry.result,\n      cached: true,\n      cachedAt: entry.cachedAt,\n      age: Date.now() - entry.cachedAt\n    };\n  }\n\n  /**\n   * 设置缓存\n   */\n  set(tool, params, result) {\n    if (!this.isCacheable(tool)) {\n      return;\n    }\n    \n    // 不缓存错误结果\n    if (result.error || result.success === false) {\n      return;\n    }\n    \n    const key = this.generateKey(tool, params);\n    const ttl = this.toolTTL[tool] || this.defaultTTL;\n    \n    this.cache.set(key, {\n      result,\n      cachedAt: Date.now(),\n      expiresAt: Date.now() + ttl,\n      tool,\n      params\n    });\n    \n    this.logger?.debug(`[Cache] 存储: ${tool} (TTL: ${ttl/1000}s)`);\n  }\n\n  /**\n   * 使缓存失效（当文件被修改时调用）\n   */\n  invalidate(pattern) {\n    let invalidated = 0;\n    \n    for (const [key, entry] of this.cache.entries()) {\n      // 按路径匹配\n      if (pattern && entry.params?.path) {\n        if (entry.params.path.includes(pattern) || pattern.includes(entry.params.path)) {\n          this.cache.delete(key);\n          invalidated++;\n        }\n      }\n      // 按目录匹配\n      if (pattern && entry.tool === 'list_directory') {\n        const dir = entry.params.path;\n        if (pattern.startsWith(dir) || dir.startsWith(pattern)) {\n          this.cache.delete(key);\n          invalidated++;\n        }\n      }\n    }\n    \n    if (invalidated > 0) {\n      this.logger?.info(`[Cache] 已失效 ${invalidated} 个缓存条目 (pattern: ${pattern})`);\n    }\n    \n    return invalidated;\n  }\n\n  /**\n   * 清理过期缓存\n   */\n  cleanup() {\n    const now = Date.now();\n    let cleaned = 0;\n    \n    for (const [key, entry] of this.cache.entries()) {\n      if (now > entry.expiresAt) {\n        this.cache.delete(key);\n        cleaned++;\n      }\n    }\n    \n    if (cleaned > 0) {\n      this.logger?.debug(`[Cache] 清理 ${cleaned} 个过期条目`);\n    }\n  }\n\n  /**\n   * 清空所有缓存\n   */\n  clear() {\n    const size = this.cache.size;\n    this.cache.clear();\n    this.logger?.info(`[Cache] 已清空 ${size} 个缓存条目`);\n    return size;\n  }\n\n  /**\n   * 获取缓存统计\n   */\n  getStats() {\n    const total = this.stats.hits + this.stats.misses;\n    return {\n      size: this.cache.size,\n      hits: this.stats.hits,\n      misses: this.stats.misses,\n      hitRate: total > 0 ? (this.stats.hits / total * 100).toFixed(1) + '%' : '0%',\n      entries: Array.from(this.cache.entries()).map(([key, entry]) => ({\n        tool: entry.tool,\n        path: entry.params?.path?.slice(-50),\n        age: Math.round((Date.now() - entry.cachedAt) / 1000) + 's',\n        ttl: Math.round((entry.expiresAt - Date.now()) / 1000) + 's'\n      }))\n    };\n  }\n\n  /**\n   * 销毁（停止清理定时器）\n   */\n  destroy() {\n    if (this.cleanupInterval) {\n      clearInterval(this.cleanupInterval);\n    }\n    this.clear();\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5021,
+      "timestamp": "2026-02-01T03:23:49.767Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import AsyncExecutor from './async-executor.js';",
+            "newText": "import AsyncExecutor from './async-executor.js';\nimport AutoHealer from './auto-healer.js';\nimport ResultCache from './result-cache.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -16,8 +16,10 @@\n import Recorder from './recorder.js';\n import SelfValidator from './self-validator.js';\n import GoalManager from './goal-manager.js';\n import AsyncExecutor from './async-executor.js';\n+import AutoHealer fro",
+      "error": null
+    },
+    {
+      "id": 5022,
+      "timestamp": "2026-02-01T03:23:58.175Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'const asyncExecutor = new AsyncExecutor' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "611:  const asyncExecutor = new AsyncExecutor(logger);\n",
+      "error": null
+    },
+    {
+      "id": 5023,
+      "timestamp": "2026-02-01T03:24:07.193Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  const asyncExecutor = new AsyncExecutor(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');",
+            "newText": "  const asyncExecutor = new AsyncExecutor(logger);\n  const autoHealer = new AutoHealer(logger, hub);\n  const resultCache = new ResultCache(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -608,9 +608,11 @@\n   // 初始化自验证器和目标管理器\n   const selfValidator = new SelfValidator(logger, hub);\n   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n   const asyncExecutor = new AsyncExecut",
+      "error": null
+    },
+    {
+      "id": 5024,
+      "timestamp": "2026-02-01T03:24:15.185Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'async_log':\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "885:          case 'async_log':\n",
+      "error": null
+    },
+    {
+      "id": 5025,
+      "timestamp": "2026-02-01T03:24:23.370Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '885,910p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 =====\n          case 'start_recording':\n            {\n              const result = recorder.startRecording(\n    ",
+      "error": null
+    },
+    {
+      "id": 5026,
+      "timestamp": "2026-02-01T03:24:38.985Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 =====",
+            "newText": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n\n          // ===== 自动修复执行 =====\n          case 'healed_execute':\n            {\n              logger.info(`[WS] 自修复执行: ${msg.tool}`);\n              const result = await autoHealer.executeWithHealing(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({\n                type: 'healed_result',\n                tool: msg.tool,\n                ...result\n              }));\n            }\n            break;\n\n          // ===== 缓存相关 =====\n          case 'cached_execute':\n            {\n              // 先检查缓存\n              const cached = resultCache.get(msg.tool, msg.params);\n              if (cached) {\n                logger.info(`[WS] 缓存命中: ${msg.tool}`);\n                ws.send(JSON.stringify({\n                  type: 'cached_result',\n                  tool: msg.tool,\n                  ...cached\n                }));\n              } else {\n                // 执行并缓存\n                logger.info(`[WS] 执行并缓存: ${msg.tool}`);\n                const result = await hub.callTool(msg.tool, msg.params);\n                resultCache.set(msg.tool, msg.params, { success: true, result });\n                ws.send(JSON.stringify({\n                  type: 'cached_result',\n                  tool: msg.tool,\n                  success: true,\n                  result,\n                  cached: false\n                }));\n              }\n            }\n            break;\n\n          case 'cache_stats':\n            {\n              const stats = resultCache.getStats();\n              ws.send(JSON.stringify({\n                type: 'cache_stats_result',\n                ...stats\n              }));\n            }\n            break;\n\n          case 'cache_clear':\n            {\n              const cleared = resultCache.clear();\n              ws.send(JSON.stringify({\n                type: 'cache_clear_result',\n                cleared\n              }));\n            }\n            break;\n\n          case 'cache_invalidate':\n            {\n              const invalidated = resultCache.invalidate(msg.pattern);\n              ws.send(JSON.stringify({\n                type: 'cache_invalidate_result',\n                pattern: msg.pattern,\n                invalidated\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -892,8 +892,84 @@\n                 ...result\n               }));\n             }\n             break;\n+\n+          // ===== 自动修复执行 =====\n+          case 'healed_execute':\n+            {\n+              logger.info(`[WS] 自修复执行:",
+      "error": null
     }
   ],
-  "nextId": 5018
+  "nextId": 5027
 }

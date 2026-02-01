@@ -17,6 +17,8 @@ import Recorder from './recorder.js';
 import SelfValidator from './self-validator.js';
 import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
+import AutoHealer from './auto-healer.js';
+import ResultCache from './result-cache.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -607,7 +609,9 @@ async function main() {
   const selfValidator = new SelfValidator(logger, hub);
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
   const asyncExecutor = new AsyncExecutor(logger);
-  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');
+  const autoHealer = new AutoHealer(logger, hub);
+  const resultCache = new ResultCache(logger);
+  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化');
 
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
@@ -886,6 +890,82 @@ async function main() {
                 type: 'async_log_result',
                 processId: msg.processId,
                 ...result
+              }));
+            }
+            break;
+
+          // ===== 自动修复执行 =====
+          case 'healed_execute':
+            {
+              logger.info(`[WS] 自修复执行: ${msg.tool}`);
+              const result = await autoHealer.executeWithHealing(
+                msg.tool,
+                msg.params,
+                msg.options || {}
+              );
+              ws.send(JSON.stringify({
+                type: 'healed_result',
+                tool: msg.tool,
+                ...result
+              }));
+            }
+            break;
+
+          // ===== 缓存相关 =====
+          case 'cached_execute':
+            {
+              // 先检查缓存
+              const cached = resultCache.get(msg.tool, msg.params);
+              if (cached) {
+                logger.info(`[WS] 缓存命中: ${msg.tool}`);
+                ws.send(JSON.stringify({
+                  type: 'cached_result',
+                  tool: msg.tool,
+                  ...cached
+                }));
+              } else {
+                // 执行并缓存
+                logger.info(`[WS] 执行并缓存: ${msg.tool}`);
+                const result = await hub.callTool(msg.tool, msg.params);
+                resultCache.set(msg.tool, msg.params, { success: true, result });
+                ws.send(JSON.stringify({
+                  type: 'cached_result',
+                  tool: msg.tool,
+                  success: true,
+                  result,
+                  cached: false
+                }));
+              }
+            }
+            break;
+
+          case 'cache_stats':
+            {
+              const stats = resultCache.getStats();
+              ws.send(JSON.stringify({
+                type: 'cache_stats_result',
+                ...stats
+              }));
+            }
+            break;
+
+          case 'cache_clear':
+            {
+              const cleared = resultCache.clear();
+              ws.send(JSON.stringify({
+                type: 'cache_clear_result',
+                cleared
+              }));
+            }
+            break;
+
+          case 'cache_invalidate':
+            {
+              const invalidated = resultCache.invalidate(msg.pattern);
+              ws.send(JSON.stringify({
+                type: 'cache_invalidate_result',
+                pattern: msg.pattern,
+                invalidated
               }));
             }
             break;
