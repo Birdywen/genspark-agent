@@ -1698,6 +1698,71 @@ ${tip}
         sendMessageToAI(vrSummary);
         break;
 
+      // ===== 异步命令执行 =====
+      case 'async_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          const modeText = msg.mode === 'async' ? ' (后台)' : '';
+          addLog(`✅ 命令执行成功${modeText}`, 'success');
+          if (msg.processId) {
+            addLog(`📋 进程ID: ${msg.processId}`, 'info');
+          }
+        } else {
+          addLog(`❌ 命令执行失败: ${msg.error}`, 'error');
+          if (msg.suggestion) {
+            addLog(`💡 建议: ${msg.suggestion}`, 'info');
+          }
+        }
+        // 生成异步结果摘要
+        const asyncSummary = `**[命令执行结果]** ${msg.success ? '✓ 成功' : '✗ 失败'}${msg.mode === 'async' ? ' (后台模式)' : ''}\n` +
+          (msg.processId ? `- 进程ID: ${msg.processId}\n` : '') +
+          (msg.logFile ? `- 日志文件: ${msg.logFile}\n` : '') +
+          (msg.warning ? `- ⚠️ ${msg.warning}\n` : '') +
+          (msg.output ? `\`\`\`\n${msg.output.slice(-2000)}\n\`\`\`\n` : '') +
+          (msg.error ? `- 错误: ${msg.error}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(asyncSummary);
+        break;
+
+      case 'async_output':
+        // 实时输出，仅记录日志
+        if (msg.output) {
+          addLog(`📤 ${msg.output.slice(0, 200)}`, 'info');
+        }
+        break;
+
+      case 'async_status_result':
+        if (msg.exists) {
+          addLog(`📊 进程 ${msg.processId}: ${msg.isRunning ? '运行中' : '已停止'}`, msg.isRunning ? 'success' : 'info');
+        } else {
+          addLog(`⚠️ 进程不存在: ${msg.processId}`, 'warning');
+        }
+        break;
+
+      case 'async_stop_result':
+        if (msg.success) {
+          addLog(`⏹️ 进程已停止: ${msg.processId}`, 'success');
+        } else {
+          addLog(`❌ 停止失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'async_log_result':
+        if (msg.success) {
+          addLog(`📋 日志 (${msg.lines} 行)`, 'info');
+          const logSummary = `**[进程日志]** ${msg.processId}\n` +
+            `- 文件: ${msg.logFile}\n` +
+            `- 总行数: ${msg.lines}\n` +
+            `\`\`\`\n${msg.content?.slice(-3000) || '(空)'}\n\`\`\`\n` +
+            `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          sendMessageToAI(logSummary);
+        } else {
+          addLog(`❌ 读取日志失败: ${msg.error}`, 'error');
+        }
+        break;
+
       // ===== 录制相关 =====
       case 'recording_started':
         addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');

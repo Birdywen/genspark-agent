@@ -16,6 +16,7 @@ import TaskEngine from './task-engine.js';
 import Recorder from './recorder.js';
 import SelfValidator from './self-validator.js';
 import GoalManager from './goal-manager.js';
+import AsyncExecutor from './async-executor.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -605,7 +606,8 @@ async function main() {
   // 初始化自验证器和目标管理器
   const selfValidator = new SelfValidator(logger, hub);
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
-  logger.info('[Main] SelfValidator 和 GoalManager 已初始化');
+  const asyncExecutor = new AsyncExecutor(logger);
+  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');
 
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
@@ -822,6 +824,68 @@ async function main() {
                 type: 'validated_result', 
                 tool: msg.tool,
                 ...result 
+              }));
+            }
+            break;
+
+          // ===== 异步命令执行 =====
+          case 'async_execute':
+            {
+              // 异步执行命令（自动后台+日志监控）
+              logger.info(`[WS] 异步执行: ${msg.command?.slice(0, 50)}...`);
+              const result = await asyncExecutor.execute(
+                msg.command,
+                {
+                  forceAsync: msg.forceAsync || false,
+                  timeout: msg.timeout || 30000,
+                  onOutput: (output) => {
+                    // 实时发送输出
+                    ws.send(JSON.stringify({
+                      type: 'async_output',
+                      processId: result?.processId,
+                      output
+                    }));
+                  }
+                }
+              );
+              ws.send(JSON.stringify({
+                type: 'async_result',
+                ...result
+              }));
+            }
+            break;
+
+          case 'async_status':
+            {
+              // 获取异步进程状态
+              const status = asyncExecutor.getProcessStatus(msg.processId);
+              ws.send(JSON.stringify({
+                type: 'async_status_result',
+                ...status
+              }));
+            }
+            break;
+
+          case 'async_stop':
+            {
+              // 停止异步进程
+              const result = asyncExecutor.stopProcess(msg.processId);
+              ws.send(JSON.stringify({
+                type: 'async_stop_result',
+                processId: msg.processId,
+                ...result
+              }));
+            }
+            break;
+
+          case 'async_log':
+            {
+              // 读取异步进程日志
+              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);
+              ws.send(JSON.stringify({
+                type: 'async_log_result',
+                processId: msg.processId,
+                ...result
               }));
             }
             break;

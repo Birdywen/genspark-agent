@@ -123,6 +123,15 @@ function connectWebSocket() {
         broadcastToAllTabs(data);
         return;
       }
+
+      // 异步执行消息
+      if (data.type === 'async_result' || data.type === 'async_output' ||
+          data.type === 'async_status_result' || data.type === 'async_stop_result' ||
+          data.type === 'async_log_result') {
+        console.log('[BG] 异步执行消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
       
       // reload_tools 结果
       if (data.type === 'reload_tools_result') {
@@ -468,6 +477,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           params: message.params,
           options: message.options
         }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    // ===== 异步命令执行 =====
+    case 'ASYNC_EXECUTE':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'async_execute', 
+          command: message.command,
+          forceAsync: message.forceAsync,
+          timeout: message.timeout
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_STOP':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_LOG':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));
         sendResponse({ success: true });
       } else {
         sendResponse({ success: false, error: '未连接到服务器' });

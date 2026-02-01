@@ -5275,7 +5275,269 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1639,8 +1639,66 @@\n       case 'resume_error':\n         addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n         break;\n \n+      // ===== 目标驱动执行 =====\n+      case 'goal_created':\n+        addLog(`🎯 目标已创建: ${msg.goal?.id ",
       "error": null
+    },
+    {
+      "id": 4981,
+      "timestamp": "2026-02-01T02:41:46.816Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.38\"/\"version\": \"1.0.39\"/' extension/manifest.json && git add -A && git commit -m 'feat: 闭环自验证系统 - 目标驱动执行\n\n新增模块:\n- self-validator.js: 执行后自动验证结果\n- goal-manager.js: 目标 → 计划 → 执行 → 验证 → 调整\n\n功能:\n- 自验证执行: write_file后自动读取确认\n- 目标追踪: 设定成功条件，自动检测是否达成\n- 差距分析: 未满足条件时自动生成修复步骤\n- 自动调整: 最多3次尝试达成目标\n\n消息类型:\n- create_goal, execute_goal, goal_status, list_goals\n- validated_execute\n- goal_created, goal_progress, goal_complete\n\nversion: 1.0.38 -> 1.0.39'"
+      },
+      "success": true,
+      "resultPreview": "[main 4c90c55] feat: 闭环自验证系统 - 目标驱动执行\n 7 files changed, 963 insertions(+), 2 deletions(-)\n create mode 100644 server-v2/goal-manager.js\n create mode 100644 server-v2/self-validator.js\n",
+      "error": null
+    },
+    {
+      "id": 4982,
+      "timestamp": "2026-02-01T02:41:54.856Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n",
+      "error": null
+    },
+    {
+      "id": 4983,
+      "timestamp": "2026-02-01T02:44:30.706Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'timeout\\|TIMEOUT' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "336:          reject(new Error('timeout'));\n",
+      "error": null
+    },
+    {
+      "id": 4984,
+      "timestamp": "2026-02-01T02:44:39.897Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'timeout\\|30000\\|60000' /Users/yay/workspace/genspark-agent/server-v2/config.json 2>/dev/null || echo '无config' && grep -rn 'timeout' /Users/yay/workspace/genspark-agent/extension/*.js | grep -i command | head -5"
+      },
+      "success": true,
+      "resultPreview": "47:        \"--timeout=60000\",\n61:        \"--timeout=60000\",\n",
+      "error": null
+    },
+    {
+      "id": 4985,
+      "timestamp": "2026-02-01T02:44:47.680Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'TIMEOUT\\|timeout' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "14:    TIMEOUT_MS: 120000,\n798:        const timeoutResult = `**[重试结果]** \\`#${historyId}\\` ✗ 超时\\n\\n请稍后再试，或检查服务器状态。`;\n799:        sendMessageSafe(timeoutResult);\n801:    }, CONFIG.TIMEOUT_MS);\n901:        const timeoutResult = formatToolResult({\n904:          error: `执行超时 (${CONFIG.TIMEOUT_MS / 1000}秒)`\n906:        sendMessageSafe(timeoutResult);\n908:    }, CONFIG.TIMEOUT_MS);\n1065:      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',\n1929:  const WAKEUP_TIMEOUT = 60000; // 60 seconds timeout\n",
+      "error": null
+    },
+    {
+      "id": 4986,
+      "timestamp": "2026-02-01T02:45:34.292Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/async-executor.js << 'EOF'\n/**\n * 异步命令执行器\n * 自动检测长时间运行的命令，转为后台执行并监控日志\n */\n\nimport { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\nimport path from 'path';\n\nexport default class AsyncExecutor {\n  constructor(logger) {\n    this.logger = logger;\n    this.logDir = path.join(process.cwd(), 'async-logs');\n    this.runningProcesses = new Map();\n    \n    // 需要后台执行的命令模式\n    this.asyncPatterns = [\n      /^node\\s+.*index\\.js/i,           // node server\n      /^npm\\s+(start|run|install)/i,    // npm commands\n      /^yarn\\s+(start|install)/i,       // yarn commands  \n      /^python.*server/i,               // python servers\n      /^uvicorn|gunicorn|flask/i,       // python web servers\n      /^docker\\s+(build|run|compose)/i, // docker commands\n      /^brew\\s+install/i,               // homebrew\n      /^pip\\s+install/i,                // pip install\n      /^cargo\\s+build/i,                // rust build\n      /^make\\b/i,                       // make\n      /^gradle|mvn/i,                   // java build\n    ];\n    \n    // 确保日志目录存在\n    if (!existsSync(this.logDir)) {\n      require('fs').mkdirSync(this.logDir, { recursive: true });\n    }\n  }\n\n  /**\n   * 判断命令是否需要异步执行\n   */\n  shouldRunAsync(command) {\n    return this.asyncPatterns.some(pattern => pattern.test(command));\n  }\n\n  /**\n   * 执行命令 - 自动选择同步或异步模式\n   */\n  async execute(command, options = {}) {\n    const { \n      forceAsync = false, \n      forceSync = false,\n      timeout = 30000,\n      onOutput = null \n    } = options;\n\n    // 强制同步或命令不匹配异步模式\n    if (forceSync || (!forceAsync && !this.shouldRunAsync(command))) {\n      return this.executeSync(command, timeout);\n    }\n\n    // 异步执行\n    return this.executeAsync(command, { timeout, onOutput });\n  }\n\n  /**\n   * 同步执行（带超时）\n   */\n  executeSync(command, timeout = 30000) {\n    return new Promise((resolve) => {\n      const startTime = Date.now();\n      \n      exec(command, { \n        timeout, \n        maxBuffer: 10 * 1024 * 1024,\n        shell: '/bin/bash'\n      }, (error, stdout, stderr) => {\n        const duration = Date.now() - startTime;\n        \n        if (error) {\n          if (error.killed || error.code === 'ETIMEDOUT') {\n            resolve({\n              success: false,\n              error: `命令超时 (${timeout/1000}秒)`,\n              suggestion: '此命令可能需要较长时间，建议使用后台执行模式',\n              duration\n            });\n          } else {\n            resolve({\n              success: false,\n              error: error.message,\n              stderr: stderr?.slice(-2000),\n              duration\n            });\n          }\n          return;\n        }\n        \n        resolve({\n          success: true,\n          output: stdout,\n          stderr: stderr || undefined,\n          duration\n        });\n      });\n    });\n  }\n\n  /**\n   * 异步执行（后台运行 + 日志监控）\n   */\n  async executeAsync(command, options = {}) {\n    const { timeout = 60000, onOutput = null } = options;\n    const processId = `async-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;\n    const logFile = path.join(this.logDir, `${processId}.log`);\n    const pidFile = path.join(this.logDir, `${processId}.pid`);\n    \n    this.logger?.info(`[AsyncExecutor] 启动异步命令: ${processId}`);\n    this.logger?.info(`[AsyncExecutor] 日志文件: ${logFile}`);\n\n    return new Promise((resolve) => {\n      // 启动后台进程\n      const shellCommand = `(${command}) > \"${logFile}\" 2>&1 & echo $! > \"${pidFile}\"`;\n      \n      exec(shellCommand, { shell: '/bin/bash' }, (error) => {\n        if (error) {\n          resolve({\n            success: false,\n            error: `启动失败: ${error.message}`,\n            processId\n          });\n          return;\n        }\n\n        // 等待 PID 文件生成\n        setTimeout(() => {\n          let pid = null;\n          if (existsSync(pidFile)) {\n            pid = readFileSync(pidFile, 'utf8').trim();\n          }\n\n          this.runningProcesses.set(processId, {\n            pid,\n            command,\n            logFile,\n            startTime: Date.now()\n          });\n\n          // 监控日志文件\n          this.monitorLog(processId, logFile, timeout, onOutput, resolve);\n        }, 500);\n      });\n    });\n  }\n\n  /**\n   * 监控日志文件\n   */\n  monitorLog(processId, logFile, timeout, onOutput, resolve) {\n    const startTime = Date.now();\n    let lastSize = 0;\n    let outputBuffer = '';\n    let resolved = false;\n    \n    // 成功模式\n    const successPatterns = [\n      /listening on|started|running|ready|server.*started/i,\n      /✅|success|completed|done/i,\n      /\\[Main\\].*初始化/,\n      /WebSocket.*listening/i\n    ];\n    \n    // 错误模式\n    const errorPatterns = [\n      /error:|exception:|failed:|fatal:/i,\n      /EADDRINUSE|EACCES|ENOENT/i,\n      /Cannot find module/i,\n      /SyntaxError|TypeError|ReferenceError/i\n    ];\n\n    const checkLog = () => {\n      if (resolved) return;\n      \n      if (!existsSync(logFile)) {\n        return; // 文件还未创建\n      }\n\n      try {\n        const content = readFileSync(logFile, 'utf8');\n        const newContent = content.slice(lastSize);\n        lastSize = content.length;\n        \n        if (newContent) {\n          outputBuffer += newContent;\n          onOutput?.(newContent);\n          \n          // 检查成功模式\n          if (successPatterns.some(p => p.test(outputBuffer))) {\n            resolved = true;\n            clearInterval(checkInterval);\n            clearTimeout(timeoutId);\n            \n            resolve({\n              success: true,\n              output: outputBuffer.slice(-5000),\n              processId,\n              mode: 'async',\n              logFile,\n              message: '命令已在后台启动并运行成功'\n            });\n            return;\n          }\n          \n          // 检查错误模式\n          if (errorPatterns.some(p => p.test(newContent))) {\n            resolved = true;\n            clearInterval(checkInterval);\n            clearTimeout(timeoutId);\n            \n            resolve({\n              success: false,\n              error: '检测到错误',\n              output: outputBuffer.slice(-5000),\n              processId,\n              mode: 'async',\n              logFile\n            });\n            return;\n          }\n        }\n      } catch (e) {\n        // 文件读取错误，继续等待\n      }\n    };\n\n    // 定期检查日志\n    const checkInterval = setInterval(checkLog, 500);\n    \n    // 首次检查\n    setTimeout(checkLog, 200);\n\n    // 超时处理\n    const timeoutId = setTimeout(() => {\n      if (resolved) return;\n      resolved = true;\n      clearInterval(checkInterval);\n      \n      // 超时但可能仍在运行\n      const hasOutput = outputBuffer.length > 0;\n      \n      resolve({\n        success: hasOutput, // 有输出认为启动成功\n        output: outputBuffer.slice(-5000) || '(无输出)',\n        processId,\n        mode: 'async',\n        logFile,\n        message: hasOutput \n          ? `命令已在后台运行 (${timeout/1000}秒内有输出)` \n          : `命令可能仍在运行，请检查日志: ${logFile}`,\n        warning: '超时但进程可能仍在后台运行'\n      });\n    }, timeout);\n  }\n\n  /**\n   * 获取进程状态\n   */\n  getProcessStatus(processId) {\n    const proc = this.runningProcesses.get(processId);\n    if (!proc) {\n      return { exists: false };\n    }\n\n    let isRunning = false;\n    if (proc.pid) {\n      try {\n        process.kill(parseInt(proc.pid), 0);\n        isRunning = true;\n      } catch (e) {\n        isRunning = false;\n      }\n    }\n\n    let lastOutput = '';\n    if (existsSync(proc.logFile)) {\n      const content = readFileSync(proc.logFile, 'utf8');\n      lastOutput = content.slice(-2000);\n    }\n\n    return {\n      exists: true,\n      processId,\n      pid: proc.pid,\n      command: proc.command,\n      isRunning,\n      logFile: proc.logFile,\n      lastOutput,\n      uptime: Date.now() - proc.startTime\n    };\n  }\n\n  /**\n   * 停止进程\n   */\n  stopProcess(processId) {\n    const proc = this.runningProcesses.get(processId);\n    if (!proc || !proc.pid) {\n      return { success: false, error: '进程不存在' };\n    }\n\n    try {\n      process.kill(parseInt(proc.pid), 'SIGTERM');\n      this.runningProcesses.delete(processId);\n      return { success: true, message: `进程 ${proc.pid} 已停止` };\n    } catch (e) {\n      return { success: false, error: e.message };\n    }\n  }\n\n  /**\n   * 读取进程日志\n   */\n  readLog(processId, tail = 100) {\n    const proc = this.runningProcesses.get(processId);\n    const logFile = proc?.logFile || path.join(this.logDir, `${processId}.log`);\n    \n    if (!existsSync(logFile)) {\n      return { success: false, error: '日志文件不存在' };\n    }\n\n    const content = readFileSync(logFile, 'utf8');\n    const lines = content.split('\\n');\n    const lastLines = lines.slice(-tail).join('\\n');\n\n    return {\n      success: true,\n      logFile,\n      lines: lines.length,\n      content: lastLines\n    };\n  }\n\n  /**\n   * 清理旧日志\n   */\n  cleanupLogs(maxAge = 24 * 60 * 60 * 1000) {\n    const now = Date.now();\n    let cleaned = 0;\n    \n    if (!existsSync(this.logDir)) return { cleaned: 0 };\n    \n    const files = require('fs').readdirSync(this.logDir);\n    for (const file of files) {\n      const filePath = path.join(this.logDir, file);\n      const stat = require('fs').statSync(filePath);\n      if (now - stat.mtimeMs > maxAge) {\n        unlinkSync(filePath);\n        cleaned++;\n      }\n    }\n    \n    return { cleaned };\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4987,
+      "timestamp": "2026-02-01T02:45:42.689Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import SelfValidator from './self-validator.js';\nimport GoalManager from './goal-manager.js';",
+            "newText": "import SelfValidator from './self-validator.js';\nimport GoalManager from './goal-manager.js';\nimport AsyncExecutor from './async-executor.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -15,8 +15,9 @@\n import TaskEngine from './task-engine.js';\n import Recorder from './recorder.js';\n import SelfValidator from './self-validator.js';\n import GoalManager from './goal-manager.js';\n+import AsyncExecutor from '.",
+      "error": null
+    },
+    {
+      "id": 4988,
+      "timestamp": "2026-02-01T02:45:51.099Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'const goalManager = new GoalManager' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "608:  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n",
+      "error": null
+    },
+    {
+      "id": 4989,
+      "timestamp": "2026-02-01T02:46:01.090Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  logger.info('[Main] SelfValidator 和 GoalManager 已初始化');",
+            "newText": "  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  const asyncExecutor = new AsyncExecutor(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -605,9 +605,10 @@\n \n   // 初始化自验证器和目标管理器\n   const selfValidator = new SelfValidator(logger, hub);\n   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n-  logger.info('[Main] SelfValidator 和",
+      "error": null
+    },
+    {
+      "id": 4990,
+      "timestamp": "2026-02-01T02:46:09.492Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'validated_execute'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "814:          case 'validated_execute':\n",
+      "error": null
+    },
+    {
+      "id": 4991,
+      "timestamp": "2026-02-01T02:46:18.101Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '814,830p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;",
+      "error": null
+    },
+    {
+      "id": 4992,
+      "timestamp": "2026-02-01T02:46:33.902Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;",
+            "newText": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;\n\n          // ===== 异步命令执行 =====\n          case 'async_execute':\n            {\n              // 异步执行命令（自动后台+日志监控）\n              logger.info(`[WS] 异步执行: ${msg.command?.slice(0, 50)}...`);\n              const result = await asyncExecutor.execute(\n                msg.command,\n                {\n                  forceAsync: msg.forceAsync || false,\n                  timeout: msg.timeout || 30000,\n                  onOutput: (output) => {\n                    // 实时发送输出\n                    ws.send(JSON.stringify({\n                      type: 'async_output',\n                      processId: result?.processId,\n                      output\n                    }));\n                  }\n                }\n              );\n              ws.send(JSON.stringify({\n                type: 'async_result',\n                ...result\n              }));\n            }\n            break;\n\n          case 'async_status':\n            {\n              // 获取异步进程状态\n              const status = asyncExecutor.getProcessStatus(msg.processId);\n              ws.send(JSON.stringify({\n                type: 'async_status_result',\n                ...status\n              }));\n            }\n            break;\n\n          case 'async_stop':\n            {\n              // 停止异步进程\n              const result = asyncExecutor.stopProcess(msg.processId);\n              ws.send(JSON.stringify({\n                type: 'async_stop_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n\n          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -826,8 +826,70 @@\n                 ...result \n               }));\n             }\n             break;\n+\n+          // ===== 异步命令执行 =====\n+          case 'async_execute':\n+            {\n+              // 异步执行命令（自动后台+日志监控）\n+  ",
+      "error": null
+    },
+    {
+      "id": 4993,
+      "timestamp": "2026-02-01T02:46:48.068Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;",
+            "newText": "      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      // ===== 异步命令执行 =====\n      case 'ASYNC_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'async_execute', \n            command: message.command,\n            forceAsync: message.forceAsync,\n            timeout: message.timeout\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_STATUS':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_STOP':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_LOG':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "Could not find exact match for edit:\n      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;",
+      "error": null
+    },
+    {
+      "id": 4994,
+      "timestamp": "2026-02-01T02:46:56.508Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"VALIDATED_EXECUTE\\|REPLAY_RECORDING\" /Users/yay/workspace/genspark-agent/extension/background.js | head -5"
+      },
+      "success": true,
+      "resultPreview": "413:    case 'REPLAY_RECORDING':\n463:    case 'VALIDATED_EXECUTE':\n",
+      "error": null
+    },
+    {
+      "id": 4995,
+      "timestamp": "2026-02-01T02:47:07.699Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '463,480p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====\n    \n    case 'REGISTER_AGENT':\n      if (message.ag",
+      "error": null
+    },
+    {
+      "id": 4996,
+      "timestamp": "2026-02-01T02:47:21.093Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====",
+            "newText": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    // ===== 异步命令执行 =====\n    case 'ASYNC_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'async_execute', \n          command: message.command,\n          forceAsync: message.forceAsync,\n          timeout: message.timeout\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_STATUS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_STOP':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_LOG':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -472,8 +472,50 @@\n       } else {\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n+\n+    // ===== 异步命令执行 =====\n+    case 'ASYNC_EXECUTE':\n+      if (socket && socket.readyS",
+      "error": null
+    },
+    {
+      "id": 4997,
+      "timestamp": "2026-02-01T02:47:30.899Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"goal_created\\|goals_list\" /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "119:      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n121:          data.type === 'goals_list' || data.type === 'validated_result') {\n",
+      "error": null
+    },
+    {
+      "id": 4998,
+      "timestamp": "2026-02-01T02:47:38.099Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '119,130p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果\n      if (data.type === 'reload_tools_result') {\n        if (data.success) {\n          cachedTools = data.tools || [];\n",
+      "error": null
+    },
+    {
+      "id": 4999,
+      "timestamp": "2026-02-01T02:47:48.884Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果",
+            "newText": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n\n      // 异步执行消息\n      if (data.type === 'async_result' || data.type === 'async_output' ||\n          data.type === 'async_status_result' || data.type === 'async_stop_result' ||\n          data.type === 'async_log_result') {\n        console.log('[BG] 异步执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -122,8 +122,17 @@\n         console.log('[BG] 目标执行消息:', data.type);\n         broadcastToAllTabs(data);\n         return;\n       }\n+\n+      // 异步执行消息\n+      if (data.type === 'async_result' || data.type === 'asy",
+      "error": null
+    },
+    {
+      "id": 5000,
+      "timestamp": "2026-02-01T02:48:16.895Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'validated_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        const vr = msg.result;\n        if (vr?.success && vr?.validated) {\n          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');\n        } else if (vr?.success && !vr?.validated) {\n          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');\n        } else {\n          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');\n        }\n        // 生成验证结果摘要\n        const vrSummary = `**[验证执行结果]** ${msg.tool}\\n` +\n          `- 执行: ${vr?.success ? '✓' : '✗'}\\n` +\n          `- 验证: ${vr?.validated ? '✓' : '✗'}\\n` +\n          (vr?.result ? `\\`\\`\\`\\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\\n\\`\\`\\`\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(vrSummary);\n        break;\n\n      // ===== 录制相关 =====",
+            "newText": "      case 'validated_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        const vr = msg.result;\n        if (vr?.success && vr?.validated) {\n          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');\n        } else if (vr?.success && !vr?.validated) {\n          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');\n        } else {\n          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');\n        }\n        // 生成验证结果摘要\n        const vrSummary = `**[验证执行结果]** ${msg.tool}\\n` +\n          `- 执行: ${vr?.success ? '✓' : '✗'}\\n` +\n          `- 验证: ${vr?.validated ? '✓' : '✗'}\\n` +\n          (vr?.result ? `\\`\\`\\`\\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\\n\\`\\`\\`\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(vrSummary);\n        break;\n\n      // ===== 异步命令执行 =====\n      case 'async_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          const modeText = msg.mode === 'async' ? ' (后台)' : '';\n          addLog(`✅ 命令执行成功${modeText}`, 'success');\n          if (msg.processId) {\n            addLog(`📋 进程ID: ${msg.processId}`, 'info');\n          }\n        } else {\n          addLog(`❌ 命令执行失败: ${msg.error}`, 'error');\n          if (msg.suggestion) {\n            addLog(`💡 建议: ${msg.suggestion}`, 'info');\n          }\n        }\n        // 生成异步结果摘要\n        const asyncSummary = `**[命令执行结果]** ${msg.success ? '✓ 成功' : '✗ 失败'}${msg.mode === 'async' ? ' (后台模式)' : ''}\\n` +\n          (msg.processId ? `- 进程ID: ${msg.processId}\\n` : '') +\n          (msg.logFile ? `- 日志文件: ${msg.logFile}\\n` : '') +\n          (msg.warning ? `- ⚠️ ${msg.warning}\\n` : '') +\n          (msg.output ? `\\`\\`\\`\\n${msg.output.slice(-2000)}\\n\\`\\`\\`\\n` : '') +\n          (msg.error ? `- 错误: ${msg.error}\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(asyncSummary);\n        break;\n\n      case 'async_output':\n        // 实时输出，仅记录日志\n        if (msg.output) {\n          addLog(`📤 ${msg.output.slice(0, 200)}`, 'info');\n        }\n        break;\n\n      case 'async_status_result':\n        if (msg.exists) {\n          addLog(`📊 进程 ${msg.processId}: ${msg.isRunning ? '运行中' : '已停止'}`, msg.isRunning ? 'success' : 'info');\n        } else {\n          addLog(`⚠️ 进程不存在: ${msg.processId}`, 'warning');\n        }\n        break;\n\n      case 'async_stop_result':\n        if (msg.success) {\n          addLog(`⏹️ 进程已停止: ${msg.processId}`, 'success');\n        } else {\n          addLog(`❌ 停止失败: ${msg.error}`, 'error');\n        }\n        break;\n\n      case 'async_log_result':\n        if (msg.success) {\n          addLog(`📋 日志 (${msg.lines} 行)`, 'info');\n          const logSummary = `**[进程日志]** ${msg.processId}\\n` +\n            `- 文件: ${msg.logFile}\\n` +\n            `- 总行数: ${msg.lines}\\n` +\n            `\\`\\`\\`\\n${msg.content?.slice(-3000) || '(空)'}\\n\\`\\`\\`\\n` +\n            `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n          sendMessageToAI(logSummary);\n        } else {\n          addLog(`❌ 读取日志失败: ${msg.error}`, 'error');\n        }\n        break;\n\n      // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1697,8 +1697,73 @@\n           `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n         sendMessageToAI(vrSummary);\n         break;\n \n+      // ===== 异步命令执行 =====\n+      case 'async_result':\n+        state.agentRunning = false;\n+   ",
+      "error": null
     }
   ],
-  "nextId": 4981
+  "nextId": 5001
 }
