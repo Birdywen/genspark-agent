@@ -5064,7 +5064,214 @@
       "success": true,
       "resultPreview": "已添加启动日志\n",
       "error": null
+    },
+    {
+      "id": 5380,
+      "timestamp": "2026-02-01T12:29:42.377Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git status"
+      },
+      "success": true,
+      "resultPreview": "On branch main\nYour branch is up to date with 'origin/main'.\n\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n\tmodified:   extension/content.js\n\tmodified:   server-v2/command-history.json\n\tmodified:   server-v2/history-archives/archive-2026-02-01.json\n\tmodified:   server-v2/index.js\n\tmodified:   server-v2/recorder.js\n\tnew file:   \"server-v2/recordings/\\346\\243\\200\\346\\237\\245\\346\\234\\215\\345\\212\\241.json\"\n\n",
+      "error": null
+    },
+    {
+      "id": 5381,
+      "timestamp": "2026-02-01T12:29:53.459Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git commit -m 'v1.0.46 录制功能增强: 参数化+循环回放\n\n- recorder.js: 支持变量替换和foreach循环\n- 扩展: 添加@REC快捷命令(start/stop/list/play)\n- 修复录制ID使用名称而非随机ID\n- 修复replay_complete显示统计'"
+      },
+      "success": true,
+      "resultPreview": "[main d0d6fea] v1.0.46 录制功能增强: 参数化+循环回放\n 6 files changed, 3600 insertions(+), 2374 deletions(-)\n create mode 100644 \"server-v2/recordings/\\346\\243\\200\\346\\237\\245\\346\\234\\215\\345\\212\\241.json\"\n",
+      "error": null
+    },
+    {
+      "id": 5382,
+      "timestamp": "2026-02-01T12:30:02.347Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git push"
+      },
+      "success": true,
+      "resultPreview": "To https://github.com/Birdywen/genspark-agent.git\n   d58f23b..d0d6fea  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 5383,
+      "timestamp": "2026-02-01T12:30:12.388Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'v1.0.46 录制功能增强: @REC命令+参数化+循环回放(待测试扩展加载问题)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: v1.0.46 录制功能增强: @REC命令+参数化+循环回放(待测试扩展加载问题)\n",
+      "error": null
+    },
+    {
+      "id": 5384,
+      "timestamp": "2026-02-01T12:32:20.771Z",
+      "tool": "run_command",
+      "params": {},
+      "success": true,
+      "resultPreview": "Command is required, current value: undefined",
+      "error": null
+    },
+    {
+      "id": 5385,
+      "timestamp": "2026-02-01T12:34:31.369Z",
+      "tool": "run_command",
+      "params": {},
+      "success": true,
+      "resultPreview": "Command is required, current value: undefined",
+      "error": null
+    },
+    {
+      "id": 5386,
+      "timestamp": "2026-02-01T12:35:07.767Z",
+      "tool": "run_command",
+      "params": {},
+      "success": true,
+      "resultPreview": "Command is required, current value: undefined",
+      "error": null
+    },
+    {
+      "id": 5387,
+      "timestamp": "2026-02-01T12:39:41.052Z",
+      "tool": "run_command",
+      "params": {},
+      "success": true,
+      "resultPreview": "Command is required, current value: undefined",
+      "error": null
+    },
+    {
+      "id": 5388,
+      "timestamp": "2026-02-01T12:41:29.950Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T12:41\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- v1.0.43 第三阶段完成: TaskPlanner智能规划 + WorkflowTemplate工作流模板(6个内置) + CheckpointManager断点",
+      "error": null
+    },
+    {
+      "id": 5389,
+      "timestamp": "2026-02-01T12:42:59.085Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T12:42\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- v1.0.43 第三阶段完成: TaskPlanner智能规划 + WorkflowTemplate工作流模板(6个内置) + CheckpointManager断点",
+      "error": null
+    },
+    {
+      "id": 5390,
+      "timestamp": "2026-02-01T12:43:55.965Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T12:43\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- v1.0.43 第三阶段完成: TaskPlanner智能规划 + WorkflowTemplate工作流模板(6个内置) + CheckpointManager断点",
+      "error": null
+    },
+    {
+      "id": 5391,
+      "timestamp": "2026-02-01T12:45:47.746Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T12:45\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- v1.0.43 第三阶段完成: TaskPlanner智能规划 + WorkflowTemplate工作流模板(6个内置) + CheckpointManager断点",
+      "error": null
+    },
+    {
+      "id": 5392,
+      "timestamp": "2026-02-01T12:47:37.904Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1638,1650p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    \n    document.addEventListener('mousemove', (e) => {\n      if (!isDragging) return;\n      el.style.left = (startLeft + e.clientX - startX) + 'px';\n      el.style.bottom = (startBottom - e.clientY + startY) + 'px';\n      el.style.right = 'auto';\n    });\n    \n    document.addEventListener('mouseup', () => { isDragging = false; });\n  }\n\n  function updateStatus() {\n    const el = document.getElementById('agent-status');\n",
+      "error": null
+    },
+    {
+      "id": 5393,
+      "timestamp": "2026-02-01T12:47:48.284Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'Ω{\"tool\"' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "165:Ω{\"tool\":\"工具名\",\"params\":{\"参数\":\"值\"}}\n200:Ω{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent\"}}\n2319:      sendMessageSafe(`检查是否有分配给我的任务：\\n\\`\\`\\`\\nΩ{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}\"}}\\n\\`\\`\\``);\n",
+      "error": null
+    },
+    {
+      "id": 5394,
+      "timestamp": "2026-02-01T12:47:56.278Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '636,680p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    // ========== ΩPLAN ==========\n    const planData = extractBalancedJson(text, 'ΩPLAN');\n    if (planData && !state.executedCalls.has('plan:' + planData.start)) {\n      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);\n      if (!beforePlan.includes('格式') && !beforePlan.includes('示例')) {\n        try {\n          const plan = safeJsonParse(planData.json);\n          if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planDa",
+      "error": null
+    },
+    {
+      "id": 5395,
+      "timestamp": "2026-02-01T12:48:06.675Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '680,720p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    const toolCalls = [];\n    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\s*\\{\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }\n      const extracted = extractJsonFromText(text, idx + marker.length);\n      if (extrac",
+      "error": null
+    },
+    {
+      "id": 5396,
+      "timestamp": "2026-02-01T12:48:19.782Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "    const toolCalls = [];\n    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\s*\\{\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }",
+            "newText": "    const toolCalls = [];\n    let searchStart = 0;\n    while (true) {\n      const marker = 'Ω';\n      const idx = text.indexOf(marker, searchStart);\n      if (idx === -1) break;\n      \n      // 检查前面100字符是否包含示例关键词\n      const beforeMarker = text.substring(Math.max(0, idx - 100), idx);\n      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用/.test(beforeMarker);\n      if (isExample) {\n        searchStart = idx + marker.length;\n        continue;\n      }\n      \n      // 检查是否紧跟 {\"tool\":\n      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);\n      if (!afterMarker.match(/^\\s*\\{\\s*\"tool\"/)) {\n        searchStart = idx + marker.length;\n        continue;\n      }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -682,8 +682,17 @@\n     while (true) {\n       const marker = 'Ω';\n       const idx = text.indexOf(marker, searchStart);\n       if (idx === -1) break;\n+      \n+      // 检查前面100字符是否包含示例关键词\n+      const beforeMarker = tex",
+      "error": null
+    },
+    {
+      "id": 5397,
+      "timestamp": "2026-02-01T12:48:27.282Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'ΩBATCH' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "171:ΩBATCH{\"steps\":[{\"tool\":\"t1\",\"params\":{}},{\"tool\":\"t2\",\"params\":{}}]}\n606:    // 优先检查 ΩBATCH 批量格式\n607:    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n610:      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n631:          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);\n1271:      '支持批量执行: ΩBATCH{\"steps\":[...]}',\n",
+      "error": null
+    },
+    {
+      "id": 5398,
+      "timestamp": "2026-02-01T12:48:34.277Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '606,640p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n                        beforeBatch.includes('示例') || before",
+      "error": null
     }
   ],
-  "nextId": 5380
+  "nextId": 5399
 }
