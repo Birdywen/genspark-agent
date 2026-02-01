@@ -1,1147 +1,6 @@
 {
   "history": [
     {
-      "id": 5042,
-      "timestamp": "2026-02-01T03:34:39.788Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '23,50p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "\n  const state = {\n    wsConnected: false,\n    agentRunning: false,\n    availableTools: [],\n    availableSkills: [],\n    skillsPrompt: \"\",\n    executedCalls: new Set(),\n    pendingCalls: new Map(),\n    lastMessageText: '',\n    lastStableTime: 0,\n    execTimer: null,\n    execStartTime: 0,\n    // 消息队列\n    messageQueue: [],\n    isProcessingQueue: false,\n    roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),\n    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null\n  };\n\n  \n  // 改进的 JSON ",
-      "error": null
-    },
-    {
-      "id": 5043,
-      "timestamp": "2026-02-01T03:35:01.186Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null\n  };",
-            "newText": "    // 本地命令缓存（用于发送失败时重试）\n    lastToolCall: null,\n    // 批量任务状态\n    batchResults: [],\n    currentBatchId: null,\n    currentBatchTotal: 0,\n    // 统计\n    totalCalls: 0,\n    sessionStart: Date.now()\n  };\n\n  // 加载面板增强模块\n  function loadPanelEnhancer() {\n    const script = document.createElement('script');\n    script.src = chrome.runtime.getURL('panel-enhancer.js');\n    script.onload = () => {\n      if (window.PanelEnhancer) {\n        window.PanelEnhancer.init();\n        console.log('[Agent] PanelEnhancer 已加载');\n      }\n    };\n    document.head.appendChild(script);\n  }"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -37,11 +37,31 @@\n     messageQueue: [],\n     isProcessingQueue: false,\n     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),\n     // 本地命令缓存（用于发送失败时重试）\n-    lastToolCall: null\n+    lastToolCall: ",
-      "error": null
-    },
-    {
-      "id": 5044,
-      "timestamp": "2026-02-01T03:35:19.784Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'web_accessible_resources' /Users/yay/workspace/genspark-agent/extension/manifest.json"
-      },
-      "success": true,
-      "resultPreview": "1",
-      "error": null
-    },
-    {
-      "id": 5045,
-      "timestamp": "2026-02-01T03:35:39.154Z",
-      "tool": "read_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/manifest.json"
-      },
-      "success": true,
-      "resultPreview": "{\n  \"manifest_version\": 3,\n  \"name\": \"Genspark Agent Bridge\",\n  \"version\": \"1.0.41\",\n  \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n  \"permissions\": [\n    \"activeTab\",\n    \"storage\",\n    \"scripting\"\n  ],\n  \"host_permissions\": [\n    \"https://www.genspark.ai/*\"\n  ],\n  \"background\": {\n    \"service_worker\": \"background.js\"\n  },\n  \"content_scripts\": [\n    {\n      \"matches\": [\"https://www.genspark.ai/agents*\"],\n      \"js\": [\"content.js\"],\n      \"css\": [\"styles.css\"],\n      \"run_at\": \"document_idl",
-      "error": null
-    },
-    {
-      "id": 5046,
-      "timestamp": "2026-02-01T03:35:58.362Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/manifest.json",
-        "edits": [
-          {
-            "oldText": "  \"icons\": {\n    \"16\": \"icons/icon16.png\",\n    \"48\": \"icons/icon48.png\",\n    \"128\": \"icons/icon128.png\"\n  }\n}",
-            "newText": "  \"icons\": {\n    \"16\": \"icons/icon16.png\",\n    \"48\": \"icons/icon48.png\",\n    \"128\": \"icons/icon128.png\"\n  },\n  \"web_accessible_resources\": [\n    {\n      \"resources\": [\"panel-enhancer.js\"],\n      \"matches\": [\"https://www.genspark.ai/*\"]\n    }\n  ]\n}"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/manifest.json\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/manifest.json\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/manifest.json\tmodified\n@@ -25,6 +25,12 @@\n   \"icons\": {\n     \"16\": \"icons/icon16.png\",\n     \"48\": \"icons/icon48.png\",\n     \"128\": \"icons/icon128.png\"\n-  }\n+  },\n+  \"web_accessible_resources\": [\n+    {\n+      \"resources\": [\"panel-enhan",
-      "error": null
-    },
-    {
-      "id": 5047,
-      "timestamp": "2026-02-01T03:36:18.998Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'function executeBatchCall' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "825:  function executeBatchCall(batch, callHash) {\n",
-      "error": null
-    },
-    {
-      "id": 5048,
-      "timestamp": "2026-02-01T03:36:39.390Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '825,880p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "  function executeBatchCall(batch, callHash) {\n    const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\n    \n    state.agentRunning = true;\n    state.executedCalls.add(callHash);\n    showExecutingIndicator(`批量 (${batch.steps.length} 步)`);\n    updateStatus();\n    \n    addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');\n    \n    chrome.runtime.sendMessage({\n      type: 'TOOL_BATCH',\n      batchId: batchId,\n      steps: batch.steps,\n      options: batch.options || { ",
-      "error": null
-    },
-    {
-      "id": 5049,
-      "timestamp": "2026-02-01T03:37:07.786Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "  function executeBatchCall(batch, callHash) {\n    const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\n    \n    state.agentRunning = true;\n    state.executedCalls.add(callHash);\n    showExecutingIndicator(`批量 (${batch.steps.length} 步)`);\n    updateStatus();\n    \n    addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');\n    \n    chrome.runtime.sendMessage({\n      type: 'TOOL_BATCH',\n      batchId: batchId,\n      steps: batch.steps,\n      options: batch.options || { stopOnError: true }\n    }, (response) => {\n      if (chrome.runtime.lastError) {\n        addLog(`❌ 批量发送失败: ${chrome.runtime.lastError.message}`, 'error');\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n      } else if (response?.success) {\n        addLog(`📤 批量任务已提交: ${response.batchId}`, 'info');\n      } else {\n        addLog('❌ 批量任务提交失败', 'error');\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n      }\n    });\n  }",
-            "newText": "  function executeBatchCall(batch, callHash) {\n    const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\n    \n    state.agentRunning = true;\n    state.executedCalls.add(callHash);\n    state.batchResults = [];  // 重置批量结果\n    state.currentBatchId = batchId;\n    state.currentBatchTotal = batch.steps.length;\n    \n    showExecutingIndicator(`批量 (${batch.steps.length} 步)`);\n    updateStatus();\n    \n    // 显示进度条\n    if (window.PanelEnhancer) {\n      window.PanelEnhancer.showBatchProgress(batchId, batch.steps.length);\n    }\n    \n    addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');\n    \n    chrome.runtime.sendMessage({\n      type: 'SEND_TO_SERVER',\n      payload: {\n        type: 'tool_batch',\n        id: batchId,\n        steps: batch.steps,\n        options: batch.options || { stopOnError: true }\n      }\n    }, (response) => {\n      if (chrome.runtime.lastError) {\n        addLog(`❌ 批量发送失败: ${chrome.runtime.lastError.message}`, 'error');\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();\n      } else if (response?.success) {\n        addLog(`📤 批量任务已提交: ${batchId}`, 'info');\n      } else {\n        addLog('❌ 批量任务提交失败', 'error');\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();\n      }\n    });\n  }"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -826,31 +826,45 @@\n     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;\n     \n     state.agentRunning = true;\n     state.executedCalls.add(callHash);\n+    state.batchResults = [];  // ",
-      "error": null
-    },
-    {
-      "id": 5050,
-      "timestamp": "2026-02-01T03:37:33.181Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "      case 'batch_step_result':\n        if (msg.success) {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');\n          // 存储结果供汇总使用\n          if (!state.batchResults) state.batchResults = [];\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: true,\n            result: msg.result\n          });\n        } else if (msg.skipped) {\n          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');\n        } else {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');\n          if (!state.batchResults) state.batchResults = [];\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: false,\n            error: msg.error\n          });\n        }\n        break;",
-            "newText": "      case 'batch_step_result':\n        state.totalCalls++;  // 统计调用次数\n        if (msg.success) {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: true,\n            result: msg.result\n          });\n          // 更新进度条\n          if (window.PanelEnhancer) {\n            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'success', msg.tool);\n            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal);\n          }\n        } else if (msg.skipped) {\n          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');\n          if (window.PanelEnhancer) {\n            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'skipped', msg.tool);\n          }\n        } else {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: false,\n            error: msg.error\n          });\n          // 更新进度条（错误状态）\n          if (window.PanelEnhancer) {\n            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'error', msg.tool);\n            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal, true);\n          }\n        }\n        break;"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1604,29 +1604,40 @@\n         break;\n \n       // ===== 批量任务消息 =====\n       case 'batch_step_result':\n+        state.totalCalls++;  // 统计调用次数\n         if (msg.success) {\n           addLog(`📦 步骤${msg.stepIndex}: ${msg.",
-      "error": null
-    },
-    {
-      "id": 5051,
-      "timestamp": "2026-02-01T03:37:52.800Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '1645,1665p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }\n        // 生成包含详细结果的汇总\n        let detailedResults = '';\n        if (state.batchResults && state.batchResults.length > 0) {\n          detailedResults = state.batchResults.map((r, i) => {\n       ",
-      "error": null
-    },
-    {
-      "id": 5052,
-      "timestamp": "2026-02-01T03:38:14.009Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }",
-            "newText": "        hideExecutingIndicator();\n        updateStatus();\n        // 隐藏进度条\n        if (window.PanelEnhancer) {\n          window.PanelEnhancer.hideProgress();\n          // 显示 Toast 通知\n          if (msg.success) {\n            window.PanelEnhancer.showToast(`批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');\n          } else {\n            window.PanelEnhancer.showToast(`批量任务部分失败: ${msg.stepsFailed} 个错误`, 'error');\n          }\n        }\n        if (msg.success) {\n          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n        } else {\n          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');\n        }"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1643,8 +1643,18 @@\n       case 'batch_complete':\n         state.agentRunning = false;\n         hideExecutingIndicator();\n         updateStatus();\n+        // 隐藏进度条\n+        if (window.PanelEnhancer) {\n+          wind",
-      "error": null
-    },
-    {
-      "id": 5053,
-      "timestamp": "2026-02-01T03:38:32.806Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'function init()\\|function initialize' /Users/yay/workspace/genspark-agent/extension/content.js | head -3"
-      },
-      "success": true,
-      "resultPreview": "2133:  function init() {\n",
-      "error": null
-    },
-    {
-      "id": 5054,
-      "timestamp": "2026-02-01T03:38:50.799Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '2133,2160p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "  function init() {\n    log('初始化 Agent v34 (Genspark)');\n    \n    createPanel();\n\n    setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);\n    \n    // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）\n    let lastCheckedUserMsgCount = 0;\n    setInterval(() => {\n      const userMessages = document.querySelectorAll('.conversation-statement.user');\n      if (userMessages.length > lastCheckedUserMsgCount) {\n        const lastUserMsg = userMessages[userMessages.length - 1];\n        const text = lastUserMsg.",
-      "error": null
-    },
-    {
-      "id": 5055,
-      "timestamp": "2026-02-01T03:39:11.783Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
-        "edits": [
-          {
-            "oldText": "  function init() {\n    log('初始化 Agent v34 (Genspark)');\n    \n    createPanel();\n\n    setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);",
-            "newText": "  function init() {\n    log('初始化 Agent v34 (Genspark)');\n    \n    createPanel();\n    \n    // 加载面板增强模块\n    loadPanelEnhancer();\n\n    setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);"
-          }
-        ]
-      },
-      "success": true,
-      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -2133,8 +2133,11 @@\n   function init() {\n     log('初始化 Agent v34 (Genspark)');\n     \n     createPanel();\n+    \n+    // 加载面板增强模块\n+    loadPanelEnhancer();\n \n     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);\n   ",
-      "error": null
-    },
-    {
-      "id": 5056,
-      "timestamp": "2026-02-01T03:39:37.728Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.41\"/\"version\": \"1.0.42\"/' extension/manifest.json && git add -A && git commit -m 'feat: 第二阶段 - 上下文压缩 + 可视化面板增强\n\n新增模块:\n- context-compressor.js: 长对话自动总结压缩\n- panel-enhancer.js: 进度条、状态面板、Toast通知\n\n上下文压缩功能:\n- 超过阈值自动压缩旧消息\n- 提取里程碑、任务、文件、错误等关键信息\n- 保留最近N条完整消息\n- 工具结果智能摘要\n\n可视化增强:\n- 批量任务进度条\n- 步骤状态实时更新\n- 状态面板(工具数/调用数/缓存率/运行时间)\n- Toast通知\n- 目标进度显示\n\nversion: 1.0.41 -> 1.0.42'"
-      },
-      "success": true,
-      "resultPreview": "[main f1a9be3] feat: 第二阶段 - 上下文压缩 + 可视化面板增强\n 7 files changed, 2300 insertions(+), 1139 deletions(-)\n create mode 100644 extension/panel-enhancer.js\n create mode 100644 server-v2/context-compressor.js\n",
-      "error": null
-    },
-    {
-      "id": 5057,
-      "timestamp": "2026-02-01T03:39:55.971Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '第二阶段完成: 上下文压缩ContextCompressor + 可视化面板PanelEnhancer (v1.0.42)'"
-      },
-      "success": true,
-      "resultPreview": "里程碑已添加: 第二阶段完成: 上下文压缩ContextCompressor + 可视化面板PanelEnhancer (v1.0.42)\n",
-      "error": null
-    },
-    {
-      "id": 5058,
-      "timestamp": "2026-02-01T03:42:19.645Z",
-      "tool": "run_command",
-      "params": {
-        "command": "lsof -i :8765 2>/dev/null | head -3 && grep -E 'SUCCESS|初始化' /tmp/server.log | tail -8"
-      },
-      "success": true,
-      "resultPreview": "COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nGenspark  17559  yay   26u  IPv6 0xaebda9dbfba06722      0t0  TCP localhost:60012->localhost:ultraseek-http (ESTABLISHED)\nnode      17563  yay   34u  IPv6 0x397696ca779059e7      0t0  TCP localhost:ultraseek-http (LISTEN)\n\u001b[32m[03:40:46] [SUCCESS]\u001b[0m [ssh-oracle] 就绪, 2 个工具\n\u001b[32m[03:40:51] [SUCCESS]\u001b[0m [ssh-cpanel] 就绪, 2 个工具\n\u001b[32m[03:40:51] [SUCCESS]\u001b[0m MCP Hub 就绪, 总工具数: 67\n\u001b[36m[03:40:51] [INFO]\u001b[0m [Main] TaskEngine 已初始化\n",
-      "error": null
-    },
-    {
-      "id": 5059,
-      "timestamp": "2026-02-01T03:44:31.529Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'v1.0.42完整功能: ΩBATCH批量执行、闭环自验证、目标驱动、异步执行、错误自愈、结果缓存、上下文压缩、可视化面板' && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "里程碑已添加: v1.0.42完整功能: ΩBATCH批量执行、闭环自验证、目标驱动、异步执行、错误自愈、结果缓存、上下文压缩、可视化面板\n# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:44\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: Self",
-      "error": null
-    },
-    {
-      "id": 5060,
-      "timestamp": "2026-02-01T03:44:53.446Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:44\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5061,
-      "timestamp": "2026-02-01T03:45:16.672Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:45\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5062,
-      "timestamp": "2026-02-01T03:45:16.822Z",
-      "tool": "run_command",
-      "params": {
-        "command": "ps aux | grep 'node.*index.js' | grep -v grep"
-      },
-      "success": true,
-      "resultPreview": "yay              17563   1.9  0.6 435766304  53168 s000  S    10:40PM   0:00.36 node index.js\n",
-      "error": null
-    },
-    {
-      "id": 5063,
-      "timestamp": "2026-02-01T03:45:47.272Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && node index.js &"
-      },
-      "success": true,
-      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:45:17] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:45:17] [INFO]\u001b[0m 加载了 425 条历史记录\n\u001b[36m[03:45:17] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:45:19] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdio\n\u001b[33m[03:45:22] [WARNING]\u001b[0m [filesystem] stderr: Client",
-      "error": null
-    },
-    {
-      "id": 5064,
-      "timestamp": "2026-02-01T03:47:06.277Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:47\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5065,
-      "timestamp": "2026-02-01T03:47:28.455Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:47\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5066,
-      "timestamp": "2026-02-01T03:47:47.660Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T03:47\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5067,
-      "timestamp": "2026-02-01T03:49:17.399Z",
-      "tool": "run_command",
-      "params": {},
-      "success": true,
-      "resultPreview": "Command is required, current value: undefined",
-      "error": null
-    },
-    {
-      "id": 5068,
-      "timestamp": "2026-02-01T04:00:43.042Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo 'Hello from Claude - testing genspark-agent connection'"
-      },
-      "success": true,
-      "resultPreview": "Hello from Claude - testing genspark-agent connection\n",
-      "error": null
-    },
-    {
-      "id": 5069,
-      "timestamp": "2026-02-01T04:00:49.420Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T04:00\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5070,
-      "timestamp": "2026-02-01T04:01:50.410Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /Users/yay/workspace/TODO.md << 'EOF'\n# 第三阶段开发 - genspark-agent v1.0.43\n\n## 目标\n实现智能任务规划、工作流模板、断点续传三大功能\n\n## 任务清单\n\n### 1. 智能任务规划器 (TaskPlanner)\n- [ ] 任务分解算法 - 将复杂任务拆分为原子操作\n- [ ] 依赖图构建 - DAG 拓扑排序\n- [ ] 并行度分析 - 识别可并行执行的步骤\n- [ ] 优先级调度 - 基于依赖和资源的调度\n\n### 2. 工作流模板引擎 (WorkflowTemplate)\n- [ ] YAML/JSON 模板定义格式\n- [ ] 变量插值和表达式求值\n- [ ] 条件分支和循环支持\n- [ ] 内置模板库 (部署、备份、测试等)\n\n### 3. 断点续传系统 (CheckpointManager)\n- [ ] 状态持久化到磁盘\n- [ ] 检查点自动创建\n- [ ] 任务恢复机制\n- [ ] 幂等性保证\n\n### 4. 集成与测试\n- [ ] 集成到 index.js 主入口\n- [ ] 添加 ΩPLAN / ΩFLOW / ΩRESUME 命令\n- [ ] 端到端测试\n\n## 时间线\n开始: 2026-02-01\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5071,
-      "timestamp": "2026-02-01T04:02:41.220Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/task-planner.js << 'EOF'\n// Task Planner - 智能任务规划器\n// 任务分解 → 依赖分析 → 并行优化 → 调度执行\n\nimport { writeFileSync, readFileSync, existsSync } from 'fs';\nimport path from 'path';\n\n/**\n * 任务节点类型\n */\nconst NodeType = {\n  ATOMIC: 'atomic',      // 原子操作\n  COMPOSITE: 'composite', // 复合任务\n  CONDITION: 'condition', // 条件分支\n  PARALLEL: 'parallel',   // 并行组\n  SEQUENCE: 'sequence'    // 顺序组\n};\n\n/**\n * 任务模式库 - 常见任务的分解模式\n */\nconst TaskPatterns = {\n  // 文件操作模式\n  'file:copy': {\n    pattern: /复制.*文件|copy.*file/i,\n    decompose: (params) => [\n      { tool: 'read_file', params: { path: params.source } },\n      { tool: 'write_file', params: { path: params.target, content: '${step0.result}' } }\n    ]\n  },\n  \n  // 部署模式\n  'deploy:basic': {\n    pattern: /部署|deploy/i,\n    decompose: (params) => [\n      { tool: 'run_command', params: { command: 'git pull' }, saveAs: 'pull' },\n      { tool: 'run_command', params: { command: 'npm install' }, saveAs: 'install', dependsOn: ['pull'] },\n      { tool: 'run_command', params: { command: 'npm run build' }, saveAs: 'build', dependsOn: ['install'] },\n      { tool: 'run_command', params: { command: 'pm2 restart all' }, dependsOn: ['build'] }\n    ]\n  },\n  \n  // 备份模式\n  'backup:database': {\n    pattern: /备份.*数据库|backup.*db/i,\n    decompose: (params) => [\n      { tool: 'run_command', params: { command: `mysqldump ${params.database} > backup_$(date +%Y%m%d).sql` } },\n      { tool: 'run_command', params: { command: 'gzip backup_*.sql' } }\n    ]\n  },\n  \n  // 批量文件处理\n  'batch:files': {\n    pattern: /批量.*文件|batch.*files/i,\n    decompose: (params) => {\n      const files = params.files || [];\n      return files.map((f, i) => ({\n        tool: params.operation || 'read_file',\n        params: { path: f },\n        saveAs: `file${i}`,\n        parallel: true  // 标记可并行\n      }));\n    }\n  }\n};\n\n/**\n * 智能任务规划器\n */\nclass TaskPlanner {\n  constructor(logger, stateManager) {\n    this.logger = logger;\n    this.stateManager = stateManager;\n    this.patterns = { ...TaskPatterns };\n    this.planCache = new Map();\n  }\n  \n  /**\n   * 注册自定义任务模式\n   */\n  registerPattern(name, pattern) {\n    this.patterns[name] = pattern;\n    this.logger.info(`[TaskPlanner] 注册模式: ${name}`);\n  }\n  \n  /**\n   * 分析任务并生成执行计划\n   * @param {string} taskDescription - 任务描述或结构化任务\n   * @param {object} context - 上下文信息\n   * @returns {object} 执行计划\n   */\n  analyze(taskDescription, context = {}) {\n    this.logger.info(`[TaskPlanner] 分析任务: ${typeof taskDescription === 'string' ? taskDescription : JSON.stringify(taskDescription)}`);\n    \n    // 如果已经是结构化的步骤数组，直接优化\n    if (Array.isArray(taskDescription)) {\n      return this._optimizePlan(taskDescription, context);\n    }\n    \n    // 如果是对象格式的任务定义\n    if (typeof taskDescription === 'object' && taskDescription.steps) {\n      return this._optimizePlan(taskDescription.steps, context);\n    }\n    \n    // 文本描述 - 尝试匹配模式\n    if (typeof taskDescription === 'string') {\n      const matched = this._matchPattern(taskDescription);\n      if (matched) {\n        const steps = matched.decompose(context);\n        return this._optimizePlan(steps, context);\n      }\n      \n      // 无法识别的描述\n      return {\n        success: false,\n        error: '无法识别的任务描述，请提供结构化的步骤或使用已知模式',\n        suggestions: Object.keys(this.patterns)\n      };\n    }\n    \n    return { success: false, error: '无效的任务格式' };\n  }\n  \n  /**\n   * 匹配任务模式\n   */\n  _matchPattern(description) {\n    for (const [name, pattern] of Object.entries(this.patterns)) {\n      if (pattern.pattern && pattern.pattern.test(description)) {\n        this.logger.info(`[TaskPlanner] 匹配模式: ${name}`);\n        return pattern;\n      }\n    }\n    return null;\n  }\n  \n  /**\n   * 优化执行计划\n   * - 构建依赖图\n   * - 识别并行机会\n   * - 生成最优执行顺序\n   */\n  _optimizePlan(steps, context) {\n    // 1. 构建依赖图\n    const graph = this._buildDependencyGraph(steps);\n    \n    // 2. 拓扑排序\n    const sorted = this._topologicalSort(graph);\n    if (!sorted.success) {\n      return sorted; // 返回循环依赖错误\n    }\n    \n    // 3. 计算并行层级\n    const levels = this._computeParallelLevels(steps, graph);\n    \n    // 4. 生成优化后的计划\n    const plan = {\n      success: true,\n      id: `plan_${Date.now()}`,\n      originalSteps: steps.length,\n      optimizedLevels: levels.length,\n      parallelizable: levels.some(l => l.length > 1),\n      levels: levels,\n      executionOrder: sorted.order,\n      graph: graph,\n      estimatedTime: this._estimateTime(levels),\n      metadata: {\n        createdAt: new Date().toISOString(),\n        context\n      }\n    };\n    \n    this.planCache.set(plan.id, plan);\n    this.logger.info(`[TaskPlanner] 生成计划: ${plan.id}, ${levels.length} 层, 可并行: ${plan.parallelizable}`);\n    \n    return plan;\n  }\n  \n  /**\n   * 构建依赖图\n   */\n  _buildDependencyGraph(steps) {\n    const graph = {\n      nodes: [],\n      edges: [],\n      adjacency: {},\n      inDegree: {}\n    };\n    \n    // 创建节点\n    steps.forEach((step, index) => {\n      const nodeId = step.id || `step${index}`;\n      graph.nodes.push({\n        id: nodeId,\n        index,\n        step,\n        parallel: step.parallel || false\n      });\n      graph.adjacency[nodeId] = [];\n      graph.inDegree[nodeId] = 0;\n    });\n    \n    // 创建边 (依赖关系)\n    steps.forEach((step, index) => {\n      const nodeId = step.id || `step${index}`;\n      const deps = step.dependsOn || [];\n      \n      deps.forEach(depId => {\n        // 支持索引引用 (如 \"step0\") 或 ID 引用\n        let resolvedDep = depId;\n        if (typeof depId === 'number') {\n          resolvedDep = `step${depId}`;\n        }\n        \n        if (graph.adjacency[resolvedDep]) {\n          graph.edges.push({ from: resolvedDep, to: nodeId });\n          graph.adjacency[resolvedDep].push(nodeId);\n          graph.inDegree[nodeId]++;\n        }\n      });\n      \n      // 如果没有显式依赖且不是并行任务，默认依赖前一个\n      if (deps.length === 0 && !step.parallel && index > 0) {\n        const prevId = steps[index - 1].id || `step${index - 1}`;\n        // 只有当前一个也不是并行任务时才添加默认依赖\n        if (!steps[index - 1].parallel) {\n          graph.edges.push({ from: prevId, to: nodeId, implicit: true });\n          graph.adjacency[prevId].push(nodeId);\n          graph.inDegree[nodeId]++;\n        }\n      }\n    });\n    \n    return graph;\n  }\n  \n  /**\n   * 拓扑排序 (Kahn 算法)\n   */\n  _topologicalSort(graph) {\n    const inDegree = { ...graph.inDegree };\n    const queue = [];\n    const order = [];\n    \n    // 找出所有入度为 0 的节点\n    for (const nodeId of Object.keys(inDegree)) {\n      if (inDegree[nodeId] === 0) {\n        queue.push(nodeId);\n      }\n    }\n    \n    while (queue.length > 0) {\n      const current = queue.shift();\n      order.push(current);\n      \n      for (const neighbor of graph.adjacency[current]) {\n        inDegree[neighbor]--;\n        if (inDegree[neighbor] === 0) {\n          queue.push(neighbor);\n        }\n      }\n    }\n    \n    // 检查是否有循环依赖\n    if (order.length !== graph.nodes.length) {\n      return {\n        success: false,\n        error: '检测到循环依赖',\n        processedNodes: order,\n        remainingNodes: graph.nodes.filter(n => !order.includes(n.id)).map(n => n.id)\n      };\n    }\n    \n    return { success: true, order };\n  }\n  \n  /**\n   * 计算并行层级\n   * 同一层级的任务可以并行执行\n   */\n  _computeParallelLevels(steps, graph) {\n    const levels = [];\n    const nodeLevel = {};\n    const inDegree = { ...graph.inDegree };\n    const processed = new Set();\n    \n    while (processed.size < graph.nodes.length) {\n      const currentLevel = [];\n      \n      // 找出当前可执行的节点 (入度为 0)\n      for (const node of graph.nodes) {\n        if (!processed.has(node.id) && inDegree[node.id] === 0) {\n          currentLevel.push(node);\n          nodeLevel[node.id] = levels.length;\n        }\n      }\n      \n      if (currentLevel.length === 0) break; // 防止无限循环\n      \n      // 标记已处理并更新入度\n      for (const node of currentLevel) {\n        processed.add(node.id);\n        for (const neighbor of graph.adjacency[node.id]) {\n          inDegree[neighbor]--;\n        }\n      }\n      \n      levels.push(currentLevel.map(n => ({\n        id: n.id,\n        index: n.index,\n        tool: n.step.tool,\n        params: n.step.params,\n        saveAs: n.step.saveAs\n      })));\n    }\n    \n    return levels;\n  }\n  \n  /**\n   * 估算执行时间\n   */\n  _estimateTime(levels) {\n    const toolTimes = {\n      'run_command': 5000,\n      'read_file': 500,\n      'write_file': 500,\n      'browser_navigate': 3000,\n      'browser_click': 1000,\n      'default': 2000\n    };\n    \n    let total = 0;\n    for (const level of levels) {\n      // 并行层级取最长时间\n      const maxTime = Math.max(...level.map(step => \n        toolTimes[step.tool] || toolTimes.default\n      ));\n      total += maxTime;\n    }\n    \n    return total;\n  }\n  \n  /**\n   * 获取缓存的计划\n   */\n  getPlan(planId) {\n    return this.planCache.get(planId);\n  }\n  \n  /**\n   * 生成计划的可视化描述\n   */\n  visualize(plan) {\n    if (!plan.success) {\n      return `❌ 计划生成失败: ${plan.error}`;\n    }\n    \n    let output = `📋 执行计划 ${plan.id}\\n`;\n    output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n`;\n    output += `原始步骤: ${plan.originalSteps} | 优化层级: ${plan.optimizedLevels} | 可并行: ${plan.parallelizable ? '是' : '否'}\\n`;\n    output += `预估时间: ${(plan.estimatedTime / 1000).toFixed(1)}s\\n\\n`;\n    \n    plan.levels.forEach((level, i) => {\n      const parallel = level.length > 1 ? ' ⚡并行' : '';\n      output += `【层级 ${i + 1}】${parallel}\\n`;\n      level.forEach(step => {\n        output += `  └─ ${step.tool}${step.saveAs ? ` → $${step.saveAs}` : ''}\\n`;\n      });\n    });\n    \n    return output;\n  }\n}\n\nexport default TaskPlanner;\nexport { NodeType, TaskPatterns };\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5072,
-      "timestamp": "2026-02-01T04:02:52.746Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"
-      },
-      "success": true,
-      "resultPreview": "# 🧠 上下文恢复 - genspark-agent\n\n> 生成时间: 2026-02-01T04:02\n\n## 📋 当前任务\nAgent系统开发 - 记忆系统、多项目支持、上下文恢复\n\n## 📁 关键路径\n- **project**: `/Users/yay/workspace/genspark-agent`\n- **extension**: `/Users/yay/workspace/genspark-agent/extension`\n- **server**: `/Users/yay/workspace/genspark-agent/server-v2`\n- **docs**: `/Users/yay/workspace/genspark-agent/docs`\n- **scripts**: `/Users/yay/workspace/genspark-agent/scripts`\n\n## ✅ 最近里程碑\n- 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n- 异步命令执行器: 自动检测长时间",
-      "error": null
-    },
-    {
-      "id": 5073,
-      "timestamp": "2026-02-01T04:03:48.593Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/task-planner.js << 'EOF'\n// Task Planner - 智能任务规划器\n// 任务分解 → 依赖分析 → 并行优化 → 调度执行\n\nimport { writeFileSync, readFileSync, existsSync } from 'fs';\nimport path from 'path';\n\n/**\n * 任务节点类型\n */\nconst NodeType = {\n  ATOMIC: 'atomic',      // 原子操作\n  COMPOSITE: 'composite', // 复合任务\n  CONDITION: 'condition', // 条件分支\n  PARALLEL: 'parallel',   // 并行组\n  SEQUENCE: 'sequence'    // 顺序组\n};\n\n/**\n * 任务模式库 - 常见任务的分解模式\n */\nconst TaskPatterns = {\n  // 文件操作模式\n  'file:copy': {\n    pattern: /复制.*文件|copy.*file/i,\n    decompose: (params) => [\n      { tool: 'read_file', params: { path: params.source } },\n      { tool: 'write_file', params: { path: params.target, content: '${step0.result}' } }\n    ]\n  },\n  \n  // 部署模式\n  'deploy:basic': {\n    pattern: /部署|deploy/i,\n    decompose: (params) => [\n      { tool: 'run_command', params: { command: 'git pull' }, saveAs: 'pull' },\n      { tool: 'run_command', params: { command: 'npm install' }, saveAs: 'install', dependsOn: ['pull'] },\n      { tool: 'run_command', params: { command: 'npm run build' }, saveAs: 'build', dependsOn: ['install'] },\n      { tool: 'run_command', params: { command: 'pm2 restart all' }, dependsOn: ['build'] }\n    ]\n  },\n  \n  // 备份模式\n  'backup:database': {\n    pattern: /备份.*数据库|backup.*db/i,\n    decompose: (params) => [\n      { tool: 'run_command', params: { command: `mysqldump ${params.database} > backup_$(date +%Y%m%d).sql` } },\n      { tool: 'run_command', params: { command: 'gzip backup_*.sql' } }\n    ]\n  },\n  \n  // 批量文件处理\n  'batch:files': {\n    pattern: /批量.*文件|batch.*files/i,\n    decompose: (params) => {\n      const files = params.files || [];\n      return files.map((f, i) => ({\n        tool: params.operation || 'read_file',\n        params: { path: f },\n        saveAs: `file${i}`,\n        parallel: true  // 标记可并行\n      }));\n    }\n  }\n};\n\n/**\n * 智能任务规划器\n */\nclass TaskPlanner {\n  constructor(logger, stateManager) {\n    this.logger = logger;\n    this.stateManager = stateManager;\n    this.patterns = { ...TaskPatterns };\n    this.planCache = new Map();\n  }\n  \n  /**\n   * 注册自定义任务模式\n   */\n  registerPattern(name, pattern) {\n    this.patterns[name] = pattern;\n    this.logger.info(`[TaskPlanner] 注册模式: ${name}`);\n  }\n  \n  /**\n   * 分析任务并生成执行计划\n   * @param {string} taskDescription - 任务描述或结构化任务\n   * @param {object} context - 上下文信息\n   * @returns {object} 执行计划\n   */\n  analyze(taskDescription, context = {}) {\n    this.logger.info(`[TaskPlanner] 分析任务: ${typeof taskDescription === 'string' ? taskDescription : JSON.stringify(taskDescription)}`);\n    \n    // 如果已经是结构化的步骤数组，直接优化\n    if (Array.isArray(taskDescription)) {\n      return this._optimizePlan(taskDescription, context);\n    }\n    \n    // 如果是对象格式的任务定义\n    if (typeof taskDescription === 'object' && taskDescription.steps) {\n      return this._optimizePlan(taskDescription.steps, context);\n    }\n    \n    // 文本描述 - 尝试匹配模式\n    if (typeof taskDescription === 'string') {\n      const matched = this._matchPattern(taskDescription);\n      if (matched) {\n        const steps = matched.decompose(context);\n        return this._optimizePlan(steps, context);\n      }\n      \n      // 无法识别的描述\n      return {\n        success: false,\n        error: '无法识别的任务描述，请提供结构化的步骤或使用已知模式',\n        suggestions: Object.keys(this.patterns)\n      };\n    }\n    \n    return { success: false, error: '无效的任务格式' };\n  }\n  \n  /**\n   * 匹配任务模式\n   */\n  _matchPattern(description) {\n    for (const [name, pattern] of Object.entries(this.patterns)) {\n      if (pattern.pattern && pattern.pattern.test(description)) {\n        this.logger.info(`[TaskPlanner] 匹配模式: ${name}`);\n        return pattern;\n      }\n    }\n    return null;\n  }\n  \n  /**\n   * 优化执行计划\n   * - 构建依赖图\n   * - 识别并行机会\n   * - 生成最优执行顺序\n   */\n  _optimizePlan(steps, context) {\n    // 1. 构建依赖图\n    const graph = this._buildDependencyGraph(steps);\n    \n    // 2. 拓扑排序\n    const sorted = this._topologicalSort(graph);\n    if (!sorted.success) {\n      return sorted; // 返回循环依赖错误\n    }\n    \n    // 3. 计算并行层级\n    const levels = this._computeParallelLevels(steps, graph);\n    \n    // 4. 生成优化后的计划\n    const plan = {\n      success: true,\n      id: `plan_${Date.now()}`,\n      originalSteps: steps.length,\n      optimizedLevels: levels.length,\n      parallelizable: levels.some(l => l.length > 1),\n      levels: levels,\n      executionOrder: sorted.order,\n      graph: graph,\n      estimatedTime: this._estimateTime(levels),\n      metadata: {\n        createdAt: new Date().toISOString(),\n        context\n      }\n    };\n    \n    this.planCache.set(plan.id, plan);\n    this.logger.info(`[TaskPlanner] 生成计划: ${plan.id}, ${levels.length} 层, 可并行: ${plan.parallelizable}`);\n    \n    return plan;\n  }\n  \n  /**\n   * 构建依赖图\n   */\n  _buildDependencyGraph(steps) {\n    const graph = {\n      nodes: [],\n      edges: [],\n      adjacency: {},\n      inDegree: {}\n    };\n    \n    // 创建节点\n    steps.forEach((step, index) => {\n      const nodeId = step.id || `step${index}`;\n      graph.nodes.push({\n        id: nodeId,\n        index,\n        step,\n        parallel: step.parallel || false\n      });\n      graph.adjacency[nodeId] = [];\n      graph.inDegree[nodeId] = 0;\n    });\n    \n    // 创建边 (依赖关系)\n    steps.forEach((step, index) => {\n      const nodeId = step.id || `step${index}`;\n      const deps = step.dependsOn || [];\n      \n      deps.forEach(depId => {\n        // 支持索引引用 (如 \"step0\") 或 ID 引用\n        let resolvedDep = depId;\n        if (typeof depId === 'number') {\n          resolvedDep = `step${depId}`;\n        }\n        \n        if (graph.adjacency[resolvedDep]) {\n          graph.edges.push({ from: resolvedDep, to: nodeId });\n          graph.adjacency[resolvedDep].push(nodeId);\n          graph.inDegree[nodeId]++;\n        }\n      });\n      \n      // 如果没有显式依赖且不是并行任务，默认依赖前一个\n      if (deps.length === 0 && !step.parallel && index > 0) {\n        const prevId = steps[index - 1].id || `step${index - 1}`;\n        // 只有当前一个也不是并行任务时才添加默认依赖\n        if (!steps[index - 1].parallel) {\n          graph.edges.push({ from: prevId, to: nodeId, implicit: true });\n          graph.adjacency[prevId].push(nodeId);\n          graph.inDegree[nodeId]++;\n        }\n      }\n    });\n    \n    return graph;\n  }\n  \n  /**\n   * 拓扑排序 (Kahn 算法)\n   */\n  _topologicalSort(graph) {\n    const inDegree = { ...graph.inDegree };\n    const queue = [];\n    const order = [];\n    \n    // 找出所有入度为 0 的节点\n    for (const nodeId of Object.keys(inDegree)) {\n      if (inDegree[nodeId] === 0) {\n        queue.push(nodeId);\n      }\n    }\n    \n    while (queue.length > 0) {\n      const current = queue.shift();\n      order.push(current);\n      \n      for (const neighbor of graph.adjacency[current]) {\n        inDegree[neighbor]--;\n        if (inDegree[neighbor] === 0) {\n          queue.push(neighbor);\n        }\n      }\n    }\n    \n    // 检查是否有循环依赖\n    if (order.length !== graph.nodes.length) {\n      return {\n        success: false,\n        error: '检测到循环依赖',\n        processedNodes: order,\n        remainingNodes: graph.nodes.filter(n => !order.includes(n.id)).map(n => n.id)\n      };\n    }\n    \n    return { success: true, order };\n  }\n  \n  /**\n   * 计算并行层级\n   * 同一层级的任务可以并行执行\n   */\n  _computeParallelLevels(steps, graph) {\n    const levels = [];\n    const nodeLevel = {};\n    const inDegree = { ...graph.inDegree };\n    const processed = new Set();\n    \n    while (processed.size < graph.nodes.length) {\n      const currentLevel = [];\n      \n      // 找出当前可执行的节点 (入度为 0)\n      for (const node of graph.nodes) {\n        if (!processed.has(node.id) && inDegree[node.id] === 0) {\n          currentLevel.push(node);\n          nodeLevel[node.id] = levels.length;\n        }\n      }\n      \n      if (currentLevel.length === 0) break; // 防止无限循环\n      \n      // 标记已处理并更新入度\n      for (const node of currentLevel) {\n        processed.add(node.id);\n        for (const neighbor of graph.adjacency[node.id]) {\n          inDegree[neighbor]--;\n        }\n      }\n      \n      levels.push(currentLevel.map(n => ({\n        id: n.id,\n        index: n.index,\n        tool: n.step.tool,\n        params: n.step.params,\n        saveAs: n.step.saveAs\n      })));\n    }\n    \n    return levels;\n  }\n  \n  /**\n   * 估算执行时间\n   */\n  _estimateTime(levels) {\n    const toolTimes = {\n      'run_command': 5000,\n      'read_file': 500,\n      'write_file': 500,\n      'browser_navigate': 3000,\n      'browser_click': 1000,\n      'default': 2000\n    };\n    \n    let total = 0;\n    for (const level of levels) {\n      // 并行层级取最长时间\n      const maxTime = Math.max(...level.map(step => \n        toolTimes[step.tool] || toolTimes.default\n      ));\n      total += maxTime;\n    }\n    \n    return total;\n  }\n  \n  /**\n   * 获取缓存的计划\n   */\n  getPlan(planId) {\n    return this.planCache.get(planId);\n  }\n  \n  /**\n   * 生成计划的可视化描述\n   */\n  visualize(plan) {\n    if (!plan.success) {\n      return `❌ 计划生成失败: ${plan.error}`;\n    }\n    \n    let output = `📋 执行计划 ${plan.id}\\n`;\n    output += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n`;\n    output += `原始步骤: ${plan.originalSteps} | 优化层级: ${plan.optimizedLevels} | 可并行: ${plan.parallelizable ? '是' : '否'}\\n`;\n    output += `预估时间: ${(plan.estimatedTime / 1000).toFixed(1)}s\\n\\n`;\n    \n    plan.levels.forEach((level, i) => {\n      const parallel = level.length > 1 ? ' ⚡并行' : '';\n      output += `【层级 ${i + 1}】${parallel}\\n`;\n      level.forEach(step => {\n        output += `  └─ ${step.tool}${step.saveAs ? ` → $${step.saveAs}` : ''}\\n`;\n      });\n    });\n    \n    return output;\n  }\n}\n\nexport default TaskPlanner;\nexport { NodeType, TaskPatterns };\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5074,
-      "timestamp": "2026-02-01T04:04:46.601Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/workflow-template.js << 'EOF'\n// Workflow Template Engine - 工作流模板引擎\n// 支持 YAML/JSON 模板、变量插值、条件分支、循环\n\nimport { writeFileSync, readFileSync, existsSync, readdirSync } from 'fs';\nimport path from 'path';\n\n/**\n * 内置工作流模板库\n */\nconst BuiltinTemplates = {\n  // 项目部署模板\n  'deploy-nodejs': {\n    name: '部署 Node.js 项目',\n    description: '拉取代码、安装依赖、构建、重启服务',\n    variables: {\n      projectPath: { type: 'string', required: true, description: '项目路径' },\n      branch: { type: 'string', default: 'main', description: 'Git 分支' },\n      pm2Name: { type: 'string', default: 'app', description: 'PM2 进程名' }\n    },\n    steps: [\n      { id: 'pull', tool: 'run_command', params: { command: 'cd {{projectPath}} && git fetch && git checkout {{branch}} && git pull' } },\n      { id: 'install', tool: 'run_command', params: { command: 'cd {{projectPath}} && npm install' }, dependsOn: ['pull'] },\n      { id: 'build', tool: 'run_command', params: { command: 'cd {{projectPath}} && npm run build' }, dependsOn: ['install'], condition: '{{hasBuildScript}}' },\n      { id: 'restart', tool: 'run_command', params: { command: 'pm2 restart {{pm2Name}}' }, dependsOn: ['install'] }\n    ]\n  },\n  \n  // 数据库备份模板\n  'backup-mysql': {\n    name: 'MySQL 数据库备份',\n    description: '导出数据库、压缩、上传到云存储',\n    variables: {\n      database: { type: 'string', required: true },\n      host: { type: 'string', default: 'localhost' },\n      user: { type: 'string', default: 'root' },\n      backupDir: { type: 'string', default: '/tmp/backups' },\n      uploadTo: { type: 'string', description: '云存储路径 (可选)' }\n    },\n    steps: [\n      { id: 'mkdir', tool: 'run_command', params: { command: 'mkdir -p {{backupDir}}' } },\n      { id: 'dump', tool: 'run_command', params: { command: 'mysqldump -h {{host}} -u {{user}} {{database}} > {{backupDir}}/{{database}}_$(date +%Y%m%d_%H%M%S).sql' }, dependsOn: ['mkdir'], saveAs: 'dumpFile' },\n      { id: 'compress', tool: 'run_command', params: { command: 'gzip {{backupDir}}/{{database}}_*.sql' }, dependsOn: ['dump'] },\n      { id: 'upload', tool: 'run_command', params: { command: 'mega-put {{backupDir}}/*.gz {{uploadTo}}' }, dependsOn: ['compress'], condition: '{{uploadTo}}' }\n    ]\n  },\n  \n  // 批量文件处理模板\n  'batch-process': {\n    name: '批量文件处理',\n    description: '对多个文件执行相同操作',\n    variables: {\n      files: { type: 'array', required: true, description: '文件列表' },\n      operation: { type: 'string', default: 'read_file', description: '操作类型' }\n    },\n    steps: [\n      { id: 'process', tool: '{{operation}}', foreach: '{{files}}', itemVar: 'file', params: { path: '{{file}}' }, parallel: true }\n    ]\n  },\n  \n  // 健康检查模板\n  'health-check': {\n    name: '服务健康检查',\n    description: '检查多个服务的运行状态',\n    variables: {\n      services: { type: 'array', default: ['nginx', 'mysql', 'redis'], description: '服务列表' }\n    },\n    steps: [\n      { id: 'check', tool: 'run_command', foreach: '{{services}}', itemVar: 'svc', params: { command: 'systemctl is-active {{svc}} || echo \"{{svc}} is down\"' }, parallel: true }\n    ]\n  },\n  \n  // 日志分析模板\n  'log-analysis': {\n    name: '日志分析',\n    description: '收集、过滤、统计日志',\n    variables: {\n      logPath: { type: 'string', required: true },\n      pattern: { type: 'string', default: 'ERROR' },\n      lines: { type: 'number', default: 100 }\n    },\n    steps: [\n      { id: 'tail', tool: 'run_command', params: { command: 'tail -n {{lines}} {{logPath}}' }, saveAs: 'rawLogs' },\n      { id: 'filter', tool: 'run_command', params: { command: 'echo \"$rawLogs\" | grep -i \"{{pattern}}\" || true' }, dependsOn: ['tail'], saveAs: 'filtered' },\n      { id: 'count', tool: 'run_command', params: { command: 'echo \"$rawLogs\" | grep -ci \"{{pattern}}\" || echo 0' }, dependsOn: ['tail'], saveAs: 'errorCount' }\n    ]\n  },\n  \n  // Git 操作模板\n  'git-release': {\n    name: 'Git 发布流程',\n    description: '创建 tag、生成 changelog、推送',\n    variables: {\n      version: { type: 'string', required: true },\n      projectPath: { type: 'string', default: '.' }\n    },\n    steps: [\n      { id: 'changelog', tool: 'run_command', params: { command: 'cd {{projectPath}} && git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || echo HEAD~10)..HEAD' }, saveAs: 'changes' },\n      { id: 'tag', tool: 'run_command', params: { command: 'cd {{projectPath}} && git tag -a v{{version}} -m \"Release v{{version}}\"' }, dependsOn: ['changelog'] },\n      { id: 'push', tool: 'run_command', params: { command: 'cd {{projectPath}} && git push origin v{{version}}' }, dependsOn: ['tag'] }\n    ]\n  }\n};\n\n/**\n * 工作流模板引擎\n */\nclass WorkflowTemplate {\n  constructor(logger, taskPlanner) {\n    this.logger = logger;\n    this.taskPlanner = taskPlanner;\n    this.templates = { ...BuiltinTemplates };\n    this.templateDir = path.join(process.cwd(), 'workflows');\n    this._loadCustomTemplates();\n  }\n  \n  /**\n   * 加载自定义模板\n   */\n  _loadCustomTemplates() {\n    try {\n      if (!existsSync(this.templateDir)) return;\n      \n      const files = readdirSync(this.templateDir).filter(f => \n        f.endsWith('.json') || f.endsWith('.yaml') || f.endsWith('.yml')\n      );\n      \n      for (const file of files) {\n        try {\n          const content = readFileSync(path.join(this.templateDir, file), 'utf-8');\n          const template = JSON.parse(content); // TODO: 添加 YAML 支持\n          const name = file.replace(/\\.(json|ya?ml)$/, '');\n          this.templates[name] = template;\n          this.logger.info(`[WorkflowTemplate] 加载模板: ${name}`);\n        } catch (e) {\n          this.logger.warn(`[WorkflowTemplate] 加载模板失败: ${file}`, e.message);\n        }\n      }\n    } catch (e) {\n      // 目录不存在，忽略\n    }\n  }\n  \n  /**\n   * 列出所有可用模板\n   */\n  listTemplates() {\n    return Object.entries(this.templates).map(([id, tpl]) => ({\n      id,\n      name: tpl.name,\n      description: tpl.description,\n      variables: Object.keys(tpl.variables || {})\n    }));\n  }\n  \n  /**\n   * 获取模板详情\n   */\n  getTemplate(templateId) {\n    return this.templates[templateId] || null;\n  }\n  \n  /**\n   * 注册新模板\n   */\n  registerTemplate(templateId, template) {\n    this.templates[templateId] = template;\n    this.logger.info(`[WorkflowTemplate] 注册模板: ${templateId}`);\n    return true;\n  }\n  \n  /**\n   * 保存模板到文件\n   */\n  saveTemplate(templateId, template) {\n    if (!existsSync(this.templateDir)) {\n      require('fs').mkdirSync(this.templateDir, { recursive: true });\n    }\n    \n    const filePath = path.join(this.templateDir, `${templateId}.json`);\n    writeFileSync(filePath, JSON.stringify(template, null, 2));\n    this.templates[templateId] = template;\n    this.logger.info(`[WorkflowTemplate] 保存模板: ${filePath}`);\n    return filePath;\n  }\n  \n  /**\n   * 实例化模板 - 用变量填充模板生成可执行计划\n   */\n  instantiate(templateId, variables = {}) {\n    const template = this.templates[templateId];\n    if (!template) {\n      return { success: false, error: `模板不存在: ${templateId}` };\n    }\n    \n    // 1. 验证必填变量\n    const validation = this._validateVariables(template, variables);\n    if (!validation.valid) {\n      return { success: false, error: validation.error, missing: validation.missing };\n    }\n    \n    // 2. 合并默认值\n    const resolvedVars = this._resolveVariables(template, variables);\n    \n    // 3. 展开步骤 (处理 foreach)\n    const expandedSteps = this._expandSteps(template.steps, resolvedVars);\n    \n    // 4. 插值替换\n    const interpolatedSteps = expandedSteps.map(step => \n      this._interpolate(step, resolvedVars)\n    );\n    \n    // 5. 过滤条件不满足的步骤\n    const filteredSteps = interpolatedSteps.filter(step => {\n      if (step._condition !== undefined) {\n        return this._evaluateCondition(step._condition, resolvedVars);\n      }\n      return true;\n    });\n    \n    // 6. 清理临时字段\n    const cleanSteps = filteredSteps.map(({ _condition, ...step }) => step);\n    \n    // 7. 使用 TaskPlanner 优化\n    const plan = this.taskPlanner.analyze(cleanSteps, { template: templateId, variables: resolvedVars });\n    \n    return {\n      success: true,\n      templateId,\n      templateName: template.name,\n      variables: resolvedVars,\n      steps: cleanSteps,\n      plan\n    };\n  }\n  \n  /**\n   * 验证变量\n   */\n  _validateVariables(template, variables) {\n    const missing = [];\n    const varDefs = template.variables || {};\n    \n    for (const [name, def] of Object.entries(varDefs)) {\n      if (def.required && variables[name] === undefined) {\n        missing.push(name);\n      }\n    }\n    \n    if (missing.length > 0) {\n      return {\n        valid: false,\n        error: `缺少必填变量: ${missing.join(', ')}`,\n        missing\n      };\n    }\n    \n    return { valid: true };\n  }\n  \n  /**\n   * 解析变量 (合并默认值)\n   */\n  _resolveVariables(template, variables) {\n    const resolved = {};\n    const varDefs = template.variables || {};\n    \n    for (const [name, def] of Object.entries(varDefs)) {\n      resolved[name] = variables[name] !== undefined ? variables[name] : def.default;\n    }\n    \n    // 添加用户提供的额外变量\n    for (const [name, value] of Object.entries(variables)) {\n      if (resolved[name] === undefined) {\n        resolved[name] = value;\n      }\n    }\n    \n    return resolved;\n  }\n  \n  /**\n   * 展开 foreach 步骤\n   */\n  _expandSteps(steps, variables) {\n    const expanded = [];\n    \n    for (const step of steps) {\n      if (step.foreach) {\n        // 解析 foreach 数组\n        const arrayRef = step.foreach.replace(/\\{\\{|\\}\\}/g, '');\n        const array = variables[arrayRef] || [];\n        const itemVar = step.itemVar || 'item';\n        const indexVar = step.indexVar || 'index';\n        \n        array.forEach((item, index) => {\n          const expandedStep = JSON.parse(JSON.stringify(step));\n          delete expandedStep.foreach;\n          delete expandedStep.itemVar;\n          delete expandedStep.indexVar;\n          \n          // 在 params 中替换 item 变量\n          expandedStep.id = `${step.id}_${index}`;\n          expandedStep._loopVars = { [itemVar]: item, [indexVar]: index };\n          expanded.push(expandedStep);\n        });\n      } else {\n        expanded.push({ ...step });\n      }\n    }\n    \n    return expanded;\n  }\n  \n  /**\n   * 变量插值\n   */\n  _interpolate(obj, variables) {\n    if (typeof obj === 'string') {\n      return obj.replace(/\\{\\{(\\w+)\\}\\}/g, (match, varName) => {\n        if (variables[varName] !== undefined) {\n          return variables[varName];\n        }\n        return match; // 保留未知变量\n      });\n    }\n    \n    if (Array.isArray(obj)) {\n      return obj.map(item => this._interpolate(item, variables));\n    }\n    \n    if (typeof obj === 'object' && obj !== null) {\n      const result = {};\n      \n      // 合并循环变量\n      const mergedVars = obj._loopVars ? { ...variables, ...obj._loopVars } : variables;\n      \n      for (const [key, value] of Object.entries(obj)) {\n        if (key === '_loopVars') continue;\n        if (key === 'condition') {\n          result._condition = this._interpolate(value, mergedVars);\n        } else {\n          result[key] = this._interpolate(value, mergedVars);\n        }\n      }\n      return result;\n    }\n    \n    return obj;\n  }\n  \n  /**\n   * 评估条件表达式\n   */\n  _evaluateCondition(condition, variables) {\n    if (!condition) return true;\n    \n    // 简单的真值检查\n    const value = variables[condition] || condition;\n    \n    // 空字符串、null、undefined、false、0 都视为 false\n    if (!value || value === 'false' || value === '0' || value === 'null' || value === 'undefined') {\n      return false;\n    }\n    \n    // 检查是否仍有未替换的变量\n    if (typeof value === 'string' && value.includes('{{')) {\n      return false;\n    }\n    \n    return true;\n  }\n  \n  /**\n   * 生成模板文档\n   */\n  generateDocs(templateId) {\n    const template = this.templates[templateId];\n    if (!template) return null;\n    \n    let doc = `# ${template.name}\\n\\n`;\n    doc += `${template.description}\\n\\n`;\n    doc += `## 变量\\n\\n`;\n    doc += `| 名称 | 类型 | 必填 | 默认值 | 说明 |\\n`;\n    doc += `|------|------|------|--------|------|\\n`;\n    \n    for (const [name, def] of Object.entries(template.variables || {})) {\n      doc += `| ${name} | ${def.type || 'string'} | ${def.required ? '是' : '否'} | ${def.default || '-'} | ${def.description || '-'} |\\n`;\n    }\n    \n    doc += `\\n## 步骤\\n\\n`;\n    template.steps.forEach((step, i) => {\n      doc += `${i + 1}. **${step.id || 'step' + i}**: \\`${step.tool}\\`\\n`;\n      if (step.dependsOn) doc += `   - 依赖: ${step.dependsOn.join(', ')}\\n`;\n      if (step.condition) doc += `   - 条件: ${step.condition}\\n`;\n      if (step.foreach) doc += `   - 循环: ${step.foreach}\\n`;\n    });\n    \n    return doc;\n  }\n}\n\nexport default WorkflowTemplate;\nexport { BuiltinTemplates };\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5075,
-      "timestamp": "2026-02-01T04:05:41.396Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/checkpoint-manager.js << 'EOF'\n// Checkpoint Manager - 断点续传系统\n// 状态持久化 → 检查点创建 → 任务恢复 → 幂等性保证\n\nimport { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs';\nimport path from 'path';\n\n/**\n * 检查点状态\n */\nconst CheckpointState = {\n  CREATED: 'created',\n  RUNNING: 'running',\n  PAUSED: 'paused',\n  COMPLETED: 'completed',\n  FAILED: 'failed',\n  RESUMING: 'resuming'\n};\n\n/**\n * 断点续传管理器\n */\nclass CheckpointManager {\n  constructor(logger, stateManager, options = {}) {\n    this.logger = logger;\n    this.stateManager = stateManager;\n    this.options = {\n      checkpointDir: options.checkpointDir || path.join(process.cwd(), 'checkpoints'),\n      autoSaveInterval: options.autoSaveInterval || 5000,  // 自动保存间隔\n      maxCheckpoints: options.maxCheckpoints || 50,        // 最大检查点数\n      compressionEnabled: options.compressionEnabled || false\n    };\n    \n    this.activeCheckpoints = new Map();\n    this.autoSaveTimers = new Map();\n    \n    this._ensureDir();\n    this._loadExistingCheckpoints();\n  }\n  \n  /**\n   * 确保检查点目录存在\n   */\n  _ensureDir() {\n    if (!existsSync(this.options.checkpointDir)) {\n      mkdirSync(this.options.checkpointDir, { recursive: true });\n      this.logger.info(`[CheckpointManager] 创建检查点目录: ${this.options.checkpointDir}`);\n    }\n  }\n  \n  /**\n   * 加载已存在的检查点\n   */\n  _loadExistingCheckpoints() {\n    try {\n      const files = readdirSync(this.options.checkpointDir)\n        .filter(f => f.endsWith('.checkpoint.json'));\n      \n      for (const file of files) {\n        try {\n          const content = readFileSync(path.join(this.options.checkpointDir, file), 'utf-8');\n          const checkpoint = JSON.parse(content);\n          \n          // 只加载未完成的检查点\n          if (checkpoint.state !== CheckpointState.COMPLETED) {\n            this.activeCheckpoints.set(checkpoint.id, checkpoint);\n            this.logger.info(`[CheckpointManager] 恢复检查点: ${checkpoint.id} (${checkpoint.state})`);\n          }\n        } catch (e) {\n          this.logger.warn(`[CheckpointManager] 加载检查点失败: ${file}`, e.message);\n        }\n      }\n      \n      this.logger.info(`[CheckpointManager] 已加载 ${this.activeCheckpoints.size} 个未完成检查点`);\n    } catch (e) {\n      // 目录可能不存在\n    }\n  }\n  \n  /**\n   * 创建新检查点\n   */\n  create(taskId, taskData) {\n    const checkpoint = {\n      id: taskId,\n      state: CheckpointState.CREATED,\n      createdAt: new Date().toISOString(),\n      updatedAt: new Date().toISOString(),\n      \n      // 任务信息\n      task: {\n        description: taskData.description || '',\n        steps: taskData.steps || [],\n        totalSteps: (taskData.steps || []).length,\n        variables: taskData.variables || {},\n        options: taskData.options || {}\n      },\n      \n      // 执行进度\n      progress: {\n        currentStep: 0,\n        completedSteps: [],\n        failedSteps: [],\n        skippedSteps: []\n      },\n      \n      // 执行结果\n      results: {},\n      \n      // 变量存储 (步骤间传递)\n      context: {},\n      \n      // 错误记录\n      errors: [],\n      \n      // 恢复历史\n      resumeHistory: [],\n      \n      // 幂等性键值 (防止重复执行)\n      idempotencyKeys: {}\n    };\n    \n    this.activeCheckpoints.set(taskId, checkpoint);\n    this._save(checkpoint);\n    this._startAutoSave(taskId);\n    \n    this.logger.info(`[CheckpointManager] 创建检查点: ${taskId}`);\n    return checkpoint;\n  }\n  \n  /**\n   * 获取检查点\n   */\n  get(taskId) {\n    return this.activeCheckpoints.get(taskId);\n  }\n  \n  /**\n   * 列出所有可恢复的任务\n   */\n  listResumable() {\n    const resumable = [];\n    \n    for (const [id, cp] of this.activeCheckpoints) {\n      if (cp.state !== CheckpointState.COMPLETED) {\n        resumable.push({\n          id,\n          description: cp.task.description,\n          state: cp.state,\n          progress: `${cp.progress.completedSteps.length}/${cp.task.totalSteps}`,\n          createdAt: cp.createdAt,\n          updatedAt: cp.updatedAt,\n          lastError: cp.errors.length > 0 ? cp.errors[cp.errors.length - 1] : null\n        });\n      }\n    }\n    \n    return resumable.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));\n  }\n  \n  /**\n   * 更新步骤执行状态\n   */\n  updateStep(taskId, stepIndex, result) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    checkpoint.updatedAt = new Date().toISOString();\n    checkpoint.progress.currentStep = stepIndex + 1;\n    \n    // 记录结果\n    checkpoint.results[stepIndex] = {\n      ...result,\n      timestamp: new Date().toISOString()\n    };\n    \n    // 更新完成/失败列表\n    if (result.success) {\n      if (!checkpoint.progress.completedSteps.includes(stepIndex)) {\n        checkpoint.progress.completedSteps.push(stepIndex);\n      }\n      \n      // 保存 saveAs 变量\n      if (result.saveAs && result.value !== undefined) {\n        checkpoint.context[result.saveAs] = result.value;\n      }\n    } else {\n      if (!checkpoint.progress.failedSteps.includes(stepIndex)) {\n        checkpoint.progress.failedSteps.push(stepIndex);\n      }\n      checkpoint.errors.push({\n        stepIndex,\n        error: result.error,\n        timestamp: new Date().toISOString()\n      });\n    }\n    \n    // 生成幂等性键\n    const step = checkpoint.task.steps[stepIndex];\n    if (step) {\n      const idempotencyKey = this._generateIdempotencyKey(step);\n      checkpoint.idempotencyKeys[idempotencyKey] = {\n        stepIndex,\n        result: result.success,\n        timestamp: new Date().toISOString()\n      };\n    }\n    \n    this._save(checkpoint);\n    return checkpoint;\n  }\n  \n  /**\n   * 标记步骤跳过\n   */\n  skipStep(taskId, stepIndex, reason) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    checkpoint.progress.skippedSteps.push(stepIndex);\n    checkpoint.results[stepIndex] = {\n      skipped: true,\n      reason,\n      timestamp: new Date().toISOString()\n    };\n    \n    this._save(checkpoint);\n    return checkpoint;\n  }\n  \n  /**\n   * 更新检查点状态\n   */\n  updateState(taskId, state, extra = {}) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    checkpoint.state = state;\n    checkpoint.updatedAt = new Date().toISOString();\n    Object.assign(checkpoint, extra);\n    \n    this._save(checkpoint);\n    this.logger.info(`[CheckpointManager] 检查点 ${taskId} 状态: ${state}`);\n    \n    // 如果完成，停止自动保存\n    if (state === CheckpointState.COMPLETED) {\n      this._stopAutoSave(taskId);\n    }\n    \n    return checkpoint;\n  }\n  \n  /**\n   * 恢复任务执行\n   */\n  resume(taskId) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) {\n      return { success: false, error: '检查点不存在' };\n    }\n    \n    if (checkpoint.state === CheckpointState.COMPLETED) {\n      return { success: false, error: '任务已完成，无需恢复' };\n    }\n    \n    // 记录恢复历史\n    checkpoint.resumeHistory.push({\n      timestamp: new Date().toISOString(),\n      fromStep: checkpoint.progress.currentStep,\n      previousState: checkpoint.state\n    });\n    \n    // 更新状态\n    checkpoint.state = CheckpointState.RESUMING;\n    checkpoint.updatedAt = new Date().toISOString();\n    \n    // 计算需要执行的步骤\n    const completedSet = new Set(checkpoint.progress.completedSteps);\n    const skippedSet = new Set(checkpoint.progress.skippedSteps);\n    \n    const pendingSteps = [];\n    for (let i = 0; i < checkpoint.task.steps.length; i++) {\n      if (!completedSet.has(i) && !skippedSet.has(i)) {\n        pendingSteps.push({\n          index: i,\n          step: checkpoint.task.steps[i]\n        });\n      }\n    }\n    \n    this._save(checkpoint);\n    this._startAutoSave(taskId);\n    \n    this.logger.info(`[CheckpointManager] 恢复任务 ${taskId}, 待执行: ${pendingSteps.length} 步`);\n    \n    return {\n      success: true,\n      checkpoint,\n      pendingSteps,\n      context: checkpoint.context,  // 传递已保存的变量\n      resumeFrom: checkpoint.progress.currentStep\n    };\n  }\n  \n  /**\n   * 检查步骤是否已执行 (幂等性)\n   */\n  isStepExecuted(taskId, step) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return false;\n    \n    const idempotencyKey = this._generateIdempotencyKey(step);\n    return !!checkpoint.idempotencyKeys[idempotencyKey];\n  }\n  \n  /**\n   * 获取步骤的历史执行结果\n   */\n  getStepResult(taskId, stepIndex) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    return checkpoint.results[stepIndex] || null;\n  }\n  \n  /**\n   * 生成幂等性键\n   */\n  _generateIdempotencyKey(step) {\n    const keyParts = [\n      step.tool,\n      JSON.stringify(step.params || {})\n    ];\n    return keyParts.join('::');\n  }\n  \n  /**\n   * 保存检查点到磁盘\n   */\n  _save(checkpoint) {\n    const filePath = path.join(\n      this.options.checkpointDir,\n      `${checkpoint.id}.checkpoint.json`\n    );\n    \n    try {\n      writeFileSync(filePath, JSON.stringify(checkpoint, null, 2));\n    } catch (e) {\n      this.logger.error(`[CheckpointManager] 保存失败: ${e.message}`);\n    }\n  }\n  \n  /**\n   * 启动自动保存\n   */\n  _startAutoSave(taskId) {\n    if (this.autoSaveTimers.has(taskId)) return;\n    \n    const timer = setInterval(() => {\n      const checkpoint = this.activeCheckpoints.get(taskId);\n      if (checkpoint) {\n        this._save(checkpoint);\n      }\n    }, this.options.autoSaveInterval);\n    \n    this.autoSaveTimers.set(taskId, timer);\n  }\n  \n  /**\n   * 停止自动保存\n   */\n  _stopAutoSave(taskId) {\n    const timer = this.autoSaveTimers.get(taskId);\n    if (timer) {\n      clearInterval(timer);\n      this.autoSaveTimers.delete(taskId);\n    }\n  }\n  \n  /**\n   * 删除检查点\n   */\n  delete(taskId) {\n    this._stopAutoSave(taskId);\n    this.activeCheckpoints.delete(taskId);\n    \n    const filePath = path.join(\n      this.options.checkpointDir,\n      `${taskId}.checkpoint.json`\n    );\n    \n    try {\n      if (existsSync(filePath)) {\n        unlinkSync(filePath);\n        this.logger.info(`[CheckpointManager] 删除检查点: ${taskId}`);\n      }\n    } catch (e) {\n      this.logger.error(`[CheckpointManager] 删除失败: ${e.message}`);\n    }\n  }\n  \n  /**\n   * 清理过期检查点\n   */\n  cleanup(maxAge = 7 * 24 * 60 * 60 * 1000) { // 默认 7 天\n    const now = Date.now();\n    let cleaned = 0;\n    \n    for (const [id, checkpoint] of this.activeCheckpoints) {\n      const age = now - new Date(checkpoint.updatedAt).getTime();\n      \n      if (age > maxAge && checkpoint.state === CheckpointState.COMPLETED) {\n        this.delete(id);\n        cleaned++;\n      }\n    }\n    \n    // 限制检查点总数\n    const allCheckpoints = [...this.activeCheckpoints.entries()]\n      .sort((a, b) => new Date(b[1].updatedAt) - new Date(a[1].updatedAt));\n    \n    while (allCheckpoints.length > this.options.maxCheckpoints) {\n      const [oldestId] = allCheckpoints.pop();\n      this.delete(oldestId);\n      cleaned++;\n    }\n    \n    this.logger.info(`[CheckpointManager] 清理了 ${cleaned} 个检查点`);\n    return cleaned;\n  }\n  \n  /**\n   * 生成恢复报告\n   */\n  generateReport(taskId) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    const total = checkpoint.task.totalSteps;\n    const completed = checkpoint.progress.completedSteps.length;\n    const failed = checkpoint.progress.failedSteps.length;\n    const skipped = checkpoint.progress.skippedSteps.length;\n    const pending = total - completed - skipped;\n    \n    let report = `\\n📊 任务检查点报告: ${taskId}\\n`;\n    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n`;\n    report += `状态: ${checkpoint.state}\\n`;\n    report += `描述: ${checkpoint.task.description || '无'}\\n`;\n    report += `创建: ${checkpoint.createdAt}\\n`;\n    report += `更新: ${checkpoint.updatedAt}\\n\\n`;\n    \n    report += `📈 进度: ${completed}/${total} (${Math.round(completed/total*100)}%)\\n`;\n    report += `  ✅ 完成: ${completed}\\n`;\n    report += `  ❌ 失败: ${failed}\\n`;\n    report += `  ⏭️  跳过: ${skipped}\\n`;\n    report += `  ⏳ 待执行: ${pending}\\n\\n`;\n    \n    if (checkpoint.errors.length > 0) {\n      report += `⚠️ 最近错误:\\n`;\n      checkpoint.errors.slice(-3).forEach(err => {\n        report += `  - Step ${err.stepIndex}: ${err.error}\\n`;\n      });\n      report += `\\n`;\n    }\n    \n    if (checkpoint.resumeHistory.length > 0) {\n      report += `🔄 恢复历史: ${checkpoint.resumeHistory.length} 次\\n`;\n    }\n    \n    report += `\\n💡 可用命令:\\n`;\n    report += `  恢复执行: ΩRESUME{\"taskId\":\"${taskId}\"}\\n`;\n    report += `  删除检查点: ΩCHECKPOINT{\"action\":\"delete\",\"taskId\":\"${taskId}\"}\\n`;\n    \n    return report;\n  }\n}\n\nexport default CheckpointManager;\nexport { CheckpointState };\nEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5076,
-      "timestamp": "2026-02-01T04:05:58.192Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'ΩBATCH\\|parseMessage\\|handleMessage\\|omega\\|Omega' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -40"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5077,
-      "timestamp": "2026-02-01T04:06:04.387Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'BATCH\\|parse\\|message\\|ws.on' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -50"
-      },
-      "success": true,
-      "resultPreview": "45:const config = expandEnvVars(JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8')));\n88:function sendCrossExtensionMessage(fromAgent, toAgent, message) {\n96:      type: 'cross_extension_message',\n99:      message: message,\n105:    logger.error(`发送跨扩展消息失败: ${e.message}`);\n106:    return { success: false, error: e.message };\n130:      const data = JSON.parse(readFileSync(HISTORY_FILE, 'utf-8'));\n136:    logger.warning('加载历史记录失败: ' + e.message);\n149:    logger.warning('保存历史记录失败:",
-      "error": null
-    },
-    {
-      "id": 5078,
-      "timestamp": "2026-02-01T04:06:10.992Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '700,850p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "                type: 'health_status',\n                ...status\n              }));\n            } catch (e) {\n              ws.send(JSON.stringify({\n                type: 'health_status',\n                healthy: false,\n                error: e.message\n              }));\n            }\n            break;\n          \n          // ===== 批量任务执行 =====\n          case 'tool_batch':\n            if (!taskEngine) {\n              ws.send(JSON.stringify({ type: 'batch_error', error: 'TaskEngine 未初始化' }));\n  ",
-      "error": null
-    },
-    {
-      "id": 5079,
-      "timestamp": "2026-02-01T04:06:53.221Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/patch_index.js << 'PATCHEOF'\n// 补丁脚本：为 index.js 添加第三阶段模块\n\nimport { readFileSync, writeFileSync } from 'fs';\n\nconst indexPath = '/Users/yay/workspace/genspark-agent/server-v2/index.js';\nlet content = readFileSync(indexPath, 'utf-8');\n\n// 1. 添加 import 语句\nconst importMarker = \"import ContextCompressor from './context-compressor.js';\";\nconst newImports = `import ContextCompressor from './context-compressor.js';\nimport TaskPlanner from './task-planner.js';\nimport WorkflowTemplate from './workflow-template.js';\nimport CheckpointManager from './checkpoint-manager.js';`;\n\nif (!content.includes(\"import TaskPlanner\")) {\n  content = content.replace(importMarker, newImports);\n  console.log('✓ 添加 import 语句');\n}\n\n// 2. 添加初始化代码\nconst initMarker = \"const contextCompressor = new ContextCompressor(logger);\";\nconst newInit = `const contextCompressor = new ContextCompressor(logger);\n  \n  // 第三阶段模块: 智能任务规划、工作流模板、断点续传\n  const taskPlanner = new TaskPlanner(logger, taskEngine.stateManager);\n  const checkpointManager = new CheckpointManager(logger, taskEngine.stateManager);\n  const workflowTemplate = new WorkflowTemplate(logger, taskPlanner);`;\n\nif (!content.includes(\"const taskPlanner\")) {\n  content = content.replace(initMarker, newInit);\n  console.log('✓ 添加初始化代码');\n}\n\n// 3. 更新日志输出\nconst logMarker = \"logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor 已初始化');\";\nconst newLog = \"logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor, TaskPlanner, WorkflowTemplate, CheckpointManager 已初始化');\";\n\nif (content.includes(logMarker)) {\n  content = content.replace(logMarker, newLog);\n  console.log('✓ 更新日志输出');\n}\n\n// 4. 添加新的消息处理 case (在 compress_context 之前)\nconst caseMarker = \"case 'compress_context':\";\nconst newCases = `// ===== 第三阶段: 智能任务规划 =====\n          case 'plan_task':\n            {\n              logger.info('[WS] 任务规划请求');\n              const plan = taskPlanner.analyze(msg.task, msg.context || {});\n              ws.send(JSON.stringify({ \n                type: 'plan_result', \n                ...plan,\n                visualization: plan.success ? taskPlanner.visualize(plan) : null\n              }));\n            }\n            break;\n          \n          case 'list_patterns':\n            {\n              const patterns = Object.keys(taskPlanner.patterns);\n              ws.send(JSON.stringify({ type: 'patterns_list', patterns }));\n            }\n            break;\n          \n          // ===== 工作流模板 =====\n          case 'list_workflows':\n            {\n              const templates = workflowTemplate.listTemplates();\n              ws.send(JSON.stringify({ type: 'workflows_list', templates }));\n            }\n            break;\n          \n          case 'get_workflow':\n            {\n              const template = workflowTemplate.getTemplate(msg.templateId);\n              const docs = template ? workflowTemplate.generateDocs(msg.templateId) : null;\n              ws.send(JSON.stringify({ type: 'workflow_detail', template, docs }));\n            }\n            break;\n          \n          case 'run_workflow':\n            {\n              logger.info('[WS] 执行工作流: ' + msg.templateId);\n              const instance = workflowTemplate.instantiate(msg.templateId, msg.variables || {});\n              \n              if (!instance.success) {\n                ws.send(JSON.stringify({ type: 'workflow_error', ...instance }));\n                break;\n              }\n              \n              // 创建检查点\n              const checkpoint = checkpointManager.create(\n                msg.taskId || 'wf-' + Date.now(),\n                {\n                  description: instance.templateName,\n                  steps: instance.steps,\n                  variables: instance.variables\n                }\n              );\n              \n              // 执行任务\n              checkpointManager.updateState(checkpoint.id, 'running');\n              \n              const result = await taskEngine.executeBatch(\n                checkpoint.id,\n                instance.steps,\n                { stopOnError: false },\n                (stepResult) => {\n                  checkpointManager.updateStep(checkpoint.id, stepResult.stepIndex, stepResult);\n                  ws.send(JSON.stringify({ type: 'workflow_step', checkpointId: checkpoint.id, ...stepResult }));\n                }\n              );\n              \n              checkpointManager.updateState(checkpoint.id, result.success ? 'completed' : 'failed');\n              ws.send(JSON.stringify({ \n                type: 'workflow_complete', \n                checkpointId: checkpoint.id,\n                ...result \n              }));\n            }\n            break;\n          \n          case 'save_workflow':\n            {\n              const filePath = workflowTemplate.saveTemplate(msg.templateId, msg.template);\n              ws.send(JSON.stringify({ type: 'workflow_saved', templateId: msg.templateId, filePath }));\n            }\n            break;\n          \n          // ===== 断点续传 =====\n          case 'list_checkpoints':\n            {\n              const resumable = checkpointManager.listResumable();\n              ws.send(JSON.stringify({ type: 'checkpoints_list', checkpoints: resumable }));\n            }\n            break;\n          \n          case 'checkpoint_status':\n            {\n              const checkpoint = checkpointManager.get(msg.taskId);\n              const report = checkpoint ? checkpointManager.generateReport(msg.taskId) : null;\n              ws.send(JSON.stringify({ type: 'checkpoint_detail', checkpoint, report }));\n            }\n            break;\n          \n          case 'resume_checkpoint':\n            {\n              logger.info('[WS] 恢复检查点: ' + msg.taskId);\n              const resumeInfo = checkpointManager.resume(msg.taskId);\n              \n              if (!resumeInfo.success) {\n                ws.send(JSON.stringify({ type: 'resume_error', ...resumeInfo }));\n                break;\n              }\n              \n              // 继续执行未完成的步骤\n              const stepsToRun = resumeInfo.pendingSteps.map(p => p.step);\n              \n              checkpointManager.updateState(msg.taskId, 'running');\n              \n              const result = await taskEngine.executeBatch(\n                msg.taskId,\n                stepsToRun,\n                { stopOnError: false, context: resumeInfo.context },\n                (stepResult) => {\n                  const actualIndex = resumeInfo.pendingSteps[stepResult.stepIndex]?.index ?? stepResult.stepIndex;\n                  checkpointManager.updateStep(msg.taskId, actualIndex, stepResult);\n                  ws.send(JSON.stringify({ type: 'resume_step', taskId: msg.taskId, ...stepResult }));\n                }\n              );\n              \n              checkpointManager.updateState(msg.taskId, result.success ? 'completed' : 'paused');\n              ws.send(JSON.stringify({ \n                type: 'resume_complete', \n                taskId: msg.taskId,\n                ...result,\n                report: checkpointManager.generateReport(msg.taskId)\n              }));\n            }\n            break;\n          \n          case 'delete_checkpoint':\n            {\n              checkpointManager.delete(msg.taskId);\n              ws.send(JSON.stringify({ type: 'checkpoint_deleted', taskId: msg.taskId }));\n            }\n            break;\n          \n          case 'cleanup_checkpoints':\n            {\n              const cleaned = checkpointManager.cleanup(msg.maxAge);\n              ws.send(JSON.stringify({ type: 'checkpoints_cleaned', count: cleaned }));\n            }\n            break;\n          \n          case 'compress_context':`;\n\nif (!content.includes(\"case 'plan_task'\")) {\n  content = content.replace(caseMarker, newCases);\n  console.log('✓ 添加消息处理 case');\n}\n\nwriteFileSync(indexPath, content);\nconsole.log('\\n✅ index.js 补丁完成!');\nPATCHEOF"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5080,
-      "timestamp": "2026-02-01T04:06:59.257Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && node /tmp/patch_index.js"
-      },
-      "success": true,
-      "resultPreview": "✓ 添加 import 语句\n✓ 添加初始化代码\n✓ 更新日志输出\n✓ 添加消息处理 case\n\n✅ index.js 补丁完成!\n",
-      "error": null
-    },
-    {
-      "id": 5081,
-      "timestamp": "2026-02-01T04:07:31.592Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && pm2 restart mcp-hub-server 2>/dev/null || (pm2 stop mcp-hub-server 2>/dev/null; pm2 start index.js --name mcp-hub-server) && sleep 2 && pm2 logs mcp-hub-server --lines 15 --nostream"
-      },
-      "success": true,
-      "resultPreview": "127\n/bin/sh: pm2: command not found\n",
-      "error": null
-    },
-    {
-      "id": 5082,
-      "timestamp": "2026-02-01T04:08:46.176Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && pkill -f 'node.*index.js' 2>/dev/null; sleep 1 && node index.js &disown && sleep 3 && echo 'Server started' && curl -s http://localhost:3456/health 2>/dev/null || echo 'Checking via process...' && pgrep -f 'node.*index.js'"
-      },
-      "success": true,
-      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[04:08:15] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[04:08:15] [INFO]\u001b[0m 加载了 444 条历史记录\n\u001b[36m[04:08:15] [INFO]\u001b[0m [filesystem] 启动中...\nServer started\nChecking via process...\n19015\n19018\n\u001b[33m[04:08:17] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdio\n\u001b[33m[",
-      "error": null
-    },
-    {
-      "id": 5083,
-      "timestamp": "2026-02-01T04:09:42.796Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sleep 8 && tail -30 /tmp/agent-server.log"
-      },
-      "success": true,
-      "resultPreview": "║   Skills:   2   个                                  ║\n║   安全检查: ✅ 已启用                              ║\n║   日志记录: ✅ 已启用                              ║\n║   命令重试: ✅ 已启用                                     ║\n║                                                           ║\n║   等待客户端连接...                                       ║\n║                                                           ║\n╚═══════════════════════════════════════════════════════════╝\n\nnode:events:485\n      throw er; // Unhandled 'error' ev",
-      "error": null
-    },
-    {
-      "id": 5084,
-      "timestamp": "2026-02-01T04:11:11.566Z",
-      "tool": "run_command",
-      "params": {
-        "command": "tail -50 /Users/yay/workspace/genspark-agent/server-v2/checkpoint-manager.js"
-      },
-      "success": true,
-      "resultPreview": "  }\n  \n  /**\n   * 生成恢复报告\n   */\n  generateReport(taskId) {\n    const checkpoint = this.activeCheckpoints.get(taskId);\n    if (!checkpoint) return null;\n    \n    const total = checkpoint.task.totalSteps;\n    const completed = checkpoint.progress.completedSteps.length;\n    const failed = checkpoint.progress.failedSteps.length;\n    const skipped = checkpoint.progress.skippedSteps.length;\n    const pending = total - completed - skipped;\n    \n    let report = `\\n📊 任务检查点报告: ${taskId}\\n`;\n    report +=",
-      "error": null
-    },
-    {
-      "id": 5085,
-      "timestamp": "2026-02-01T04:11:29.414Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'ΩBATCH\\|case.*tool_call\\|handleToolCall\\|parseOmega' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -40"
-      },
-      "success": true,
-      "resultPreview": "473:async function handleToolCall(ws, message, isRetry = false, originalId = null) {\n656:          case 'tool_call':\n657:            await handleToolCall(ws, msg);\n1287:              await handleToolCall(ws, {\n",
-      "error": null
-    },
-    {
-      "id": 5086,
-      "timestamp": "2026-02-01T04:12:48.763Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '473,600p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "async function handleToolCall(ws, message, isRetry = false, originalId = null) {\n  const { tool, params, id } = message;\n  \n  logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);\n\n  // 安全检查\n  const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);\n  \n  if (!safetyCheck.allowed) {\n    logger.warning(`安全检查未通过: ${safetyCheck.reason}`);\n    \n    // 记录失败的调用\n    const historyId = addToHistory(tool, params, false, null, safetyCheck.reason);\n    \n    ws.send(JSON.string",
-      "error": null
-    },
-    {
-      "id": 5087,
-      "timestamp": "2026-02-01T04:12:55.561Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'BATCH\\|ΩGOAL\\|batch\\|parseCommand' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -30"
-      },
-      "success": true,
-      "resultPreview": "721:          case 'tool_batch':\n723:              ws.send(JSON.stringify({ type: 'batch_error', error: 'TaskEngine 未初始化' }));\n727:              const { id: batchId, steps, options } = msg;\n728:              logger.info(`[WS] 收到批量任务: ${batchId}, ${steps?.length || 0} 步`);\n731:                batchId || `batch-${Date.now()}`,\n737:                    type: 'batch_step_result',\n738:                    batchId,\n745:                type: 'batch_complete',\n753:                type: 'batch_error',\n769:",
-      "error": null
-    },
-    {
-      "id": 5088,
-      "timestamp": "2026-02-01T04:13:03.564Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -rn 'ΩBATCH\\|parseBatch\\|tool_batch' /Users/yay/workspace/genspark-agent/extension/ --include='*.js' | head -30"
-      },
-      "success": true,
-      "resultPreview": "/Users/yay/workspace/genspark-agent/extension/content.js:171:ΩBATCH{\"steps\":[{\"tool\":\"t1\",\"params\":{}},{\"tool\":\"t2\",\"params\":{}}]}\n/Users/yay/workspace/genspark-agent/extension/content.js:584:    // 优先检查 ΩBATCH 批量格式\n/Users/yay/workspace/genspark-agent/extension/content.js:585:    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n/Users/yay/workspace/genspark-agent/extension/content.js:588:      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n/Users/yay/workspace/genspark-agent/extension/content.js",
-      "error": null
-    },
-    {
-      "id": 5089,
-      "timestamp": "2026-02-01T04:13:10.356Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '580,700p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "    return calls;\n  }\n\n  function parseToolCalls(text) {\n    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n   ",
-      "error": null
-    },
-    {
-      "id": 5090,
-      "timestamp": "2026-02-01T04:13:29.357Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/new_commands_parser.js << 'ENDOFFILE'\\n    // ========== 第三阶段命令解析 ==========\\n    \\n    // ΩPLAN - 智能任务规划\\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*```|\\\\s*$|\\\\n\\\\n)/;\\n    const planMatch = text.match(planRegex);\\n    if (planMatch && !state.executedCalls.has('plan:' + planMatch.index)) {\\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\\n      const isExample = beforePlan.includes('格式') || beforePlan.includes('示例') || beforePlan.includes('Example');\\n      if (!isExample) {\\n        try {\\n          const planJson = planMatch[1].replace(/["
-      },
-      "success": true,
-      "resultPreview": "2\n/bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `cat > /tmp/new_commands_parser.js << 'ENDOFFILE'\\n    // ========== 第三阶段命令解析 ==========\\n    \\n    // ΩPLAN - 智能任务规划\\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*```|\\\\s*$|\\\\n\\\\n)/;\\n    const planMatch = text.match(planRegex);\\n    if (planMatch && !state.executedCalls.has('plan:' + planMatch.index)) {\\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\\n  ",
-      "error": null
-    },
-    {
-      "id": 5091,
-      "timestamp": "2026-02-01T04:13:45.359Z",
-      "tool": "write_file",
-      "params": {
-        "path": "/tmp/new_commands_parser.js"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool write_file: [\n  {\n    \"expected\": \"string\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"content\"\n    ],\n    \"message\": \"Invalid input: expected string, received undefined\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 5092,
-      "timestamp": "2026-02-01T04:13:52.960Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat /Users/yay/workspace/genspark-agent/extension/content.js | head -590 | tail -10"
-      },
-      "success": true,
-      "resultPreview": "  }\n\n  function parseToolCalls(text) {\n    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n",
-      "error": null
-    },
-    {
-      "id": 5093,
-      "timestamp": "2026-02-01T04:14:00.159Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'ΩBATCH parse skip\\|方案3.*优先解析' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "609:          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);\n614:    // 方案3: 优先解析 ```tool 代码块\n",
-      "error": null
-    },
-    {
-      "id": 5094,
-      "timestamp": "2026-02-01T04:14:16.939Z",
-      "tool": "edit_file",
-      "params": {
-        "path": "/Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "MCP error -32602: Input validation error: Invalid arguments for tool edit_file: [\n  {\n    \"expected\": \"array\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"edits\"\n    ],\n    \"message\": \"Invalid input: expected array, received undefined\"\n  }\n]",
-      "error": null
-    },
-    {
-      "id": 5095,
-      "timestamp": "2026-02-01T04:14:22.571Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '613,616p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "\n    // 方案3: 优先解析 ```tool 代码块\n    const toolBlockCalls = parseToolCodeBlock(text);\n    if (toolBlockCalls.length > 0) return toolBlockCalls;\n",
-      "error": null
-    },
-    {
-      "id": 5096,
-      "timestamp": "2026-02-01T04:14:41.761Z",
-      "tool": "run_command",
-      "params": {
-        "command": "python3 << 'PYEOF'\\nimport re\\n\\n# 读取文件\\nwith open('/Users/yay/workspace/genspark-agent/extension/content.js', 'r') as f:\\n    content = f.read()\\n\\n# 新代码块\\nnew_code = '''\\n    // ========== ΩPLAN - 智能任务规划 ==========\\n    const planRegex = /ΩPLAN\\\\\\\\s*(\\\\\\\\{[\\\\\\\\s\\\\\\\\S]*?\\\\\\\\})(?=\\\\\\\\s*```|\\\\\\\\s*$|\\\\\\\\n\\\\\\\\n)/;\\n    const planMatch = text.match(planRegex);\\n    if (planMatch && !state.executedCalls.has('plan:' + planMatch.index)) {\\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\\n      const isExample = beforePlan.includes('格式') || beforePlan.includes('示例') || beforePlan.includes('Example');\\n      if (!isExample) {\\n        try {\\n          const planJson = planMatch[1].replace(/["
-      },
-      "success": true,
-      "resultPreview": "2\n/bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `python3 << 'PYEOF'\\nimport re\\n\\n# 读取文件\\nwith open('/Users/yay/workspace/genspark-agent/extension/content.js', 'r') as f:\\n    content = f.read()\\n\\n# 新代码块\\nnew_code = '''\\n    // ========== ΩPLAN - 智能任务规划 ==========\\n    const planRegex = /ΩPLAN\\\\\\\\s*(\\\\\\\\{[\\\\\\\\s\\\\\\\\S]*?\\\\\\\\})(?=\\\\\\\\s*```|\\\\\\\\s*$|\\\\\\\\n\\\\\\\\n)/;\\n    const planMatch = text.match(planRegex);\\n    if (planMatch && !state.executedCalls.has('plan:' + ",
-      "error": null
-    },
-    {
-      "id": 5097,
-      "timestamp": "2026-02-01T04:15:07.957Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/inject_parsers.py << 'ENDPY'\\nimport re\\n\\nwith open('/Users/yay/workspace/genspark-agent/extension/content.js', 'r') as f:\\n    content = f.read()\\n\\nnew_code = r\\"
-      },
-      "success": true,
-      "resultPreview": "2\n/bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `cat > /tmp/inject_parsers.py << 'ENDPY'\\nimport re\\n\\nwith open('/Users/yay/workspace/genspark-agent/extension/content.js', 'r') as f:\\n    content = f.read()\\n\\nnew_code = r\\'\n",
-      "error": null
-    },
-    {
-      "id": 5098,
-      "timestamp": "2026-02-01T04:15:19.209Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e \\"
-      },
-      "success": true,
-      "resultPreview": "9\nnode: -e requires an argument\n",
-      "error": null
-    },
-    {
-      "id": 5099,
-      "timestamp": "2026-02-01T04:15:37.937Z",
-      "tool": "run_command",
-      "params": {
-        "command": "printf '%s' 'const fs = require(\\"
-      },
-      "success": false,
-      "resultPreview": "",
-      "error": "命令不在白名单: printf"
-    },
-    {
-      "id": 5100,
-      "timestamp": "2026-02-01T04:15:44.356Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo 'const fs = require(\"fs\");' > /tmp/inject.js"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5101,
-      "timestamp": "2026-02-01T04:16:02.155Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo '\\n    // ========== ΩPLAN - 智能任务规划 ==========\\n    const planRegex = /ΩPLAN\\\\\\\\s*(\\\\\\\\{[\\\\\\\\s\\\\\\\\S]*?\\\\\\\\})(?=\\\\\\\\s*```|\\\\\\\\s*$|\\\\\\\\n\\\\\\\\n)/;\\n    const planMatch = text.match(planRegex);\\n    if (planMatch && !state.executedCalls.has(\\"
-      },
-      "success": true,
-      "resultPreview": "2\n/bin/sh: -c: line 0: unexpected EOF while looking for matching `''\n/bin/sh: -c: line 1: syntax error: unexpected end of file\n",
-      "error": null
-    },
-    {
-      "id": 5102,
-      "timestamp": "2026-02-01T04:16:11.215Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e 'console.log(Buffer.from(`\n    // ========== ΩPLAN - 智能任务规划 ==========\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*\\$|\\\\n\\\\n)/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      const isExample = beforePlan.includes(\"格式\") || beforePlan.includes(\"示例\");\n      if (!isExample) {\n        try {\n          const planJson = planMatch[1];\n          const plan = safeJsonParse(planJson);\n          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n        } catch (e) { if (CONFIG.DEBUG) console.log(\"[Agent] ΩPLAN skip:\", e.message); }\n      }\n    }\n`).toString(\"base64\"))'"
-      },
-      "success": true,
-      "resultPreview": "CiAgICAvLyA9PT09PT09PT09IM6pUExBTiAtIOaZuuiDveS7u+WKoeinhOWIkiA9PT09PT09PT09CiAgICBjb25zdCBwbGFuUmVnZXggPSAvzqlQTEFOXHMqKFx7W1xzXFNdKj9cfSkoPz1ccypgYGB8XHMqJHxcblxuKS87CiAgICBjb25zdCBwbGFuTWF0Y2ggPSB0ZXh0Lm1hdGNoKHBsYW5SZWdleCk7CiAgICBpZiAocGxhbk1hdGNoICYmICFzdGF0ZS5leGVjdXRlZENhbGxzLmhhcygicGxhbjoiICsgcGxhbk1hdGNoLmluZGV4KSkgewogICAgICBjb25zdCBiZWZvcmVQbGFuID0gdGV4dC5zdWJzdHJpbmcoTWF0aC5tYXgoMCwgcGxhbk1hdGNoLmluZGV4IC0gMTAwKSwgcGxhbk1hdGNoLmluZGV4KTsKICAgICAgY29uc3QgaXNFeGFtcGxlID0gYmVmb3JlUGxh",
-      "error": null
-    },
-    {
-      "id": 5103,
-      "timestamp": "2026-02-01T04:16:28.018Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node > /tmp/newcode.b64 << 'NODESCRIPT'\nconst code = `\n    // ========== ΩPLAN - 智能任务规划 ==========\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      const isExample = beforePlan.includes(\"格式\") || beforePlan.includes(\"示例\");\n      if (!isExample) {\n        try {\n          const plan = safeJsonParse(planMatch[1]);\n          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n        } catch (e) { if (CONFIG.DEBUG) console.log(\"[Agent] ΩPLAN skip:\", e.message); }\n      }\n    }\n\n    // ========== ΩFLOW - 工作流模板 ==========\n    const flowRegex = /ΩFLOW\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const flowMatch = text.match(flowRegex);\n    if (flowMatch && !state.executedCalls.has(\"flow:\" + flowMatch.index)) {\n      const beforeFlow = text.substring(Math.max(0, flowMatch.index - 100), flowMatch.index);\n      const isExample = beforeFlow.includes(\"格式\") || beforeFlow.includes(\"示例\");\n      if (!isExample) {\n        try {\n          const flow = safeJsonParse(flowMatch[1]);\n          return [{ name: \"__FLOW__\", params: flow, raw: flowMatch[0], start: flowMatch.index, end: flowMatch.index + flowMatch[0].length, isFlow: true }];\n        } catch (e) { if (CONFIG.DEBUG) console.log(\"[Agent] ΩFLOW skip:\", e.message); }\n      }\n    }\n\n    // ========== ΩRESUME - 断点续传 ==========\n    const resumeRegex = /ΩRESUME\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const resumeMatch = text.match(resumeRegex);\n    if (resumeMatch && !state.executedCalls.has(\"resume:\" + resumeMatch.index)) {\n      const beforeResume = text.substring(Math.max(0, resumeMatch.index - 100), resumeMatch.index);\n      const isExample = beforeResume.includes(\"格式\") || beforeResume.includes(\"示例\");\n      if (!isExample) {\n        try {\n          const resume = safeJsonParse(resumeMatch[1]);\n          return [{ name: \"__RESUME__\", params: resume, raw: resumeMatch[0], start: resumeMatch.index, end: resumeMatch.index + resumeMatch[0].length, isResume: true }];\n        } catch (e) { if (CONFIG.DEBUG) console.log(\"[Agent] ΩRESUME skip:\", e.message); }\n      }\n    }\n\n    // ========== ΩCHECKPOINT - 检查点操作 ==========\n    const cpRegex = /ΩCHECKPOINT\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const cpMatch = text.match(cpRegex);\n    if (cpMatch && !state.executedCalls.has(\"cp:\" + cpMatch.index)) {\n      const beforeCp = text.substring(Math.max(0, cpMatch.index - 100), cpMatch.index);\n      const isExample = beforeCp.includes(\"格式\") || beforeCp.includes(\"示例\");\n      if (!isExample) {\n        try {\n          const cp = safeJsonParse(cpMatch[1]);\n          return [{ name: \"__CHECKPOINT__\", params: cp, raw: cpMatch[0], start: cpMatch.index, end: cpMatch.index + cpMatch[0].length, isCheckpoint: true }];\n        } catch (e) { if (CONFIG.DEBUG) console.log(\"[Agent] ΩCHECKPOINT skip:\", e.message); }\n      }\n    }\n`;\nconsole.log(Buffer.from(code).toString('base64'));\nNODESCRIPT"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5104,
-      "timestamp": "2026-02-01T04:16:40.430Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e 'const code = `\n    // ========== ΩPLAN ==========\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\")) {\n        try {\n          const plan = safeJsonParse(planMatch[1]);\n          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n        } catch (e) {}\n      }\n    }\n    // ========== ΩFLOW ==========\n    const flowRegex = /ΩFLOW\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const flowMatch = text.match(flowRegex);\n    if (flowMatch && !state.executedCalls.has(\"flow:\" + flowMatch.index)) {\n      const beforeFlow = text.substring(Math.max(0, flowMatch.index - 100), flowMatch.index);\n      if (!beforeFlow.includes(\"格式\") && !beforeFlow.includes(\"示例\")) {\n        try {\n          const flow = safeJsonParse(flowMatch[1]);\n          return [{ name: \"__FLOW__\", params: flow, raw: flowMatch[0], start: flowMatch.index, end: flowMatch.index + flowMatch[0].length, isFlow: true }];\n        } catch (e) {}\n      }\n    }\n    // ========== ΩRESUME ==========\n    const resumeRegex = /ΩRESUME\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\x60\\x60\\x60|\\\\s*$|\\\\n\\\\n)/;\n    const resumeMatch = text.match(resumeRegex);\n    if (resumeMatch && !state.executedCalls.has(\"resume:\" + resumeMatch.index)) {\n      const beforeResume = text.substring(Math.max(0, resumeMatch.index - 100), resumeMatch.index);\n      if (!beforeResume.includes(\"格式\") && !beforeResume.includes(\"示例\")) {\n        try {\n          const resume = safeJsonParse(resumeMatch[1]);\n          return [{ name: \"__RESUME__\", params: resume, raw: resumeMatch[0], start: resumeMatch.index, end: resumeMatch.index + resumeMatch[0].length, isResume: true }];\n        } catch (e) {}\n      }\n    }\n`; console.log(Buffer.from(code).toString(\"base64\"));' > /tmp/newcode.b64"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5105,
-      "timestamp": "2026-02-01T04:16:46.560Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat /tmp/newcode.b64 | head -c 200"
-      },
-      "success": true,
-      "resultPreview": "CiAgICAvLyA9PT09PT09PT09IM6pUExBTiA9PT09PT09PT09CiAgICBjb25zdCBwbGFuUmVnZXggPSAvzqlQTEFOXHMqKFx7W1xzXFNdKj9cfSkoPz1ccypgYGB8XHMqJHxcblxuKS87CiAgICBjb25zdCBwbGFuTWF0Y2ggPSB0ZXh0Lm1hdGNoKHBsYW5SZWdleCk7",
-      "error": null
-    },
-    {
-      "id": 5106,
-      "timestamp": "2026-02-01T04:17:27.813Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /tmp/inject.js"
-      },
-      "success": true,
-      "resultPreview": "OK: Injected\n",
-      "error": null
-    },
-    {
-      "id": 5107,
-      "timestamp": "2026-02-01T04:17:35.370Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'ΩPLAN\\|ΩFLOW\\|ΩRESUME\\|__PLAN__\\|__FLOW__\\|__RESUME__' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
-      },
-      "success": true,
-      "resultPreview": "615:    // ========== ΩPLAN ==========\n616:    const planRegex = /ΩPLAN\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n623:          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n627:    // ========== ΩFLOW ==========\n628:    const flowRegex = /ΩFLOW\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n635:          return [{ name: \"__FLOW__\", params: flow, raw: flowMatch[0], start: flowMatch.index, end: flowMatch.inde",
-      "error": null
-    },
-    {
-      "id": 5108,
-      "timestamp": "2026-02-01T04:17:42.564Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n '__BATCH__\\|isBatch\\|tool_batch' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
-      },
-      "success": true,
-      "resultPreview": "599:              name: '__BATCH__',\n604:              isBatch: true\n885:        type: 'tool_batch',\n1072:      if (tool.isBatch && tool.name === '__BATCH__') {\n",
-      "error": null
-    },
-    {
-      "id": 5109,
-      "timestamp": "2026-02-01T04:17:49.559Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '1070,1120p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else {\n        executeToolCall(tool, callHash);\n      }\n      return;\n    }\n    \n    if (text.includes('@DONE') || text.includes('[[DONE]]')) {\n      const doneHash = `done:${index}`;\n      if (!state.executedCalls.has(doneHash)) {\n        state.executedCalls.add(doneHash);\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        state.pen",
-      "error": null
-    },
-    {
-      "id": 5110,
-      "timestamp": "2026-02-01T04:18:02.016Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e 'const code = `\n      // ========== 处理 ΩPLAN ==========\n      if (tool.isPlan && tool.name === \"__PLAN__\") {\n        ws.send(JSON.stringify({ type: \"task_plan\", params: tool.params, id: Date.now() }));\n        state.executedCalls.add(callHash);\n        addLog(\"📋 发送任务规划请求\", \"info\");\n        return;\n      }\n      \n      // ========== 处理 ΩFLOW ==========\n      if (tool.isFlow && tool.name === \"__FLOW__\") {\n        ws.send(JSON.stringify({ type: \"workflow_execute\", params: tool.params, id: Date.now() }));\n        state.executedCalls.add(callHash);\n        addLog(\"🔄 发送工作流执行请求\", \"info\");\n        return;\n      }\n      \n      // ========== 处理 ΩRESUME ==========\n      if (tool.isResume && tool.name === \"__RESUME__\") {\n        ws.send(JSON.stringify({ type: \"task_resume\", params: tool.params, id: Date.now() }));\n        state.executedCalls.add(callHash);\n        addLog(\"▶️ 发送断点续传请求\", \"info\");\n        return;\n      }\n      \n      // ========== 处理 ΩCHECKPOINT ==========\n      if (tool.isCheckpoint && tool.name === \"__CHECKPOINT__\") {\n        ws.send(JSON.stringify({ type: \"checkpoint_action\", params: tool.params, id: Date.now() }));\n        state.executedCalls.add(callHash);\n        addLog(\"💾 发送检查点操作请求\", \"info\");\n        return;\n      }\n`; console.log(Buffer.from(code).toString(\"base64\"));' > /tmp/handlers.b64 && cat /tmp/handlers.b64"
-      },
-      "success": true,
-      "resultPreview": "CiAgICAgIC8vID09PT09PT09PT0g5aSE55CGIM6pUExBTiA9PT09PT09PT09CiAgICAgIGlmICh0b29sLmlzUGxhbiAmJiB0b29sLm5hbWUgPT09ICJfX1BMQU5fXyIpIHsKICAgICAgICB3cy5zZW5kKEpTT04uc3RyaW5naWZ5KHsgdHlwZTogInRhc2tfcGxhbiIsIHBhcmFtczogdG9vbC5wYXJhbXMsIGlkOiBEYXRlLm5vdygpIH0pKTsKICAgICAgICBzdGF0ZS5leGVjdXRlZENhbGxzLmFkZChjYWxsSGFzaCk7CiAgICAgICAgYWRkTG9nKCLwn5OLIOWPkemAgeS7u+WKoeinhOWIkuivt+axgiIsICJpbmZvIik7CiAgICAgICAgcmV0dXJuOwogICAgICB9CiAgICAgIAogICAgICAvLyA9PT09PT09PT09IOWkhOeQhiDOqUZMT1cgPT09PT09PT09PQogICAgICBp",
-      "error": null
-    },
-    {
-      "id": 5111,
-      "timestamp": "2026-02-01T04:18:37.221Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /tmp/inject2.js"
-      },
-      "success": true,
-      "resultPreview": "OK\n",
-      "error": null
-    },
-    {
-      "id": 5112,
-      "timestamp": "2026-02-01T04:18:44.759Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n \"case 'tool_batch'\\|case 'tool_call'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "656:          case 'tool_call':\n721:          case 'tool_batch':\n",
-      "error": null
-    },
-    {
-      "id": 5113,
-      "timestamp": "2026-02-01T04:18:51.172Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '750,800p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "            } catch (e) {\n              logger.error('[WS] 批量任务失败:', e.message);\n              ws.send(JSON.stringify({\n                type: 'batch_error',\n                error: e.message\n              }));\n            }\n            break;\n          \n          case 'resume_task':\n            if (!taskEngine) {\n              ws.send(JSON.stringify({ type: 'resume_error', error: 'TaskEngine 未初始化' }));\n              break;\n            }\n            try {\n              const result = await taskEng",
-      "error": null
-    },
-    {
-      "id": 5114,
-      "timestamp": "2026-02-01T04:18:58.378Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n \"case 'create_goal'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "791:          case 'create_goal':\n",
-      "error": null
-    },
-    {
-      "id": 5115,
-      "timestamp": "2026-02-01T04:19:23.642Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e 'const code = `\n          // ===== 第三阶段: 智能规划、工作流、断点续传 =====\n          case \"task_plan\":\n            {\n              if (!taskPlanner) {\n                ws.send(JSON.stringify({ type: \"plan_error\", error: \"TaskPlanner 未初始化\" }));\n                break;\n              }\n              try {\n                const plan = taskPlanner.analyze(msg.params.task || msg.params.steps, msg.params.context || {});\n                const visualization = taskPlanner.visualize(plan);\n                ws.send(JSON.stringify({ type: \"plan_result\", plan, visualization }));\n                logger.info(\"[WS] 任务规划完成:\", plan.id);\n              } catch (e) {\n                ws.send(JSON.stringify({ type: \"plan_error\", error: e.message }));\n              }\n            }\n            break;\n          \n          case \"workflow_execute\":\n            {\n              if (!workflowTemplate || !taskEngine) {\n                ws.send(JSON.stringify({ type: \"workflow_error\", error: \"WorkflowTemplate 未初始化\" }));\n                break;\n              }\n              try {\n                const { template, vars } = msg.params;\n                const workflow = workflowTemplate.instantiate(template, vars || {});\n                if (!workflow.success) {\n                  ws.send(JSON.stringify({ type: \"workflow_error\", error: workflow.error, missing: workflow.missing }));\n                  break;\n                }\n                logger.info(\"[WS] 执行工作流:\", workflow.workflowId);\n                // 创建检查点\n                const checkpoint = checkpointManager.create(workflow.workflowId, {\n                  steps: workflow.steps,\n                  description: workflow.name,\n                  source: \"workflow\"\n                });\n                // 执行工作流步骤\n                const result = await taskEngine.executeBatch(\n                  workflow.workflowId,\n                  workflow.steps,\n                  { stopOnError: false },\n                  (stepResult) => {\n                    checkpointManager.recordStepComplete(checkpoint.id, stepResult.stepIndex, stepResult);\n                    ws.send(JSON.stringify({ type: \"workflow_step\", workflowId: workflow.workflowId, ...stepResult }));\n                  }\n                );\n                checkpointManager.complete(checkpoint.id);\n                ws.send(JSON.stringify({ type: \"workflow_complete\", workflowId: workflow.workflowId, ...result }));\n              } catch (e) {\n                logger.error(\"[WS] 工作流执行失败:\", e.message);\n                ws.send(JSON.stringify({ type: \"workflow_error\", error: e.message }));\n              }\n            }\n            break;\n          \n          case \"task_resume\":\n            {\n              if (!checkpointManager || !taskEngine) {\n                ws.send(JSON.stringify({ type: \"resume_error\", error: \"CheckpointManager 未初始化\" }));\n                break;\n              }\n              try {\n                const { checkpointId, taskId } = msg.params;\n                const cpId = checkpointId || taskId;\n                const recovery = checkpointManager.recover(cpId);\n                if (!recovery.success) {\n                  ws.send(JSON.stringify({ type: \"resume_error\", error: recovery.error }));\n                  break;\n                }\n                logger.info(\"[WS] 恢复任务:\", cpId, \"从步骤\", recovery.resumeFrom);\n                ws.send(JSON.stringify({ type: \"resume_started\", ...recovery }));\n                // 执行剩余步骤\n                const result = await taskEngine.executeBatch(\n                  cpId + \"_resumed\",\n                  recovery.remainingSteps,\n                  recovery.options,\n                  (stepResult) => {\n                    checkpointManager.recordStepComplete(cpId, recovery.resumeFrom + stepResult.stepIndex, stepResult);\n                    ws.send(JSON.stringify({ type: \"resume_step\", checkpointId: cpId, ...stepResult }));\n                  }\n                );\n                checkpointManager.complete(cpId);\n                ws.send(JSON.stringify({ type: \"resume_complete\", checkpointId: cpId, ...result }));\n              } catch (e) {\n                logger.error(\"[WS] 断点续传失败:\", e.message);\n                ws.send(JSON.stringify({ type: \"resume_error\", error: e.message }));\n              }\n            }\n            break;\n          \n          case \"checkpoint_action\":\n            {\n              if (!checkpointManager) {\n                ws.send(JSON.stringify({ type: \"checkpoint_error\", error: \"CheckpointManager 未初始化\" }));\n                break;\n              }\n              try {\n                const { action, checkpointId, taskId } = msg.params;\n                let result;\n                switch (action) {\n                  case \"list\":\n                    result = { checkpoints: checkpointManager.list(msg.params.filter || {}) };\n                    break;\n                  case \"get\":\n                    result = { checkpoint: checkpointManager.get(checkpointId || taskId) };\n                    break;\n                  case \"delete\":\n                    result = { deleted: checkpointManager.delete(checkpointId || taskId) };\n                    break;\n                  case \"pause\":\n                    result = { paused: checkpointManager.pause(checkpointId || taskId) };\n                    break;\n                  case \"recoverable\":\n                    result = { recoverable: checkpointManager.listRecoverable() };\n                    break;\n                  case \"cleanup\":\n                    result = { cleaned: checkpointManager.cleanup(msg.params.options || {}) };\n                    break;\n                  case \"report\":\n                    result = { report: checkpointManager.generateReport(checkpointId || taskId) };\n                    break;\n                  default:\n                    result = { error: \"未知操作: \" + action };\n                }\n                ws.send(JSON.stringify({ type: \"checkpoint_result\", action, ...result }));\n              } catch (e) {\n                ws.send(JSON.stringify({ type: \"checkpoint_error\", error: e.message }));\n              }\n            }\n            break;\n          \n          case \"list_templates\":\n            {\n              if (!workflowTemplate) {\n                ws.send(JSON.stringify({ type: \"templates_error\", error: \"WorkflowTemplate 未初始化\" }));\n                break;\n              }\n              const templates = workflowTemplate.listTemplates();\n              ws.send(JSON.stringify({ type: \"templates_list\", templates }));\n            }\n            break;\n\n`; console.log(Buffer.from(code).toString(\"base64\"));' > /tmp/server_handlers.b64"
-      },
-      "success": true,
-      "resultPreview": "",
-      "error": null
-    },
-    {
-      "id": 5116,
-      "timestamp": "2026-02-01T04:19:30.761Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat /tmp/server_handlers.b64 | head -c 100"
-      },
-      "success": true,
-      "resultPreview": "CiAgICAgICAgICAvLyA9PT09PSDnrKzkuInpmLbmrrU6IOaZuuiDveinhOWIkuOAgeW3peS9nOa1geOAgeaWreeCuee7reS8oCA9",
-      "error": null
-    },
-    {
-      "id": 5117,
-      "timestamp": "2026-02-01T04:19:49.222Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node /tmp/inject3.js"
-      },
-      "success": true,
-      "resultPreview": "OK: Server handlers injected\n",
-      "error": null
-    },
-    {
-      "id": 5118,
-      "timestamp": "2026-02-01T04:20:06.377Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n \"task_plan\\|workflow_execute\\|checkpoint_action\\|list_templates\" /Users/yay/workspace/genspark-agent/server-v2/index.js | head -10"
-      },
-      "success": true,
-      "resultPreview": "793:          case \"task_plan\":\n810:          case \"workflow_execute\":\n884:          case \"checkpoint_action\":\n925:          case \"list_templates\":\n",
-      "error": null
-    },
-    {
-      "id": 5119,
-      "timestamp": "2026-02-01T04:20:45.141Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && pkill -f 'node index.js' 2>/dev/null; sleep 1 && node index.js &"
-      },
-      "success": true,
-      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[04:20:14] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[04:20:14] [INFO]\u001b[0m 加载了 481 条历史记录\n\u001b[36m[04:20:14] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[04:20:16] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdio\n\u001b[33m[04:20:19] [WARNING]\u001b[0m [filesystem] stderr: Client",
-      "error": null
-    },
-    {
-      "id": 5120,
-      "timestamp": "2026-02-01T04:22:29.348Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'case.*tool_call\\|BATCH\\|handleBatch' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "656:          case 'tool_call':\n",
-      "error": null
-    },
-    {
-      "id": 5121,
-      "timestamp": "2026-02-01T04:22:38.536Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '650,750p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "\n    ws.on('message', async data => {\n      try {\n        const msg = JSON.parse(data.toString());\n        \n        switch (msg.type) {\n          case 'tool_call':\n            await handleToolCall(ws, msg);\n            break;\n            \n          case 'confirm_result':\n            safety.handleConfirmation(msg.id, msg.approved);\n            break;\n            \n          case 'ping':\n            ws.send('{\"type\":\"pong\"}');\n            break;\n            \n          case 'list_tools':\n           ",
-      "error": null
-    },
-    {
-      "id": 5122,
-      "timestamp": "2026-02-01T04:22:45.739Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '740,850p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "                  }));\n                }\n              );\n              \n              ws.send(JSON.stringify({\n                type: 'batch_complete',\n                ...result\n              }));\n              \n              logger.success(`[WS] 批量任务完成: ${result.stepsCompleted}/${result.totalSteps} 成功`);\n            } catch (e) {\n              logger.error('[WS] 批量任务失败:', e.message);\n              ws.send(JSON.stringify({\n                type: 'batch_error',\n                error: e.message\n   ",
-      "error": null
-    },
-    {
-      "id": 5123,
-      "timestamp": "2026-02-01T04:22:53.337Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '850,950p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "            {\n              if (!checkpointManager || !taskEngine) {\n                ws.send(JSON.stringify({ type: \"resume_error\", error: \"CheckpointManager 未初始化\" }));\n                break;\n              }\n              try {\n                const { checkpointId, taskId } = msg.params;\n                const cpId = checkpointId || taskId;\n                const recovery = checkpointManager.recover(cpId);\n                if (!recovery.success) {\n                  ws.send(JSON.stringify({ type: \"r",
-      "error": null
-    },
-    {
-      "id": 5124,
-      "timestamp": "2026-02-01T04:23:00.563Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'ΩBATCH\\|parseOmega\\|executeToolCall\\|方案3' /Users/yay/workspace/genspark-agent/extension/content.js | head -30"
-      },
-      "success": true,
-      "resultPreview": "171:ΩBATCH{\"steps\":[{\"tool\":\"t1\",\"params\":{}},{\"tool\":\"t2\",\"params\":{}}]}\n565:  // 方案3: 解析 ```tool 代码块\n584:    // 优先检查 ΩBATCH 批量格式\n585:    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n588:      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n609:          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);\n652:    // 方案3: 优先解析 ```tool 代码块\n910:  function executeToolCall(tool, callHash) {\n1107:        executeToolCall(tool, callHash);\n1180:      '支持批量执行: ΩBATCH{\"steps\":[...]}",
-      "error": null
-    },
-    {
-      "id": 5125,
-      "timestamp": "2026-02-01T04:23:07.535Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '580,660p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "    return calls;\n  }\n\n  function parseToolCalls(text) {\n    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n   ",
-      "error": null
-    },
-    {
-      "id": 5126,
-      "timestamp": "2026-02-01T04:23:14.944Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n '__PLAN__\\|__FLOW__\\|__RESUME__\\|__BATCH__' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "599:              name: '__BATCH__',\n623:          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n635:          return [{ name: \"__FLOW__\", params: flow, raw: flowMatch[0], start: flowMatch.index, end: flowMatch.index + flowMatch[0].length, isFlow: true }];\n647:          return [{ name: \"__RESUME__\", params: resume, raw: resumeMatch[0], start: resumeMatch.index, end: resumeMatch.index + resumeMatch",
-      "error": null
-    },
-    {
-      "id": 5127,
-      "timestamp": "2026-02-01T04:23:21.536Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '1070,1130p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      \n      // ========== 处理 ΩPLAN ==========\n      if (tool.isPlan && tool.name === \"__PLAN__\") {\n        ws.send(JSON.stringify({ type: \"task_plan\", params: tool.params, id: Date.now() }));\n        state.executedCalls.add(callHash);\n        addLog(\"📋 发送任务规划请求\", \"info\");\n        return;\n      }\n      \n      // ========== 处理 ΩFLOW ==========\n      if (tool.isFlow &&",
-      "error": null
-    },
-    {
-      "id": 5128,
-      "timestamp": "2026-02-01T04:23:49.565Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo '=== 第三阶段文件检查 ===' && ls -la /Users/yay/workspace/genspark-agent/server-v2/{task-planner,workflow-template,checkpoint-manager}.js && echo '' && echo '=== 代码行数统计 ===' && wc -l /Users/yay/workspace/genspark-agent/server-v2/{task-planner,workflow-template,checkpoint-manager}.js && echo '' && echo '=== 模块导入验证 ===' && grep -c 'TaskPlanner\\|WorkflowTemplate\\|CheckpointManager' /Users/yay/workspace/genspark-agent/server-v2/index.js"
-      },
-      "success": true,
-      "resultPreview": "=== 第三阶段文件检查 ===\n-rw-r--r--@ 1 yay  staff  13233 Jan 31 23:05 /Users/yay/workspace/genspark-agent/server-v2/checkpoint-manager.js\n-rw-r--r--@ 1 yay  staff  10521 Jan 31 23:03 /Users/yay/workspace/genspark-agent/server-v2/task-planner.js\n-rw-r--r--@ 1 yay  staff  13276 Jan 31 23:04 /Users/yay/workspace/genspark-agent/server-v2/workflow-template.js\n\n=== 代码行数统计 ===\n     377 /Users/yay/workspace/genspark-agent/server-v2/task-planner.js\n     403 /Users/yay/workspace/genspark-agent/server-v2/workflow-",
-      "error": null
-    },
-    {
-      "id": 5129,
-      "timestamp": "2026-02-01T04:25:22.521Z",
-      "tool": "xxx",
-      "params": {},
-      "success": false,
-      "resultPreview": "",
-      "error": "工具未找到: xxx"
-    },
-    {
-      "id": 5130,
-      "timestamp": "2026-02-01T04:25:51.320Z",
-      "tool": "xxx",
-      "params": {},
-      "success": false,
-      "resultPreview": "",
-      "error": "工具未找到: xxx"
-    },
-    {
-      "id": 5131,
-      "timestamp": "2026-02-01T04:25:51.548Z",
-      "tool": "run_command",
-      "params": {
-        "command": "ls"
-      },
-      "success": true,
-      "resultPreview": "async-executor.js\nasync-logs\nauto-healer.js\nbatch_pid.txt\ncheckpoint-manager.js\ncheckpoints\ncommand-history.json\nconfig.json\ncontext-compressor.js\nerror-classifier.js\ngoal-manager.js\nhealth-checker.js\nhistory-archives\nindex.js\nlogger.js\nlogs\nnode_modules\npackage-lock.json\npackage.json\nrecorder.js\nrecordings\nresult-cache.js\nretry-manager.js\nsafety.js\nself-validator.js\nskills.js\nstate-manager.js\ntask-engine.js\ntask-planner.js\nworkflow-template.js\nworkflows\n",
-      "error": null
-    },
-    {
-      "id": 5132,
-      "timestamp": "2026-02-01T04:30:53.358Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -A5 'ΩPLAN' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
-      },
-      "success": true,
-      "resultPreview": "    // ========== ΩPLAN ==========\n    const planRegex = /ΩPLAN\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\")) {\n        try {\n--\n      // ========== 处理 ΩPLAN ==========\n      if (tool.isPlan && tool.name === \"__PLAN__\") {\n  ",
-      "error": null
-    },
-    {
-      "id": 5133,
-      "timestamp": "2026-02-01T04:31:37.948Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -B2 -A10 'planRegex' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "\n    // ========== ΩPLAN ==========\n    const planRegex = /ΩPLAN\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\")) {\n        try {\n          const plan = safeJsonParse(planMatch[1]);\n          return [{ name: \"__PLAN__\", params:",
-      "error": null
-    },
-    {
-      "id": 5134,
-      "timestamp": "2026-02-01T04:31:46.138Z",
-      "tool": "run_command",
-      "params": {
-        "command": "sed -n '583,655p' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "  function parseToolCalls(text) {\n    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n                        be",
-      "error": null
-    },
-    {
-      "id": 5135,
-      "timestamp": "2026-02-01T04:32:01.606Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/fix_parsers.js << 'ENDSCRIPT'\nconst fs = require('fs');\nconst p = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet c = fs.readFileSync(p, 'utf-8');\n\n// 修复 ΩPLAN 正则 - 使用平衡括号匹配\nconst oldPlanRegex = `const planRegex = /ΩPLAN\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\`\\`\\`|\\\\s*$|\\\\n\\\\n)/;`;\nconst newPlanRegex = `const planRegex = /ΩPLAN\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;`;\n\n// 修复 ΩFLOW 正则\nconst oldFlowRegex = `const flowRegex = /ΩFLOW\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\`\\`\\`|\\\\s*$|\\\\n\\\\n)/;`;\nconst newFlowRegex = `const flowRegex = /ΩFLOW\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;`;\n\n// 修复 ΩRESUME 正则\nconst oldResumeRegex = `const resumeRegex = /ΩRESUME\\\\s*(\\\\{[\\\\s\\\\S]*?\\\\})(?=\\\\s*\\`\\`\\`|\\\\s*$|\\\\n\\\\n)/;`;\nconst newResumeRegex = `const resumeRegex = /ΩRESUME\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;`;\n\nif (c.includes('ΩPLAN') && c.includes('[\\\\s\\\\S]*?')){\n  c = c.replace(oldPlanRegex, newPlanRegex);\n  c = c.replace(oldFlowRegex, newFlowRegex);\n  c = c.replace(oldResumeRegex, newResumeRegex);\n  fs.writeFileSync(p, c);\n  console.log('OK: Fixed regex patterns');\n} else {\n  console.log('SKIP: Already fixed or pattern not found');\n}\nENDSCRIPT\nnode /tmp/fix_parsers.js"
-      },
-      "success": true,
-      "resultPreview": "OK: Fixed regex patterns\n",
-      "error": null
-    },
-    {
-      "id": 5136,
-      "timestamp": "2026-02-01T04:32:59.167Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -n 'planRegex\\|flowRegex\\|resumeRegex' /Users/yay/workspace/genspark-agent/extension/content.js"
-      },
-      "success": true,
-      "resultPreview": "616:    const planRegex = /ΩPLAN\\s*(\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/;\n617:    const planMatch = text.match(planRegex);\n628:    const flowRegex = /ΩFLOW\\s*(\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/;\n629:    const flowMatch = text.match(flowRegex);\n640:    const resumeRegex = /ΩRESUME\\s*(\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/;\n641:    const resumeMatch = text.match(resumeRegex);\n",
-      "error": null
-    },
-    {
-      "id": 5137,
-      "timestamp": "2026-02-01T04:33:07.816Z",
-      "tool": "run_command",
-      "params": {
-        "command": "echo '测试简单正则匹配' && node -e \"const regex = /ΩPLAN\\s*(\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/; const text = 'ΩPLAN{\\\"task\\\":\\\"test\\\"}'; console.log('Match:', regex.test(text), regex.exec(text)?.[1]);\""
-      },
-      "success": true,
-      "resultPreview": "测试简单正则匹配\nMatch: true {\"task\":\"test\"}\n",
-      "error": null
-    },
-    {
-      "id": 5138,
-      "timestamp": "2026-02-01T04:33:16.826Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e \"\nconst regex = /ΩPLAN\\s*(\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\})/;\nconst text = 'ΩPLAN{\\\"steps\\\":[{\\\"tool\\\":\\\"run_command\\\",\\\"params\\\":{\\\"command\\\":\\\"echo A\\\"}}]}';\nconst match = regex.exec(text);\nconsole.log('Match:', !!match);\nif(match) console.log('Captured:', match[1].substring(0,100));\n\""
-      },
-      "success": true,
-      "resultPreview": "Match: false\n",
-      "error": null
-    },
-    {
-      "id": 5139,
-      "timestamp": "2026-02-01T04:33:44.254Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/fix_regex2.js << 'ENDSCRIPT'\nconst fs = require('fs');\nconst p = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet c = fs.readFileSync(p, 'utf-8');\n\n// 使用函数式解析替代正则 - 修改 parseToolCalls 函数\n// 添加一个辅助函数来提取平衡的 JSON\n\nconst helperFunc = `\n  // 辅助函数: 提取平衡的 JSON 对象\n  function extractBalancedJson(text, startMarker) {\n    const idx = text.indexOf(startMarker);\n    if (idx === -1) return null;\n    \n    const jsonStart = text.indexOf('{', idx + startMarker.length);\n    if (jsonStart === -1) return null;\n    \n    let depth = 0;\n    let inString = false;\n    let escape = false;\n    \n    for (let i = jsonStart; i < text.length; i++) {\n      const char = text[i];\n      \n      if (escape) { escape = false; continue; }\n      if (char === '\\\\\\\\') { escape = true; continue; }\n      \n      if (char === '\"' && !escape) { inString = !inString; continue; }\n      if (inString) continue;\n      \n      if (char === '{') depth++;\n      if (char === '}') {\n        depth--;\n        if (depth === 0) {\n          return {\n            json: text.substring(jsonStart, i + 1),\n            start: idx,\n            end: i + 1\n          };\n        }\n      }\n    }\n    return null;\n  }\n\n`;\n\n// 新的解析代码\nconst newParseCode = `\n    // ========== ΩPLAN (平衡括号解析) ==========\n    const planData = extractBalancedJson(text, 'ΩPLAN');\n    if (planData && !state.executedCalls.has(\"plan:\" + planData.start)) {\n      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\") && !beforePlan.includes(\"测试\")) {\n        try {\n          const plan = safeJsonParse(planData.json);\n          if (plan && (plan.steps || plan.task)) {\n            return [{ name: \"__PLAN__\", params: plan, raw: \"ΩPLAN\" + planData.json, start: planData.start, end: planData.end, isPlan: true }];\n          }\n        } catch (e) { if (CONFIG.DEBUG) console.log('[Agent] ΩPLAN parse error:', e.message); }\n      }\n    }\n\n    // ========== ΩFLOW (平衡括号解析) ==========\n    const flowData = extractBalancedJson(text, 'ΩFLOW');\n    if (flowData && !state.executedCalls.has(\"flow:\" + flowData.start)) {\n      const beforeFlow = text.substring(Math.max(0, flowData.start - 100), flowData.start);\n      if (!beforeFlow.includes(\"格式\") && !beforeFlow.includes(\"示例\") && !beforeFlow.includes(\"测试\")) {\n        try {\n          const flow = safeJsonParse(flowData.json);\n          if (flow && flow.template) {\n            return [{ name: \"__FLOW__\", params: flow, raw: \"ΩFLOW\" + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];\n          }\n        } catch (e) { if (CONFIG.DEBUG) console.log('[Agent] ΩFLOW parse error:', e.message); }\n      }\n    }\n\n    // ========== ΩRESUME (平衡括号解析) ==========\n    const resumeData = extractBalancedJson(text, 'ΩRESUME');\n    if (resumeData && !state.executedCalls.has(\"resume:\" + resumeData.start)) {\n      const beforeResume = text.substring(Math.max(0, resumeData.start - 100), resumeData.start);\n      if (!beforeResume.includes(\"格式\") && !beforeResume.includes(\"示例\") && !beforeResume.includes(\"测试\")) {\n        try {\n          const resume = safeJsonParse(resumeData.json);\n          if (resume && (resume.checkpointId || resume.taskId)) {\n            return [{ name: \"__RESUME__\", params: resume, raw: \"ΩRESUME\" + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];\n          }\n        } catch (e) { if (CONFIG.DEBUG) console.log('[Agent] ΩRESUME parse error:', e.message); }\n      }\n    }\n`;\n\n// 找到 parseToolCalls 函数开始位置，在前面插入辅助函数\nconst parseToolCallsIdx = c.indexOf('function parseToolCalls(text)');\nif (parseToolCallsIdx === -1) {\n  console.log('ERROR: parseToolCalls not found');\n  process.exit(1);\n}\n\n// 检查是否已添加\nif (c.includes('extractBalancedJson')) {\n  console.log('SKIP: Already patched');\n  process.exit(0);\n}\n\n// 插入辅助函数\nc = c.slice(0, parseToolCallsIdx) + helperFunc + c.slice(parseToolCallsIdx);\n\n// 替换旧的正则解析代码\nconst oldPlanBlock = /\\/\\/ ={10} ΩPLAN[\\s\\S]*?\\/\\/ ={10} ΩFLOW/;\nconst oldFlowBlock = /\\/\\/ ={10} ΩFLOW[\\s\\S]*?\\/\\/ ={10} ΩRESUME/;\nconst oldResumeBlock = /\\/\\/ ={10} ΩRESUME[\\s\\S]*?\n\\s*\n\\s*\\/\\/ 方案3/;\n\nc = c.replace(/\\/\\/ ={10} ΩPLAN \\(平衡括号解析\\)[\\s\\S]*?\\/\\/ ={10} ΩRESUME \\(平衡括号解析\\)[\\s\\S]*?\\}\\s*\\}\\s*\\}/m, '');\nc = c.replace(/\\/\\/ ={10} ΩPLAN ={10}[\\s\\S]*?\\/\\/ ={10} ΩRESUME ={10}[\\s\\S]*?catch \\(e\\) \\{\\}\\s*\\}\\s*\\}/m, newParseCode);\n\nfs.writeFileSync(p, c);\nconsole.log('OK: Patched with balanced bracket parser');\nENDSCRIPT\nnode /tmp/fix_regex2.js"
-      },
-      "success": true,
-      "resultPreview": "1\n/private/tmp/fix_regex2.js:111\nconst oldResumeBlock = /\\/\\/ ={10} ΩRESUME[\\s\\S]*?\n                       ^\n\nSyntaxError: Invalid regular expression: missing /\n    at wrapSafe (node:internal/modules/cjs/loader:1666:18)\n    at Module._compile (node:internal/modules/cjs/loader:1708:20)\n    at Object..js (node:internal/modules/cjs/loader:1899:10)\n    at Module.load (node:internal/modules/cjs/loader:1469:32)\n    at Function._load (node:internal/modules/cjs/loader:1286:12)\n    at TracingChannel.trac",
-      "error": null
-    },
-    {
-      "id": 5140,
-      "timestamp": "2026-02-01T04:34:08.444Z",
-      "tool": "run_command",
-      "params": {
-        "command": "cat > /tmp/fix_simple.js << 'ENDOFSCRIPT'\nconst fs = require('fs');\nconst p = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet c = fs.readFileSync(p, 'utf-8');\n\nif (c.includes('extractBalancedJson')) {\n  console.log('SKIP: Already has extractBalancedJson');\n  process.exit(0);\n}\n\n// 辅助函数\nconst helper = `\n  // 辅助函数: 提取平衡的 JSON 对象 (支持任意嵌套)\n  function extractBalancedJson(text, marker) {\n    const idx = text.indexOf(marker);\n    if (idx === -1) return null;\n    const jsonStart = text.indexOf('{', idx + marker.length);\n    if (jsonStart === -1) return null;\n    let depth = 0, inStr = false, esc = false;\n    for (let i = jsonStart; i < text.length; i++) {\n      const ch = text[i];\n      if (esc) { esc = false; continue; }\n      if (ch === '\\\\\\\\') { esc = true; continue; }\n      if (ch === '\"') { inStr = !inStr; continue; }\n      if (inStr) continue;\n      if (ch === '{') depth++;\n      if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }\n    }\n    return null;\n  }\n\n`;\n\n// 在 parseToolCalls 前插入辅助函数\nconst marker = 'function parseToolCalls(text) {';\nconst pos = c.indexOf(marker);\nif (pos === -1) { console.log('ERROR: marker not found'); process.exit(1); }\nc = c.slice(0, pos) + helper + c.slice(pos);\n\n// 替换 ΩPLAN 的正则解析为函数解析\nconst oldPlan = `    // ========== ΩPLAN ==========\n    const planRegex = /ΩPLAN\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;\n    const planMatch = text.match(planRegex);\n    if (planMatch && !state.executedCalls.has(\"plan:\" + planMatch.index)) {\n      const beforePlan = text.substring(Math.max(0, planMatch.index - 100), planMatch.index);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\")) {\n        try {\n          const plan = safeJsonParse(planMatch[1]);\n          return [{ name: \"__PLAN__\", params: plan, raw: planMatch[0], start: planMatch.index, end: planMatch.index + planMatch[0].length, isPlan: true }];\n        } catch (e) {}\n      }\n    }`;\n\nconst newPlan = `    // ========== ΩPLAN (balanced) ==========\n    const planData = extractBalancedJson(text, 'ΩPLAN');\n    if (planData && !state.executedCalls.has(\"plan:\" + planData.start)) {\n      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\") && !beforePlan.includes(\"测试\")) {\n        try {\n          const plan = safeJsonParse(planData.json);\n          if (plan) return [{ name: \"__PLAN__\", params: plan, raw: \"ΩPLAN\"+planData.json, start: planData.start, end: planData.end, isPlan: true }];\n        } catch (e) {}\n      }\n    }`;\n\nc = c.replace(oldPlan, newPlan);\n\n// 替换 ΩFLOW\nconst oldFlow = `    // ========== ΩFLOW ==========\n    const flowRegex = /ΩFLOW\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;\n    const flowMatch = text.match(flowRegex);\n    if (flowMatch && !state.executedCalls.has(\"flow:\" + flowMatch.index)) {\n      const beforeFlow = text.substring(Math.max(0, flowMatch.index - 100), flowMatch.index);\n      if (!beforeFlow.includes(\"格式\") && !beforeFlow.includes(\"示例\")) {\n        try {\n          const flow = safeJsonParse(flowMatch[1]);\n          return [{ name: \"__FLOW__\", params: flow, raw: flowMatch[0], start: flowMatch.index, end: flowMatch.index + flowMatch[0].length, isFlow: true }];\n        } catch (e) {}\n      }\n    }`;\n\nconst newFlow = `    // ========== ΩFLOW (balanced) ==========\n    const flowData = extractBalancedJson(text, 'ΩFLOW');\n    if (flowData && !state.executedCalls.has(\"flow:\" + flowData.start)) {\n      const beforeFlow = text.substring(Math.max(0, flowData.start - 100), flowData.start);\n      if (!beforeFlow.includes(\"格式\") && !beforeFlow.includes(\"示例\") && !beforeFlow.includes(\"测试\")) {\n        try {\n          const flow = safeJsonParse(flowData.json);\n          if (flow) return [{ name: \"__FLOW__\", params: flow, raw: \"ΩFLOW\"+flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];\n        } catch (e) {}\n      }\n    }`;\n\nc = c.replace(oldFlow, newFlow);\n\n// 替换 ΩRESUME\nconst oldResume = `    // ========== ΩRESUME ==========\n    const resumeRegex = /ΩRESUME\\\\s*(\\\\{[^{}]*(?:\\\\{[^{}]*\\\\}[^{}]*)*\\\\})/;\n    const resumeMatch = text.match(resumeRegex);\n    if (resumeMatch && !state.executedCalls.has(\"resume:\" + resumeMatch.index)) {\n      const beforeResume = text.substring(Math.max(0, resumeMatch.index - 100), resumeMatch.index);\n      if (!beforeResume.includes(\"格式\") && !beforeResume.includes(\"示例\")) {\n        try {\n          const resume = safeJsonParse(resumeMatch[1]);\n          return [{ name: \"__RESUME__\", params: resume, raw: resumeMatch[0], start: resumeMatch.index, end: resumeMatch.index + resumeMatch[0].length, isResume: true }];\n        } catch (e) {}\n      }\n    }`;\n\nconst newResume = `    // ========== ΩRESUME (balanced) ==========\n    const resumeData = extractBalancedJson(text, 'ΩRESUME');\n    if (resumeData && !state.executedCalls.has(\"resume:\" + resumeData.start)) {\n      const beforeResume = text.substring(Math.max(0, resumeData.start - 100), resumeData.start);\n      if (!beforeResume.includes(\"格式\") && !beforeResume.includes(\"示例\") && !beforeResume.includes(\"测试\")) {\n        try {\n          const resume = safeJsonParse(resumeData.json);\n          if (resume) return [{ name: \"__RESUME__\", params: resume, raw: \"ΩRESUME\"+resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];\n        } catch (e) {}\n      }\n    }`;\n\nc = c.replace(oldResume, newResume);\n\nfs.writeFileSync(p, c);\nconsole.log('OK: Patched all three parsers with balanced bracket matching');\nENDOFSCRIPT\nnode /tmp/fix_simple.js"
-      },
-      "success": true,
-      "resultPreview": "OK: Patched all three parsers with balanced bracket matching\n",
-      "error": null
-    },
-    {
-      "id": 5141,
-      "timestamp": "2026-02-01T04:35:09.819Z",
-      "tool": "run_command",
-      "params": {
-        "command": "grep -A3 'extractBalancedJson' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
-      },
-      "success": true,
-      "resultPreview": "  function extractBalancedJson(text, marker) {\n    const idx = text.indexOf(marker);\n    if (idx === -1) return null;\n    const jsonStart = text.indexOf('{', idx + marker.length);\n--\n    const planData = extractBalancedJson(text, 'ΩPLAN');\n    if (planData && !state.executedCalls.has(\"plan:\" + planData.start)) {\n      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);\n      if (!beforePlan.includes(\"格式\") && !beforePlan.includes(\"示例\") && !beforePlan.includes(\"测试",
-      "error": null
-    },
-    {
-      "id": 5142,
-      "timestamp": "2026-02-01T04:35:19.866Z",
-      "tool": "run_command",
-      "params": {
-        "command": "node -e \"\nfunction extractBalancedJson(text, marker) {\n  const idx = text.indexOf(marker);\n  if (idx === -1) return null;\n  const jsonStart = text.indexOf('{', idx + marker.length);\n  if (jsonStart === -1) return null;\n  let depth = 0, inStr = false, esc = false;\n  for (let i = jsonStart; i < text.length; i++) {\n    const ch = text[i];\n    if (esc) { esc = false; continue; }\n    if (ch === '\\\\\\\\') { esc = true; continue; }\n    if (ch === '\\\"') { inStr = !inStr; continue; }\n    if (inStr) continue;\n    if (ch === '{') depth++;\n    if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }\n  }\n  return null;\n}\n\nconst text = 'ΩPLAN{\\\"steps\\\":[{\\\"tool\\\":\\\"run_command\\\",\\\"params\\\":{\\\"command\\\":\\\"echo A\\\"},\\\"id\\\":\\\"a\\\"}]}';\nconst result = extractBalancedJson(text, 'ΩPLAN');\nconsole.log('Result:', JSON.stringify(result, null, 2));\n\""
-      },
-      "success": true,
-      "resultPreview": "Result: {\n  \"json\": \"{\\\"steps\\\":[{\\\"tool\\\":\\\"run_command\\\",\\\"params\\\":{\\\"command\\\":\\\"echo A\\\"},\\\"id\\\":\\\"a\\\"}]}\",\n  \"start\": 0,\n  \"end\": 78\n}\n",
-      "error": null
-    },
-    {
       "id": 5143,
       "timestamp": "2026-02-01T04:35:27.994Z",
       "tool": "run_command",
@@ -5403,7 +4262,419 @@
       "success": true,
       "resultPreview": "extension-kimi generateSystemPrompt 已替换\n",
       "error": null
+    },
+    {
+      "id": 5518,
+      "timestamp": "2026-02-01T13:50:27.023Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'sync: 同步 generateSystemPrompt 和 parseToolCalls 到所有分支\n\n- ΩBATCH 支持 ΩEND 结束标记\n- 新增 ΩPLAN/ΩFLOW/ΩRESUME 说明\n- 保留各分支特有的 DOM 选择器\n- 同步到: extension-vear, extension-galaxy, extension-hixx, extension-kimi'"
+      },
+      "success": true,
+      "resultPreview": "[main 9829ece] sync: 同步 generateSystemPrompt 和 parseToolCalls 到所有分支\n 5 files changed, 699 insertions(+), 13 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5519,
+      "timestamp": "2026-02-01T13:52:32.238Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone 'v1.0.41 ΩBATCH支持ΩEND结束标记 + 同步所有extension分支 + 系统提示词优化'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: v1.0.41 ΩBATCH支持ΩEND结束标记 + 同步所有extension分支 + 系统提示词优化\n",
+      "error": null
+    },
+    {
+      "id": 5520,
+      "timestamp": "2026-02-01T13:53:07.766Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '167,180p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "\n### 批量执行\n\n\\`\\`\\`\n前缀ΩBATCH + {\"steps\":[...]} + 结尾ΩEND\n\\`\\`\\`\n\n多行格式：前缀ΩBATCH + JSON对象 + 结尾ΩEND\n\n适用：读取多文件、执行多命令、并行获取信息\n高级：saveAs 保存变量、when 条件执行、stopOnError\n\n### 智能规划 (ΩPLAN)\n\n",
+      "error": null
+    },
+    {
+      "id": 5521,
+      "timestamp": "2026-02-01T13:55:30.560Z",
+      "tool": "__BATCH__",
+      "params": {
+        "steps": [
+          {
+            "tool": "run_command",
+            "params": {
+              "command": "cd /Users/yay/workspace/genspark-agent && git log -3 --oneline"
+            }
+          },
+          {
+            "tool": "run_command",
+            "params": {
+              "command": "cd /Users/yay/workspace/genspark-agent && git status -s"
+            }
+          },
+          {
+            "tool": "read_file",
+            "params": {
+              "path": "/Users/yay/workspace/genspark-agent/package.json"
+            }
+          },
+          {
+            "tool": "list_directory",
+            "params": {
+              "path": "/Users/yay/workspace/genspark-agent"
+            }
+          }
+        ]
+      },
+      "success": false,
+      "resultPreview": "",
+      "error": "工具未找到: __BATCH__"
+    },
+    {
+      "id": 5522,
+      "timestamp": "2026-02-01T13:57:09.385Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n '__BATCH__\\|executeBatchCall\\|isBatch' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "621:                name: '__BATCH__',\n626:                isBatch: true\n",
+      "error": null
+    },
+    {
+      "id": 5523,
+      "timestamp": "2026-02-01T13:57:18.574Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executeBatchCall\\|function executeBatch' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "931:  function executeBatchCall(batch, callHash) {\n1205:        executeBatchCall(tool.params, callHash);\n",
+      "error": null
+    },
+    {
+      "id": 5524,
+      "timestamp": "2026-02-01T13:57:30.174Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executeBatchCall\\|isBatch' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "626:                isBatch: true\n",
+      "error": null
+    },
+    {
+      "id": 5525,
+      "timestamp": "2026-02-01T13:57:41.454Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '931,1000p' /Users/yay/workspace/genspark-agent/extension/content.js | grep -n 'function '"
+      },
+      "success": true,
+      "resultPreview": "1:  function executeBatchCall(batch, callHash) {\n48:  function executeToolCall(tool, callHash) {\n",
+      "error": null
+    },
+    {
+      "id": 5526,
+      "timestamp": "2026-02-01T13:57:50.979Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '931,977p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/executeBatchCall.js && wc -l /tmp/executeBatchCall.js"
+      },
+      "success": true,
+      "resultPreview": "      47 /tmp/executeBatchCall.js\n",
+      "error": null
+    },
+    {
+      "id": 5527,
+      "timestamp": "2026-02-01T13:57:59.775Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function executeToolCall' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "891:  function executeToolCall(tool, callHash) {\n",
+      "error": null
+    },
+    {
+      "id": 5528,
+      "timestamp": "2026-02-01T13:58:11.847Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/executeBatchCall.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 890).join('\\n');\nconst after = lines.slice(890).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', before + '\\n' + newFunc + '\\n' + after);\nconsole.log('extension-vear executeBatchCall 已插入');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear executeBatchCall 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5529,
+      "timestamp": "2026-02-01T13:58:20.776Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1200,1215p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      \n      log('检测到工具调用:', tool.name, tool.params);\n      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else if (tool.isPlan && tool.name === '__PLAN__') {\n        state.executedCalls.add(callHash);\n        chrome.runtime.sendMessage({\n          type: 'SEND_TO_SERVER',\n          payload: { type: 'task_plan', params: tool.params, id: Date.now() }\n        }, (resp) => {\n          if (resp && resp.success) addLo",
+      "error": null
+    },
+    {
+      "id": 5530,
+      "timestamp": "2026-02-01T13:58:30.175Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'isBatch\\|__BATCH__' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "621:                name: '__BATCH__',\n626:                isBatch: true\n",
+      "error": null
+    },
+    {
+      "id": 5531,
+      "timestamp": "2026-02-01T13:58:39.172Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n '检测到工具调用\\|executeToolCall(tool' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "939:  function executeToolCall(tool, callHash) {\n1098:      log('检测到工具调用:', tool.name, tool.params);\n1100:      executeToolCall(tool, callHash);\n",
+      "error": null
+    },
+    {
+      "id": 5532,
+      "timestamp": "2026-02-01T13:58:47.574Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1095,1105p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "        continue;\n      }\n      \n      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;\n    }\n    \n    if (text.includes('@DONE') || text.includes('[[DONE]]')) {\n      const doneHash = `done:${index}`;\n",
+      "error": null
+    },
+    {
+      "id": 5533,
+      "timestamp": "2026-02-01T13:58:59.381Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-vear/content.js",
+        "edits": [
+          {
+            "oldText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;",
+            "newText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else {\n        executeToolCall(tool, callHash);\n      }\n      return;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-vear/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-vear/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-vear/content.js\tmodified\n@@ -1096,9 +1096,14 @@\n       }\n       \n       log('检测到工具调用:', tool.name, tool.params);\n       \n-      executeToolCall(tool, callHash);\n+      // 判断是否为批量调用\n+      if (tool.isBatch && tool.name === '__BATCH",
+      "error": null
+    },
+    {
+      "id": 5534,
+      "timestamp": "2026-02-01T13:59:08.974Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executeBatchCall\\|executeToolCall(tool' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js"
+      },
+      "success": true,
+      "resultPreview": "891:  function executeToolCall(tool, callHash) {\n1052:      executeToolCall(tool, callHash);\n",
+      "error": null
+    },
+    {
+      "id": 5535,
+      "timestamp": "2026-02-01T13:59:23.439Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/executeBatchCall.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 890).join('\\n');\nconst after = lines.slice(890).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', before + '\\n' + newFunc + '\\n' + after);\nconsole.log('extension-galaxy executeBatchCall 已插入');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy executeBatchCall 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5536,
+      "timestamp": "2026-02-01T13:59:36.780Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1095,1110p' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js"
+      },
+      "success": true,
+      "resultPreview": "        continue;\n      }\n      \n      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;\n    }\n    \n    if (text.includes('@DONE') || text.includes('[[DONE]]')) {\n      const doneHash = `done:${index}`;\n      if (!state.executedCalls.has(doneHash)) {\n        state.executedCalls.add(doneHash);\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        state.pendingCalls.clear();\n",
+      "error": null
+    },
+    {
+      "id": 5537,
+      "timestamp": "2026-02-01T13:59:45.759Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-galaxy/content.js",
+        "edits": [
+          {
+            "oldText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;",
+            "newText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else {\n        executeToolCall(tool, callHash);\n      }\n      return;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-galaxy/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-galaxy/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-galaxy/content.js\tmodified\n@@ -1096,9 +1096,14 @@\n       }\n       \n       log('检测到工具调用:', tool.name, tool.params);\n       \n-      executeToolCall(tool, callHash);\n+      // 判断是否为批量调用\n+      if (tool.isBatch && tool.name === '_",
+      "error": null
+    },
+    {
+      "id": 5538,
+      "timestamp": "2026-02-01T13:59:55.175Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function executeToolCall' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "926:  function executeToolCall(tool, callHash) {\n",
+      "error": null
+    },
+    {
+      "id": 5539,
+      "timestamp": "2026-02-01T14:23:26.210Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function executeToolCall' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "926:  function executeToolCall(tool, callHash) {\n",
+      "error": null
+    },
+    {
+      "id": 5540,
+      "timestamp": "2026-02-01T14:23:38.523Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/executeBatchCall.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 925).join('\\n');\nconst after = lines.slice(925).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', before + '\\n' + newFunc + '\\n' + after);\nconsole.log('extension-hixx executeBatchCall 已插入');\n\""
+      },
+      "success": true,
+      "resultPreview": "1\nnode:fs:443\n    return binding.readFileUtf8(path, stringToFlags(options.flag));\n                   ^\n\nError: ENOENT: no such file or directory, open '/tmp/executeBatchCall.js'\n    at Object.readFileSync (node:fs:443:20)\n    at [eval]:3:20\n    at runScriptInThisContext (node:internal/vm:209:10)\n    at node:internal/process/execution:449:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:447:60)\n    at evalFunction (node:internal/process/execution:280:30)\n  ",
+      "error": null
+    },
+    {
+      "id": 5541,
+      "timestamp": "2026-02-01T14:23:47.421Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '931,977p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/executeBatchCall.js && echo '已保存' && wc -l /tmp/executeBatchCall.js"
+      },
+      "success": true,
+      "resultPreview": "已保存\n      47 /tmp/executeBatchCall.js\n",
+      "error": null
+    },
+    {
+      "id": 5542,
+      "timestamp": "2026-02-01T14:23:59.467Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/executeBatchCall.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 925).join('\\n');\nconst after = lines.slice(925).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', before + '\\n' + newFunc + '\\n' + after);\nconsole.log('extension-hixx executeBatchCall 已插入');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-hixx executeBatchCall 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5543,
+      "timestamp": "2026-02-01T14:24:08.416Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executeToolCall(tool, callHash)' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "974:  function executeToolCall(tool, callHash) {\n1135:      executeToolCall(tool, callHash);\n",
+      "error": null
+    },
+    {
+      "id": 5544,
+      "timestamp": "2026-02-01T14:24:18.801Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1130,1145p' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "        continue;\n      }\n      \n      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;\n    }\n    \n    if (text.includes('@DONE') || text.includes('[[DONE]]')) {\n      const doneHash = `done:${index}`;\n      if (!state.executedCalls.has(doneHash)) {\n        state.executedCalls.add(doneHash);\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        state.pendingCalls.clear();\n",
+      "error": null
+    },
+    {
+      "id": 5545,
+      "timestamp": "2026-02-01T14:24:29.604Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-hixx/content.js",
+        "edits": [
+          {
+            "oldText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;",
+            "newText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else {\n        executeToolCall(tool, callHash);\n      }\n      return;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-hixx/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-hixx/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-hixx/content.js\tmodified\n@@ -1131,9 +1131,14 @@\n       }\n       \n       log('检测到工具调用:', tool.name, tool.params);\n       \n-      executeToolCall(tool, callHash);\n+      // 判断是否为批量调用\n+      if (tool.isBatch && tool.name === '__BATCH",
+      "error": null
+    },
+    {
+      "id": 5546,
+      "timestamp": "2026-02-01T14:24:40.406Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function executeToolCall' /Users/yay/workspace/genspark-agent/extension-kimi/content.js"
+      },
+      "success": true,
+      "resultPreview": "897:  function executeToolCall(tool, callHash) {\n",
+      "error": null
+    },
+    {
+      "id": 5547,
+      "timestamp": "2026-02-01T14:24:52.863Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/executeBatchCall.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 896).join('\\n');\nconst after = lines.slice(896).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', before + '\\n' + newFunc + '\\n' + after);\nconsole.log('extension-kimi executeBatchCall 已插入');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-kimi executeBatchCall 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5548,
+      "timestamp": "2026-02-01T14:25:02.011Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executeToolCall(tool, callHash)' /Users/yay/workspace/genspark-agent/extension-kimi/content.js"
+      },
+      "success": true,
+      "resultPreview": "945:  function executeToolCall(tool, callHash) {\n1106:      executeToolCall(tool, callHash);\n",
+      "error": null
+    },
+    {
+      "id": 5549,
+      "timestamp": "2026-02-01T14:25:11.404Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1101,1115p' /Users/yay/workspace/genspark-agent/extension-kimi/content.js"
+      },
+      "success": true,
+      "resultPreview": "        continue;\n      }\n      \n      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;\n    }\n    \n    if (text.includes('@DONE') || text.includes('[[DONE]]')) {\n      const doneHash = `done:${index}`;\n      if (!state.executedCalls.has(doneHash)) {\n        state.executedCalls.add(doneHash);\n        state.agentRunning = false;\n        hideExecutingIndicator();\n",
+      "error": null
+    },
+    {
+      "id": 5550,
+      "timestamp": "2026-02-01T14:25:21.597Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-kimi/content.js",
+        "edits": [
+          {
+            "oldText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      executeToolCall(tool, callHash);\n      return;",
+            "newText": "      log('检测到工具调用:', tool.name, tool.params);\n      \n      // 判断是否为批量调用\n      if (tool.isBatch && tool.name === '__BATCH__') {\n        executeBatchCall(tool.params, callHash);\n      } else {\n        executeToolCall(tool, callHash);\n      }\n      return;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-kimi/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-kimi/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-kimi/content.js\tmodified\n@@ -1102,9 +1102,14 @@\n       }\n       \n       log('检测到工具调用:', tool.name, tool.params);\n       \n-      executeToolCall(tool, callHash);\n+      // 判断是否为批量调用\n+      if (tool.isBatch && tool.name === '__BATCH",
+      "error": null
     }
   ],
-  "nextId": 5518
+  "nextId": 5551
 }

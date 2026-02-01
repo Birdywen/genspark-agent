@@ -923,6 +923,54 @@ ${toolSummary}
     }, CONFIG.TIMEOUT_MS);
   }
 
+  function executeBatchCall(batch, callHash) {
+    const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    
+    state.agentRunning = true;
+    state.executedCalls.add(callHash);
+    state.batchResults = [];  // 重置批量结果
+    state.currentBatchId = batchId;
+    state.currentBatchTotal = batch.steps.length;
+    
+    showExecutingIndicator(`批量 (${batch.steps.length} 步)`);
+    updateStatus();
+    
+    // 显示进度条
+    if (window.PanelEnhancer) {
+      window.PanelEnhancer.showBatchProgress(batchId, batch.steps.length);
+    }
+    
+    addLog(`📦 开始批量执行: ${batch.steps.length} 个步骤`, 'tool');
+    
+    chrome.runtime.sendMessage({
+      type: 'SEND_TO_SERVER',
+      payload: {
+        type: 'tool_batch',
+        id: batchId,
+        steps: batch.steps,
+        options: batch.options || { stopOnError: true }
+      }
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        addLog(`❌ 批量发送失败: ${chrome.runtime.lastError.message}`, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();
+      } else if (response?.success) {
+        addLog(`📤 批量任务已提交: ${batchId}`, 'info');
+      } else {
+        addLog('❌ 批量任务提交失败', 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (window.PanelEnhancer) window.PanelEnhancer.hideProgress();
+      }
+    });
+  }
+
+
+
   function executeToolCall(tool, callHash) {
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
@@ -1084,7 +1132,12 @@ ${toolSummary}
       
       log('检测到工具调用:', tool.name, tool.params);
       
-      executeToolCall(tool, callHash);
+      // 判断是否为批量调用
+      if (tool.isBatch && tool.name === '__BATCH__') {
+        executeBatchCall(tool.params, callHash);
+      } else {
+        executeToolCall(tool, callHash);
+      }
       return;
     }
     
