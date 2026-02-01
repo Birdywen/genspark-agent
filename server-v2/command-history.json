@@ -5073,7 +5073,337 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -170,15 +170,9 @@\n \\`\\`\\`\n 前缀ΩBATCH + {\"steps\":[...]} + 结尾ΩEND\n \\`\\`\\`\n \n-多行示例：\n-\\`\\`\\`\n-ΩBATCH{\"steps\":[\n-  {\"tool\":\"t1\",\"params\":{}},\n-  {\"tool\":\"t2\",\"params\":{}}\n-]}ΩEND\n-\\`\\`\\`\n+多行格式：前缀ΩBATCH + JSON对象 + 结尾ΩEND\n \n ",
       "error": null
+    },
+    {
+      "id": 5488,
+      "timestamp": "2026-02-01T13:45:20.806Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: ΩBATCH 支持 ΩEND 结束标记\n\n- 多行JSON使用 ΩBATCH{...}ΩEND 格式\n- 兼容无ΩEND的单行格式（使用平衡括号匹配）\n- 更新提示词说明'"
+      },
+      "success": true,
+      "resultPreview": "[main 44c6634] fix: ΩBATCH 支持 ΩEND 结束标记\n 2 files changed, 236 insertions(+), 23 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5489,
+      "timestamp": "2026-02-01T13:45:36.385Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst main = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\n\n// 提取 generateSystemPrompt\nconst gsStart = main.indexOf('function generateSystemPrompt()');\nconst gsOpenBrace = main.indexOf('{', gsStart);\nlet depth = 1, gsEnd = gsOpenBrace + 1;\nfor (let i = gsOpenBrace + 1; i < main.length; i++) {\n  if (main[i] === '{') depth++;\n  else if (main[i] === '}') { depth--; if (depth === 0) { gsEnd = i + 1; break; } }\n}\nconst gsFunc = main.substring(gsStart, gsEnd);\nconsole.log('generateSystemPrompt length:', gsFunc.length);\n\n// 替换到各分支\n['vear', 'galaxy', 'hixx', 'kimi'].forEach(name => {\n  const path = '/Users/yay/workspace/genspark-agent/extension-' + name + '/content.js';\n  let content = fs.readFileSync(path, 'utf8');\n  const tStart = content.indexOf('function generateSystemPrompt()');\n  const tOpenBrace = content.indexOf('{', tStart);\n  let d = 1, tEnd = tOpenBrace + 1;\n  for (let i = tOpenBrace + 1; i < content.length; i++) {\n    if (content[i] === '{') d++;\n    else if (content[i] === '}') { d--; if (d === 0) { tEnd = i + 1; break; } }\n  }\n  content = content.substring(0, tStart) + gsFunc + content.substring(tEnd);\n  fs.writeFileSync(path, content);\n  console.log('extension-' + name + ' generateSystemPrompt 同步完成');\n});\n\""
+      },
+      "success": true,
+      "resultPreview": "generateSystemPrompt length: 1757\nextension-vear generateSystemPrompt 同步完成\nextension-galaxy generateSystemPrompt 同步完成\nextension-hixx generateSystemPrompt 同步完成\nextension-kimi generateSystemPrompt 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5490,
+      "timestamp": "2026-02-01T13:45:49.187Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst main = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\n\n// 提取 parseToolCalls\nconst ptStart = main.indexOf('function parseToolCalls(text)');\nconst ptOpenBrace = main.indexOf('{', ptStart);\nlet depth = 1, ptEnd = ptOpenBrace + 1;\nfor (let i = ptOpenBrace + 1; i < main.length; i++) {\n  if (main[i] === '{') depth++;\n  else if (main[i] === '}') { depth--; if (depth === 0) { ptEnd = i + 1; break; } }\n}\nconst ptFunc = main.substring(ptStart, ptEnd);\nconsole.log('parseToolCalls length:', ptFunc.length);\n\n// 替换到各分支\n['vear', 'galaxy', 'hixx', 'kimi'].forEach(name => {\n  const path = '/Users/yay/workspace/genspark-agent/extension-' + name + '/content.js';\n  let content = fs.readFileSync(path, 'utf8');\n  const tStart = content.indexOf('function parseToolCalls(text)');\n  if (tStart === -1) { console.log(name + ': parseToolCalls not found'); return; }\n  const tOpenBrace = content.indexOf('{', tStart);\n  let d = 1, tEnd = tOpenBrace + 1;\n  for (let i = tOpenBrace + 1; i < content.length; i++) {\n    if (content[i] === '{') d++;\n    else if (content[i] === '}') { d--; if (d === 0) { tEnd = i + 1; break; } }\n  }\n  content = content.substring(0, tStart) + ptFunc + content.substring(tEnd);\n  fs.writeFileSync(path, content);\n  console.log('extension-' + name + ' parseToolCalls 同步完成');\n});\n\""
+      },
+      "success": true,
+      "resultPreview": "parseToolCalls length: 31\nextension-vear parseToolCalls 同步完成\nextension-galaxy parseToolCalls 同步完成\nextension-hixx parseToolCalls 同步完成\nextension-kimi parseToolCalls 同步完成\n",
+      "error": null
+    },
+    {
+      "id": 5491,
+      "timestamp": "2026-02-01T13:45:59.924Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls\\|^  }$\\|^    }$' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "102:    }\n122:    }\n128:    }\n247:    }\n288:    }\n303:    }\n323:    }\n342:    }\n448:    }\n455:    }\n478:    }\n495:    }\n506:    }\n515:    }\n524:    }\n530:    }\n545:    }\n587:    }\n607:    }\n629:    }\n",
+      "error": null
+    },
+    {
+      "id": 5492,
+      "timestamp": "2026-02-01T13:46:09.520Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "633:    function parseToolCalls(text) {\n",
+      "error": null
+    },
+    {
+      "id": 5493,
+      "timestamp": "2026-02-01T13:46:17.120Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '633,800p' /Users/yay/workspace/genspark-agent/extension/content.js | grep -n 'function '"
+      },
+      "success": true,
+      "resultPreview": "1:    function parseToolCalls(text) {\n",
+      "error": null
+    },
+    {
+      "id": 5494,
+      "timestamp": "2026-02-01T13:46:25.515Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '633,900p' /Users/yay/workspace/genspark-agent/extension/content.js | grep -n 'function '"
+      },
+      "success": true,
+      "resultPreview": "1:    function parseToolCalls(text) {\n187:  function parseParams(body) {\n242:  function showExecutingIndicator(toolName) {\n257:  function hideExecutingIndicator() {\n266:  function executeRetry(historyId) {\n",
+      "error": null
+    },
+    {
+      "id": 5495,
+      "timestamp": "2026-02-01T13:46:37.119Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '633,818p' /Users/yay/workspace/genspark-agent/extension/content.js | wc -l"
+      },
+      "success": true,
+      "resultPreview": "     186\n",
+      "error": null
+    },
+    {
+      "id": 5496,
+      "timestamp": "2026-02-01T13:46:46.756Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git checkout extension-vear/content.js extension-galaxy/content.js extension-hixx/content.js extension-kimi/content.js && echo '已恢复'"
+      },
+      "success": true,
+      "resultPreview": "已恢复\n\nUpdated 4 paths from the index\n",
+      "error": null
+    },
+    {
+      "id": 5497,
+      "timestamp": "2026-02-01T13:47:05.134Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '633,818p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/parseToolCalls.js && echo '已保存 parseToolCalls 函数' && wc -l /tmp/parseToolCalls.js"
+      },
+      "success": true,
+      "resultPreview": "已保存 parseToolCalls 函数\n     186 /tmp/parseToolCalls.js\n",
+      "error": null
+    },
+    {
+      "id": 5498,
+      "timestamp": "2026-02-01T13:47:14.323Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "591:  function parseToolCalls(text) {\n",
+      "error": null
+    },
+    {
+      "id": 5499,
+      "timestamp": "2026-02-01T13:47:23.318Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '591,800p' /Users/yay/workspace/genspark-agent/extension-vear/content.js | grep -n 'function ' | head -3"
+      },
+      "success": true,
+      "resultPreview": "1:  function parseToolCalls(text) {\n101:  function parseParams(body) {\n156:  function showExecutingIndicator(toolName) {\n",
+      "error": null
+    },
+    {
+      "id": 5500,
+      "timestamp": "2026-02-01T13:47:35.381Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/parseToolCalls.js', 'utf8');\n\n// extension-vear: 591-690\nlet vear = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\nconst vearLines = vear.split('\\n');\nconst vearBefore = vearLines.slice(0, 590).join('\\n');\nconst vearAfter = vearLines.slice(690).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', vearBefore + '\\n' + newFunc + vearAfter);\nconsole.log('extension-vear parseToolCalls 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear parseToolCalls 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5501,
+      "timestamp": "2026-02-01T13:47:44.138Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js && sed -n '1,700p' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js | grep -n 'function ' | tail -5"
+      },
+      "success": true,
+      "resultPreview": "591:  function parseToolCalls(text) {\n515:  function extractJsonFromText(text, startIndex) {\n530:  function parseCodeBlockFormat(text) {\n574:  function parseToolCodeBlock(text) {\n591:  function parseToolCalls(text) {\n691:  function parseParams(body) {\n",
+      "error": null
+    },
+    {
+      "id": 5502,
+      "timestamp": "2026-02-01T13:47:54.973Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/parseToolCalls.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 590).join('\\n');\nconst after = lines.slice(690).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-galaxy parseToolCalls 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy parseToolCalls 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5503,
+      "timestamp": "2026-02-01T13:48:02.920Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls\\|function parseParams' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "626:  function parseToolCalls(text) {\n726:  function parseParams(body) {\n",
+      "error": null
+    },
+    {
+      "id": 5504,
+      "timestamp": "2026-02-01T13:48:15.376Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/parseToolCalls.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 625).join('\\n');\nconst after = lines.slice(725).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-hixx parseToolCalls 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-hixx parseToolCalls 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5505,
+      "timestamp": "2026-02-01T13:48:24.514Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls\\|function parseParams' /Users/yay/workspace/genspark-agent/extension-kimi/content.js"
+      },
+      "success": true,
+      "resultPreview": "597:  function parseToolCalls(text) {\n697:  function parseParams(body) {\n",
+      "error": null
+    },
+    {
+      "id": 5506,
+      "timestamp": "2026-02-01T13:48:35.178Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/parseToolCalls.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 596).join('\\n');\nconst after = lines.slice(696).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-kimi parseToolCalls 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-kimi parseToolCalls 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5507,
+      "timestamp": "2026-02-01T13:48:43.724Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "146:  function generateSystemPrompt() {\n",
+      "error": null
+    },
+    {
+      "id": 5508,
+      "timestamp": "2026-02-01T13:48:51.526Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '146,300p' /Users/yay/workspace/genspark-agent/extension/content.js | grep -n 'function ' | head -3"
+      },
+      "success": true,
+      "resultPreview": "1:  function generateSystemPrompt() {\n110:  function getAIMessages() {\n114:  function getLatestAIMessage() {\n",
+      "error": null
+    },
+    {
+      "id": 5509,
+      "timestamp": "2026-02-01T13:49:00.122Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '146,254p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/generateSystemPrompt.js && echo '已保存' && wc -l /tmp/generateSystemPrompt.js"
+      },
+      "success": true,
+      "resultPreview": "已保存\n     109 /tmp/generateSystemPrompt.js\n",
+      "error": null
+    },
+    {
+      "id": 5510,
+      "timestamp": "2026-02-01T13:49:08.125Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt\\|function getAIMessages' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -4"
+      },
+      "success": true,
+      "resultPreview": "126:  function generateSystemPrompt() {\n232:  function getAIMessages() {\n",
+      "error": null
+    },
+    {
+      "id": 5511,
+      "timestamp": "2026-02-01T13:49:20.580Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/generateSystemPrompt.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 125).join('\\n');\nconst after = lines.slice(231).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-vear generateSystemPrompt 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear generateSystemPrompt 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5512,
+      "timestamp": "2026-02-01T13:49:28.924Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt\\|function getAIMessages' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js | head -4"
+      },
+      "success": true,
+      "resultPreview": "126:  function generateSystemPrompt() {\n232:  function getAIMessages() {\n",
+      "error": null
+    },
+    {
+      "id": 5513,
+      "timestamp": "2026-02-01T13:49:38.576Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/generateSystemPrompt.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 125).join('\\n');\nconst after = lines.slice(231).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-galaxy generateSystemPrompt 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy generateSystemPrompt 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5514,
+      "timestamp": "2026-02-01T13:49:46.925Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt\\|function getAIMessages' /Users/yay/workspace/genspark-agent/extension-hixx/content.js | head -4"
+      },
+      "success": true,
+      "resultPreview": "135:  function generateSystemPrompt() {\n241:  function getAIMessages() {\n",
+      "error": null
+    },
+    {
+      "id": 5515,
+      "timestamp": "2026-02-01T13:49:55.577Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/generateSystemPrompt.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 134).join('\\n');\nconst after = lines.slice(240).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-hixx generateSystemPrompt 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-hixx generateSystemPrompt 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5516,
+      "timestamp": "2026-02-01T13:50:05.123Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function generateSystemPrompt\\|function getAIMessages' /Users/yay/workspace/genspark-agent/extension-kimi/content.js | head -4"
+      },
+      "success": true,
+      "resultPreview": "126:  function generateSystemPrompt() {\n232:  function getAIMessages() {\n",
+      "error": null
+    },
+    {
+      "id": 5517,
+      "timestamp": "2026-02-01T13:50:15.776Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/generateSystemPrompt.js', 'utf8');\n\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 125).join('\\n');\nconst after = lines.slice(231).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', before + '\\n' + newFunc + after);\nconsole.log('extension-kimi generateSystemPrompt 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-kimi generateSystemPrompt 已替换\n",
+      "error": null
     }
   ],
-  "nextId": 5488
+  "nextId": 5518
 }

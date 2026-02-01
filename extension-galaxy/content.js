@@ -148,8 +148,10 @@ function log(...args) {
 ### 批量执行
 
 \`\`\`
-前缀ΩBATCH + {"steps":[{"tool":"t1","params":{}},{"tool":"t2","params":{}}]}
+前缀ΩBATCH + {"steps":[...]} + 结尾ΩEND
 \`\`\`
+
+多行格式：前缀ΩBATCH + JSON对象 + 结尾ΩEND
 
 适用：读取多文件、执行多命令、并行获取信息
 高级：saveAs 保存变量、when 条件执行、stopOnError
@@ -227,7 +229,8 @@ ${toolSummary}
   }
 
 
-    // ============== DOM 操作 (Galaxy AI 专用) ==============
+
+    // ============== DOM 操作 (Genspark 专用) ==============
   
   function getAIMessages() {
     return Array.from(document.querySelectorAll('main [data-testid="message-content"], main div.user-message'));
@@ -588,7 +591,84 @@ ${toolSummary}
     return calls;
   }
 
-  function parseToolCalls(text) {
+    function parseToolCalls(text) {
+    // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
+    const batchStartIdx = text.indexOf('ΩBATCH');
+    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
+      // 跳过示例中的 ΩBATCH
+      const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
+      const isExample = /格式[：:]|示例|用法|如下|Example|前缀/.test(beforeBatch);
+      if (!isExample) {
+        try {
+          // 尝试找 ΩEND 结束标记
+          const jsonStart = text.indexOf('{', batchStartIdx);
+          let jsonEnd = text.indexOf('ΩEND', jsonStart);
+          let batchJson;
+          if (jsonEnd !== -1) {
+            // 有 ΩEND 标记，直接截取
+            batchJson = text.substring(jsonStart, jsonEnd).trim();
+          } else {
+            // 没有 ΩEND，使用平衡括号匹配
+            const batchData = extractBalancedJson(text, 'ΩBATCH');
+            if (batchData) batchJson = batchData.json;
+          }
+          if (batchJson) {
+            batchJson = batchJson.replace(/[""]/g, '"').replace(/['']/g, "'");
+            const batch = safeJsonParse(batchJson);
+            if (batch.steps && Array.isArray(batch.steps)) {
+              const endPos = jsonEnd !== -1 ? jsonEnd + 4 : batchStartIdx + 6 + batchJson.length;
+              return [{
+                name: '__BATCH__',
+                params: batch,
+                raw: text.substring(batchStartIdx, endPos),
+                start: batchStartIdx,
+                end: endPos,
+                isBatch: true
+              }];
+            }
+          }
+        } catch (e) {
+          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
+        }
+      }
+    }
+
+    // ========== ΩPLAN ==========
+    const planData = extractBalancedJson(text, 'ΩPLAN');
+    if (planData && !state.executedCalls.has('plan:' + planData.start)) {
+      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);
+      if (!beforePlan.includes('格式') && !beforePlan.includes('示例')) {
+        try {
+          const plan = safeJsonParse(planData.json);
+          if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planData.start, end: planData.end, isPlan: true }];
+        } catch (e) {}
+      }
+    }
+
+    // ========== ΩFLOW ==========
+    const flowData = extractBalancedJson(text, 'ΩFLOW');
+    if (flowData && !state.executedCalls.has('flow:' + flowData.start)) {
+      const beforeFlow = text.substring(Math.max(0, flowData.start - 100), flowData.start);
+      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例')) {
+        try {
+          const flow = safeJsonParse(flowData.json);
+          if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];
+        } catch (e) {}
+      }
+    }
+
+    // ========== ΩRESUME ==========
+    const resumeData = extractBalancedJson(text, 'ΩRESUME');
+    if (resumeData && !state.executedCalls.has('resume:' + resumeData.start)) {
+      const beforeResume = text.substring(Math.max(0, resumeData.start - 100), resumeData.start);
+      if (!beforeResume.includes('格式') && !beforeResume.includes('示例')) {
+        try {
+          const resume = safeJsonParse(resumeData.json);
+          if (resume) return [{ name: '__RESUME__', params: resume, raw: 'ΩRESUME' + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];
+        } catch (e) {}
+      }
+    }
+
     // 方案3: 优先解析 ```tool 代码块
     const toolBlockCalls = parseToolCodeBlock(text);
     if (toolBlockCalls.length > 0) return toolBlockCalls;
@@ -603,6 +683,15 @@ ${toolSummary}
       const marker = 'Ω';
       const idx = text.indexOf(marker, searchStart);
       if (idx === -1) break;
+      
+      // 检查前面100字符是否包含示例关键词
+      const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
+      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用/.test(beforeMarker);
+      if (isExample) {
+        searchStart = idx + marker.length;
+        continue;
+      }
+      
       // 检查是否紧跟 {"tool":
       const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);
       if (!afterMarker.match(/^\s*\{\s*"tool"/)) {
