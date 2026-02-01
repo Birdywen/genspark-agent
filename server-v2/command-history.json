@@ -4812,7 +4812,68 @@
       "success": true,
       "resultPreview": "extension-kimi 同步完成\n",
       "error": null
+    },
+    {
+      "id": 5467,
+      "timestamp": "2026-02-01T13:29:26.800Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'sync: 同步 generateSystemPrompt 函数到所有 extension 分支\n\n- 只替换 generateSystemPrompt 函数\n- 保留各分支特有的 DOM 选择器\n- 新增 ΩPLAN/ΩFLOW/ΩRESUME 说明\n- 同步到: extension-vear, extension-galaxy, extension-hixx, extension-kimi'"
+      },
+      "success": true,
+      "resultPreview": "[main d76018e] sync: 同步 generateSystemPrompt 函数到所有 extension 分支\n 5 files changed, 416 insertions(+), 277 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5468,
+      "timestamp": "2026-02-01T13:32:48.814Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest general"
+      },
+      "success": true,
+      "resultPreview": "1\nnode:fs:2427\n    return binding.writeFileUtf8(\n                   ^\n\nError: ENOENT: no such file or directory, open '/Users/yay/workspace/.agent_memory/projects/general/DIGEST.md'\n    at Object.writeFileSync (node:fs:2427:20)\n    at generateDigest (/Users/yay/workspace/.agent_memory/memory_manager_v2.js:245:8)\n    at Object.<anonymous> (/Users/yay/workspace/.agent_memory/memory_manager_v2.js:418:17)\n    at Module._compile (node:internal/modules/cjs/loader:1734:14)\n    at Object..js (node:inter",
+      "error": null
+    },
+    {
+      "id": 5469,
+      "timestamp": "2026-02-01T13:32:53.195Z",
+      "tool": "run_command",
+      "params": {
+        "command": "mkdir -p /Users/yay/workspace/.agent_memory/projects/general && node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest general"
+      },
+      "success": true,
+      "resultPreview": "# 🧠 上下文恢复 - general\n\n> 生成时间: 2026-02-01T13:32\n\n## 🔌 SSH 快速连接\n```\nOracle Cloud: Ω{\"tool\":\"ssh-oracle:exec\",\"params\":{\"command\":\"hostname && uptime\"}}\ncPanel: Ω{\"tool\":\"ssh-cpanel:exec\",\"params\":{\"command\":\"pwd\"}}\n```\n\n\n",
+      "error": null
+    },
+    {
+      "id": 5470,
+      "timestamp": "2026-02-01T13:36:33.519Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "## 新对话首步\n\n\\`\\`\\`\n前缀Ω + {\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名\"}}\n\\`\\`\\`",
+            "newText": "## 新对话首步\n\n恢复上下文（替换 <项目名> 为实际项目）：\n\\`\\`\\`\n前缀Ω + {\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名>\"}}\n\\`\\`\\`\n常用项目：genspark-agent, ezmusicstore, oracle-cloud"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -219,11 +219,13 @@\n ---\n \n ## 新对话首步\n \n+恢复上下文（替换 <项目名> 为实际项目）：\n \\`\\`\\`\n-前缀Ω + {\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名\"}}\n+前缀Ω + {\"tool\":\"run_co",
+      "error": null
+    },
+    {
+      "id": 5471,
+      "timestamp": "2026-02-01T13:36:45.005Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst mainContent = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension/content.js', 'utf8');\nlet mainStart = mainContent.indexOf('function generateSystemPrompt()');\nlet depth = 0, inFunc = false, mainEnd = mainStart;\nfor (let i = mainStart; i < mainContent.length; i++) {\n  if (mainContent[i] === '{') { depth++; inFunc = true; }\n  if (mainContent[i] === '}') { depth--; if (inFunc && depth === 0) { mainEnd = i + 1; break; } }\n}\nconst newFunc = mainContent.substring(mainStart, mainEnd);\n\n['vear', 'galaxy', 'hixx', 'kimi'].forEach(name => {\n  const path = '/Users/yay/workspace/genspark-agent/extension-' + name + '/content.js';\n  const content = fs.readFileSync(path, 'utf8');\n  let start = content.indexOf('function generateSystemPrompt()');\n  depth = 0; inFunc = false; let end = start;\n  for (let i = start; i < content.length; i++) {\n    if (content[i] === '{') { depth++; inFunc = true; }\n    if (content[i] === '}') { depth--; if (inFunc && depth === 0) { end = i + 1; break; } }\n  }\n  fs.writeFileSync(path, content.substring(0, start) + newFunc + content.substring(end));\n  console.log('extension-' + name + ' 同步完成');\n});\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear 同步完成\nextension-galaxy 同步完成\nextension-hixx 同步完成\nextension-kimi 同步完成\n",
+      "error": null
     }
   ],
-  "nextId": 5467
+  "nextId": 5472
 }

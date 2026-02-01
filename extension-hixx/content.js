@@ -209,9 +209,11 @@ ${toolSummary}
 
 ## 新对话首步
 
+恢复上下文（替换 <项目名> 为实际项目）：
 \`\`\`
-前缀Ω + {"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}
+前缀Ω + {"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest <项目名>"}}
 \`\`\`
+常用项目：genspark-agent, ezmusicstore, oracle-cloud
 
 ---
 
