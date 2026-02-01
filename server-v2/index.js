@@ -9,6 +9,8 @@ import path from 'path';
 import Logger from './logger.js';
 import Safety from './safety.js';
 import SkillsManager from './skills.js';
+import HealthChecker from './health-checker.js';
+import ErrorClassifier from './error-classifier.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +42,12 @@ const safety = new Safety(config.safety, logger);
 // 初始化 Skills 管理器
 const skillsManager = new SkillsManager();
 skillsManager.load();
+
+// 初始化健康检查器
+const healthChecker = new HealthChecker(logger);
+
+// 初始化错误分类器
+const errorClassifier = new ErrorClassifier();
 
 // ==================== 跨扩展通信 ====================
 // agentId -> { ws, site, lastSeen }
@@ -513,6 +521,9 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     ws.send(JSON.stringify(response));
     logger.info(`[WS] 发送结果: id=${id}, tool=${tool}, historyId=${historyId}`);
   } catch (e) {
+    // 使用错误分类器分析错误
+    const classified = errorClassifier.wrapError(e, tool);
+    
     const historyId = isRetry ? originalId : addToHistory(tool, params, false, null, e.message);
     
     // 如果是重试，更新原记录
@@ -521,17 +532,21 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       if (entry) {
         entry.retriedAt = new Date().toISOString();
         entry.error = e.message;
+        entry.errorType = classified.errorType;
         saveHistory();
       }
     }
     
-    logger.error(`工具执行失败: ${tool}`, { error: e.message });
+    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });
     ws.send(JSON.stringify({
       type: 'tool_result',
       id,
       historyId,
       tool,
       success: false,
+      errorType: classified.errorType,
+      recoverable: classified.recoverable,
+      suggestion: classified.suggestion,
       error: `[#${historyId}] 错误: ${e.message}`
     }));
   }
@@ -543,6 +558,12 @@ async function main() {
   loadHistory();
   
   await hub.start();
+
+  // 启动时运行健康检查
+  const healthStatus = await healthChecker.runAll(hub);
+  if (!healthStatus.healthy) {
+    logger.warning('⚠️  部分组件异常，请查看上方日志');
+  }
 
   const wss = new WebSocketServer({
     port: config.server.port,
@@ -611,6 +632,22 @@ async function main() {
               ws.send(JSON.stringify({
                 type: 'reload_tools_result',
                 success: false,
+                error: e.message
+              }));
+            }
+            break;
+          
+          case 'health_check':
+            try {
+              const status = await healthChecker.runAll(hub);
+              ws.send(JSON.stringify({
+                type: 'health_status',
+                ...status
+              }));
+            } catch (e) {
+              ws.send(JSON.stringify({
+                type: 'health_status',
+                healthy: false,
                 error: e.message
               }));
             }

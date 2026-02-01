@@ -1084,6 +1084,13 @@ ${toolSummary}
       }
     } else {
       content = `错误: ${msg.error || msg.result?.stderr || '未知错误'}`;
+      // 添加错误类型和修复建议
+      if (msg.errorType) {
+        content += `\n[错误类型]: ${msg.errorType}`;
+      }
+      if (msg.recoverable) {
+        content += `\n[可恢复]: 是`;
+      }
     }
     
     if (content.length > CONFIG.MAX_RESULT_LENGTH) {
@@ -1092,7 +1099,8 @@ ${toolSummary}
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
     
-    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);
+    // 优先使用服务器返回的建议，否则使用本地 SmartTips
+    const tip = msg.suggestion || SmartTips.getTip(msg.tool, msg.success, content, msg.error);
     
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
