@@ -4848,7 +4848,62 @@
       "success": true,
       "resultPreview": "````diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -636,24 +636,31 @@\n     // 优先检查 ΩBATCH 批量格式\n     const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n     const batchMatch = text.match(batchRegex);\n     if (batchMatch && !state.executedCalls.has('batc",
       "error": null
+    },
+    {
+      "id": 4946,
+      "timestamp": "2026-02-01T02:04:58.142Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.37\"/\"version\": \"1.0.38\"/' extension/manifest.json && git add -A && git commit -m 'fix: ΩBATCH 解析跳过示例文本，静默处理解析错误\n\n- 检测前100字符是否包含示例关键词\n- 解析错误改为静默忽略（DEBUG模式下输出）\n- version: 1.0.37 -> 1.0.38'"
+      },
+      "success": true,
+      "resultPreview": "[main 00701ea] fix: ΩBATCH 解析跳过示例文本，静默处理解析错误\n 3 files changed, 85 insertions(+), 17 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4947,
+      "timestamp": "2026-02-01T02:05:58.684Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '126,250p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等\n- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols 等\n\n**需要查看完整工具文档时：**\n- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/",
+      "error": null
+    },
+    {
+      "id": 4948,
+      "timestamp": "2026-02-01T02:10:05.082Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /private/tmp/new_prompt.js << 'EOF'\n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.0.38)，可执行文件操作、命令、浏览器自动化等。\n\n---\n\n## 工具调用格式\n\n### 单个工具\n\n\\`\\`\\`\nΩ{\"tool\":\"工具名\",\"params\":{\"参数\":\"值\"}}\n\\`\\`\\`\n\n### 批量执行\n\n\\`\\`\\`\nΩBATCH{\"steps\":[{\"tool\":\"t1\",\"params\":{}},{\"tool\":\"t2\",\"params\":{}}]}\n\\`\\`\\`\n\n适用：读取多文件、执行多命令、并行获取信息\n高级：saveAs 保存变量、when 条件执行、stopOnError\n\n---\n\n## 可用工具\n\n${toolSummary}\n\n---\n\n## 核心规则\n\n1. 代码块包裹工具调用\n2. 单工具等结果再继续\n3. 批量执行多个独立操作\n4. 不编造结果\n5. content 引号转义 \\\\\\\"\n6. 完成输出 @DONE\n7. 重要工作记录里程碑\n\n---\n\n## 新对话首步\n\n\\`\\`\\`\nΩ{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent\"}}\n\\`\\`\\`\n\n---\n\n## SSH 远程\n\n禁止 run_command+ssh，用：ssh-oracle:exec, ssh-cpanel:exec\n\n---\n\n## 其他\n\n- 重试：@RETRY:#ID\n- 长内容：heredoc\n- 协作：@SEND:agent:msg`;\n\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4949,
+      "timestamp": "2026-02-01T02:10:17.688Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nconst newFunc = fs.readFileSync('/private/tmp/new_prompt.js', 'utf8');\nlet content = fs.readFileSync(file, 'utf8');\n\n// 找到旧函数的开始和结束\nconst startMarker = '  function generateSystemPrompt() {';\nconst startIdx = content.indexOf(startMarker);\nif (startIdx === -1) { console.log('未找到函数开始'); process.exit(1); }\n\n// 找到函数结束（匹配大括号）\nlet depth = 0, inFunc = false, endIdx = -1;\nfor (let i = startIdx; i < content.length; i++) {\n  if (content[i] === '{') { depth++; inFunc = true; }\n  if (content[i] === '}') { depth--; }\n  if (inFunc && depth === 0) { endIdx = i + 1; break; }\n}\n\nif (endIdx === -1) { console.log('未找到函数结束'); process.exit(1); }\n\nconsole.log('替换范围:', startIdx, '-', endIdx);\ncontent = content.slice(0, startIdx) + newFunc + content.slice(endIdx);\nfs.writeFileSync(file, content);\nconsole.log('函数替换成功');\n\""
+      },
+      "success": true,
+      "resultPreview": "替换范围: 4180 - 8063\n函数替换成功\n",
+      "error": null
+    },
+    {
+      "id": 4950,
+      "timestamp": "2026-02-01T02:10:25.661Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '126,200p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.",
+      "error": null
     }
   ],
-  "nextId": 4946
+  "nextId": 4951
 }
