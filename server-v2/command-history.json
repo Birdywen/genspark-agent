@@ -5248,7 +5248,172 @@
       "success": true,
       "resultPreview": "",
       "error": null
+    },
+    {
+      "id": 5602,
+      "timestamp": "2026-02-01T14:40:47.880Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git status -s"
+      },
+      "success": true,
+      "resultPreview": "M  extension-vear/content.js\nM  server-v2/command-history.json\n",
+      "error": null
+    },
+    {
+      "id": 5603,
+      "timestamp": "2026-02-01T14:40:59.871Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add extension-vear/content.js && git commit -m 'fix: extension-vear 添加批量执行消息处理和 state 初始化'"
+      },
+      "success": true,
+      "resultPreview": "[main 46f6f1a] fix: extension-vear 添加批量执行消息处理和 state 初始化\n 2 files changed, 289 insertions(+), 460 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5604,
+      "timestamp": "2026-02-01T14:43:10.418Z",
+      "tool": "run_command",
+      "params": {
+        "command": "diff <(grep -n 'function ' /Users/yay/workspace/genspark-agent/extension/content.js | head -40) <(grep -n 'function ' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -40)"
+      },
+      "success": true,
+      "resultPreview": "2\n/bin/sh: -c: line 0: syntax error near unexpected token `('\n/bin/sh: -c: line 0: `diff <(grep -n 'function ' /Users/yay/workspace/genspark-agent/extension/content.js | head -40) <(grep -n 'function ' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -40)'\n",
+      "error": null
+    },
+    {
+      "id": 5605,
+      "timestamp": "2026-02-01T14:43:22.030Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function ' /Users/yay/workspace/genspark-agent/extension/content.js | wc -l && grep -n 'function ' /Users/yay/workspace/genspark-agent/extension-vear/content.js | wc -l"
+      },
+      "success": true,
+      "resultPreview": "      49\n      47\n",
+      "error": null
+    },
+    {
+      "id": 5606,
+      "timestamp": "2026-02-01T14:43:32.437Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -o 'function [a-zA-Z_]*' /Users/yay/workspace/genspark-agent/extension/content.js | sort > /tmp/main_funcs.txt && grep -o 'function [a-zA-Z_]*' /Users/yay/workspace/genspark-agent/extension-vear/content.js | sort > /tmp/vear_funcs.txt && comm -23 /tmp/main_funcs.txt /tmp/vear_funcs.txt"
+      },
+      "success": true,
+      "resultPreview": "function extractBalancedJson\nfunction loadPanelEnhancer\n",
+      "error": null
+    },
+    {
+      "id": 5607,
+      "timestamp": "2026-02-01T14:43:43.421Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function extractBalancedJson\\|function loadPanelEnhancer' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "52:  function loadPanelEnhancer() {\n612:  function extractBalancedJson(text, marker) {\n",
+      "error": null
+    },
+    {
+      "id": 5608,
+      "timestamp": "2026-02-01T14:43:53.615Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '612,630p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function extractBalancedJson(text, marker) {\n    const idx = text.indexOf(marker);\n    if (idx === -1) return null;\n    const jsonStart = text.indexOf('{', idx + marker.length);\n    if (jsonStart === -1) return null;\n    // 严格检查: marker 和 { 之间只能有空白字符\n    const between = text.slice(idx + marker.length, jsonStart);\n    if (between.trim() !== '') return null;\n    let depth = 0, inStr = false, esc = false;\n    for (let i = jsonStart; i < text.length; i++) {\n      const ch = text[i];\n      if (esc)",
+      "error": null
+    },
+    {
+      "id": 5609,
+      "timestamp": "2026-02-01T14:44:06.832Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '612,631p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/extractBalancedJson.js && cat /tmp/extractBalancedJson.js"
+      },
+      "success": true,
+      "resultPreview": "  function extractBalancedJson(text, marker) {\n    const idx = text.indexOf(marker);\n    if (idx === -1) return null;\n    const jsonStart = text.indexOf('{', idx + marker.length);\n    if (jsonStart === -1) return null;\n    // 严格检查: marker 和 { 之间只能有空白字符\n    const between = text.slice(idx + marker.length, jsonStart);\n    if (between.trim() !== '') return null;\n    let depth = 0, inStr = false, esc = false;\n    for (let i = jsonStart; i < text.length; i++) {\n      const ch = text[i];\n      if (esc)",
+      "error": null
+    },
+    {
+      "id": 5610,
+      "timestamp": "2026-02-01T14:44:20.296Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'function parseToolCalls' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "598:    function parseToolCalls(text) {\n",
+      "error": null
+    },
+    {
+      "id": 5611,
+      "timestamp": "2026-02-01T14:44:32.493Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'EOF'\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/extractBalancedJson.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\n\nconst insertPoint = '    function parseToolCalls(text) {';\nif (content.includes(insertPoint)) {\n  content = content.replace(insertPoint, newFunc + '\\n\\n' + insertPoint);\n  fs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', content);\n  console.log('extractBalancedJson 已插入');\n} else {\n  console.log('未找到插入点');\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "extractBalancedJson 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5612,
+      "timestamp": "2026-02-01T14:44:42.277Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 && echo '语法正确'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
+    },
+    {
+      "id": 5613,
+      "timestamp": "2026-02-01T14:44:51.423Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '52,80p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function loadPanelEnhancer() {\n    const script = document.createElement('script');\n    script.src = chrome.runtime.getURL('panel-enhancer.js');\n    script.onload = () => {\n      if (window.PanelEnhancer) {\n        window.PanelEnhancer.init();\n        console.log('[Agent] PanelEnhancer 已加载');\n      }\n    };\n    document.head.appendChild(script);\n  }\n\n  \n  // 改进的 JSON 解析函数 - 处理长内容和特殊字符\n  function safeJsonParse(jsonStr) {\n    let fixed = jsonStr\n      .replace(/[\"\"]/g, '\"')\n      .replace(/['']/",
+      "error": null
+    },
+    {
+      "id": 5614,
+      "timestamp": "2026-02-01T14:45:02.233Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '52,62p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/loadPanelEnhancer.js && grep -n 'function safeJsonParse' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "50:  function safeJsonParse(jsonStr) {\n",
+      "error": null
+    },
+    {
+      "id": 5615,
+      "timestamp": "2026-02-01T14:45:13.293Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node << 'EOF'\nconst fs = require('fs');\nconst newFunc = fs.readFileSync('/tmp/loadPanelEnhancer.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\n\nconst insertPoint = '  function safeJsonParse(jsonStr) {';\nif (content.includes(insertPoint)) {\n  content = content.replace(insertPoint, newFunc + '\\n\\n  ' + insertPoint.trim());\n  fs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', content);\n  console.log('loadPanelEnhancer 已插入');\n} else {\n  console.log('未找到插入点');\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "loadPanelEnhancer 已插入\n",
+      "error": null
+    },
+    {
+      "id": 5616,
+      "timestamp": "2026-02-01T14:45:24.869Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node --check /Users/yay/workspace/genspark-agent/extension-vear/content.js 2>&1 && echo '语法正确' || echo '有语法错误'"
+      },
+      "success": true,
+      "resultPreview": "语法正确\n",
+      "error": null
     }
   ],
-  "nextId": 5602
+  "nextId": 5617
 }

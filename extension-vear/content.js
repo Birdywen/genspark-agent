@@ -47,6 +47,19 @@
 
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
+  function loadPanelEnhancer() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('panel-enhancer.js');
+    script.onload = () => {
+      if (window.PanelEnhancer) {
+        window.PanelEnhancer.init();
+        console.log('[Agent] PanelEnhancer 已加载');
+      }
+    };
+    document.head.appendChild(script);
+  }
+
+
   function safeJsonParse(jsonStr) {
     let fixed = jsonStr
       .replace(/[""]/g, '"')
@@ -594,6 +607,28 @@ ${toolSummary}
     }
     return calls;
   }
+
+  function extractBalancedJson(text, marker) {
+    const idx = text.indexOf(marker);
+    if (idx === -1) return null;
+    const jsonStart = text.indexOf('{', idx + marker.length);
+    if (jsonStart === -1) return null;
+    // 严格检查: marker 和 { 之间只能有空白字符
+    const between = text.slice(idx + marker.length, jsonStart);
+    if (between.trim() !== '') return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = jsonStart; i < text.length; i++) {
+      const ch = text[i];
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') depth++;
+      if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }
+    }
+    return null;
+  }
+
 
     function parseToolCalls(text) {
     // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
