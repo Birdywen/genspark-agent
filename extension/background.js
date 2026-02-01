@@ -107,6 +107,28 @@ function connectWebSocket() {
         broadcastToAllTabs(data);
         return;
       }
+
+      // 第三阶段: 任务规划、工作流、断点续传结果
+      if (data.type === 'plan_result' || data.type === 'plan_error') {
+        console.log('[BG] 任务规划消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'workflow_complete' || data.type === 'workflow_step' || data.type === 'workflow_error') {
+        console.log('[BG] 工作流消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'resume_started' || data.type === 'resume_step' || data.type === 'resume_complete' || data.type === 'resume_error') {
+        console.log('[BG] 断点续传消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'checkpoint_result' || data.type === 'checkpoint_error' || data.type === 'templates_list') {
+        console.log('[BG] 检查点/模板消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
       
       // 任务恢复结果
       if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {

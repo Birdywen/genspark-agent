@@ -20,6 +20,9 @@ import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
 import ResultCache from './result-cache.js';
 import ContextCompressor from './context-compressor.js';
+import TaskPlanner from './task-planner.js';
+import WorkflowTemplate from './workflow-template.js';
+import CheckpointManager from './checkpoint-manager.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -613,7 +616,12 @@ async function main() {
   const autoHealer = new AutoHealer(logger, hub);
   const resultCache = new ResultCache(logger);
   const contextCompressor = new ContextCompressor(logger);
-  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor 已初始化');
+  
+  // 第三阶段模块: 智能任务规划、工作流模板、断点续传
+  const taskPlanner = new TaskPlanner(logger, taskEngine.stateManager);
+  const checkpointManager = new CheckpointManager(logger, taskEngine.stateManager);
+  const workflowTemplate = new WorkflowTemplate(logger, taskPlanner);
+  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor, TaskPlanner, WorkflowTemplate, CheckpointManager 已初始化');
 
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
@@ -780,6 +788,153 @@ async function main() {
             break;
           
           // ===== 目标驱动执行 =====
+          
+          // ===== 第三阶段: 智能规划、工作流、断点续传 =====
+          case "task_plan":
+            {
+              if (!taskPlanner) {
+                ws.send(JSON.stringify({ type: "plan_error", error: "TaskPlanner 未初始化" }));
+                break;
+              }
+              try {
+                const plan = taskPlanner.analyze(msg.params.task || msg.params.steps, msg.params.context || {});
+                const visualization = taskPlanner.visualize(plan);
+                ws.send(JSON.stringify({ type: "plan_result", plan, visualization }));
+                logger.info("[WS] 任务规划完成:", plan.id);
+              } catch (e) {
+                ws.send(JSON.stringify({ type: "plan_error", error: e.message }));
+              }
+            }
+            break;
+          
+          case "workflow_execute":
+            logger.info("[WS] workflow_execute FULL MSG:", JSON.stringify(msg));
+            {
+              if (!workflowTemplate || !taskEngine) {
+                ws.send(JSON.stringify({ type: "workflow_error", error: "WorkflowTemplate 未初始化" }));
+                break;
+              }
+              try {
+                const { template, vars } = msg.params;
+                const workflow = workflowTemplate.instantiate(template, vars || {});
+                if (!workflow.success) {
+                  ws.send(JSON.stringify({ type: "workflow_error", error: workflow.error, missing: workflow.missing }));
+                  break;
+                }
+                logger.info("[WS] 执行工作流:", workflow.workflowId);
+                // 创建检查点
+                const checkpoint = checkpointManager.create(workflow.workflowId, {
+                  steps: workflow.steps,
+                  description: workflow.name,
+                  source: "workflow"
+                });
+                // 执行工作流步骤
+                const result = await taskEngine.executeBatch(
+                  workflow.workflowId,
+                  workflow.steps,
+                  { stopOnError: false },
+                  (stepResult) => {
+                    checkpointManager.updateStep(checkpoint.id, stepResult.stepIndex, stepResult);
+                    ws.send(JSON.stringify({ type: "workflow_step", workflowId: workflow.workflowId, ...stepResult }));
+                  }
+                );
+                checkpointManager.complete(checkpoint.id);
+                ws.send(JSON.stringify({ type: "workflow_complete", ...result, workflowId: workflow.workflowId }));
+              } catch (e) {
+                logger.error("[WS] 工作流执行失败:", e.message);
+                ws.send(JSON.stringify({ type: "workflow_error", error: e.message }));
+              }
+            }
+            break;
+          
+          case "task_resume":
+            {
+              if (!checkpointManager || !taskEngine) {
+                ws.send(JSON.stringify({ type: "resume_error", error: "CheckpointManager 未初始化" }));
+                break;
+              }
+              try {
+                const { checkpointId, taskId } = msg.params;
+                const cpId = checkpointId || taskId;
+                const recovery = checkpointManager.recover(cpId);
+                if (!recovery.success) {
+                  ws.send(JSON.stringify({ type: "resume_error", error: recovery.error }));
+                  break;
+                }
+                logger.info("[WS] 恢复任务:", cpId, "从步骤", recovery.resumeFrom);
+                ws.send(JSON.stringify({ type: "resume_started", ...recovery }));
+                // 执行剩余步骤
+                const result = await taskEngine.executeBatch(
+                  cpId + "_resumed",
+                  recovery.pendingSteps.map(p => p.step),
+                  recovery.options,
+                  (stepResult) => {
+                    checkpointManager.updateStep(cpId, recovery.resumeFrom + stepResult.stepIndex, stepResult);
+                    ws.send(JSON.stringify({ type: "resume_step", checkpointId: cpId, ...stepResult }));
+                  }
+                );
+                checkpointManager.complete(cpId);
+                ws.send(JSON.stringify({ type: "resume_complete", checkpointId: cpId, ...result }));
+              } catch (e) {
+                logger.error("[WS] 断点续传失败:", e.message);
+                ws.send(JSON.stringify({ type: "resume_error", error: e.message }));
+              }
+            }
+            break;
+          
+          case "checkpoint_action":
+            {
+              if (!checkpointManager) {
+                ws.send(JSON.stringify({ type: "checkpoint_error", error: "CheckpointManager 未初始化" }));
+                break;
+              }
+              try {
+                const { action, checkpointId, taskId } = msg.params;
+                let result;
+                switch (action) {
+                  case "list":
+                    result = { checkpoints: checkpointManager.list(msg.params.filter || {}) };
+                    break;
+                  case "get":
+                    result = { checkpoint: checkpointManager.get(checkpointId || taskId) };
+                    break;
+                  case "delete":
+                    result = { deleted: checkpointManager.delete(checkpointId || taskId) };
+                    break;
+                  case "pause":
+                    result = { paused: checkpointManager.pause(checkpointId || taskId) };
+                    break;
+                  case "recoverable":
+                    result = { recoverable: checkpointManager.listRecoverable() };
+                    break;
+                  case "cleanup":
+                    result = { cleaned: checkpointManager.cleanup(msg.params.options || {}) };
+                    break;
+                  case "report":
+                    result = { report: checkpointManager.generateReport(checkpointId || taskId) };
+                    break;
+                  default:
+                    result = { error: "未知操作: " + action };
+                }
+                ws.send(JSON.stringify({ type: "checkpoint_result", action, ...result }));
+              } catch (e) {
+                ws.send(JSON.stringify({ type: "checkpoint_error", error: e.message }));
+              }
+            }
+            break;
+          
+          case "list_templates":
+            {
+              if (!workflowTemplate) {
+                ws.send(JSON.stringify({ type: "templates_error", error: "WorkflowTemplate 未初始化" }));
+                break;
+              }
+              const templates = workflowTemplate.listTemplates();
+              ws.send(JSON.stringify({ type: "templates_list", templates }));
+            }
+            break;
+
+
           case 'create_goal':
             {
               const goal = goalManager.createGoal(
@@ -973,6 +1128,157 @@ async function main() {
             break;
 
           // ===== 上下文压缩 =====
+          // ===== 第三阶段: 智能任务规划 =====
+          case 'plan_task':
+            {
+              logger.info('[WS] 任务规划请求');
+              const plan = taskPlanner.analyze(msg.task, msg.context || {});
+              ws.send(JSON.stringify({ 
+                type: 'plan_result', 
+                ...plan,
+                visualization: plan.success ? taskPlanner.visualize(plan) : null
+              }));
+            }
+            break;
+          
+          case 'list_patterns':
+            {
+              const patterns = Object.keys(taskPlanner.patterns);
+              ws.send(JSON.stringify({ type: 'patterns_list', patterns }));
+            }
+            break;
+          
+          // ===== 工作流模板 =====
+          case 'list_workflows':
+            {
+              const templates = workflowTemplate.listTemplates();
+              ws.send(JSON.stringify({ type: 'workflows_list', templates }));
+            }
+            break;
+          
+          case 'get_workflow':
+            {
+              const template = workflowTemplate.getTemplate(msg.templateId);
+              const docs = template ? workflowTemplate.generateDocs(msg.templateId) : null;
+              ws.send(JSON.stringify({ type: 'workflow_detail', template, docs }));
+            }
+            break;
+          
+          case 'run_workflow':
+            {
+              logger.info('[WS] 执行工作流: ' + msg.templateId);
+              const instance = workflowTemplate.instantiate(msg.templateId, msg.variables || {});
+              
+              if (!instance.success) {
+                ws.send(JSON.stringify({ type: 'workflow_error', ...instance }));
+                break;
+              }
+              
+              // 创建检查点
+              const checkpoint = checkpointManager.create(
+                msg.taskId || 'wf-' + Date.now(),
+                {
+                  description: instance.templateName,
+                  steps: instance.steps,
+                  variables: instance.variables
+                }
+              );
+              
+              // 执行任务
+              checkpointManager.updateState(checkpoint.id, 'running');
+              
+              const result = await taskEngine.executeBatch(
+                checkpoint.id,
+                instance.steps,
+                { stopOnError: false },
+                (stepResult) => {
+                  checkpointManager.updateStep(checkpoint.id, stepResult.stepIndex, stepResult);
+                  ws.send(JSON.stringify({ type: 'workflow_step', checkpointId: checkpoint.id, ...stepResult }));
+                }
+              );
+              
+              checkpointManager.updateState(checkpoint.id, result.success ? 'completed' : 'failed');
+              ws.send(JSON.stringify({ 
+                type: 'workflow_complete', 
+                checkpointId: checkpoint.id,
+                ...result 
+              }));
+            }
+            break;
+          
+          case 'save_workflow':
+            {
+              const filePath = workflowTemplate.saveTemplate(msg.templateId, msg.template);
+              ws.send(JSON.stringify({ type: 'workflow_saved', templateId: msg.templateId, filePath }));
+            }
+            break;
+          
+          // ===== 断点续传 =====
+          case 'list_checkpoints':
+            {
+              const resumable = checkpointManager.listResumable();
+              ws.send(JSON.stringify({ type: 'checkpoints_list', checkpoints: resumable }));
+            }
+            break;
+          
+          case 'checkpoint_status':
+            {
+              const checkpoint = checkpointManager.get(msg.taskId);
+              const report = checkpoint ? checkpointManager.generateReport(msg.taskId) : null;
+              ws.send(JSON.stringify({ type: 'checkpoint_detail', checkpoint, report }));
+            }
+            break;
+          
+          case 'resume_checkpoint':
+            {
+              logger.info('[WS] 恢复检查点: ' + msg.taskId);
+              const resumeInfo = checkpointManager.resume(msg.taskId);
+              
+              if (!resumeInfo.success) {
+                ws.send(JSON.stringify({ type: 'resume_error', ...resumeInfo }));
+                break;
+              }
+              
+              // 继续执行未完成的步骤
+              const stepsToRun = resumeInfo.pendingSteps.map(p => p.step);
+              
+              checkpointManager.updateState(msg.taskId, 'running');
+              
+              const result = await taskEngine.executeBatch(
+                msg.taskId,
+                stepsToRun,
+                { stopOnError: false, context: resumeInfo.context },
+                (stepResult) => {
+                  const actualIndex = resumeInfo.pendingSteps[stepResult.stepIndex]?.index ?? stepResult.stepIndex;
+                  checkpointManager.updateStep(msg.taskId, actualIndex, stepResult);
+                  ws.send(JSON.stringify({ type: 'resume_step', taskId: msg.taskId, ...stepResult }));
+                }
+              );
+              
+              checkpointManager.updateState(msg.taskId, result.success ? 'completed' : 'paused');
+              ws.send(JSON.stringify({ 
+                type: 'resume_complete', 
+                taskId: msg.taskId,
+                ...result,
+                report: checkpointManager.generateReport(msg.taskId)
+              }));
+            }
+            break;
+          
+          case 'delete_checkpoint':
+            {
+              checkpointManager.delete(msg.taskId);
+              ws.send(JSON.stringify({ type: 'checkpoint_deleted', taskId: msg.taskId }));
+            }
+            break;
+          
+          case 'cleanup_checkpoints':
+            {
+              const cleaned = checkpointManager.cleanup(msg.maxAge);
+              ws.send(JSON.stringify({ type: 'checkpoints_cleaned', count: cleaned }));
+            }
+            break;
+          
           case 'compress_context':
             {
               logger.info(`[WS] 压缩上下文: ${msg.messages?.length || 0} 条消息`);

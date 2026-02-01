@@ -1,0 +1,96 @@
+{
+  "id": "test_resume",
+  "state": "completed",
+  "task": {
+    "description": "测试断点续传",
+    "steps": [
+      {
+        "tool": "run_command",
+        "params": {
+          "command": "echo Step1-Done"
+        },
+        "id": "s1"
+      },
+      {
+        "tool": "run_command",
+        "params": {
+          "command": "echo Step2-Resumed"
+        },
+        "id": "s2"
+      },
+      {
+        "tool": "run_command",
+        "params": {
+          "command": "echo Step3-Resumed"
+        },
+        "id": "s3"
+      }
+    ],
+    "totalSteps": 3
+  },
+  "progress": {
+    "currentStep": 4,
+    "completedSteps": [
+      0,
+      2,
+      3
+    ],
+    "failedSteps": [],
+    "skippedSteps": [],
+    "results": {
+      "0": {
+        "success": true,
+        "result": "Step1-Done"
+      }
+    }
+  },
+  "resumeHistory": [
+    {
+      "timestamp": "2026-02-01T05:58:59.524Z",
+      "fromStep": 1,
+      "previousState": "paused"
+    },
+    {
+      "timestamp": "2026-02-01T06:00:43.326Z",
+      "fromStep": 1,
+      "previousState": "resuming"
+    },
+    {
+      "timestamp": "2026-02-01T06:02:23.321Z",
+      "fromStep": 1,
+      "previousState": "resuming"
+    },
+    {
+      "timestamp": "2026-02-01T06:11:52.924Z",
+      "fromStep": 2,
+      "previousState": "resuming"
+    }
+  ],
+  "errors": [],
+  "createdAt": "2026-02-01T05:00:00.000Z",
+  "updatedAt": "2026-02-01T06:11:52.985Z",
+  "results": {
+    "2": {
+      "stepIndex": 0,
+      "tool": "run_command",
+      "success": true,
+      "result": "Step2-Resumed\n",
+      "timestamp": "2026-02-01T06:11:52.958Z"
+    },
+    "3": {
+      "stepIndex": 1,
+      "tool": "run_command",
+      "success": true,
+      "result": "Step3-Resumed\n",
+      "timestamp": "2026-02-01T06:11:52.981Z"
+    }
+  },
+  "context": {},
+  "idempotencyKeys": {
+    "run_command::{\"command\":\"echo Step3-Resumed\"}": {
+      "stepIndex": 2,
+      "result": true,
+      "timestamp": "2026-02-01T06:11:52.958Z"
+    }
+  }
+}

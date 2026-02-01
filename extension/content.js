@@ -580,7 +580,29 @@ ${toolSummary}
     return calls;
   }
 
-  function parseToolCalls(text) {
+  // 辅助函数: 提取平衡的 JSON 对象 (支持任意嵌套)
+  function extractBalancedJson(text, marker) {
+    const idx = text.indexOf(marker);
+    if (idx === -1) return null;
+    const jsonStart = text.indexOf('{', idx + marker.length);
+    if (jsonStart === -1) return null;
+    // 严格检查: marker 和 { 之间只能有空白字符
+    const between = text.slice(idx + marker.length, jsonStart);
+    if (between.trim() !== '') return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = jsonStart; i < text.length; i++) {
+      const ch = text[i];
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') depth++;
+      if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }
+    }
+    return null;
+  }
+
+    function parseToolCalls(text) {
     // 优先检查 ΩBATCH 批量格式
     const batchRegex = /ΩBATCH\s*(\{[\s\S]*?\})(?=\s*```|\s*$|\n\n)/;
     const batchMatch = text.match(batchRegex);
@@ -608,6 +630,42 @@ ${toolSummary}
           // 静默忽略解析错误（可能是示例或不完整的输入）
           if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
         }
+      }
+    }
+
+    // ========== ΩPLAN ==========
+    const planData = extractBalancedJson(text, 'ΩPLAN');
+    if (planData && !state.executedCalls.has('plan:' + planData.start)) {
+      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);
+      if (!beforePlan.includes('格式') && !beforePlan.includes('示例')) {
+        try {
+          const plan = safeJsonParse(planData.json);
+          if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planData.start, end: planData.end, isPlan: true }];
+        } catch (e) {}
+      }
+    }
+
+    // ========== ΩFLOW ==========
+    const flowData = extractBalancedJson(text, 'ΩFLOW');
+    if (flowData && !state.executedCalls.has('flow:' + flowData.start)) {
+      const beforeFlow = text.substring(Math.max(0, flowData.start - 100), flowData.start);
+      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例')) {
+        try {
+          const flow = safeJsonParse(flowData.json);
+          if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];
+        } catch (e) {}
+      }
+    }
+
+    // ========== ΩRESUME ==========
+    const resumeData = extractBalancedJson(text, 'ΩRESUME');
+    if (resumeData && !state.executedCalls.has('resume:' + resumeData.start)) {
+      const beforeResume = text.substring(Math.max(0, resumeData.start - 100), resumeData.start);
+      if (!beforeResume.includes('格式') && !beforeResume.includes('示例')) {
+        try {
+          const resume = safeJsonParse(resumeData.json);
+          if (resume) return [{ name: '__RESUME__', params: resume, raw: 'ΩRESUME' + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];
+        } catch (e) {}
       }
     }
 
@@ -1033,6 +1091,36 @@ ${toolSummary}
       // 判断是否为批量调用
       if (tool.isBatch && tool.name === '__BATCH__') {
         executeBatchCall(tool.params, callHash);
+      } else if (tool.isPlan && tool.name === '__PLAN__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_plan', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('📋 任务规划请求已发送', 'info');
+          else addLog('❌ 任务规划请求失败', 'error');
+        });
+        return;
+      } else if (tool.isFlow && tool.name === '__FLOW__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'workflow_execute', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('🔄 工作流请求已发送', 'info');
+          else addLog('❌ 工作流请求失败', 'error');
+        });
+        return;
+      } else if (tool.isResume && tool.name === '__RESUME__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_resume', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('▶️ 断点续传请求已发送', 'info');
+          else addLog('❌ 断点续传请求失败', 'error');
+        });
+        return;
       } else {
         executeToolCall(tool, callHash);
       }
@@ -1685,6 +1773,75 @@ ${tip}
         updateStatus();
         addLog(`❌ 批量任务错误: ${msg.error}`, 'error');
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
+        break;
+
+      // ===== 第三阶段: 任务规划 =====
+      case 'plan_result':
+        addLog('📋 收到任务规划结果', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划完成]**\n\n' + (msg.visualization || '') + '\n\n' + JSON.stringify(msg.plan, null, 2).slice(0, 2000));
+        break;
+
+      case 'plan_error':
+        addLog('❌ 任务规划失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划失败]** ' + msg.error);
+        break;
+
+      case 'workflow_step':
+        addLog('🔄 工作流步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'workflow_complete':
+        addLog('✅ 工作流完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流完成]** ' + msg.workflowId + ' 成功: ' + msg.stepsCompleted + '/' + msg.totalSteps);
+        break;
+
+      case 'workflow_error':
+        addLog('❌ 工作流失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流失败]** ' + msg.error);
+        break;
+
+      case 'resume_complete':
+        addLog('✅ 断点续传完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        break;
+
+      case 'resume_started':
+        addLog('▶️ 断点续传开始', 'info');
+        break;
+
+      case 'resume_step':
+        addLog('▶️ 恢复步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'checkpoint_result':
+        addLog('💾 检查点操作完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[检查点结果]** ' + JSON.stringify(msg, null, 2).slice(0, 1000));
+        break;
+
+      case 'checkpoint_error':
+        addLog('❌ 检查点失败: ' + msg.error, 'error');
+        break;
+
+      case 'templates_list':
+        addLog('📋 模板列表', 'success');
+        sendMessageSafe('**[工作流模板]**\n' + msg.templates.map(t => '- ' + t.id + ': ' + t.name).join('\n'));
         break;
 
       case 'resume_complete':
