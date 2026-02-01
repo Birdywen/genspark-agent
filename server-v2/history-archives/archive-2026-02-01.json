@@ -7154,14 +7154,1281 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1668,15 +1668,25 @@\n           addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');\n         } else {\n           addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFaile",
       "error": null
+    },
+    {
+      "id": 4941,
+      "timestamp": "2026-02-01T02:01:17.818Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.36\"/\"version\": \"1.0.37\"/' extension/manifest.json && git add -A && git commit -m 'feat: 批量执行返回详细结果内容\n\n- batch_step_result 存储每步结果\n- batch_complete 生成包含详细输出的汇总\n- 每步结果限制2000字符防止过长\n- version: 1.0.36 -> 1.0.37'"
+      },
+      "success": true,
+      "resultPreview": "[main 86f7753] feat: 批量执行返回详细结果内容\n 4 files changed, 1247 insertions(+), 1111 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4942,
+      "timestamp": "2026-02-01T02:02:22.358Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git status --short && echo '---' && cat extension/manifest.json | head -5"
+      },
+      "success": true,
+      "resultPreview": " M server-v2/command-history.json\n---\n{\n  \"manifest_version\": 3,\n  \"name\": \"Genspark Agent Bridge\",\n  \"version\": \"1.0.37\",\n  \"description\": \"将 Genspark 聊天窗口转变为 AI Agent 运行时\",\n",
+      "error": null
+    },
+    {
+      "id": 4943,
+      "timestamp": "2026-02-01T02:04:22.242Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'ΩBATCH' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "198:当需要执行多个**相互独立**的工具时，使用 ΩBATCH 格式：\n201:ΩBATCH{\"steps\":[{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/a.txt\"}},{\"tool\":\"read_file\",\"params\":{\"path\":\"/path/b.txt\"}},{\"tool\":\"run_command\",\"params\":{\"command\":\"date\"}}]}\n207:ΩBATCH{\"steps\":[{\"tool\":\"read_file\",\"params\":{\"path\":\"/config.json\"},\"saveAs\":\"cfg\"},{\"tool\":\"run_command\",\"params\":{\"command\":\"echo done\"},\"when\":\"{{cfg.success}}\"}],\"options\":{\"stopOnError\":true}}\n636:    // 优先检查 ΩBATCH 批量格式\n637:    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(",
+      "error": null
+    },
+    {
+      "id": 4944,
+      "timestamp": "2026-02-01T02:04:31.427Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '636,660p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      try {\n        const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n        const batch = safeJsonParse(batchJson);\n        if (batch.steps && Array.isArray(batch.steps)) {\n          return [{\n            name: '__BATCH__',\n            params: batch,\n",
+      "error": null
+    },
+    {
+      "id": 4945,
+      "timestamp": "2026-02-01T02:04:48.042Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      try {\n        const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n        const batch = safeJsonParse(batchJson);\n        if (batch.steps && Array.isArray(batch.steps)) {\n          return [{\n            name: '__BATCH__',\n            params: batch,\n            raw: batchMatch[0],\n            start: batchMatch.index,\n            end: batchMatch.index + batchMatch[0].length,\n            isBatch: true\n          }];\n        }\n      } catch (e) {\n        console.error('[Agent] ΩBATCH parse error:', e.message);\n        addLog('ΩBATCH 解析错误: ' + e.message, 'error');\n      }\n    }",
+            "newText": "    // 优先检查 ΩBATCH 批量格式\n    const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n    const batchMatch = text.match(batchRegex);\n    if (batchMatch && !state.executedCalls.has('batch:' + batchMatch.index)) {\n      // 跳过示例中的 ΩBATCH（检查是否在说明文字后面）\n      const beforeBatch = text.substring(Math.max(0, batchMatch.index - 100), batchMatch.index);\n      const isExample = beforeBatch.includes('格式：') || beforeBatch.includes('格式:') || \n                        beforeBatch.includes('示例') || beforeBatch.includes('用法') ||\n                        beforeBatch.includes('如下') || beforeBatch.includes('Example');\n      if (!isExample) {\n        try {\n          const batchJson = batchMatch[1].replace(/[\"\"]/g, '\"').replace(/['']/g, \"'\");\n          const batch = safeJsonParse(batchJson);\n          if (batch.steps && Array.isArray(batch.steps)) {\n            return [{\n              name: '__BATCH__',\n              params: batch,\n              raw: batchMatch[0],\n              start: batchMatch.index,\n              end: batchMatch.index + batchMatch[0].length,\n              isBatch: true\n            }];\n          }\n        } catch (e) {\n          // 静默忽略解析错误（可能是示例或不完整的输入）\n          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);\n        }\n      }\n    }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "````diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -636,24 +636,31 @@\n     // 优先检查 ΩBATCH 批量格式\n     const batchRegex = /ΩBATCH\\s*(\\{[\\s\\S]*?\\})(?=\\s*```|\\s*$|\\n\\n)/;\n     const batchMatch = text.match(batchRegex);\n     if (batchMatch && !state.executedCalls.has('batc",
+      "error": null
+    },
+    {
+      "id": 4946,
+      "timestamp": "2026-02-01T02:04:58.142Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.37\"/\"version\": \"1.0.38\"/' extension/manifest.json && git add -A && git commit -m 'fix: ΩBATCH 解析跳过示例文本，静默处理解析错误\n\n- 检测前100字符是否包含示例关键词\n- 解析错误改为静默忽略（DEBUG模式下输出）\n- version: 1.0.37 -> 1.0.38'"
+      },
+      "success": true,
+      "resultPreview": "[main 00701ea] fix: ΩBATCH 解析跳过示例文本，静默处理解析错误\n 3 files changed, 85 insertions(+), 17 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4947,
+      "timestamp": "2026-02-01T02:05:58.684Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '126,250p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory 等\n- **浏览器自动化** (26个): navigate_page, click, fill, take_screenshot, evaluate_script 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols 等\n\n**需要查看完整工具文档时：**\n- 能联网: 用 crawler 访问 https://raw.githubusercontent.com/Birdywen/genspark-agent/main/",
+      "error": null
+    },
+    {
+      "id": 4948,
+      "timestamp": "2026-02-01T02:10:05.082Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /private/tmp/new_prompt.js << 'EOF'\n  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.0.38)，可执行文件操作、命令、浏览器自动化等。\n\n---\n\n## 工具调用格式\n\n### 单个工具\n\n\\`\\`\\`\nΩ{\"tool\":\"工具名\",\"params\":{\"参数\":\"值\"}}\n\\`\\`\\`\n\n### 批量执行\n\n\\`\\`\\`\nΩBATCH{\"steps\":[{\"tool\":\"t1\",\"params\":{}},{\"tool\":\"t2\",\"params\":{}}]}\n\\`\\`\\`\n\n适用：读取多文件、执行多命令、并行获取信息\n高级：saveAs 保存变量、when 条件执行、stopOnError\n\n---\n\n## 可用工具\n\n${toolSummary}\n\n---\n\n## 核心规则\n\n1. 代码块包裹工具调用\n2. 单工具等结果再继续\n3. 批量执行多个独立操作\n4. 不编造结果\n5. content 引号转义 \\\\\\\"\n6. 完成输出 @DONE\n7. 重要工作记录里程碑\n\n---\n\n## 新对话首步\n\n\\`\\`\\`\nΩ{\"tool\":\"run_command\",\"params\":{\"command\":\"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent\"}}\n\\`\\`\\`\n\n---\n\n## SSH 远程\n\n禁止 run_command+ssh，用：ssh-oracle:exec, ssh-cpanel:exec\n\n---\n\n## 其他\n\n- 重试：@RETRY:#ID\n- 长内容：heredoc\n- 协作：@SEND:agent:msg`;\n\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4949,
+      "timestamp": "2026-02-01T02:10:17.688Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst file = '/Users/yay/workspace/genspark-agent/extension/content.js';\nconst newFunc = fs.readFileSync('/private/tmp/new_prompt.js', 'utf8');\nlet content = fs.readFileSync(file, 'utf8');\n\n// 找到旧函数的开始和结束\nconst startMarker = '  function generateSystemPrompt() {';\nconst startIdx = content.indexOf(startMarker);\nif (startIdx === -1) { console.log('未找到函数开始'); process.exit(1); }\n\n// 找到函数结束（匹配大括号）\nlet depth = 0, inFunc = false, endIdx = -1;\nfor (let i = startIdx; i < content.length; i++) {\n  if (content[i] === '{') { depth++; inFunc = true; }\n  if (content[i] === '}') { depth--; }\n  if (inFunc && depth === 0) { endIdx = i + 1; break; }\n}\n\nif (endIdx === -1) { console.log('未找到函数结束'); process.exit(1); }\n\nconsole.log('替换范围:', startIdx, '-', endIdx);\ncontent = content.slice(0, startIdx) + newFunc + content.slice(endIdx);\nfs.writeFileSync(file, content);\nconsole.log('函数替换成功');\n\""
+      },
+      "success": true,
+      "resultPreview": "替换范围: 4180 - 8063\n函数替换成功\n",
+      "error": null
+    },
+    {
+      "id": 4950,
+      "timestamp": "2026-02-01T02:10:25.661Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '126,200p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function generateSystemPrompt() {\n    const toolCount = state.availableTools.length || 67;\n    const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：\n- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等\n- **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  \n- **命令执行** (1个): run_command\n- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;\n\n    const prompt = `## 身份\n\n你连接了 **genspark-agent** 本地代理系统 (v1.",
+      "error": null
+    },
+    {
+      "id": 4951,
+      "timestamp": "2026-02-01T02:10:34.942Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'refactor: 精简系统提示词，整合批量执行说明\n\n- 更清晰的结构和格式\n- 整合 ΩBATCH 批量执行说明\n- 简化规则描述\n- 保留核心功能：里程碑、SSH、协作'"
+      },
+      "success": true,
+      "resultPreview": "[main 65358d1] refactor: 精简系统提示词，整合批量执行说明\n 2 files changed, 86 insertions(+), 103 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4952,
+      "timestamp": "2026-02-01T02:10:43.328Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '系统提示词优化: 精简结构、整合批量执行ΩBATCH说明 (v1.0.38)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 系统提示词优化: 精简结构、整合批量执行ΩBATCH说明 (v1.0.38)\n",
+      "error": null
+    },
+    {
+      "id": 4953,
+      "timestamp": "2026-02-01T02:15:13.992Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'getSkillsPrompt\\|generateSkillsPrompt' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "1",
+      "error": null
+    },
+    {
+      "id": 4954,
+      "timestamp": "2026-02-01T02:15:21.958Z",
+      "tool": "run_command",
+      "params": {
+        "command": "head -100 /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "// Skills 加载模块\n// 自动加载 skills 目录下的所有 Skill，生成系统提示\n\nimport { readFileSync, existsSync, readdirSync } from 'fs';\nimport path from 'path';\nimport { fileURLToPath } from 'url';\n\nconst __dirname = path.dirname(fileURLToPath(import.meta.url));\nconst SKILLS_DIR = path.join(__dirname, '..', 'skills');\n\nclass SkillsManager {\n  constructor() {\n    this.skills = [];\n    this.systemPrompt = '';\n  }\n\n  /**\n   * 加载所有 Skills\n   */\n  load() {\n    // 检查 skills 目录是否存在\n    if (!existsSync(SKILLS_DIR)) {\n      cons",
+      "error": null
+    },
+    {
+      "id": 4955,
+      "timestamp": "2026-02-01T02:15:34.573Z",
+      "tool": "run_command",
+      "params": {
+        "command": "wc -l /Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md /Users/yay/workspace/genspark-agent/docs/ADVANCED_GUIDE.md /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md 2>/dev/null"
+      },
+      "success": true,
+      "resultPreview": "1\n     306 /Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\n     375 /Users/yay/workspace/genspark-agent/docs/ADVANCED_GUIDE.md\n     681 total\n",
+      "error": null
+    },
+    {
+      "id": 4956,
+      "timestamp": "2026-02-01T02:15:43.374Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '70,110p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "    }\n\n    // 动态生成简短摘要（详细文档按需加载）\n    let prompt = '# 已加载的 Skills\\n\\n';\n    prompt += '以下 Skills 可用。需要详细参数时，读取对应的参考文档。\\n\\n';\n    \n    for (const skill of this.skills) {\n      prompt += `- **${skill.name}**: ${skill.description}`;\n      if (skill.tools && skill.tools.length > 0) {\n        prompt += ` (${skill.tools.length} 个工具)`;\n      }\n      prompt += '\\n';\n    }\n    \n    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n\n    // 添加工具选择指南\n    const toolsGuidePath = p",
+      "error": null
+    },
+    {
+      "id": 4957,
+      "timestamp": "2026-02-01T02:15:54.974Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/skills.js",
+        "edits": [
+          {
+            "oldText": "    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n\n    // 添加工具选择指南\n    const toolsGuidePath = path.join(__dirname, '..', 'docs', 'TOOLS_GUIDE.md');\n    if (existsSync(toolsGuidePath)) {\n      prompt += '\\n---\\n\\n';\n      prompt += readFileSync(toolsGuidePath, 'utf-8');\n      console.log('✅ 已加载工具使用指南 (TOOLS_GUIDE.md)');\n    }\n\n    // 添加进阶指南（错误处理、超时、权限等）\n    const advancedGuidePath = path.join(__dirname, '..', 'docs', 'ADVANCED_GUIDE.md');\n    if (existsSync(advancedGuidePath)) {\n      prompt += '\\n\\n---\\n\\n';\n      prompt += readFileSync(advancedGuidePath, 'utf-8');\n      console.log('✅ 已加载进阶指南 (ADVANCED_GUIDE.md)');\n    }\n    \n    return envInfo + prompt;",
+            "newText": "    prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n    prompt += `\\n如需查看完整工具文档，读取 \\`/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\\`\\n`;\n    \n    return envInfo + prompt;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/skills.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/skills.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/skills.js\tmodified\n@@ -81,24 +81,9 @@\n       prompt += '\\n';\n     }\n     \n     prompt += `\\n如需使用 Skill，可读取 \\`${SKILLS_DIR}/<skill-name>/SKILL.md\\` 获取详细指南。\\n`;\n-\n-    // 添加工具选择指南\n-    const toolsGuidePath = path.join(__dirname, '..', 'docs', '",
+      "error": null
+    },
+    {
+      "id": 4958,
+      "timestamp": "2026-02-01T02:16:04.772Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'SYSTEM_PROMPT_SKILLS' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "67:    const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');\n",
+      "error": null
+    },
+    {
+      "id": 4959,
+      "timestamp": "2026-02-01T02:16:12.768Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '65,75p' /Users/yay/workspace/genspark-agent/server-v2/skills.js"
+      },
+      "success": true,
+      "resultPreview": "    \n    // 尝试读取预生成的系统提示\n    const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');\n    if (existsSync(promptPath)) {\n      return envInfo + readFileSync(promptPath, 'utf-8');\n    }\n\n    // 动态生成简短摘要（详细文档按需加载）\n    let prompt = '# 已加载的 Skills\\n\\n';\n    prompt += '以下 Skills 可用。需要详细参数时，读取对应的参考文档。\\n\\n';\n    \n",
+      "error": null
+    },
+    {
+      "id": 4960,
+      "timestamp": "2026-02-01T02:16:21.380Z",
+      "tool": "run_command",
+      "params": {
+        "command": "ls -la /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md 2>/dev/null && wc -l /Users/yay/workspace/genspark-agent/skills/SYSTEM_PROMPT_SKILLS.md || echo '文件不存在'"
+      },
+      "success": true,
+      "resultPreview": "文件不存在\n",
+      "error": null
+    },
+    {
+      "id": 4961,
+      "timestamp": "2026-02-01T02:16:31.042Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'perf: 精简Skills提示词，移除自动加载的长文档\n\n- 删除自动加载 TOOLS_GUIDE.md (306行)\n- 删除自动加载 ADVANCED_GUIDE.md (375行)\n- 改为按需读取，提示词减少约680行'"
+      },
+      "success": true,
+      "resultPreview": "[main be195eb] perf: 精简Skills提示词，移除自动加载的长文档\n 2 files changed, 118 insertions(+), 17 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 4962,
+      "timestamp": "2026-02-01T02:18:21.182Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/self-validator.js << 'EOF'\n// 自验证执行器 - 闭环自证系统核心\n// 执行 → 验证 → 差距分析 → 自动修复\n\nclass SelfValidator {\n  constructor(logger, hub) {\n    this.logger = logger;\n    this.hub = hub;\n    \n    // 验证规则：工具 -> 验证方法\n    this.validationRules = {\n      // 文件操作验证\n      write_file: async (params, result) => {\n        if (!result.success) return { valid: false, reason: '写入失败' };\n        // 读取文件确认内容\n        const readResult = await this.hub.call('read_file', { path: params.path });\n        if (!readResult.success) {\n          return { valid: false, reason: '验证读取失败', canRetry: true };\n        }\n        const written = this._extractContent(readResult);\n        const expected = params.content;\n        if (written.includes(expected.slice(0, 100))) {\n          return { valid: true, message: '文件内容验证通过' };\n        }\n        return { valid: false, reason: '内容不匹配', expected: expected.slice(0, 100), actual: written.slice(0, 100) };\n      },\n      \n      edit_file: async (params, result) => {\n        if (!result.success) return { valid: false, reason: '编辑失败' };\n        // 读取文件确认修改\n        const readResult = await this.hub.call('read_file', { path: params.path });\n        if (!readResult.success) {\n          return { valid: false, reason: '验证读取失败', canRetry: true };\n        }\n        const content = this._extractContent(readResult);\n        // 检查所有 newText 是否存在\n        for (const edit of params.edits || []) {\n          if (edit.newText && !content.includes(edit.newText.slice(0, 50))) {\n            return { valid: false, reason: '编辑内容未找到', expected: edit.newText.slice(0, 50) };\n          }\n        }\n        return { valid: true, message: '编辑验证通过' };\n      },\n      \n      create_directory: async (params, result) => {\n        if (!result.success) return { valid: false, reason: '创建失败' };\n        const listResult = await this.hub.call('list_directory', { path: params.path });\n        if (listResult.success) {\n          return { valid: true, message: '目录存在验证通过' };\n        }\n        return { valid: false, reason: '目录不存在', canRetry: true };\n      },\n      \n      run_command: async (params, result) => {\n        if (!result.success) {\n          // 分析错误类型\n          const error = result.error || '';\n          if (error.includes('not found')) {\n            return { valid: false, reason: '命令不存在', canRetry: false };\n          }\n          if (error.includes('permission')) {\n            return { valid: false, reason: '权限不足', canRetry: false };\n          }\n          if (error.includes('timeout')) {\n            return { valid: false, reason: '执行超时', canRetry: true, suggestion: '使用后台执行' };\n          }\n          return { valid: false, reason: error, canRetry: true };\n        }\n        return { valid: true, message: '命令执行成功' };\n      },\n      \n      // Git 操作验证\n      'git_commit': async (params, result) => {\n        if (!result.success) return { valid: false, reason: '提交失败' };\n        // 检查最新提交\n        const logResult = await this.hub.call('run_command', {\n          command: `git -C ${params.cwd || '.'} log --oneline -1`\n        });\n        if (logResult.success) {\n          return { valid: true, message: '提交验证通过', commitId: this._extractContent(logResult).slice(0, 7) };\n        }\n        return { valid: false, reason: '无法验证提交' };\n      }\n    };\n  }\n  \n  _extractContent(result) {\n    if (typeof result === 'string') return result;\n    if (result.content) {\n      if (Array.isArray(result.content)) {\n        return result.content.map(c => c.text || '').join('');\n      }\n      return result.content;\n    }\n    if (result.result) return this._extractContent(result.result);\n    if (result.stdout) return result.stdout;\n    return JSON.stringify(result);\n  }\n  \n  /**\n   * 执行并验证\n   */\n  async executeWithValidation(tool, params, options = {}) {\n    const { maxRetries = 2, autoFix = true } = options;\n    \n    this.logger.info(`[Validator] 执行: ${tool}`);\n    \n    let lastResult = null;\n    let lastValidation = null;\n    \n    for (let attempt = 0; attempt <= maxRetries; attempt++) {\n      // 执行工具\n      const result = await this.hub.call(tool, params);\n      lastResult = result;\n      \n      // 获取验证规则\n      const validator = this.validationRules[tool];\n      if (!validator) {\n        // 无验证规则，直接返回\n        return { success: result.success, result, validated: false };\n      }\n      \n      // 执行验证\n      const validation = await validator(params, result);\n      lastValidation = validation;\n      \n      if (validation.valid) {\n        this.logger.success(`[Validator] ${tool} 验证通过: ${validation.message}`);\n        return { \n          success: true, \n          result, \n          validated: true, \n          validation,\n          attempts: attempt + 1\n        };\n      }\n      \n      this.logger.warning(`[Validator] ${tool} 验证失败 (尝试 ${attempt + 1}/${maxRetries + 1}): ${validation.reason}`);\n      \n      // 检查是否可重试\n      if (!validation.canRetry || attempt >= maxRetries) {\n        break;\n      }\n      \n      // 自动修复尝试\n      if (autoFix && validation.suggestion) {\n        this.logger.info(`[Validator] 尝试自动修复: ${validation.suggestion}`);\n      }\n      \n      // 等待后重试\n      await new Promise(r => setTimeout(r, 1000));\n    }\n    \n    return {\n      success: false,\n      result: lastResult,\n      validated: true,\n      validation: lastValidation,\n      attempts: maxRetries + 1\n    };\n  }\n  \n  /**\n   * 目标驱动执行\n   * goal: { description, successCriteria: [...], actions: [...] }\n   */\n  async executeGoal(goal) {\n    this.logger.info(`[Validator] 开始目标: ${goal.description}`);\n    \n    const results = [];\n    let allSuccess = true;\n    \n    for (const action of goal.actions) {\n      const result = await this.executeWithValidation(action.tool, action.params);\n      results.push({ action, result });\n      \n      if (!result.success) {\n        allSuccess = false;\n        if (goal.stopOnError !== false) {\n          break;\n        }\n      }\n    }\n    \n    // 检查成功标准\n    let criteriaResults = [];\n    if (goal.successCriteria && allSuccess) {\n      for (const criteria of goal.successCriteria) {\n        const check = await this._checkCriteria(criteria);\n        criteriaResults.push(check);\n        if (!check.met) {\n          allSuccess = false;\n        }\n      }\n    }\n    \n    const summary = {\n      goal: goal.description,\n      success: allSuccess,\n      actionsCompleted: results.filter(r => r.result.success).length,\n      totalActions: goal.actions.length,\n      criteriaResults,\n      results\n    };\n    \n    this.logger.info(`[Validator] 目标${allSuccess ? '达成' : '未达成'}: ${goal.description}`);\n    \n    return summary;\n  }\n  \n  async _checkCriteria(criteria) {\n    // criteria: { type: 'file_exists', path: '...' }\n    // criteria: { type: 'file_contains', path: '...', text: '...' }\n    // criteria: { type: 'command_succeeds', command: '...' }\n    \n    switch (criteria.type) {\n      case 'file_exists': {\n        const result = await this.hub.call('get_file_info', { path: criteria.path });\n        return { criteria, met: result.success, message: result.success ? '文件存在' : '文件不存在' };\n      }\n      case 'file_contains': {\n        const result = await this.hub.call('read_file', { path: criteria.path });\n        if (!result.success) return { criteria, met: false, message: '无法读取文件' };\n        const content = this._extractContent(result);\n        const contains = content.includes(criteria.text);\n        return { criteria, met: contains, message: contains ? '包含目标文本' : '不包含目标文本' };\n      }\n      case 'command_succeeds': {\n        const result = await this.hub.call('run_command', { command: criteria.command });\n        return { criteria, met: result.success, message: result.success ? '命令成功' : '命令失败' };\n      }\n      default:\n        return { criteria, met: false, message: '未知标准类型' };\n    }\n  }\n}\n\nexport default SelfValidator;\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4963,
+      "timestamp": "2026-02-01T02:18:55.587Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/goal-manager.js << 'EOF'\n// 目标管理器 - 目标驱动的闭环执行\n// 目标设定 → 计划生成 → 执行 → 验证 → 差距分析 → 调整\n\nimport { writeFileSync, readFileSync, existsSync } from 'fs';\nimport path from 'path';\n\nclass GoalManager {\n  constructor(logger, validator, stateManager) {\n    this.logger = logger;\n    this.validator = validator;\n    this.stateManager = stateManager;\n    this.activeGoals = new Map();\n    this.goalHistory = [];\n    this.storagePath = path.join(process.cwd(), 'goals');\n  }\n  \n  /**\n   * 创建目标\n   */\n  createGoal(goalId, definition) {\n    const goal = {\n      id: goalId,\n      description: definition.description,\n      status: 'pending',\n      createdAt: new Date().toISOString(),\n      \n      // 成功标准\n      successCriteria: definition.successCriteria || [],\n      \n      // 执行计划\n      plan: definition.plan || [],\n      currentStep: 0,\n      \n      // 执行历史\n      history: [],\n      \n      // 差距分析\n      gaps: [],\n      \n      // 配置\n      maxAttempts: definition.maxAttempts || 3,\n      autoAdjust: definition.autoAdjust !== false\n    };\n    \n    this.activeGoals.set(goalId, goal);\n    this.logger.info(`[GoalManager] 创建目标: ${goalId} - ${definition.description}`);\n    \n    return goal;\n  }\n  \n  /**\n   * 执行目标\n   */\n  async executeGoal(goalId, onProgress = null) {\n    const goal = this.activeGoals.get(goalId);\n    if (!goal) {\n      return { success: false, error: '目标不存在' };\n    }\n    \n    goal.status = 'running';\n    goal.startedAt = new Date().toISOString();\n    \n    let attempt = 0;\n    \n    while (attempt < goal.maxAttempts) {\n      attempt++;\n      this.logger.info(`[GoalManager] 执行目标 ${goalId} (尝试 ${attempt}/${goal.maxAttempts})`);\n      \n      // 执行计划中的每一步\n      const executionResult = await this._executePlan(goal, onProgress);\n      \n      // 验证成功标准\n      const validationResult = await this._validateCriteria(goal);\n      \n      goal.history.push({\n        attempt,\n        timestamp: new Date().toISOString(),\n        executionResult,\n        validationResult\n      });\n      \n      if (validationResult.allMet) {\n        goal.status = 'completed';\n        goal.completedAt = new Date().toISOString();\n        this.logger.success(`[GoalManager] 目标达成: ${goalId}`);\n        \n        this._archiveGoal(goal);\n        return {\n          success: true,\n          goal,\n          attempts: attempt,\n          message: '目标已达成'\n        };\n      }\n      \n      // 差距分析\n      goal.gaps = this._analyzeGaps(validationResult);\n      this.logger.warning(`[GoalManager] 目标未达成，发现 ${goal.gaps.length} 个差距`);\n      \n      // 自动调整计划\n      if (goal.autoAdjust && attempt < goal.maxAttempts) {\n        const adjusted = await this._adjustPlan(goal);\n        if (adjusted) {\n          this.logger.info(`[GoalManager] 计划已调整，重新执行`);\n          goal.currentStep = 0;\n          continue;\n        }\n      }\n      \n      // 无法调整或达到最大尝试次数\n      break;\n    }\n    \n    goal.status = 'failed';\n    goal.failedAt = new Date().toISOString();\n    this._archiveGoal(goal);\n    \n    return {\n      success: false,\n      goal,\n      attempts: attempt,\n      gaps: goal.gaps,\n      message: '目标未能达成'\n    };\n  }\n  \n  async _executePlan(goal, onProgress) {\n    const results = [];\n    \n    for (let i = goal.currentStep; i < goal.plan.length; i++) {\n      const step = goal.plan[i];\n      goal.currentStep = i;\n      \n      this.logger.info(`[GoalManager] 执行步骤 ${i + 1}/${goal.plan.length}: ${step.tool}`);\n      \n      const result = await this.validator.executeWithValidation(\n        step.tool,\n        step.params,\n        { maxRetries: step.maxRetries || 1 }\n      );\n      \n      results.push({\n        step: i,\n        tool: step.tool,\n        result\n      });\n      \n      if (onProgress) {\n        onProgress({\n          type: 'step_complete',\n          goalId: goal.id,\n          step: i,\n          total: goal.plan.length,\n          result\n        });\n      }\n      \n      if (!result.success && step.required !== false) {\n        this.logger.error(`[GoalManager] 必要步骤失败: ${step.tool}`);\n        break;\n      }\n    }\n    \n    return {\n      stepsCompleted: results.filter(r => r.result.success).length,\n      totalSteps: goal.plan.length,\n      results\n    };\n  }\n  \n  async _validateCriteria(goal) {\n    const results = [];\n    let allMet = true;\n    \n    for (const criteria of goal.successCriteria) {\n      const check = await this.validator._checkCriteria(criteria);\n      results.push(check);\n      if (!check.met) {\n        allMet = false;\n      }\n    }\n    \n    return { allMet, results };\n  }\n  \n  _analyzeGaps(validationResult) {\n    const gaps = [];\n    \n    for (const result of validationResult.results) {\n      if (!result.met) {\n        gaps.push({\n          criteria: result.criteria,\n          reason: result.message,\n          suggestedAction: this._suggestAction(result.criteria)\n        });\n      }\n    }\n    \n    return gaps;\n  }\n  \n  _suggestAction(criteria) {\n    switch (criteria.type) {\n      case 'file_exists':\n        return { tool: 'write_file', params: { path: criteria.path, content: '' } };\n      case 'file_contains':\n        return { tool: 'edit_file', description: `添加内容: ${criteria.text}` };\n      case 'command_succeeds':\n        return { tool: 'run_command', params: { command: criteria.command } };\n      default:\n        return null;\n    }\n  }\n  \n  async _adjustPlan(goal) {\n    // 根据差距调整计划\n    let adjusted = false;\n    \n    for (const gap of goal.gaps) {\n      if (gap.suggestedAction) {\n        // 添加修复步骤到计划\n        goal.plan.push({\n          tool: gap.suggestedAction.tool,\n          params: gap.suggestedAction.params,\n          description: `自动修复: ${gap.reason}`,\n          autoAdded: true\n        });\n        adjusted = true;\n      }\n    }\n    \n    return adjusted;\n  }\n  \n  _archiveGoal(goal) {\n    this.goalHistory.push(goal);\n    this.activeGoals.delete(goal.id);\n    \n    // 保存到文件\n    try {\n      const archivePath = path.join(this.storagePath, `${goal.id}.json`);\n      writeFileSync(archivePath, JSON.stringify(goal, null, 2));\n    } catch (e) {\n      this.logger.warning(`[GoalManager] 无法保存目标存档: ${e.message}`);\n    }\n  }\n  \n  /**\n   * 获取目标状态\n   */\n  getGoalStatus(goalId) {\n    const goal = this.activeGoals.get(goalId);\n    if (!goal) {\n      return { exists: false };\n    }\n    \n    return {\n      exists: true,\n      id: goal.id,\n      status: goal.status,\n      description: goal.description,\n      progress: `${goal.currentStep}/${goal.plan.length}`,\n      gaps: goal.gaps\n    };\n  }\n  \n  /**\n   * 列出所有目标\n   */\n  listGoals() {\n    return {\n      active: Array.from(this.activeGoals.values()).map(g => ({\n        id: g.id,\n        description: g.description,\n        status: g.status,\n        progress: `${g.currentStep}/${g.plan.length}`\n      })),\n      completed: this.goalHistory.filter(g => g.status === 'completed').length,\n      failed: this.goalHistory.filter(g => g.status === 'failed').length\n    };\n  }\n}\n\nexport default GoalManager;\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4964,
+      "timestamp": "2026-02-01T02:19:04.382Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"import.*from './\" /Users/yay/workspace/genspark-agent/server-v2/index.js | tail -5"
+      },
+      "success": true,
+      "resultPreview": "12:import HealthChecker from './health-checker.js';\n13:import ErrorClassifier from './error-classifier.js';\n14:import RetryManager from './retry-manager.js';\n15:import TaskEngine from './task-engine.js';\n16:import Recorder from './recorder.js';\n",
+      "error": null
+    },
+    {
+      "id": 4965,
+      "timestamp": "2026-02-01T02:19:12.367Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import Recorder from './recorder.js';",
+            "newText": "import Recorder from './recorder.js';\nimport SelfValidator from './self-validator.js';\nimport GoalManager from './goal-manager.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -13,8 +13,10 @@\n import ErrorClassifier from './error-classifier.js';\n import RetryManager from './retry-manager.js';\n import TaskEngine from './task-engine.js';\n import Recorder from './recorder.js';\n+import SelfValidator ",
+      "error": null
+    },
+    {
+      "id": 4966,
+      "timestamp": "2026-02-01T02:19:20.370Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'const recorder = new Recorder\\|taskEngine = new TaskEngine' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "463:const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));\n602:  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n",
+      "error": null
+    },
+    {
+      "id": 4967,
+      "timestamp": "2026-02-01T02:19:28.202Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '600,610p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "\n  // 初始化任务引擎\n  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n  logger.info('[Main] TaskEngine 已初始化');\n\n  // 启动时运行健康检查\n  const healthStatus = await healthChecker.runAll(hub);\n  if (!healthStatus.healthy) {\n    logger.warning('⚠️  部分组件异常，请查看上方日志');\n  }\n\n",
+      "error": null
+    },
+    {
+      "id": 4968,
+      "timestamp": "2026-02-01T02:19:37.559Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  // 初始化任务引擎\n  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n  logger.info('[Main] TaskEngine 已初始化');\n\n  // 启动时运行健康检查",
+            "newText": "  // 初始化任务引擎\n  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n  logger.info('[Main] TaskEngine 已初始化');\n\n  // 初始化自验证器和目标管理器\n  const selfValidator = new SelfValidator(logger, hub);\n  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  logger.info('[Main] SelfValidator 和 GoalManager 已初始化');\n\n  // 启动时运行健康检查"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -601,8 +601,13 @@\n   // 初始化任务引擎\n   taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n   logger.info('[Main] TaskEngine 已初始化');\n \n+  // 初始化自验证器和目标管理器\n+  const selfValidator = new SelfValidator(logger, hub);\n",
+      "error": null
+    },
+    {
+      "id": 4969,
+      "timestamp": "2026-02-01T02:19:46.371Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'task_status'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "765:          case 'task_status':\n",
+      "error": null
+    },
+    {
+      "id": 4970,
+      "timestamp": "2026-02-01T02:19:54.753Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '765,790p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'task_status':\n            if (!taskEngine) {\n              ws.send(JSON.stringify({ type: 'task_status_result', error: 'TaskEngine 未初始化' }));\n              break;\n            }\n            const status = taskEngine.getTaskStatus(msg.taskId);\n            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 录制相关 =====\n          case 'start_recording':\n            {\n              const result = recorder.startRecording(\n",
+      "error": null
+    },
+    {
+      "id": 4971,
+      "timestamp": "2026-02-01T02:20:09.158Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 录制相关 =====",
+            "newText": "            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n            break;\n          \n          // ===== 目标驱动执行 =====\n          case 'create_goal':\n            {\n              const goal = goalManager.createGoal(\n                msg.goalId || `goal-${Date.now()}`,\n                msg.definition\n              );\n              ws.send(JSON.stringify({ type: 'goal_created', goal }));\n            }\n            break;\n          \n          case 'execute_goal':\n            {\n              logger.info(`[WS] 执行目标: ${msg.goalId}`);\n              const result = await goalManager.executeGoal(\n                msg.goalId,\n                (progress) => {\n                  ws.send(JSON.stringify({ type: 'goal_progress', ...progress }));\n                }\n              );\n              ws.send(JSON.stringify({ type: 'goal_complete', ...result }));\n            }\n            break;\n          \n          case 'goal_status':\n            {\n              const status = goalManager.getGoalStatus(msg.goalId);\n              ws.send(JSON.stringify({ type: 'goal_status_result', ...status }));\n            }\n            break;\n          \n          case 'list_goals':\n            {\n              const goals = goalManager.listGoals();\n              ws.send(JSON.stringify({ type: 'goals_list', ...goals }));\n            }\n            break;\n          \n          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;\n          \n          // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -770,8 +770,63 @@\n             const status = taskEngine.getTaskStatus(msg.taskId);\n             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));\n             break;\n           \n+          // ===== 目标驱动执行",
+      "error": null
+    },
+    {
+      "id": 4972,
+      "timestamp": "2026-02-01T02:20:17.981Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'REPLAY_RECORDING'\" /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "404:    case 'REPLAY_RECORDING':\n",
+      "error": null
+    },
+    {
+      "id": 4973,
+      "timestamp": "2026-02-01T02:20:26.175Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '404,420p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "    case 'REPLAY_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====\n    \n    case 'REGISTER_AGENT':\n      if (message.agentId && sender.tab?.id) {\n        registerAgent(message.agentId, sender.tab.id);\n      ",
+      "error": null
+    },
+    {
+      "id": 4974,
+      "timestamp": "2026-02-01T02:20:41.572Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'REPLAY_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====",
+            "newText": "    case 'REPLAY_RECORDING':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 目标驱动执行 =====\n    case 'CREATE_GOAL':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'create_goal', \n          goalId: message.goalId,\n          definition: message.definition \n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'EXECUTE_GOAL':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'execute_goal', goalId: message.goalId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'GOAL_STATUS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'goal_status', goalId: message.goalId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'LIST_GOALS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'list_goals' }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -409,8 +409,63 @@\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n     \n+    // ===== 目标驱动执行 =====\n+    case 'CREATE_GOAL':\n+      if (socket && socket.readyState === WebSo",
+      "error": null
+    },
+    {
+      "id": 4975,
+      "timestamp": "2026-02-01T02:20:52.431Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"batch_step_result\\|goal_\" /Users/yay/workspace/genspark-agent/extension/background.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "105:      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {\n438:        socket.send(JSON.stringify({ type: 'goal_status', goalId: message.goalId }));\n",
+      "error": null
+    },
+    {
+      "id": 4976,
+      "timestamp": "2026-02-01T02:21:02.412Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '105,120p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {\n        console.log('[BG] 批量任务消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // 任务恢复结果\n      if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {\n        console.log('[BG] 任务状态消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果\n      ",
+      "error": null
+    },
+    {
+      "id": 4977,
+      "timestamp": "2026-02-01T02:21:15.396Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      // 任务恢复结果\n      if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {\n        console.log('[BG] 任务状态消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果",
+            "newText": "      // 任务恢复结果\n      if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {\n        console.log('[BG] 任务状态消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // 目标驱动执行结果\n      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -114,8 +114,17 @@\n         broadcastToAllTabs(data);\n         return;\n       }\n       \n+      // 目标驱动执行结果\n+      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n+          data.type === ",
+      "error": null
+    },
+    {
+      "id": 4978,
+      "timestamp": "2026-02-01T02:33:04.908Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'recording_started'\\|case 'batch_complete'\" /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1598:      case 'batch_complete':\n1644:      case 'recording_started':\n",
+      "error": null
+    },
+    {
+      "id": 4979,
+      "timestamp": "2026-02-01T02:41:12.904Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1638,1650p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "\n      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      // ===== 录制相关 =====\n      case 'recording_started':\n        addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');\n        break;\n\n      case 'recording_stopped':\n        addLog(`⏹️ 录制已停止: ${msg.recordingId} (${msg.summary?.totalSteps || 0} 步)`, 'success');\n        break;\n",
+      "error": null
+    },
+    {
+      "id": 4980,
+      "timestamp": "2026-02-01T02:41:34.312Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      // ===== 录制相关 =====",
+            "newText": "      case 'resume_error':\n        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n        break;\n\n      // ===== 目标驱动执行 =====\n      case 'goal_created':\n        addLog(`🎯 目标已创建: ${msg.goal?.id || msg.goalId}`, 'success');\n        break;\n\n      case 'goal_progress':\n        if (msg.step !== undefined) {\n          addLog(`🎯 目标进度: 步骤 ${msg.step} - ${msg.status || '执行中'}`, 'info');\n        }\n        break;\n\n      case 'goal_complete':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          addLog(`✅ 目标完成: ${msg.goalId} (${msg.attempts || 1} 次尝试)`, 'success');\n        } else {\n          addLog(`❌ 目标失败: ${msg.goalId} - ${msg.error || '未知错误'}`, 'error');\n        }\n        // 生成目标完成摘要\n        const goalSummary = `**[目标执行完成]** ${msg.success ? '✓ 成功' : '✗ 失败'}\\n` +\n          `- 目标ID: ${msg.goalId}\\n` +\n          `- 尝试次数: ${msg.attempts || 1}\\n` +\n          (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(goalSummary);\n        break;\n\n      case 'goal_status_result':\n        addLog(`📊 目标状态: ${msg.status?.status || '未知'} (${msg.status?.progress || 0}%)`, 'info');\n        break;\n\n      case 'goals_list':\n        addLog(`📋 活跃目标: ${msg.goals?.active?.length || 0}, 已完成: ${msg.goals?.completed || 0}`, 'info');\n        break;\n\n      case 'validated_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        const vr = msg.result;\n        if (vr?.success && vr?.validated) {\n          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');\n        } else if (vr?.success && !vr?.validated) {\n          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');\n        } else {\n          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');\n        }\n        // 生成验证结果摘要\n        const vrSummary = `**[验证执行结果]** ${msg.tool}\\n` +\n          `- 执行: ${vr?.success ? '✓' : '✗'}\\n` +\n          `- 验证: ${vr?.validated ? '✓' : '✗'}\\n` +\n          (vr?.result ? `\\`\\`\\`\\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\\n\\`\\`\\`\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(vrSummary);\n        break;\n\n      // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1639,8 +1639,66 @@\n       case 'resume_error':\n         addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');\n         break;\n \n+      // ===== 目标驱动执行 =====\n+      case 'goal_created':\n+        addLog(`🎯 目标已创建: ${msg.goal?.id ",
+      "error": null
+    },
+    {
+      "id": 4981,
+      "timestamp": "2026-02-01T02:41:46.816Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.38\"/\"version\": \"1.0.39\"/' extension/manifest.json && git add -A && git commit -m 'feat: 闭环自验证系统 - 目标驱动执行\n\n新增模块:\n- self-validator.js: 执行后自动验证结果\n- goal-manager.js: 目标 → 计划 → 执行 → 验证 → 调整\n\n功能:\n- 自验证执行: write_file后自动读取确认\n- 目标追踪: 设定成功条件，自动检测是否达成\n- 差距分析: 未满足条件时自动生成修复步骤\n- 自动调整: 最多3次尝试达成目标\n\n消息类型:\n- create_goal, execute_goal, goal_status, list_goals\n- validated_execute\n- goal_created, goal_progress, goal_complete\n\nversion: 1.0.38 -> 1.0.39'"
+      },
+      "success": true,
+      "resultPreview": "[main 4c90c55] feat: 闭环自验证系统 - 目标驱动执行\n 7 files changed, 963 insertions(+), 2 deletions(-)\n create mode 100644 server-v2/goal-manager.js\n create mode 100644 server-v2/self-validator.js\n",
+      "error": null
+    },
+    {
+      "id": 4982,
+      "timestamp": "2026-02-01T02:41:54.856Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 闭环自验证系统: SelfValidator自动验证、GoalManager目标驱动执行、差距分析与自动调整 (v1.0.39)\n",
+      "error": null
+    },
+    {
+      "id": 4983,
+      "timestamp": "2026-02-01T02:44:30.706Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'timeout\\|TIMEOUT' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "336:          reject(new Error('timeout'));\n",
+      "error": null
+    },
+    {
+      "id": 4984,
+      "timestamp": "2026-02-01T02:44:39.897Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'timeout\\|30000\\|60000' /Users/yay/workspace/genspark-agent/server-v2/config.json 2>/dev/null || echo '无config' && grep -rn 'timeout' /Users/yay/workspace/genspark-agent/extension/*.js | grep -i command | head -5"
+      },
+      "success": true,
+      "resultPreview": "47:        \"--timeout=60000\",\n61:        \"--timeout=60000\",\n",
+      "error": null
+    },
+    {
+      "id": 4985,
+      "timestamp": "2026-02-01T02:44:47.680Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'TIMEOUT\\|timeout' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "14:    TIMEOUT_MS: 120000,\n798:        const timeoutResult = `**[重试结果]** \\`#${historyId}\\` ✗ 超时\\n\\n请稍后再试，或检查服务器状态。`;\n799:        sendMessageSafe(timeoutResult);\n801:    }, CONFIG.TIMEOUT_MS);\n901:        const timeoutResult = formatToolResult({\n904:          error: `执行超时 (${CONFIG.TIMEOUT_MS / 1000}秒)`\n906:        sendMessageSafe(timeoutResult);\n908:    }, CONFIG.TIMEOUT_MS);\n1065:      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',\n1929:  const WAKEUP_TIMEOUT = 60000; // 60 seconds timeout\n",
+      "error": null
+    },
+    {
+      "id": 4986,
+      "timestamp": "2026-02-01T02:45:34.292Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/async-executor.js << 'EOF'\n/**\n * 异步命令执行器\n * 自动检测长时间运行的命令，转为后台执行并监控日志\n */\n\nimport { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\nimport path from 'path';\n\nexport default class AsyncExecutor {\n  constructor(logger) {\n    this.logger = logger;\n    this.logDir = path.join(process.cwd(), 'async-logs');\n    this.runningProcesses = new Map();\n    \n    // 需要后台执行的命令模式\n    this.asyncPatterns = [\n      /^node\\s+.*index\\.js/i,           // node server\n      /^npm\\s+(start|run|install)/i,    // npm commands\n      /^yarn\\s+(start|install)/i,       // yarn commands  \n      /^python.*server/i,               // python servers\n      /^uvicorn|gunicorn|flask/i,       // python web servers\n      /^docker\\s+(build|run|compose)/i, // docker commands\n      /^brew\\s+install/i,               // homebrew\n      /^pip\\s+install/i,                // pip install\n      /^cargo\\s+build/i,                // rust build\n      /^make\\b/i,                       // make\n      /^gradle|mvn/i,                   // java build\n    ];\n    \n    // 确保日志目录存在\n    if (!existsSync(this.logDir)) {\n      require('fs').mkdirSync(this.logDir, { recursive: true });\n    }\n  }\n\n  /**\n   * 判断命令是否需要异步执行\n   */\n  shouldRunAsync(command) {\n    return this.asyncPatterns.some(pattern => pattern.test(command));\n  }\n\n  /**\n   * 执行命令 - 自动选择同步或异步模式\n   */\n  async execute(command, options = {}) {\n    const { \n      forceAsync = false, \n      forceSync = false,\n      timeout = 30000,\n      onOutput = null \n    } = options;\n\n    // 强制同步或命令不匹配异步模式\n    if (forceSync || (!forceAsync && !this.shouldRunAsync(command))) {\n      return this.executeSync(command, timeout);\n    }\n\n    // 异步执行\n    return this.executeAsync(command, { timeout, onOutput });\n  }\n\n  /**\n   * 同步执行（带超时）\n   */\n  executeSync(command, timeout = 30000) {\n    return new Promise((resolve) => {\n      const startTime = Date.now();\n      \n      exec(command, { \n        timeout, \n        maxBuffer: 10 * 1024 * 1024,\n        shell: '/bin/bash'\n      }, (error, stdout, stderr) => {\n        const duration = Date.now() - startTime;\n        \n        if (error) {\n          if (error.killed || error.code === 'ETIMEDOUT') {\n            resolve({\n              success: false,\n              error: `命令超时 (${timeout/1000}秒)`,\n              suggestion: '此命令可能需要较长时间，建议使用后台执行模式',\n              duration\n            });\n          } else {\n            resolve({\n              success: false,\n              error: error.message,\n              stderr: stderr?.slice(-2000),\n              duration\n            });\n          }\n          return;\n        }\n        \n        resolve({\n          success: true,\n          output: stdout,\n          stderr: stderr || undefined,\n          duration\n        });\n      });\n    });\n  }\n\n  /**\n   * 异步执行（后台运行 + 日志监控）\n   */\n  async executeAsync(command, options = {}) {\n    const { timeout = 60000, onOutput = null } = options;\n    const processId = `async-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;\n    const logFile = path.join(this.logDir, `${processId}.log`);\n    const pidFile = path.join(this.logDir, `${processId}.pid`);\n    \n    this.logger?.info(`[AsyncExecutor] 启动异步命令: ${processId}`);\n    this.logger?.info(`[AsyncExecutor] 日志文件: ${logFile}`);\n\n    return new Promise((resolve) => {\n      // 启动后台进程\n      const shellCommand = `(${command}) > \"${logFile}\" 2>&1 & echo $! > \"${pidFile}\"`;\n      \n      exec(shellCommand, { shell: '/bin/bash' }, (error) => {\n        if (error) {\n          resolve({\n            success: false,\n            error: `启动失败: ${error.message}`,\n            processId\n          });\n          return;\n        }\n\n        // 等待 PID 文件生成\n        setTimeout(() => {\n          let pid = null;\n          if (existsSync(pidFile)) {\n            pid = readFileSync(pidFile, 'utf8').trim();\n          }\n\n          this.runningProcesses.set(processId, {\n            pid,\n            command,\n            logFile,\n            startTime: Date.now()\n          });\n\n          // 监控日志文件\n          this.monitorLog(processId, logFile, timeout, onOutput, resolve);\n        }, 500);\n      });\n    });\n  }\n\n  /**\n   * 监控日志文件\n   */\n  monitorLog(processId, logFile, timeout, onOutput, resolve) {\n    const startTime = Date.now();\n    let lastSize = 0;\n    let outputBuffer = '';\n    let resolved = false;\n    \n    // 成功模式\n    const successPatterns = [\n      /listening on|started|running|ready|server.*started/i,\n      /✅|success|completed|done/i,\n      /\\[Main\\].*初始化/,\n      /WebSocket.*listening/i\n    ];\n    \n    // 错误模式\n    const errorPatterns = [\n      /error:|exception:|failed:|fatal:/i,\n      /EADDRINUSE|EACCES|ENOENT/i,\n      /Cannot find module/i,\n      /SyntaxError|TypeError|ReferenceError/i\n    ];\n\n    const checkLog = () => {\n      if (resolved) return;\n      \n      if (!existsSync(logFile)) {\n        return; // 文件还未创建\n      }\n\n      try {\n        const content = readFileSync(logFile, 'utf8');\n        const newContent = content.slice(lastSize);\n        lastSize = content.length;\n        \n        if (newContent) {\n          outputBuffer += newContent;\n          onOutput?.(newContent);\n          \n          // 检查成功模式\n          if (successPatterns.some(p => p.test(outputBuffer))) {\n            resolved = true;\n            clearInterval(checkInterval);\n            clearTimeout(timeoutId);\n            \n            resolve({\n              success: true,\n              output: outputBuffer.slice(-5000),\n              processId,\n              mode: 'async',\n              logFile,\n              message: '命令已在后台启动并运行成功'\n            });\n            return;\n          }\n          \n          // 检查错误模式\n          if (errorPatterns.some(p => p.test(newContent))) {\n            resolved = true;\n            clearInterval(checkInterval);\n            clearTimeout(timeoutId);\n            \n            resolve({\n              success: false,\n              error: '检测到错误',\n              output: outputBuffer.slice(-5000),\n              processId,\n              mode: 'async',\n              logFile\n            });\n            return;\n          }\n        }\n      } catch (e) {\n        // 文件读取错误，继续等待\n      }\n    };\n\n    // 定期检查日志\n    const checkInterval = setInterval(checkLog, 500);\n    \n    // 首次检查\n    setTimeout(checkLog, 200);\n\n    // 超时处理\n    const timeoutId = setTimeout(() => {\n      if (resolved) return;\n      resolved = true;\n      clearInterval(checkInterval);\n      \n      // 超时但可能仍在运行\n      const hasOutput = outputBuffer.length > 0;\n      \n      resolve({\n        success: hasOutput, // 有输出认为启动成功\n        output: outputBuffer.slice(-5000) || '(无输出)',\n        processId,\n        mode: 'async',\n        logFile,\n        message: hasOutput \n          ? `命令已在后台运行 (${timeout/1000}秒内有输出)` \n          : `命令可能仍在运行，请检查日志: ${logFile}`,\n        warning: '超时但进程可能仍在后台运行'\n      });\n    }, timeout);\n  }\n\n  /**\n   * 获取进程状态\n   */\n  getProcessStatus(processId) {\n    const proc = this.runningProcesses.get(processId);\n    if (!proc) {\n      return { exists: false };\n    }\n\n    let isRunning = false;\n    if (proc.pid) {\n      try {\n        process.kill(parseInt(proc.pid), 0);\n        isRunning = true;\n      } catch (e) {\n        isRunning = false;\n      }\n    }\n\n    let lastOutput = '';\n    if (existsSync(proc.logFile)) {\n      const content = readFileSync(proc.logFile, 'utf8');\n      lastOutput = content.slice(-2000);\n    }\n\n    return {\n      exists: true,\n      processId,\n      pid: proc.pid,\n      command: proc.command,\n      isRunning,\n      logFile: proc.logFile,\n      lastOutput,\n      uptime: Date.now() - proc.startTime\n    };\n  }\n\n  /**\n   * 停止进程\n   */\n  stopProcess(processId) {\n    const proc = this.runningProcesses.get(processId);\n    if (!proc || !proc.pid) {\n      return { success: false, error: '进程不存在' };\n    }\n\n    try {\n      process.kill(parseInt(proc.pid), 'SIGTERM');\n      this.runningProcesses.delete(processId);\n      return { success: true, message: `进程 ${proc.pid} 已停止` };\n    } catch (e) {\n      return { success: false, error: e.message };\n    }\n  }\n\n  /**\n   * 读取进程日志\n   */\n  readLog(processId, tail = 100) {\n    const proc = this.runningProcesses.get(processId);\n    const logFile = proc?.logFile || path.join(this.logDir, `${processId}.log`);\n    \n    if (!existsSync(logFile)) {\n      return { success: false, error: '日志文件不存在' };\n    }\n\n    const content = readFileSync(logFile, 'utf8');\n    const lines = content.split('\\n');\n    const lastLines = lines.slice(-tail).join('\\n');\n\n    return {\n      success: true,\n      logFile,\n      lines: lines.length,\n      content: lastLines\n    };\n  }\n\n  /**\n   * 清理旧日志\n   */\n  cleanupLogs(maxAge = 24 * 60 * 60 * 1000) {\n    const now = Date.now();\n    let cleaned = 0;\n    \n    if (!existsSync(this.logDir)) return { cleaned: 0 };\n    \n    const files = require('fs').readdirSync(this.logDir);\n    for (const file of files) {\n      const filePath = path.join(this.logDir, file);\n      const stat = require('fs').statSync(filePath);\n      if (now - stat.mtimeMs > maxAge) {\n        unlinkSync(filePath);\n        cleaned++;\n      }\n    }\n    \n    return { cleaned };\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 4987,
+      "timestamp": "2026-02-01T02:45:42.689Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import SelfValidator from './self-validator.js';\nimport GoalManager from './goal-manager.js';",
+            "newText": "import SelfValidator from './self-validator.js';\nimport GoalManager from './goal-manager.js';\nimport AsyncExecutor from './async-executor.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -15,8 +15,9 @@\n import TaskEngine from './task-engine.js';\n import Recorder from './recorder.js';\n import SelfValidator from './self-validator.js';\n import GoalManager from './goal-manager.js';\n+import AsyncExecutor from '.",
+      "error": null
+    },
+    {
+      "id": 4988,
+      "timestamp": "2026-02-01T02:45:51.099Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'const goalManager = new GoalManager' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "608:  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n",
+      "error": null
+    },
+    {
+      "id": 4989,
+      "timestamp": "2026-02-01T02:46:01.090Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  logger.info('[Main] SelfValidator 和 GoalManager 已初始化');",
+            "newText": "  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  const asyncExecutor = new AsyncExecutor(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -605,9 +605,10 @@\n \n   // 初始化自验证器和目标管理器\n   const selfValidator = new SelfValidator(logger, hub);\n   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n-  logger.info('[Main] SelfValidator 和",
+      "error": null
+    },
+    {
+      "id": 4990,
+      "timestamp": "2026-02-01T02:46:09.492Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'validated_execute'\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "814:          case 'validated_execute':\n",
+      "error": null
+    },
+    {
+      "id": 4991,
+      "timestamp": "2026-02-01T02:46:18.101Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '814,830p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;",
+      "error": null
+    },
+    {
+      "id": 4992,
+      "timestamp": "2026-02-01T02:46:33.902Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;",
+            "newText": "          case 'validated_execute':\n            {\n              // 带验证的单工具执行\n              logger.info(`[WS] 验证执行: ${msg.tool}`);\n              const result = await selfValidator.executeWithValidation(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({ \n                type: 'validated_result', \n                tool: msg.tool,\n                ...result \n              }));\n            }\n            break;\n\n          // ===== 异步命令执行 =====\n          case 'async_execute':\n            {\n              // 异步执行命令（自动后台+日志监控）\n              logger.info(`[WS] 异步执行: ${msg.command?.slice(0, 50)}...`);\n              const result = await asyncExecutor.execute(\n                msg.command,\n                {\n                  forceAsync: msg.forceAsync || false,\n                  timeout: msg.timeout || 30000,\n                  onOutput: (output) => {\n                    // 实时发送输出\n                    ws.send(JSON.stringify({\n                      type: 'async_output',\n                      processId: result?.processId,\n                      output\n                    }));\n                  }\n                }\n              );\n              ws.send(JSON.stringify({\n                type: 'async_result',\n                ...result\n              }));\n            }\n            break;\n\n          case 'async_status':\n            {\n              // 获取异步进程状态\n              const status = asyncExecutor.getProcessStatus(msg.processId);\n              ws.send(JSON.stringify({\n                type: 'async_status_result',\n                ...status\n              }));\n            }\n            break;\n\n          case 'async_stop':\n            {\n              // 停止异步进程\n              const result = asyncExecutor.stopProcess(msg.processId);\n              ws.send(JSON.stringify({\n                type: 'async_stop_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n\n          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -826,8 +826,70 @@\n                 ...result \n               }));\n             }\n             break;\n+\n+          // ===== 异步命令执行 =====\n+          case 'async_execute':\n+            {\n+              // 异步执行命令（自动后台+日志监控）\n+  ",
+      "error": null
+    },
+    {
+      "id": 4993,
+      "timestamp": "2026-02-01T02:46:48.068Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;",
+            "newText": "      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      // ===== 异步命令执行 =====\n      case 'ASYNC_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'async_execute', \n            command: message.command,\n            forceAsync: message.forceAsync,\n            timeout: message.timeout\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_STATUS':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_STOP':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;\n\n      case 'ASYNC_LOG':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "Could not find exact match for edit:\n      case 'VALIDATED_EXECUTE':\n        if (socket && socket.readyState === WebSocket.OPEN) {\n          socket.send(JSON.stringify({ \n            type: 'validated_execute', \n            tool: message.tool,\n            params: message.params,\n            options: message.options\n          }));\n          sendResponse({ success: true });\n        } else {\n          sendResponse({ success: false, error: '未连接到服务器' });\n        }\n        return true;",
+      "error": null
+    },
+    {
+      "id": 4994,
+      "timestamp": "2026-02-01T02:46:56.508Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"VALIDATED_EXECUTE\\|REPLAY_RECORDING\" /Users/yay/workspace/genspark-agent/extension/background.js | head -5"
+      },
+      "success": true,
+      "resultPreview": "413:    case 'REPLAY_RECORDING':\n463:    case 'VALIDATED_EXECUTE':\n",
+      "error": null
+    },
+    {
+      "id": 4995,
+      "timestamp": "2026-02-01T02:47:07.699Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '463,480p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====\n    \n    case 'REGISTER_AGENT':\n      if (message.ag",
+      "error": null
+    },
+    {
+      "id": 4996,
+      "timestamp": "2026-02-01T02:47:21.093Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 =====",
+            "newText": "    case 'VALIDATED_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'validated_execute', \n          tool: message.tool,\n          params: message.params,\n          options: message.options\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    // ===== 异步命令执行 =====\n    case 'ASYNC_EXECUTE':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ \n          type: 'async_execute', \n          command: message.command,\n          forceAsync: message.forceAsync,\n          timeout: message.timeout\n        }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_STATUS':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_STOP':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n\n    case 'ASYNC_LOG':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));\n        sendResponse({ success: true });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    // ===== 跨 Tab 通信 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -472,8 +472,50 @@\n       } else {\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n+\n+    // ===== 异步命令执行 =====\n+    case 'ASYNC_EXECUTE':\n+      if (socket && socket.readyS",
+      "error": null
+    },
+    {
+      "id": 4997,
+      "timestamp": "2026-02-01T02:47:30.899Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"goal_created\\|goals_list\" /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "119:      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n121:          data.type === 'goals_list' || data.type === 'validated_result') {\n",
+      "error": null
+    },
+    {
+      "id": 4998,
+      "timestamp": "2026-02-01T02:47:38.099Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '119,130p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果\n      if (data.type === 'reload_tools_result') {\n        if (data.success) {\n          cachedTools = data.tools || [];\n",
+      "error": null
+    },
+    {
+      "id": 4999,
+      "timestamp": "2026-02-01T02:47:48.884Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果",
+            "newText": "      if (data.type === 'goal_created' || data.type === 'goal_progress' || \n          data.type === 'goal_complete' || data.type === 'goal_status_result' ||\n          data.type === 'goals_list' || data.type === 'validated_result') {\n        console.log('[BG] 目标执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n\n      // 异步执行消息\n      if (data.type === 'async_result' || data.type === 'async_output' ||\n          data.type === 'async_status_result' || data.type === 'async_stop_result' ||\n          data.type === 'async_log_result') {\n        console.log('[BG] 异步执行消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n      \n      // reload_tools 结果"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -122,8 +122,17 @@\n         console.log('[BG] 目标执行消息:', data.type);\n         broadcastToAllTabs(data);\n         return;\n       }\n+\n+      // 异步执行消息\n+      if (data.type === 'async_result' || data.type === 'asy",
+      "error": null
+    },
+    {
+      "id": 5000,
+      "timestamp": "2026-02-01T02:48:16.895Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      case 'validated_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        const vr = msg.result;\n        if (vr?.success && vr?.validated) {\n          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');\n        } else if (vr?.success && !vr?.validated) {\n          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');\n        } else {\n          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');\n        }\n        // 生成验证结果摘要\n        const vrSummary = `**[验证执行结果]** ${msg.tool}\\n` +\n          `- 执行: ${vr?.success ? '✓' : '✗'}\\n` +\n          `- 验证: ${vr?.validated ? '✓' : '✗'}\\n` +\n          (vr?.result ? `\\`\\`\\`\\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\\n\\`\\`\\`\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(vrSummary);\n        break;\n\n      // ===== 录制相关 =====",
+            "newText": "      case 'validated_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        const vr = msg.result;\n        if (vr?.success && vr?.validated) {\n          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');\n        } else if (vr?.success && !vr?.validated) {\n          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');\n        } else {\n          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');\n        }\n        // 生成验证结果摘要\n        const vrSummary = `**[验证执行结果]** ${msg.tool}\\n` +\n          `- 执行: ${vr?.success ? '✓' : '✗'}\\n` +\n          `- 验证: ${vr?.validated ? '✓' : '✗'}\\n` +\n          (vr?.result ? `\\`\\`\\`\\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\\n\\`\\`\\`\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(vrSummary);\n        break;\n\n      // ===== 异步命令执行 =====\n      case 'async_result':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        if (msg.success) {\n          const modeText = msg.mode === 'async' ? ' (后台)' : '';\n          addLog(`✅ 命令执行成功${modeText}`, 'success');\n          if (msg.processId) {\n            addLog(`📋 进程ID: ${msg.processId}`, 'info');\n          }\n        } else {\n          addLog(`❌ 命令执行失败: ${msg.error}`, 'error');\n          if (msg.suggestion) {\n            addLog(`💡 建议: ${msg.suggestion}`, 'info');\n          }\n        }\n        // 生成异步结果摘要\n        const asyncSummary = `**[命令执行结果]** ${msg.success ? '✓ 成功' : '✗ 失败'}${msg.mode === 'async' ? ' (后台模式)' : ''}\\n` +\n          (msg.processId ? `- 进程ID: ${msg.processId}\\n` : '') +\n          (msg.logFile ? `- 日志文件: ${msg.logFile}\\n` : '') +\n          (msg.warning ? `- ⚠️ ${msg.warning}\\n` : '') +\n          (msg.output ? `\\`\\`\\`\\n${msg.output.slice(-2000)}\\n\\`\\`\\`\\n` : '') +\n          (msg.error ? `- 错误: ${msg.error}\\n` : '') +\n          `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n        sendMessageToAI(asyncSummary);\n        break;\n\n      case 'async_output':\n        // 实时输出，仅记录日志\n        if (msg.output) {\n          addLog(`📤 ${msg.output.slice(0, 200)}`, 'info');\n        }\n        break;\n\n      case 'async_status_result':\n        if (msg.exists) {\n          addLog(`📊 进程 ${msg.processId}: ${msg.isRunning ? '运行中' : '已停止'}`, msg.isRunning ? 'success' : 'info');\n        } else {\n          addLog(`⚠️ 进程不存在: ${msg.processId}`, 'warning');\n        }\n        break;\n\n      case 'async_stop_result':\n        if (msg.success) {\n          addLog(`⏹️ 进程已停止: ${msg.processId}`, 'success');\n        } else {\n          addLog(`❌ 停止失败: ${msg.error}`, 'error');\n        }\n        break;\n\n      case 'async_log_result':\n        if (msg.success) {\n          addLog(`📋 日志 (${msg.lines} 行)`, 'info');\n          const logSummary = `**[进程日志]** ${msg.processId}\\n` +\n            `- 文件: ${msg.logFile}\\n` +\n            `- 总行数: ${msg.lines}\\n` +\n            `\\`\\`\\`\\n${msg.content?.slice(-3000) || '(空)'}\\n\\`\\`\\`\\n` +\n            `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n          sendMessageToAI(logSummary);\n        } else {\n          addLog(`❌ 读取日志失败: ${msg.error}`, 'error');\n        }\n        break;\n\n      // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -1697,8 +1697,73 @@\n           `\\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;\n         sendMessageToAI(vrSummary);\n         break;\n \n+      // ===== 异步命令执行 =====\n+      case 'async_result':\n+        state.agentRunning = false;\n+   ",
+      "error": null
+    },
+    {
+      "id": 5001,
+      "timestamp": "2026-02-01T02:48:29.029Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.39\"/\"version\": \"1.0.40\"/' extension/manifest.json && git add -A && git commit -m 'feat: 异步命令执行器 - 解决长时间运行命令超时问题\n\n新增模块:\n- async-executor.js: 智能检测并后台执行长时间命令\n\n功能:\n- 自动检测需要后台执行的命令模式 (node server, npm, docker等)\n- 后台执行 + 日志文件监控\n- 实时输出流式返回\n- 成功/错误模式自动检测\n- 进程状态查询、停止、日志读取\n\n消息类型:\n- async_execute: 执行命令(自动选择模式)\n- async_status: 查询进程状态\n- async_stop: 停止进程\n- async_log: 读取进程日志\n\nversion: 1.0.39 -> 1.0.40'"
+      },
+      "success": true,
+      "resultPreview": "[main 86ea80e] feat: 异步命令执行器 - 解决长时间运行命令超时问题\n 6 files changed, 807 insertions(+), 3 deletions(-)\n create mode 100644 server-v2/async-executor.js\n",
+      "error": null
+    },
+    {
+      "id": 5002,
+      "timestamp": "2026-02-01T02:48:37.173Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '异步命令执行器: 自动检测长时间命令、后台执行+日志监控、解决超时问题 (v1.0.40)'"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 异步命令执行器: 自动检测长时间命令、后台执行+日志监控、解决超时问题 (v1.0.40)\n",
+      "error": null
+    },
+    {
+      "id": 5003,
+      "timestamp": "2026-02-01T03:03:43.767Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && pkill -f 'node index.js' 2>/dev/null; sleep 1 && node index.js &"
+      },
+      "success": true,
+      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:03:13] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:03:13] [INFO]\u001b[0m 加载了 466 条历史记录\n\u001b[36m[03:03:13] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:03:15] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdio\n\u001b[33m[03:03:18] [WARNING]\u001b[0m [filesystem] stderr: Client",
+      "error": null
+    },
+    {
+      "id": 5004,
+      "timestamp": "2026-02-01T03:03:52.159Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'require(' /Users/yay/workspace/genspark-agent/server-v2/async-executor.js"
+      },
+      "success": true,
+      "resultPreview": "33:      require('fs').mkdirSync(this.logDir, { recursive: true });\n350:    const files = require('fs').readdirSync(this.logDir);\n353:      const stat = require('fs').statSync(filePath);\n",
+      "error": null
+    },
+    {
+      "id": 5005,
+      "timestamp": "2026-02-01T03:04:01.150Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "import { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\nimport path from 'path';",
+            "newText": "import { spawn, exec } from 'child_process';\nimport { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile, mkdirSync, readdirSync, statSync } from 'fs';\nimport path from 'path';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -3,9 +3,9 @@\n  * 自动检测长时间运行的命令，转为后台执行并监控日志\n  */\n \n import { spawn, exec } from 'child_process';\n-import { writeFileSync, readFileSync, existsSync, unlinkSync, watchFile, unwatchFile } from 'fs';\n+i",
+      "error": null
+    },
+    {
+      "id": 5006,
+      "timestamp": "2026-02-01T03:04:09.141Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "      require('fs').mkdirSync(this.logDir, { recursive: true });",
+            "newText": "      mkdirSync(this.logDir, { recursive: true });"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -29,9 +29,9 @@\n     ];\n     \n     // 确保日志目录存在\n     if (!existsSync(this.logDir)) {\n-      require('fs').mkdirSync(this.logDir, { recursive: true });\n+      mkdirSync(this.logDir, { recursive: true",
+      "error": null
+    },
+    {
+      "id": 5007,
+      "timestamp": "2026-02-01T03:04:17.341Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "    const files = require('fs').readdirSync(this.logDir);",
+            "newText": "    const files = readdirSync(this.logDir);"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -346,9 +346,9 @@\n     let cleaned = 0;\n     \n     if (!existsSync(this.logDir)) return { cleaned: 0 };\n     \n-    const files = require('fs').readdirSync(this.logDir);\n+    const files = readdirSy",
+      "error": null
+    },
+    {
+      "id": 5008,
+      "timestamp": "2026-02-01T03:04:24.739Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/async-executor.js",
+        "edits": [
+          {
+            "oldText": "      const stat = require('fs').statSync(filePath);",
+            "newText": "      const stat = statSync(filePath);"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/async-executor.js\tmodified\n@@ -349,9 +349,9 @@\n     \n     const files = readdirSync(this.logDir);\n     for (const file of files) {\n       const filePath = path.join(this.logDir, file);\n-      const stat = require('fs').statSyn",
+      "error": null
+    },
+    {
+      "id": 5009,
+      "timestamp": "2026-02-01T03:05:04.395Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: async-executor ES module兼容性修复' && pkill -f 'node index.js' 2>/dev/null; sleep 1 && cd server-v2 && node index.js &"
+      },
+      "success": true,
+      "resultPreview": "[main 9a0bc1c] fix: async-executor ES module兼容性修复\n 2 files changed, 117 insertions(+), 5 deletions(-)\n🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:04:34] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:04:34] [INFO]\u001b[0m 加载了 472 条历史记录\n\u001b[36m[03:04:34] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:04:35] [WARNING]\u001b[0m [filesystem] stderr: S",
+      "error": null
+    },
+    {
+      "id": 5010,
+      "timestamp": "2026-02-01T03:05:45.116Z",
+      "tool": "run_command",
+      "params": {
+        "command": "pkill -9 -f 'node.*index.js' 2>/dev/null; sleep 2 && cd /Users/yay/workspace/genspark-agent/server-v2 && nohup node index.js > /tmp/server.log 2>&1 & sleep 3 && cat /tmp/server.log | tail -30"
+      },
+      "success": true,
+      "resultPreview": "🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:05:14] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:05:14] [INFO]\u001b[0m 加载了 473 条历史记录\n\u001b[36m[03:05:14] [INFO]\u001b[0m [filesystem] 启动中...\n",
+      "error": null
+    },
+    {
+      "id": 5011,
+      "timestamp": "2026-02-01T03:06:18.187Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sleep 25 && cat /tmp/server.log | tail -50"
+      },
+      "success": true,
+      "resultPreview": "\u001b[36m[03:05:35] [INFO]\u001b[0m [ssh-oracle] 启动中...\n\u001b[33m[03:05:36] [WARNING]\u001b[0m [ssh-oracle] stderr: SSH MCP Server running on stdio\n\u001b[32m[03:05:40] [SUCCESS]\u001b[0m [ssh-oracle] 就绪, 2 个工具\n\u001b[36m[03:05:40] [INFO]\u001b[0m [ssh-oracle] tools: ssh-oracle:exec, ssh-oracle:sudo-exec\n\u001b[36m[03:05:40] [INFO]\u001b[0m [ssh-cpanel] 启动中...\n\u001b[33m[03:05:41] [WARNING]\u001b[0m [ssh-cpanel] stderr: SSH MCP Server running on stdio\n\u001b[32m[03:05:45] [SUCCESS]\u001b[0m [ssh-cpanel] 就绪, 2 个工具\n\u001b[36m[03:05:45] [INFO]\u001b[0m [ssh-cpanel] tools: ss",
+      "error": null
+    },
+    {
+      "id": 5012,
+      "timestamp": "2026-02-01T03:08:28.103Z",
+      "tool": "run_command",
+      "params": {
+        "command": "lsof -i :8765 2>/dev/null | head -5 && ps aux | grep 'node.*index.js' | grep -v grep | head -3"
+      },
+      "success": true,
+      "resultPreview": "COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nGenspark  16180  yay   22u  IPv6 0x15b88677fad32a2f      0t0  TCP localhost:59298->localhost:ultraseek-http (ESTABLISHED)\nnode      16192  yay   34u  IPv6 0xa3794a7c1a544ef1      0t0  TCP localhost:ultraseek-http (LISTEN)\nnode      16192  yay   35u  IPv6 0xc87f56a766740364      0t0  TCP localhost:ultraseek-http->localhost:59298 (ESTABLISHED)\nyay              16192   2.5  0.6 435765104  47648 s000  S    10:06PM   0:00.32 node ",
+      "error": null
+    },
+    {
+      "id": 5013,
+      "timestamp": "2026-02-01T03:08:35.977Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo '测试基础命令执行' && date && hostname"
+      },
+      "success": true,
+      "resultPreview": "测试基础命令执行\nSat Jan 31 22:08:35 EST 2026\nYAOs-MacBook-Air.local\n",
+      "error": null
+    },
+    {
+      "id": 5014,
+      "timestamp": "2026-02-01T03:14:10.582Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rm -f /private/tmp/batch-test-* && ls /private/tmp/batch-test-* 2>&1 || echo '✓ 测试文件已清理完毕'"
+      },
+      "success": true,
+      "resultPreview": "ls: /private/tmp/batch-test-*: No such file or directory\n✓ 测试文件已清理完毕\n",
+      "error": null
+    },
+    {
+      "id": 5015,
+      "timestamp": "2026-02-01T03:19:03.993Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'TOOL_BATCH' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "356:    case 'TOOL_BATCH':\n",
+      "error": null
+    },
+    {
+      "id": 5016,
+      "timestamp": "2026-02-01T03:19:13.369Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '354,385p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "      break;\n    \n    case 'TOOL_BATCH':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        const batchMsg = {\n          type: 'tool_batch',\n          id: message.batchId || `batch-${Date.now()}`,\n          steps: message.steps || [],\n          options: message.options || {}\n        };\n        socket.send(JSON.stringify(batchMsg));\n        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');\n        sendResponse({ success: true, batchId: batchMsg.id });\n      } ",
+      "error": null
+    },
+    {
+      "id": 5017,
+      "timestamp": "2026-02-01T03:19:21.968Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'TOOL_BATCH':\n      if (socket && socket.readyState === WebSocket.OPEN) {\n        const batchMsg = {\n          type: 'tool_batch',\n          id: message.batchId || `batch-${Date.now()}`,\n          steps: message.steps || [],\n          options: message.options || {}\n        };\n        socket.send(JSON.stringify(batchMsg));\n        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');\n        sendResponse({ success: true, batchId: batchMsg.id });\n      } else {\n        sendResponse({ success: false, error: '未连接到服务器' });\n      }\n      break;\n    \n    case 'RESUME_TASK':",
+            "newText": "    case 'RESUME_TASK':"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -352,24 +352,8 @@\n         sendResponse({ success: false, error: '未连接到服务器' });\n       }\n       break;\n     \n-    case 'TOOL_BATCH':\n-      if (socket && socket.readyState === WebSocket.OPEN) {\n-        const ",
+      "error": null
+    },
+    {
+      "id": 5018,
+      "timestamp": "2026-02-01T03:19:29.654Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'refactor: 移除 TOOL_BATCH 控制台接口，改用 ΩBATCH 对话格式'"
+      },
+      "success": true,
+      "resultPreview": "[main cc7d7f1] refactor: 移除 TOOL_BATCH 控制台接口，改用 ΩBATCH 对话格式\n 2 files changed, 106 insertions(+), 17 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5019,
+      "timestamp": "2026-02-01T03:23:12.013Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/auto-healer.js << 'EOF'\n/**\n * 错误自愈模块\n * 自动检测常见错误并尝试修复后重试\n */\n\nimport { existsSync, mkdirSync } from 'fs';\nimport path from 'path';\n\nexport default class AutoHealer {\n  constructor(logger, hub) {\n    this.logger = logger;\n    this.hub = hub;\n    this.maxRetries = 3;\n    this.retryDelay = 1000;\n    \n    // 错误模式 -> 修复策略\n    this.healingStrategies = {\n      // 路径不存在\n      'ENOENT': {\n        detect: (error, tool, params) => {\n          return error.includes('ENOENT') || \n                 error.includes('no such file or directory') ||\n                 error.includes('does not exist');\n        },\n        heal: async (error, tool, params) => {\n          // 如果是写文件，尝试创建目录\n          if (tool === 'write_file' || tool === 'edit_file') {\n            const filePath = params.path;\n            const dir = path.dirname(filePath);\n            if (!existsSync(dir)) {\n              this.logger?.info(`[AutoHealer] 创建目录: ${dir}`);\n              mkdirSync(dir, { recursive: true });\n              return { healed: true, message: `已创建目录: ${dir}` };\n            }\n          }\n          return { healed: false };\n        }\n      },\n      \n      // 文件被占用\n      'EBUSY': {\n        detect: (error) => {\n          return error.includes('EBUSY') || \n                 error.includes('resource busy') ||\n                 error.includes('file is being used');\n        },\n        heal: async (error, tool, params) => {\n          this.logger?.info(`[AutoHealer] 文件被占用，等待 ${this.retryDelay}ms 后重试`);\n          await this.sleep(this.retryDelay);\n          return { healed: true, message: '等待后重试' };\n        }\n      },\n      \n      // 权限不足\n      'EACCES': {\n        detect: (error) => {\n          return error.includes('EACCES') || \n                 error.includes('permission denied');\n        },\n        heal: async (error, tool, params) => {\n          // 权限问题通常无法自动修复，但可以提供建议\n          const filePath = params.path || params.command;\n          return { \n            healed: false, \n            suggestion: `权限不足，请尝试: sudo chmod 755 ${filePath} 或检查文件所有者`\n          };\n        }\n      },\n      \n      // edit_file 匹配失败\n      'MATCH_FAILED': {\n        detect: (error, tool) => {\n          return tool === 'edit_file' && \n                 (error.includes('Could not find') || \n                  error.includes('not found') ||\n                  error.includes('No match'));\n        },\n        heal: async (error, tool, params) => {\n          // 尝试查找相似内容\n          if (params.edits && params.edits[0]?.oldText) {\n            const oldText = params.edits[0].oldText;\n            const firstLine = oldText.split('\\n')[0].trim();\n            if (firstLine.length > 10) {\n              this.logger?.info(`[AutoHealer] 尝试查找: ${firstLine.slice(0, 50)}...`);\n              try {\n                const grepResult = await this.hub.callTool('run_command', {\n                  command: `grep -n \"${firstLine.replace(/\"/g, '\\\\\"').slice(0, 50)}\" \"${params.path}\" | head -5`\n                });\n                if (grepResult.content) {\n                  return {\n                    healed: false,\n                    suggestion: `未找到精确匹配，相似内容:\\n${grepResult.content}`,\n                    context: grepResult.content\n                  };\n                }\n              } catch (e) {\n                // grep 失败，继续\n              }\n            }\n          }\n          return { healed: false, suggestion: '请检查 oldText 是否与文件内容完全匹配（包括空格和换行）' };\n        }\n      },\n      \n      // 命令超时\n      'TIMEOUT': {\n        detect: (error) => {\n          return error.includes('timeout') || \n                 error.includes('ETIMEDOUT') ||\n                 error.includes('timed out');\n        },\n        heal: async (error, tool, params) => {\n          if (tool === 'run_command') {\n            return {\n              healed: false,\n              suggestion: '命令超时，建议:\\n1. 使用 nohup cmd & 后台执行\\n2. 拆分为更小的任务\\n3. 增加超时时间'\n            };\n          }\n          return { healed: false };\n        }\n      },\n      \n      // 端口被占用\n      'EADDRINUSE': {\n        detect: (error) => {\n          return error.includes('EADDRINUSE') || \n                 error.includes('address already in use');\n        },\n        heal: async (error, tool, params) => {\n          // 尝试提取端口号\n          const portMatch = error.match(/:([0-9]+)/);\n          const port = portMatch ? portMatch[1] : '未知';\n          return {\n            healed: false,\n            suggestion: `端口 ${port} 被占用，建议:\\n1. lsof -i :${port} 查看占用进程\\n2. kill -9 $(lsof -t -i :${port}) 强制关闭\\n3. 使用其他端口`\n          };\n        }\n      },\n      \n      // JSON 解析错误\n      'JSON_PARSE': {\n        detect: (error) => {\n          return error.includes('JSON') && \n                 (error.includes('parse') || error.includes('Unexpected'));\n        },\n        heal: async (error, tool, params) => {\n          return {\n            healed: false,\n            suggestion: 'JSON 格式错误，请检查:\\n1. 引号是否正确转义\\n2. 是否有多余的逗号\\n3. 中文引号是否误用'\n          };\n        }\n      },\n\n      // 模块未找到\n      'MODULE_NOT_FOUND': {\n        detect: (error) => {\n          return error.includes('Cannot find module') || \n                 error.includes('MODULE_NOT_FOUND');\n        },\n        heal: async (error, tool, params) => {\n          const moduleMatch = error.match(/Cannot find module ['\"]([^'\"]+)['\"]/);\n          const moduleName = moduleMatch ? moduleMatch[1] : '未知模块';\n          return {\n            healed: false,\n            suggestion: `模块 ${moduleName} 未找到，建议:\\n1. npm install ${moduleName}\\n2. 检查 import/require 路径\\n3. 检查 package.json 依赖`\n          };\n        }\n      }\n    };\n  }\n\n  sleep(ms) {\n    return new Promise(resolve => setTimeout(resolve, ms));\n  }\n\n  /**\n   * 执行工具调用，带自动错误修复\n   */\n  async executeWithHealing(tool, params, options = {}) {\n    const { maxRetries = this.maxRetries } = options;\n    let lastError = null;\n    let lastHealResult = null;\n    \n    for (let attempt = 1; attempt <= maxRetries; attempt++) {\n      try {\n        this.logger?.info(`[AutoHealer] 执行 ${tool} (尝试 ${attempt}/${maxRetries})`);\n        \n        const result = await this.hub.callTool(tool, params);\n        \n        // 检查结果是否包含错误\n        const resultStr = typeof result === 'string' ? result : JSON.stringify(result);\n        if (this.isErrorResult(resultStr)) {\n          throw new Error(resultStr);\n        }\n        \n        // 成功\n        return {\n          success: true,\n          result,\n          attempts: attempt,\n          healed: attempt > 1\n        };\n        \n      } catch (error) {\n        lastError = error.message || String(error);\n        this.logger?.warn(`[AutoHealer] 错误: ${lastError.slice(0, 100)}`);\n        \n        // 尝试修复\n        const healResult = await this.tryHeal(lastError, tool, params);\n        lastHealResult = healResult;\n        \n        if (healResult.healed) {\n          this.logger?.info(`[AutoHealer] 已修复: ${healResult.message}`);\n          // 修复成功，继续重试\n          continue;\n        } else {\n          // 无法修复\n          if (healResult.suggestion) {\n            this.logger?.info(`[AutoHealer] 建议: ${healResult.suggestion}`);\n          }\n          break;\n        }\n      }\n    }\n    \n    // 所有重试都失败\n    return {\n      success: false,\n      error: lastError,\n      attempts: maxRetries,\n      suggestion: lastHealResult?.suggestion,\n      context: lastHealResult?.context\n    };\n  }\n\n  /**\n   * 检查结果是否为错误\n   */\n  isErrorResult(result) {\n    const errorPatterns = [\n      'ENOENT', 'EACCES', 'EBUSY', 'EADDRINUSE',\n      'Error:', 'error:', 'failed', 'Failed',\n      'Could not find', 'not found', 'No such file'\n    ];\n    return errorPatterns.some(p => result.includes(p));\n  }\n\n  /**\n   * 尝试修复错误\n   */\n  async tryHeal(error, tool, params) {\n    for (const [name, strategy] of Object.entries(this.healingStrategies)) {\n      if (strategy.detect(error, tool, params)) {\n        this.logger?.info(`[AutoHealer] 检测到 ${name} 类型错误，尝试修复...`);\n        return await strategy.heal(error, tool, params);\n      }\n    }\n    \n    // 未知错误类型\n    return { healed: false };\n  }\n\n  /**\n   * 获取错误类型\n   */\n  getErrorType(error) {\n    for (const [name, strategy] of Object.entries(this.healingStrategies)) {\n      if (strategy.detect(error, '', {})) {\n        return name;\n      }\n    }\n    return 'UNKNOWN';\n  }\n\n  /**\n   * 获取修复建议\n   */\n  async getSuggestion(error, tool, params) {\n    const healResult = await this.tryHeal(error, tool, params);\n    return healResult.suggestion || '未找到具体建议，请检查错误信息';\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5020,
+      "timestamp": "2026-02-01T03:23:40.387Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/result-cache.js << 'EOF'\n/**\n * 执行结果缓存模块\n * 避免短时间内重复执行相同的只读操作\n */\n\nexport default class ResultCache {\n  constructor(logger) {\n    this.logger = logger;\n    this.cache = new Map();\n    this.stats = { hits: 0, misses: 0 };\n    \n    // 默认 TTL（毫秒）\n    this.defaultTTL = 30000; // 30秒\n    \n    // 可缓存的工具（只读操作）\n    this.cacheableTools = new Set([\n      'read_file',\n      'read_text_file', \n      'read_multiple_files',\n      'list_directory',\n      'list_directory_with_sizes',\n      'directory_tree',\n      'get_file_info',\n      'search_files',\n      'list_allowed_directories',\n      'get_symbols',\n      'get_ast',\n      'find_text',\n      'list_projects_tool',\n      'list_languages',\n      'get_dependencies'\n    ]);\n    \n    // 工具特定的 TTL 配置\n    this.toolTTL = {\n      'read_file': 60000,           // 1分钟\n      'list_directory': 30000,      // 30秒\n      'directory_tree': 60000,      // 1分钟\n      'get_file_info': 30000,       // 30秒\n      'search_files': 20000,        // 20秒（可能变化较快）\n      'get_symbols': 120000,        // 2分钟（代码分析较稳定）\n      'get_ast': 120000,            // 2分钟\n      'list_projects_tool': 300000  // 5分钟\n    };\n    \n    // 自动清理过期缓存\n    this.cleanupInterval = setInterval(() => this.cleanup(), 60000);\n  }\n\n  /**\n   * 生成缓存键\n   */\n  generateKey(tool, params) {\n    const sortedParams = Object.keys(params)\n      .sort()\n      .reduce((acc, key) => {\n        acc[key] = params[key];\n        return acc;\n      }, {});\n    return `${tool}:${JSON.stringify(sortedParams)}`;\n  }\n\n  /**\n   * 检查是否可缓存\n   */\n  isCacheable(tool) {\n    return this.cacheableTools.has(tool);\n  }\n\n  /**\n   * 获取缓存\n   */\n  get(tool, params) {\n    if (!this.isCacheable(tool)) {\n      return null;\n    }\n    \n    const key = this.generateKey(tool, params);\n    const entry = this.cache.get(key);\n    \n    if (!entry) {\n      this.stats.misses++;\n      return null;\n    }\n    \n    // 检查是否过期\n    if (Date.now() > entry.expiresAt) {\n      this.cache.delete(key);\n      this.stats.misses++;\n      return null;\n    }\n    \n    this.stats.hits++;\n    this.logger?.debug(`[Cache] 命中: ${tool} (${key.slice(0, 50)}...)`);\n    \n    return {\n      ...entry.result,\n      cached: true,\n      cachedAt: entry.cachedAt,\n      age: Date.now() - entry.cachedAt\n    };\n  }\n\n  /**\n   * 设置缓存\n   */\n  set(tool, params, result) {\n    if (!this.isCacheable(tool)) {\n      return;\n    }\n    \n    // 不缓存错误结果\n    if (result.error || result.success === false) {\n      return;\n    }\n    \n    const key = this.generateKey(tool, params);\n    const ttl = this.toolTTL[tool] || this.defaultTTL;\n    \n    this.cache.set(key, {\n      result,\n      cachedAt: Date.now(),\n      expiresAt: Date.now() + ttl,\n      tool,\n      params\n    });\n    \n    this.logger?.debug(`[Cache] 存储: ${tool} (TTL: ${ttl/1000}s)`);\n  }\n\n  /**\n   * 使缓存失效（当文件被修改时调用）\n   */\n  invalidate(pattern) {\n    let invalidated = 0;\n    \n    for (const [key, entry] of this.cache.entries()) {\n      // 按路径匹配\n      if (pattern && entry.params?.path) {\n        if (entry.params.path.includes(pattern) || pattern.includes(entry.params.path)) {\n          this.cache.delete(key);\n          invalidated++;\n        }\n      }\n      // 按目录匹配\n      if (pattern && entry.tool === 'list_directory') {\n        const dir = entry.params.path;\n        if (pattern.startsWith(dir) || dir.startsWith(pattern)) {\n          this.cache.delete(key);\n          invalidated++;\n        }\n      }\n    }\n    \n    if (invalidated > 0) {\n      this.logger?.info(`[Cache] 已失效 ${invalidated} 个缓存条目 (pattern: ${pattern})`);\n    }\n    \n    return invalidated;\n  }\n\n  /**\n   * 清理过期缓存\n   */\n  cleanup() {\n    const now = Date.now();\n    let cleaned = 0;\n    \n    for (const [key, entry] of this.cache.entries()) {\n      if (now > entry.expiresAt) {\n        this.cache.delete(key);\n        cleaned++;\n      }\n    }\n    \n    if (cleaned > 0) {\n      this.logger?.debug(`[Cache] 清理 ${cleaned} 个过期条目`);\n    }\n  }\n\n  /**\n   * 清空所有缓存\n   */\n  clear() {\n    const size = this.cache.size;\n    this.cache.clear();\n    this.logger?.info(`[Cache] 已清空 ${size} 个缓存条目`);\n    return size;\n  }\n\n  /**\n   * 获取缓存统计\n   */\n  getStats() {\n    const total = this.stats.hits + this.stats.misses;\n    return {\n      size: this.cache.size,\n      hits: this.stats.hits,\n      misses: this.stats.misses,\n      hitRate: total > 0 ? (this.stats.hits / total * 100).toFixed(1) + '%' : '0%',\n      entries: Array.from(this.cache.entries()).map(([key, entry]) => ({\n        tool: entry.tool,\n        path: entry.params?.path?.slice(-50),\n        age: Math.round((Date.now() - entry.cachedAt) / 1000) + 's',\n        ttl: Math.round((entry.expiresAt - Date.now()) / 1000) + 's'\n      }))\n    };\n  }\n\n  /**\n   * 销毁（停止清理定时器）\n   */\n  destroy() {\n    if (this.cleanupInterval) {\n      clearInterval(this.cleanupInterval);\n    }\n    this.clear();\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5021,
+      "timestamp": "2026-02-01T03:23:49.767Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import AsyncExecutor from './async-executor.js';",
+            "newText": "import AsyncExecutor from './async-executor.js';\nimport AutoHealer from './auto-healer.js';\nimport ResultCache from './result-cache.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -16,8 +16,10 @@\n import Recorder from './recorder.js';\n import SelfValidator from './self-validator.js';\n import GoalManager from './goal-manager.js';\n import AsyncExecutor from './async-executor.js';\n+import AutoHealer fro",
+      "error": null
+    },
+    {
+      "id": 5022,
+      "timestamp": "2026-02-01T03:23:58.175Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'const asyncExecutor = new AsyncExecutor' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "611:  const asyncExecutor = new AsyncExecutor(logger);\n",
+      "error": null
+    },
+    {
+      "id": 5023,
+      "timestamp": "2026-02-01T03:24:07.193Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  const asyncExecutor = new AsyncExecutor(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor 已初始化');",
+            "newText": "  const asyncExecutor = new AsyncExecutor(logger);\n  const autoHealer = new AutoHealer(logger, hub);\n  const resultCache = new ResultCache(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -608,9 +608,11 @@\n   // 初始化自验证器和目标管理器\n   const selfValidator = new SelfValidator(logger, hub);\n   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n   const asyncExecutor = new AsyncExecut",
+      "error": null
+    },
+    {
+      "id": 5024,
+      "timestamp": "2026-02-01T03:24:15.185Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'async_log':\" /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "885:          case 'async_log':\n",
+      "error": null
+    },
+    {
+      "id": 5025,
+      "timestamp": "2026-02-01T03:24:23.370Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '885,910p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 =====\n          case 'start_recording':\n            {\n              const result = recorder.startRecording(\n    ",
+      "error": null
+    },
+    {
+      "id": 5026,
+      "timestamp": "2026-02-01T03:24:38.985Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 =====",
+            "newText": "          case 'async_log':\n            {\n              // 读取异步进程日志\n              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);\n              ws.send(JSON.stringify({\n                type: 'async_log_result',\n                processId: msg.processId,\n                ...result\n              }));\n            }\n            break;\n\n          // ===== 自动修复执行 =====\n          case 'healed_execute':\n            {\n              logger.info(`[WS] 自修复执行: ${msg.tool}`);\n              const result = await autoHealer.executeWithHealing(\n                msg.tool,\n                msg.params,\n                msg.options || {}\n              );\n              ws.send(JSON.stringify({\n                type: 'healed_result',\n                tool: msg.tool,\n                ...result\n              }));\n            }\n            break;\n\n          // ===== 缓存相关 =====\n          case 'cached_execute':\n            {\n              // 先检查缓存\n              const cached = resultCache.get(msg.tool, msg.params);\n              if (cached) {\n                logger.info(`[WS] 缓存命中: ${msg.tool}`);\n                ws.send(JSON.stringify({\n                  type: 'cached_result',\n                  tool: msg.tool,\n                  ...cached\n                }));\n              } else {\n                // 执行并缓存\n                logger.info(`[WS] 执行并缓存: ${msg.tool}`);\n                const result = await hub.callTool(msg.tool, msg.params);\n                resultCache.set(msg.tool, msg.params, { success: true, result });\n                ws.send(JSON.stringify({\n                  type: 'cached_result',\n                  tool: msg.tool,\n                  success: true,\n                  result,\n                  cached: false\n                }));\n              }\n            }\n            break;\n\n          case 'cache_stats':\n            {\n              const stats = resultCache.getStats();\n              ws.send(JSON.stringify({\n                type: 'cache_stats_result',\n                ...stats\n              }));\n            }\n            break;\n\n          case 'cache_clear':\n            {\n              const cleared = resultCache.clear();\n              ws.send(JSON.stringify({\n                type: 'cache_clear_result',\n                cleared\n              }));\n            }\n            break;\n\n          case 'cache_invalidate':\n            {\n              const invalidated = resultCache.invalidate(msg.pattern);\n              ws.send(JSON.stringify({\n                type: 'cache_invalidate_result',\n                pattern: msg.pattern,\n                invalidated\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -892,8 +892,84 @@\n                 ...result\n               }));\n             }\n             break;\n+\n+          // ===== 自动修复执行 =====\n+          case 'healed_execute':\n+            {\n+              logger.info(`[WS] 自修复执行:",
+      "error": null
+    },
+    {
+      "id": 5027,
+      "timestamp": "2026-02-01T03:24:53.080Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && sed -i '' 's/\"version\": \"1.0.40\"/\"version\": \"1.0.41\"/' extension/manifest.json && git add -A && git commit -m 'feat: 错误自愈 + 结果缓存模块\n\n新增模块:\n- auto-healer.js: 自动检测错误并尝试修复\n- result-cache.js: 只读操作结果缓存\n\n错误自愈支持:\n- ENOENT: 自动创建目录后重试\n- EBUSY: 等待后重试\n- EACCES: 提供权限修复建议\n- MATCH_FAILED: grep查找相似内容\n- TIMEOUT: 提供后台执行建议\n- EADDRINUSE: 提供端口占用解决方案\n- JSON_PARSE: 提供格式检查建议\n- MODULE_NOT_FOUND: 提供npm install建议\n\n结果缓存:\n- 只读工具自动缓存 (read_file, list_directory等)\n- 工具特定TTL配置\n- 写操作自动失效相关缓存\n- 缓存统计和管理接口\n\nversion: 1.0.40 -> 1.0.41'"
+      },
+      "success": true,
+      "resultPreview": "[main 81a9620] feat: 错误自愈 + 结果缓存模块\n 5 files changed, 701 insertions(+), 3 deletions(-)\n create mode 100644 server-v2/auto-healer.js\n create mode 100644 server-v2/result-cache.js\n",
+      "error": null
+    },
+    {
+      "id": 5028,
+      "timestamp": "2026-02-01T03:25:35.591Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /Users/yay/workspace/.agent_memory/memory_manager_v2.js milestone '第一阶段完成: 错误自愈AutoHealer + 结果缓存ResultCache (v1.0.41)' && pkill -9 -f 'node.*index.js' 2>/dev/null; sleep 2 && cd /Users/yay/workspace/genspark-agent/server-v2 && nohup node index.js > /tmp/server.log 2>&1 & sleep 5 && tail -25 /tmp/server.log"
+      },
+      "success": true,
+      "resultPreview": "里程碑已添加: 第一阶段完成: 错误自愈AutoHealer + 结果缓存ResultCache (v1.0.41)\n🔍 检查环境文件: /Users/yay/workspace/.ai-env.md 存在: true\n✅ 已加载本地环境信息 (.ai-env.md), 长度: 599\n✅ 已加载 2 个 Skills\n   - megacmd: MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享\n   - chart-visualization: 数据可视化图表生成，支持 26 种图表类型（折线图、柱状图、饼图、地图等）\n\u001b[36m[03:25:05] [INFO]\u001b[0m 加载了 4 个 Agent 配置\n\u001b[36m[03:25:05] [INFO]\u001b[0m 加载了 491 条历史记录\n\u001b[36m[03:25:05] [INFO]\u001b[0m [filesystem] 启动中...\n\u001b[33m[03:25:07] [WARNING]\u001b[0m [filesystem] stderr: Secure MCP Filesystem Server running on stdi",
+      "error": null
+    },
+    {
+      "id": 5029,
+      "timestamp": "2026-02-01T03:26:13.198Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sleep 30 && tail -30 /tmp/server.log"
+      },
+      "success": true,
+      "resultPreview": "║                                                           ║\n╚═══════════════════════════════════════════════════════════╝\n\nnode:events:485\n      throw er; // Unhandled 'error' event\n      ^\n\nError: listen EADDRINUSE: address already in use ::1:8765\n    at Server.setupListenHandle [as _listen2] (node:net:1937:16)\n    at listenInCluster (node:net:1994:12)\n    at GetAddrInfoReqWrap.callback (node:net:2203:7)\n    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:132:8)\nEmitted 'error' ev",
+      "error": null
+    },
+    {
+      "id": 5030,
+      "timestamp": "2026-02-01T03:28:32.919Z",
+      "tool": "run_command",
+      "params": {
+        "command": "lsof -i :8765 2>/dev/null | head -3 && ps aux | grep 'node.*index.js' | grep -v grep | head -2"
+      },
+      "success": true,
+      "resultPreview": "COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nGenspark  17020  yay   26u  IPv6 0x47cdfd905a1a4e3b      0t0  TCP localhost:59759->localhost:ultraseek-http (ESTABLISHED)\nnode      17027  yay   34u  IPv6 0x10607089bd68bc99      0t0  TCP localhost:ultraseek-http (LISTEN)\nyay              17027   1.6  0.6 435764512  47584 s000  S    10:26PM   0:00.27 node index.js\n",
+      "error": null
+    },
+    {
+      "id": 5031,
+      "timestamp": "2026-02-01T03:28:51.784Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -E 'AutoHealer|ResultCache|初始化' /tmp/server.log | tail -10"
+      },
+      "success": true,
+      "resultPreview": "\u001b[36m[03:27:05] [INFO]\u001b[0m [Main] TaskEngine 已初始化\n\u001b[36m[03:27:05] [INFO]\u001b[0m [Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化\n  └─ {\"command\":\"grep -E 'AutoHealer|ResultCache|初始化' /tmp/server.log | tail -10\"}\n",
+      "error": null
+    },
+    {
+      "id": 5032,
+      "timestamp": "2026-02-01T03:29:10.574Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo '✓ Server v1.0.41 运行正常' && echo '已加载模块: TaskEngine, SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache'"
+      },
+      "success": true,
+      "resultPreview": "✓ Server v1.0.41 运行正常\n已加载模块: TaskEngine, SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache\n",
+      "error": null
+    },
+    {
+      "id": 5033,
+      "timestamp": "2026-02-01T03:31:03.388Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/server-v2/context-compressor.js << 'EOF'\n/**\n * 上下文压缩模块\n * 长对话自动总结，保留关键信息，避免 token 超限\n */\n\nexport default class ContextCompressor {\n  constructor(logger) {\n    this.logger = logger;\n    this.maxContextLength = 50000;  // 最大上下文字符数\n    this.compressionThreshold = 40000;  // 触发压缩的阈值\n    this.preserveRecentCount = 10;  // 保留最近N条完整消息\n    \n    // 重要内容模式（不压缩）\n    this.importantPatterns = [\n      /\\b(error|错误|失败|Error|ERROR)\\b/i,\n      /\\b(todo|TODO|待办|任务)\\b/,\n      /\\b(重要|注意|警告|warning|IMPORTANT)\\b/i,\n      /\\b(密码|password|token|key|secret)\\b/i,\n      /\\b(版本|version|v\\d+\\.\\d+)\\b/i,\n      /^#{1,3}\\s+/m,  // Markdown 标题\n      /```[\\s\\S]*?```/,  // 代码块\n      /@DONE|@RETRY/,\n      /里程碑|milestone/i\n    ];\n    \n    // 可压缩内容模式\n    this.compressiblePatterns = [\n      /\\[执行结果\\][\\s\\S]*?(?=\\[执行结果\\]|$)/g,  // 重复的执行结果\n      /```[\\s\\S]{500,}?```/g,  // 超长代码块\n      /^\\s*[-*]\\s+.{10,}$/gm,  // 长列表项\n    ];\n  }\n\n  /**\n   * 压缩上下文\n   */\n  compress(messages) {\n    if (!Array.isArray(messages) || messages.length === 0) {\n      return { messages, compressed: false };\n    }\n\n    const totalLength = this.calculateLength(messages);\n    \n    if (totalLength < this.compressionThreshold) {\n      return { messages, compressed: false, totalLength };\n    }\n\n    this.logger?.info(`[Compressor] 开始压缩，当前长度: ${totalLength}`);\n    \n    // 分离：保留最近的 + 需要压缩的\n    const recentMessages = messages.slice(-this.preserveRecentCount);\n    const olderMessages = messages.slice(0, -this.preserveRecentCount);\n    \n    // 压缩旧消息\n    const summary = this.summarizeMessages(olderMessages);\n    \n    // 构建压缩后的上下文\n    const compressedMessages = [\n      {\n        role: 'system',\n        content: `[历史摘要 - ${olderMessages.length} 条消息已压缩]\\n${summary}`\n      },\n      ...recentMessages\n    ];\n    \n    const newLength = this.calculateLength(compressedMessages);\n    this.logger?.info(`[Compressor] 压缩完成: ${totalLength} -> ${newLength} (节省 ${Math.round((1 - newLength/totalLength) * 100)}%)`);\n    \n    return {\n      messages: compressedMessages,\n      compressed: true,\n      originalLength: totalLength,\n      compressedLength: newLength,\n      summarizedCount: olderMessages.length\n    };\n  }\n\n  /**\n   * 生成消息摘要\n   */\n  summarizeMessages(messages) {\n    const sections = {\n      tasks: [],      // 执行的任务\n      files: new Set(),  // 涉及的文件\n      errors: [],     // 错误信息\n      decisions: [],  // 重要决策\n      milestones: []  // 里程碑\n    };\n\n    for (const msg of messages) {\n      const content = msg.content || '';\n      \n      // 提取文件路径\n      const filePaths = content.match(/\\/[\\w\\/\\-\\.]+\\.(js|json|md|txt|py|ts|css|html)/g);\n      if (filePaths) {\n        filePaths.forEach(p => sections.files.add(p));\n      }\n      \n      // 提取错误\n      if (/error|错误|失败|Error/i.test(content)) {\n        const errorLine = this.extractKeyLine(content, /error|错误|失败/i);\n        if (errorLine && !sections.errors.includes(errorLine)) {\n          sections.errors.push(errorLine.slice(0, 100));\n        }\n      }\n      \n      // 提取任务完成\n      if (/@DONE|完成|成功/.test(content)) {\n        const taskLine = this.extractKeyLine(content, /完成|成功|@DONE/);\n        if (taskLine) {\n          sections.tasks.push(taskLine.slice(0, 80));\n        }\n      }\n      \n      // 提取里程碑\n      if (/里程碑|milestone/i.test(content)) {\n        const milestone = this.extractKeyLine(content, /里程碑|milestone/i);\n        if (milestone) {\n          sections.milestones.push(milestone.slice(0, 100));\n        }\n      }\n      \n      // 提取重要决策\n      if (/决定|选择|采用|使用|方案/.test(content)) {\n        const decision = this.extractKeyLine(content, /决定|选择|采用/);\n        if (decision && decision.length > 20) {\n          sections.decisions.push(decision.slice(0, 100));\n        }\n      }\n    }\n\n    // 构建摘要\n    let summary = '';\n    \n    if (sections.milestones.length > 0) {\n      summary += `**里程碑:**\\n${sections.milestones.slice(-5).map(m => `- ${m}`).join('\\n')}\\n\\n`;\n    }\n    \n    if (sections.tasks.length > 0) {\n      summary += `**已完成任务:** ${sections.tasks.length} 项\\n`;\n      summary += sections.tasks.slice(-5).map(t => `- ${t}`).join('\\n') + '\\n\\n';\n    }\n    \n    if (sections.files.size > 0) {\n      const fileList = Array.from(sections.files).slice(-10);\n      summary += `**涉及文件:** ${fileList.join(', ')}\\n\\n`;\n    }\n    \n    if (sections.errors.length > 0) {\n      summary += `**遇到的错误:** ${sections.errors.length} 个\\n`;\n      summary += sections.errors.slice(-3).map(e => `- ${e}`).join('\\n') + '\\n\\n';\n    }\n    \n    if (sections.decisions.length > 0) {\n      summary += `**重要决策:**\\n${sections.decisions.slice(-3).map(d => `- ${d}`).join('\\n')}\\n\\n`;\n    }\n\n    return summary || '(无重要信息)';\n  }\n\n  /**\n   * 提取关键行\n   */\n  extractKeyLine(content, pattern) {\n    const lines = content.split('\\n');\n    for (const line of lines) {\n      if (pattern.test(line) && line.trim().length > 10) {\n        return line.trim();\n      }\n    }\n    return null;\n  }\n\n  /**\n   * 计算消息总长度\n   */\n  calculateLength(messages) {\n    return messages.reduce((sum, msg) => {\n      return sum + (msg.content?.length || 0);\n    }, 0);\n  }\n\n  /**\n   * 压缩单条消息（用于实时压缩）\n   */\n  compressMessage(content, maxLength = 2000) {\n    if (content.length <= maxLength) {\n      return content;\n    }\n\n    // 检查是否包含重要内容\n    const hasImportant = this.importantPatterns.some(p => p.test(content));\n    \n    if (hasImportant) {\n      // 保留重要部分，压缩其他\n      return this.smartTruncate(content, maxLength);\n    }\n    \n    // 简单截断\n    return content.slice(0, maxLength - 50) + '\\n\\n...(已截断 ' + (content.length - maxLength) + ' 字符)';\n  }\n\n  /**\n   * 智能截断（保留头尾和重要部分）\n   */\n  smartTruncate(content, maxLength) {\n    const headLength = Math.floor(maxLength * 0.3);\n    const tailLength = Math.floor(maxLength * 0.5);\n    const middleIndicator = '\\n\\n... [中间内容已省略] ...\\n\\n';\n    \n    const head = content.slice(0, headLength);\n    const tail = content.slice(-tailLength);\n    \n    return head + middleIndicator + tail;\n  }\n\n  /**\n   * 提取执行结果摘要\n   */\n  summarizeToolResult(result, toolName) {\n    if (typeof result !== 'string') {\n      result = JSON.stringify(result);\n    }\n    \n    if (result.length <= 500) {\n      return result;\n    }\n\n    // 根据工具类型定制摘要\n    switch (toolName) {\n      case 'list_directory':\n        const items = result.split('\\n').filter(l => l.trim());\n        if (items.length > 20) {\n          return items.slice(0, 10).join('\\n') + \n                 `\\n... (共 ${items.length} 项，省略 ${items.length - 15} 项) ...\\n` +\n                 items.slice(-5).join('\\n');\n        }\n        break;\n        \n      case 'read_file':\n        if (result.length > 1000) {\n          const lines = result.split('\\n');\n          return `[文件内容 ${lines.length} 行, ${result.length} 字符]\\n` +\n                 lines.slice(0, 20).join('\\n') +\n                 '\\n... (内容已截断)';\n        }\n        break;\n        \n      case 'run_command':\n        if (result.length > 800) {\n          return result.slice(0, 400) + \n                 '\\n... (输出已截断) ...\\n' +\n                 result.slice(-300);\n        }\n        break;\n    }\n    \n    return this.smartTruncate(result, 500);\n  }\n\n  /**\n   * 获取压缩统计\n   */\n  getStats(messages) {\n    const totalLength = this.calculateLength(messages);\n    return {\n      messageCount: messages.length,\n      totalLength,\n      needsCompression: totalLength > this.compressionThreshold,\n      compressionRatio: totalLength > 0 ? \n        Math.round((this.compressionThreshold / totalLength) * 100) + '%' : '100%'\n    };\n  }\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5034,
+      "timestamp": "2026-02-01T03:31:58.390Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat > /Users/yay/workspace/genspark-agent/extension/panel-enhancer.js << 'EOF'\n/**\n * 面板增强模块\n * 进度条、状态图、实时监控\n */\n\nconst PanelEnhancer = {\n  // 进度条容器\n  progressContainer: null,\n  \n  // 状态面板\n  statusPanel: null,\n  \n  // 初始化\n  init() {\n    this.createProgressContainer();\n    this.createStatusPanel();\n    this.setupStyles();\n  },\n\n  // 创建进度条容器\n  createProgressContainer() {\n    if (document.getElementById('agent-progress-container')) return;\n    \n    const container = document.createElement('div');\n    container.id = 'agent-progress-container';\n    container.innerHTML = `\n      <div class=\"progress-header\">\n        <span class=\"progress-title\">任务进度</span>\n        <span class=\"progress-stats\"></span>\n      </div>\n      <div class=\"progress-bar-wrapper\">\n        <div class=\"progress-bar\"></div>\n      </div>\n      <div class=\"progress-steps\"></div>\n    `;\n    container.style.display = 'none';\n    \n    // 插入到面板中\n    const panel = document.getElementById('agent-panel');\n    if (panel) {\n      const header = panel.querySelector('.agent-panel-header');\n      if (header) {\n        header.after(container);\n      }\n    }\n    \n    this.progressContainer = container;\n  },\n\n  // 创建状态面板\n  createStatusPanel() {\n    if (document.getElementById('agent-status-panel')) return;\n    \n    const panel = document.createElement('div');\n    panel.id = 'agent-status-panel';\n    panel.innerHTML = `\n      <div class=\"status-grid\">\n        <div class=\"status-item\">\n          <div class=\"status-value\" id=\"status-tools\">0</div>\n          <div class=\"status-label\">工具</div>\n        </div>\n        <div class=\"status-item\">\n          <div class=\"status-value\" id=\"status-calls\">0</div>\n          <div class=\"status-label\">调用</div>\n        </div>\n        <div class=\"status-item\">\n          <div class=\"status-value\" id=\"status-cache\">0%</div>\n          <div class=\"status-label\">缓存</div>\n        </div>\n        <div class=\"status-item\">\n          <div class=\"status-value\" id=\"status-uptime\">0s</div>\n          <div class=\"status-label\">运行</div>\n        </div>\n      </div>\n    `;\n    \n    const agentPanel = document.getElementById('agent-panel');\n    if (agentPanel) {\n      const content = agentPanel.querySelector('.agent-panel-content');\n      if (content) {\n        content.prepend(panel);\n      }\n    }\n    \n    this.statusPanel = panel;\n  },\n\n  // 设置样式\n  setupStyles() {\n    if (document.getElementById('panel-enhancer-styles')) return;\n    \n    const styles = document.createElement('style');\n    styles.id = 'panel-enhancer-styles';\n    styles.textContent = `\n      #agent-progress-container {\n        padding: 8px 12px;\n        background: rgba(0, 100, 255, 0.05);\n        border-bottom: 1px solid rgba(0, 100, 255, 0.1);\n      }\n      \n      .progress-header {\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        margin-bottom: 6px;\n        font-size: 12px;\n      }\n      \n      .progress-title {\n        font-weight: 600;\n        color: #333;\n      }\n      \n      .progress-stats {\n        color: #666;\n      }\n      \n      .progress-bar-wrapper {\n        height: 6px;\n        background: #e0e0e0;\n        border-radius: 3px;\n        overflow: hidden;\n      }\n      \n      .progress-bar {\n        height: 100%;\n        background: linear-gradient(90deg, #4CAF50, #8BC34A);\n        border-radius: 3px;\n        transition: width 0.3s ease;\n        width: 0%;\n      }\n      \n      .progress-bar.error {\n        background: linear-gradient(90deg, #f44336, #ff5722);\n      }\n      \n      .progress-steps {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 4px;\n        margin-top: 8px;\n        max-height: 60px;\n        overflow-y: auto;\n      }\n      \n      .progress-step {\n        font-size: 10px;\n        padding: 2px 6px;\n        border-radius: 3px;\n        background: #f0f0f0;\n        color: #666;\n      }\n      \n      .progress-step.running {\n        background: #fff3e0;\n        color: #ff9800;\n        animation: pulse 1s infinite;\n      }\n      \n      .progress-step.success {\n        background: #e8f5e9;\n        color: #4caf50;\n      }\n      \n      .progress-step.error {\n        background: #ffebee;\n        color: #f44336;\n      }\n      \n      @keyframes pulse {\n        0%, 100% { opacity: 1; }\n        50% { opacity: 0.6; }\n      }\n      \n      #agent-status-panel {\n        padding: 8px 12px;\n        border-bottom: 1px solid #eee;\n      }\n      \n      .status-grid {\n        display: grid;\n        grid-template-columns: repeat(4, 1fr);\n        gap: 8px;\n        text-align: center;\n      }\n      \n      .status-item {\n        padding: 4px;\n      }\n      \n      .status-value {\n        font-size: 16px;\n        font-weight: 600;\n        color: #333;\n      }\n      \n      .status-label {\n        font-size: 10px;\n        color: #999;\n        margin-top: 2px;\n      }\n      \n      .goal-progress-container {\n        margin-top: 8px;\n        padding: 8px;\n        background: rgba(156, 39, 176, 0.05);\n        border-radius: 4px;\n      }\n      \n      .goal-title {\n        font-size: 11px;\n        font-weight: 600;\n        color: #9c27b0;\n        margin-bottom: 4px;\n      }\n      \n      .goal-criteria {\n        font-size: 10px;\n        color: #666;\n      }\n      \n      .goal-criteria-item {\n        display: flex;\n        align-items: center;\n        gap: 4px;\n        margin: 2px 0;\n      }\n      \n      .goal-criteria-item.met {\n        color: #4caf50;\n      }\n      \n      .goal-criteria-item.unmet {\n        color: #f44336;\n      }\n    `;\n    \n    document.head.appendChild(styles);\n  },\n\n  // 显示批量任务进度\n  showBatchProgress(batchId, totalSteps) {\n    if (!this.progressContainer) return;\n    \n    this.progressContainer.style.display = 'block';\n    this.progressContainer.querySelector('.progress-title').textContent = `批量任务: ${batchId.slice(-8)}`;\n    this.progressContainer.querySelector('.progress-stats').textContent = `0/${totalSteps}`;\n    this.progressContainer.querySelector('.progress-bar').style.width = '0%';\n    \n    // 创建步骤指示器\n    const stepsContainer = this.progressContainer.querySelector('.progress-steps');\n    stepsContainer.innerHTML = '';\n    \n    for (let i = 0; i < totalSteps; i++) {\n      const step = document.createElement('span');\n      step.className = 'progress-step';\n      step.textContent = `步骤${i + 1}`;\n      step.dataset.stepIndex = i;\n      stepsContainer.appendChild(step);\n    }\n  },\n\n  // 更新步骤状态\n  updateStepStatus(stepIndex, status, toolName) {\n    if (!this.progressContainer) return;\n    \n    const step = this.progressContainer.querySelector(`[data-step-index=\"${stepIndex}\"]`);\n    if (step) {\n      step.className = `progress-step ${status}`;\n      step.textContent = toolName ? `${stepIndex + 1}:${toolName.slice(0, 8)}` : `步骤${stepIndex + 1}`;\n    }\n  },\n\n  // 更新进度条\n  updateProgress(completed, total, hasError = false) {\n    if (!this.progressContainer) return;\n    \n    const percent = Math.round((completed / total) * 100);\n    const bar = this.progressContainer.querySelector('.progress-bar');\n    const stats = this.progressContainer.querySelector('.progress-stats');\n    \n    bar.style.width = `${percent}%`;\n    bar.className = `progress-bar ${hasError ? 'error' : ''}`;\n    stats.textContent = `${completed}/${total} (${percent}%)`;\n  },\n\n  // 隐藏进度\n  hideProgress() {\n    if (this.progressContainer) {\n      this.progressContainer.style.display = 'none';\n    }\n  },\n\n  // 显示目标进度\n  showGoalProgress(goalId, description, criteria) {\n    const container = document.createElement('div');\n    container.className = 'goal-progress-container';\n    container.id = `goal-${goalId}`;\n    container.innerHTML = `\n      <div class=\"goal-title\">🎯 ${description || goalId}</div>\n      <div class=\"goal-criteria\">\n        ${criteria?.map((c, i) => `\n          <div class=\"goal-criteria-item\" data-index=\"${i}\">\n            <span>○</span>\n            <span>${c.type}: ${c.path || c.text || c.command || ''}</span>\n          </div>\n        `).join('') || ''}\n      </div>\n    `;\n    \n    if (this.progressContainer) {\n      this.progressContainer.after(container);\n    }\n  },\n\n  // 更新目标条件状态\n  updateGoalCriteria(goalId, criteriaIndex, met) {\n    const container = document.getElementById(`goal-${goalId}`);\n    if (!container) return;\n    \n    const item = container.querySelector(`[data-index=\"${criteriaIndex}\"]`);\n    if (item) {\n      item.className = `goal-criteria-item ${met ? 'met' : 'unmet'}`;\n      item.querySelector('span').textContent = met ? '✓' : '✗';\n    }\n  },\n\n  // 移除目标进度\n  removeGoalProgress(goalId) {\n    const container = document.getElementById(`goal-${goalId}`);\n    if (container) {\n      container.remove();\n    }\n  },\n\n  // 更新状态面板\n  updateStatusPanel(stats) {\n    if (!this.statusPanel) return;\n    \n    if (stats.tools !== undefined) {\n      document.getElementById('status-tools').textContent = stats.tools;\n    }\n    if (stats.calls !== undefined) {\n      document.getElementById('status-calls').textContent = stats.calls;\n    }\n    if (stats.cacheHitRate !== undefined) {\n      document.getElementById('status-cache').textContent = stats.cacheHitRate;\n    }\n    if (stats.uptime !== undefined) {\n      document.getElementById('status-uptime').textContent = this.formatUptime(stats.uptime);\n    }\n  },\n\n  // 格式化运行时间\n  formatUptime(ms) {\n    const seconds = Math.floor(ms / 1000);\n    if (seconds < 60) return `${seconds}s`;\n    const minutes = Math.floor(seconds / 60);\n    if (minutes < 60) return `${minutes}m`;\n    const hours = Math.floor(minutes / 60);\n    return `${hours}h${minutes % 60}m`;\n  },\n\n  // 显示 Toast 通知\n  showToast(message, type = 'info', duration = 3000) {\n    const toast = document.createElement('div');\n    toast.className = `agent-toast agent-toast-${type}`;\n    toast.textContent = message;\n    toast.style.cssText = `\n      position: fixed;\n      bottom: 20px;\n      right: 20px;\n      padding: 12px 20px;\n      border-radius: 8px;\n      color: white;\n      font-size: 13px;\n      z-index: 10001;\n      animation: slideIn 0.3s ease;\n      background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};\n    `;\n    \n    document.body.appendChild(toast);\n    \n    setTimeout(() => {\n      toast.style.animation = 'slideOut 0.3s ease';\n      setTimeout(() => toast.remove(), 300);\n    }, duration);\n  }\n};\n\n// 导出\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = PanelEnhancer;\n} else {\n  window.PanelEnhancer = PanelEnhancer;\n}\nEOF"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5035,
+      "timestamp": "2026-02-01T03:32:17.576Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "import AutoHealer from './auto-healer.js';\nimport ResultCache from './result-cache.js';",
+            "newText": "import AutoHealer from './auto-healer.js';\nimport ResultCache from './result-cache.js';\nimport ContextCompressor from './context-compressor.js';"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -18,8 +18,9 @@\n import GoalManager from './goal-manager.js';\n import AsyncExecutor from './async-executor.js';\n import AutoHealer from './auto-healer.js';\n import ResultCache from './result-cache.js';\n+import ContextCompres",
+      "error": null
+    },
+    {
+      "id": 5036,
+      "timestamp": "2026-02-01T03:32:36.776Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  const autoHealer = new AutoHealer(logger, hub);\n  const resultCache = new ResultCache(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache 已初始化');",
+            "newText": "  const autoHealer = new AutoHealer(logger, hub);\n  const resultCache = new ResultCache(logger);\n  const contextCompressor = new ContextCompressor(logger);\n  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor 已初始化');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -611,9 +611,10 @@\n   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n   const asyncExecutor = new AsyncExecutor(logger);\n   const autoHealer = new AutoHealer(logger, hub);\n   const resul",
+      "error": null
+    },
+    {
+      "id": 5037,
+      "timestamp": "2026-02-01T03:33:01.393Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'cache_invalidate':\n            {\n              const invalidated = resultCache.invalidate(msg.pattern);\n              ws.send(JSON.stringify({\n                type: 'cache_invalidate_result',\n                pattern: msg.pattern,\n                invalidated\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 =====",
+            "newText": "          case 'cache_invalidate':\n            {\n              const invalidated = resultCache.invalidate(msg.pattern);\n              ws.send(JSON.stringify({\n                type: 'cache_invalidate_result',\n                pattern: msg.pattern,\n                invalidated\n              }));\n            }\n            break;\n\n          // ===== 上下文压缩 =====\n          case 'compress_context':\n            {\n              logger.info(`[WS] 压缩上下文: ${msg.messages?.length || 0} 条消息`);\n              const result = contextCompressor.compress(msg.messages || []);\n              ws.send(JSON.stringify({\n                type: 'compress_result',\n                ...result\n              }));\n            }\n            break;\n\n          case 'compress_message':\n            {\n              const compressed = contextCompressor.compressMessage(\n                msg.content,\n                msg.maxLength || 2000\n              );\n              ws.send(JSON.stringify({\n                type: 'compress_message_result',\n                original: msg.content?.length || 0,\n                compressed: compressed.length,\n                content: compressed\n              }));\n            }\n            break;\n\n          case 'summarize_result':\n            {\n              const summary = contextCompressor.summarizeToolResult(\n                msg.result,\n                msg.toolName\n              );\n              ws.send(JSON.stringify({\n                type: 'summarize_result_result',\n                original: msg.result?.length || 0,\n                summarized: summary.length,\n                content: summary\n              }));\n            }\n            break;\n\n          case 'context_stats':\n            {\n              const stats = contextCompressor.getStats(msg.messages || []);\n              ws.send(JSON.stringify({\n                type: 'context_stats_result',\n                ...stats\n              }));\n            }\n            break;\n          \n          // ===== 录制相关 ====="
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -970,8 +970,60 @@\n                 invalidated\n               }));\n             }\n             break;\n+\n+          // ===== 上下文压缩 =====\n+          case 'compress_context':\n+            {\n+              logger.info(`[WS] 压缩上",
+      "error": null
+    },
+    {
+      "id": 5038,
+      "timestamp": "2026-02-01T03:33:22.801Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n \"case 'batch_step_result'\" /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "1573:      case 'batch_step_result':\n",
+      "error": null
+    },
+    {
+      "id": 5039,
+      "timestamp": "2026-02-01T03:33:41.596Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1573,1610p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      case 'batch_step_result':\n        if (msg.success) {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');\n          // 存储结果供汇总使用\n          if (!state.batchResults) state.batchResults = [];\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: true,\n            result: msg.result\n          });\n        } else if (msg.skipped) {\n          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');\n        } ",
+      "error": null
+    },
+    {
+      "id": 5040,
+      "timestamp": "2026-02-01T03:34:01.163Z",
+      "tool": "run_command",
+      "params": {
+        "command": "head -30 /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "// content.js v34 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n(function() {\n  'use strict';\n\n  // 防止脚本重复加载\n  if (window.__GENSPARK_AGENT_LOADED__) {\n    console.log('[Agent] 已加载，跳过重复初始化');\n    return;\n  }\n  window.__GENSPARK_AGENT_LOADED__ = true;\n\n  const CONFIG = {\n    SCAN_INTERVAL: 200,\n    TIMEOUT_MS: 120000,\n    MAX_RESULT_LENGTH: 50000,\n    MAX_LOGS: 50,\n    DEBUG: false,\n    // Agent 协作：自动检查任务\n    AUTO_CHECK_ENABLED: false,\n    AUTO_CHECK_INTERVAL: 60000,  // 60秒检查一次\n    AGENT_ID: null  // 由用户在",
+      "error": null
+    },
+    {
+      "id": 5041,
+      "timestamp": "2026-02-01T03:34:20.191Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'executedCalls: new Set()' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "30:    executedCalls: new Set(),\n",
+      "error": null
     }
   ],
   "meta": {
-    "lastUpdate": "2026-02-01T07:01:49.008Z",
-    "count": 606,
+    "lastUpdate": "2026-02-01T13:14:59.402Z",
+    "count": 707,
     "idRange": {
       "from": 4335,
-      "to": 4940
+      "to": 5041
     }
   }
 }

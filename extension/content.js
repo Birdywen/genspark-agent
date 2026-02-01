@@ -153,7 +153,7 @@ function log(...args) {
 
     const prompt = `## 身份
 
-你连接了 **genspark-agent** 本地代理系统 (v1.0.38)，可执行文件操作、命令、浏览器自动化等。
+你连接了 **genspark-agent** 本地代理系统 (v1.0.40)，可执行文件操作、命令、浏览器自动化等。
 
 ---
 
@@ -173,6 +173,30 @@ function log(...args) {
 
 适用：读取多文件、执行多命令、并行获取信息
 高级：saveAs 保存变量、when 条件执行、stopOnError
+
+### 智能规划 (ΩPLAN)
+
+\`\`\`
+前缀ΩPLAN + {"goal":"目标描述","context":{...}}
+\`\`\`
+
+自动分解任务、分析依赖、并行优化。内置模式：文件复制、部署、数据库备份等。
+
+### 工作流模板 (ΩFLOW)
+
+\`\`\`
+前缀ΩFLOW + {"template":"模板名","variables":{...}}
+\`\`\`
+
+内置模板：deploy-nodejs, backup-mysql, batch-process, health-check, log-analysis, git-workflow
+
+### 断点续传 (ΩRESUME)
+
+\`\`\`
+前缀ΩRESUME + {"taskId":"任务ID"}
+\`\`\`
+
+恢复中断的任务，从上次失败的步骤继续执行。
 
 ---
 
