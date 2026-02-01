@@ -1637,11 +1637,26 @@ ${tip}
       // ===== 批量任务消息 =====
       case 'batch_step_result':
         if (msg.success) {
-          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: ${msg.tool} ✓`, 'success');
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');
+          // 存储结果供汇总使用
+          if (!state.batchResults) state.batchResults = [];
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: true,
+            result: msg.result
+          });
         } else if (msg.skipped) {
-          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
+          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
         } else {
-          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
+          if (!state.batchResults) state.batchResults = [];
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: false,
+            error: msg.error
+          });
         }
         break;
 
@@ -1654,13 +1669,23 @@ ${tip}
         } else {
           addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');
         }
-        // 发送汇总结果给 AI
-        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'}\n` +
-          `- 总步骤: ${msg.totalSteps}\n` +
-          `- 成功: ${msg.stepsCompleted}\n` +
-          `- 失败: ${msg.stepsFailed || 0}\n` +
-          `- 跳过: ${msg.stepsSkipped || 0}\n\n` +
-          `请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        // 生成包含详细结果的汇总
+        let detailedResults = '';
+        if (state.batchResults && state.batchResults.length > 0) {
+          detailedResults = state.batchResults.map((r, i) => {
+            if (r.success) {
+              let content = r.result || '';
+              if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
+            } else {
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error}`;
+            }
+          }).join('\n\n');
+          state.batchResults = []; // 清空
+        }
+        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'} (${msg.stepsCompleted}/${msg.totalSteps})\n\n` +
+          detailedResults +
+          `\n\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
         sendMessageSafe(batchSummary);
         break;
 
