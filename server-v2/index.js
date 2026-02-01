@@ -11,6 +11,8 @@ import Safety from './safety.js';
 import SkillsManager from './skills.js';
 import HealthChecker from './health-checker.js';
 import ErrorClassifier from './error-classifier.js';
+import RetryManager from './retry-manager.js';
+import TaskEngine from './task-engine.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -448,6 +450,12 @@ class MCPHub {
 
 const hub = new MCPHub();
 
+// 初始化重试管理器
+const retryManager = new RetryManager(logger, errorClassifier);
+
+// TaskEngine 将在 main() 中 hub.start() 后初始化
+let taskEngine = null;
+
 // ==================== 工具调用处理（含历史记录）====================
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   const { tool, params, id } = message;
@@ -559,6 +567,10 @@ async function main() {
   
   await hub.start();
 
+  // 初始化任务引擎
+  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);
+  logger.info('[Main] TaskEngine 已初始化');
+
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
   if (!healthStatus.healthy) {
@@ -651,6 +663,76 @@ async function main() {
                 error: e.message
               }));
             }
+            break;
+          
+          // ===== 批量任务执行 =====
+          case 'tool_batch':
+            if (!taskEngine) {
+              ws.send(JSON.stringify({ type: 'batch_error', error: 'TaskEngine 未初始化' }));
+              break;
+            }
+            try {
+              const { id: batchId, steps, options } = msg;
+              logger.info(`[WS] 收到批量任务: ${batchId}, ${steps?.length || 0} 步`);
+              
+              const result = await taskEngine.executeBatch(
+                batchId || `batch-${Date.now()}`,
+                steps || [],
+                options || {},
+                (stepResult) => {
+                  // 每步完成时发送结果
+                  ws.send(JSON.stringify({
+                    type: 'batch_step_result',
+                    batchId,
+                    ...stepResult
+                  }));
+                }
+              );
+              
+              ws.send(JSON.stringify({
+                type: 'batch_complete',
+                ...result
+              }));
+              
+              logger.success(`[WS] 批量任务完成: ${result.stepsCompleted}/${result.totalSteps} 成功`);
+            } catch (e) {
+              logger.error('[WS] 批量任务失败:', e.message);
+              ws.send(JSON.stringify({
+                type: 'batch_error',
+                error: e.message
+              }));
+            }
+            break;
+          
+          case 'resume_task':
+            if (!taskEngine) {
+              ws.send(JSON.stringify({ type: 'resume_error', error: 'TaskEngine 未初始化' }));
+              break;
+            }
+            try {
+              const result = await taskEngine.resumeTask(
+                msg.taskId,
+                (stepResult) => {
+                  ws.send(JSON.stringify({
+                    type: 'batch_step_result',
+                    taskId: msg.taskId,
+                    ...stepResult
+                  }));
+                }
+              );
+              ws.send(JSON.stringify({ type: 'resume_complete', ...result }));
+            } catch (e) {
+              ws.send(JSON.stringify({ type: 'resume_error', error: e.message }));
+            }
+            break;
+          
+          case 'task_status':
+            if (!taskEngine) {
+              ws.send(JSON.stringify({ type: 'task_status_result', error: 'TaskEngine 未初始化' }));
+              break;
+            }
+            const status = taskEngine.getTaskStatus(msg.taskId);
+            ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
             break;
           
           // ===== 新增: 历史记录相关 =====

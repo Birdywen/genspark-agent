@@ -101,6 +101,20 @@ function connectWebSocket() {
         return;
       }
       
+      // 批量任务结果
+      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {
+        console.log('[BG] 批量任务消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
+      // 任务恢复结果
+      if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {
+        console.log('[BG] 任务状态消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
       // reload_tools 结果
       if (data.type === 'reload_tools_result') {
         if (data.success) {
@@ -316,6 +330,40 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         socket.send(JSON.stringify({ type: 'reload_tools' }));
         console.log('[BG] 发送 reload_tools 请求');
         sendResponse({ success: true, message: '已发送刷新请求' });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'TOOL_BATCH':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        const batchMsg = {
+          type: 'tool_batch',
+          id: message.batchId || `batch-${Date.now()}`,
+          steps: message.steps || [],
+          options: message.options || {}
+        };
+        socket.send(JSON.stringify(batchMsg));
+        console.log('[BG] 发送批量任务:', batchMsg.id, batchMsg.steps.length, '步');
+        sendResponse({ success: true, batchId: batchMsg.id });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'RESUME_TASK':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'resume_task', taskId: message.taskId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'TASK_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'task_status', taskId: message.taskId }));
+        sendResponse({ success: true });
       } else {
         sendResponse({ success: false, error: '未连接到服务器' });
       }

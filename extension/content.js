@@ -1546,6 +1546,46 @@ ${tip}
         }
         break;
 
+      // ===== 批量任务消息 =====
+      case 'batch_step_result':
+        if (msg.success) {
+          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: ${msg.tool} ✓`, 'success');
+        } else if (msg.skipped) {
+          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
+        } else {
+          addLog(`📦 [${msg.batchId}] 步骤 ${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'batch_complete':
+        if (msg.success) {
+          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');
+        } else {
+          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');
+        }
+        // 发送汇总结果给 AI
+        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'}\n` +
+          `- 总步骤: ${msg.totalSteps}\n` +
+          `- 成功: ${msg.stepsCompleted}\n` +
+          `- 失败: ${msg.stepsFailed || 0}\n` +
+          `- 跳过: ${msg.stepsSkipped || 0}\n\n` +
+          `请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageSafe(batchSummary);
+        break;
+
+      case 'batch_error':
+        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');
+        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
+        break;
+
+      case 'resume_complete':
+        addLog(`✅ 任务恢复完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+        break;
+
+      case 'resume_error':
+        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');
+        break;
+
       case 'tool_result':
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;

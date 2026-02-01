@@ -13,11 +13,14 @@
         "/private/tmp"
       ]
     },
-    "chrome-devtools": {
+    "playwright": {
       "command": "npx",
       "args": [
         "-y",
-        "chrome-devtools-mcp@latest"
+        "@playwright/mcp",
+        "--headless",
+        "--browser",
+        "chromium"
       ]
     },
     "shell": {
