@@ -1,13 +1,13 @@
-// content.js v34 - Galaxy AI Agent Bridge
-(function() {
+// content.js v35 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+(function() { console.log('=== GENSPARK AGENT v35 LOADED ===');
   'use strict';
 
   // 防止脚本重复加载
-  if (window.__GALAXY_AGENT_LOADED__) {
+  if (window.__GENSPARK_AGENT_LOADED__) {
     console.log('[Agent] 已加载，跳过重复初始化');
     return;
   }
-  window.__GALAXY_AGENT_LOADED__ = true;
+  window.__GENSPARK_AGENT_LOADED__ = true;
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
@@ -38,8 +38,28 @@
     isProcessingQueue: false,
     roundCount: parseInt(localStorage.getItem('agent_round_count') || '0'),
     // 本地命令缓存（用于发送失败时重试）
-    lastToolCall: null
+    lastToolCall: null,
+    // 批量任务状态
+    batchResults: [],
+    currentBatchId: null,
+    currentBatchTotal: 0,
+    // 统计
+    totalCalls: 0,
+    sessionStart: Date.now()
   };
+
+  // 加载面板增强模块
+  function loadPanelEnhancer() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('panel-enhancer.js');
+    script.onload = () => {
+      if (window.PanelEnhancer) {
+        window.PanelEnhancer.init();
+        console.log('[Agent] PanelEnhancer 已加载');
+      }
+    };
+    document.head.appendChild(script);
+  }
 
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
@@ -272,6 +292,7 @@ ${toolSummary}
     return null;
   }
 
+  // ============== 消息队列处理 ==============
   // ============== 消息队列处理 ==============
   
   function enqueueMessage(msg) {
@@ -591,6 +612,28 @@ ${toolSummary}
     return calls;
   }
 
+  // 辅助函数: 提取平衡的 JSON 对象 (支持任意嵌套)
+  function extractBalancedJson(text, marker) {
+    const idx = text.indexOf(marker);
+    if (idx === -1) return null;
+    const jsonStart = text.indexOf('{', idx + marker.length);
+    if (jsonStart === -1) return null;
+    // 严格检查: marker 和 { 之间只能有空白字符
+    const between = text.slice(idx + marker.length, jsonStart);
+    if (between.trim() !== '') return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = jsonStart; i < text.length; i++) {
+      const ch = text[i];
+      if (esc) { esc = false; continue; }
+      if (ch === '\\') { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === '{') depth++;
+      if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }
+    }
+    return null;
+  }
+
     function parseToolCalls(text) {
     // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
     const batchStartIdx = text.indexOf('ΩBATCH');
@@ -888,6 +931,7 @@ ${toolSummary}
     }, CONFIG.TIMEOUT_MS);
   }
 
+  // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
@@ -933,7 +977,6 @@ ${toolSummary}
       }
     });
   }
-
 
 
   function executeToolCall(tool, callHash) {
@@ -1067,6 +1110,70 @@ ${toolSummary}
       }
     }
     
+    // 检查录制命令 @REC:action:name
+    const recMatch = text.match(/@REC:(start|stop|list|play)(?::([^:\s]+))?(?::([\{\[][^\s]*))?/);
+    if (recMatch) {
+      const recHash = `${index}:rec:${recMatch[0]}`;
+      if (!state.executedCalls.has(recHash)) {
+        state.executedCalls.add(recHash);
+        const action = recMatch[1];
+        const name = recMatch[2] || '';
+        
+        switch (action) {
+          case 'start':
+            if (name) {
+              addLog(`🎬 开始录制: ${name}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'start_recording', name: name, description: '' } });
+              state.currentRecordingId = name;
+            } else {
+              addLog('❌ 请指定录制名称: @REC:start:名称', 'error');
+            }
+            break;
+          case 'stop':
+            addLog('⏹️ 停止录制', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'stop_recording', recordingId: state.currentRecordingId || name } });
+            state.currentRecordingId = null;
+            break;
+          case 'list':
+            addLog('📼 获取录制列表...', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'list_recordings' } });
+            break;
+          case 'play':
+            if (name) {
+              console.log('[REC DEBUG] recMatch:', recMatch);
+              const extraParam = recMatch[3];
+              console.log('[REC DEBUG] extraParam:', extraParam);
+              let playMsg = { type: 'replay_recording', recordingId: name };
+              let paramInfo = '';
+              
+              if (extraParam) {
+                try {
+                  const parsed = JSON.parse(extraParam);
+                  if (Array.isArray(parsed)) {
+                    // 循环模式: @REC:play:名称:["a","b","c"]
+                    playMsg.foreach = parsed;
+                    paramInfo = ` (循环 ${parsed.length} 次)`;
+                  } else if (typeof parsed === 'object') {
+                    // 参数模式: @REC:play:名称:{"server":"oracle"}
+                    playMsg.variables = parsed;
+                    paramInfo = ` (参数: ${Object.keys(parsed).join(', ')})`;
+                  }
+                } catch (e) {
+                  addLog(`⚠️ 参数解析失败: ${e.message}`, 'warning');
+                }
+              }
+              
+              addLog(`▶️ 回放录制: ${name}${paramInfo}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: playMsg });
+            } else {
+              addLog('❌ 请指定录制名称: @REC:play:名称', 'error');
+            }
+            break;
+        }
+        return;
+      }
+    }
+    
     // 先检查跨 Tab 发送命令 @SEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
     const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|Ω|@DONE|$)/);
@@ -1100,6 +1207,36 @@ ${toolSummary}
       // 判断是否为批量调用
       if (tool.isBatch && tool.name === '__BATCH__') {
         executeBatchCall(tool.params, callHash);
+      } else if (tool.isPlan && tool.name === '__PLAN__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_plan', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('📋 任务规划请求已发送', 'info');
+          else addLog('❌ 任务规划请求失败', 'error');
+        });
+        return;
+      } else if (tool.isFlow && tool.name === '__FLOW__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'workflow_execute', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('🔄 工作流请求已发送', 'info');
+          else addLog('❌ 工作流请求失败', 'error');
+        });
+        return;
+      } else if (tool.isResume && tool.name === '__RESUME__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_resume', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('▶️ 断点续传请求已发送', 'info');
+          else addLog('❌ 断点续传请求失败', 'error');
+        });
+        return;
       } else {
         executeToolCall(tool, callHash);
       }
@@ -1174,7 +1311,7 @@ ${toolSummary}
       'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
-      '每次只调用一个工具，等结果后再继续',
+      '支持批量执行: ΩBATCH{"steps":[...]}',
       '长内容用 run_command + heredoc 写入',
       '项目记忆: memory_manager_v2.js projects',
     ],
@@ -1208,6 +1345,13 @@ ${toolSummary}
       }
     } else {
       content = `错误: ${msg.error || msg.result?.stderr || '未知错误'}`;
+      // 添加错误类型和修复建议
+      if (msg.errorType) {
+        content += `\n[错误类型]: ${msg.errorType}`;
+      }
+      if (msg.recoverable) {
+        content += `\n[可恢复]: 是`;
+      }
     }
     
     if (content.length > CONFIG.MAX_RESULT_LENGTH) {
@@ -1216,7 +1360,8 @@ ${toolSummary}
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
     
-    const tip = SmartTips.getTip(msg.tool, msg.success, content, msg.error);
+    // 优先使用服务器返回的建议，否则使用本地 SmartTips
+    const tip = msg.suggestion || SmartTips.getTip(msg.tool, msg.success, content, msg.error);
     
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
@@ -1235,7 +1380,7 @@ ${tip}
     panel.id = 'agent-panel';
     panel.innerHTML = `
       <div id="agent-header">
-        <span id="agent-title">🤖 Galaxy Agent v34</span>
+        <span id="agent-title">🤖 Agent v34</span>
         <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
@@ -1248,6 +1393,7 @@ ${tip}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-minimize" title="最小化">➖</button>
@@ -1412,6 +1558,21 @@ ${tip}
     document.getElementById('agent-reconnect').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
       addLog('🔄 重连中...', 'info');
+    };
+
+    // 刷新工具列表
+    document.getElementById('agent-reload-tools').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'RELOAD_TOOLS' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 发送刷新请求失败', 'error');
+          return;
+        }
+        if (resp?.success) {
+          addLog('🔧 正在刷新工具列表...', 'info');
+        } else {
+          addLog('❌ ' + (resp?.error || '刷新失败'), 'error');
+        }
+      });
     };
 
     // 切换本地/云端服务器
@@ -1627,6 +1788,350 @@ ${tip}
         if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
         break;
 
+      case 'tools_updated':
+        // 服务端热刷新后推送的工具更新
+        if (msg.tools && msg.tools.length > 0) {
+          const oldCount = state.availableTools.length;
+          state.availableTools = msg.tools;
+          updateToolsDisplay();
+          addLog(`🔄 工具已刷新: ${oldCount} → ${msg.tools.length}`, 'success');
+        }
+        break;
+
+      case 'reload_tools_result':
+        // reload_tools 请求的结果
+        if (msg.success) {
+          addLog(`✅ 工具刷新成功: ${msg.toolCount} 个工具`, 'success');
+        } else {
+          addLog(`❌ 工具刷新失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      // ===== 批量任务消息 =====
+      case 'batch_step_result':
+        state.totalCalls++;  // 统计调用次数
+        if (msg.success) {
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: true,
+            result: msg.result
+          });
+          // 更新进度条
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'success', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal);
+          }
+        } else if (msg.skipped) {
+          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'skipped', msg.tool);
+          }
+        } else {
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: false,
+            error: msg.error
+          });
+          // 更新进度条（错误状态）
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'error', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal, true);
+          }
+        }
+        break;
+
+      case 'batch_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        // 隐藏进度条
+        if (window.PanelEnhancer) {
+          window.PanelEnhancer.hideProgress();
+          // 显示 Toast 通知
+          if (msg.success) {
+            window.PanelEnhancer.showToast(`批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+          } else {
+            window.PanelEnhancer.showToast(`批量任务部分失败: ${msg.stepsFailed} 个错误`, 'error');
+          }
+        }
+        if (msg.success) {
+          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');
+        } else {
+          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');
+        }
+        // 生成包含详细结果的汇总
+        let detailedResults = '';
+        if (state.batchResults && state.batchResults.length > 0) {
+          detailedResults = state.batchResults.map((r, i) => {
+            if (r.success) {
+              let content = r.result || '';
+              if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
+            } else {
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error}`;
+            }
+          }).join('\n\n');
+          state.batchResults = []; // 清空
+        }
+        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'} (${msg.stepsCompleted}/${msg.totalSteps})\n\n` +
+          detailedResults +
+          `\n\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageSafe(batchSummary);
+        break;
+
+      case 'batch_error':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');
+        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
+        break;
+
+      // ===== 第三阶段: 任务规划 =====
+      case 'plan_result':
+        addLog('📋 收到任务规划结果', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划完成]**\n\n' + (msg.visualization || '') + '\n\n' + JSON.stringify(msg.plan, null, 2).slice(0, 2000));
+        break;
+
+      case 'plan_error':
+        addLog('❌ 任务规划失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划失败]** ' + msg.error);
+        break;
+
+      case 'workflow_step':
+        addLog('🔄 工作流步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'workflow_complete':
+        addLog('✅ 工作流完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流完成]** ' + msg.workflowId + ' 成功: ' + msg.stepsCompleted + '/' + msg.totalSteps);
+        break;
+
+      case 'workflow_error':
+        addLog('❌ 工作流失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流失败]** ' + msg.error);
+        break;
+
+      case 'resume_complete':
+        addLog('✅ 断点续传完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        break;
+
+      case 'resume_started':
+        addLog('▶️ 断点续传开始', 'info');
+        break;
+
+      case 'resume_step':
+        addLog('▶️ 恢复步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'checkpoint_result':
+        addLog('💾 检查点操作完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[检查点结果]** ' + JSON.stringify(msg, null, 2).slice(0, 1000));
+        break;
+
+      case 'checkpoint_error':
+        addLog('❌ 检查点失败: ' + msg.error, 'error');
+        break;
+
+      case 'templates_list':
+        addLog('📋 模板列表', 'success');
+        sendMessageSafe('**[工作流模板]**\n' + msg.templates.map(t => '- ' + t.id + ': ' + t.name).join('\n'));
+        break;
+
+      case 'resume_complete':
+        addLog(`✅ 任务恢复完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+        break;
+
+      case 'resume_error':
+        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');
+        break;
+
+      // ===== 目标驱动执行 =====
+      case 'goal_created':
+        addLog(`🎯 目标已创建: ${msg.goal?.id || msg.goalId}`, 'success');
+        break;
+
+      case 'goal_progress':
+        if (msg.step !== undefined) {
+          addLog(`🎯 目标进度: 步骤 ${msg.step} - ${msg.status || '执行中'}`, 'info');
+        }
+        break;
+
+      case 'goal_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          addLog(`✅ 目标完成: ${msg.goalId} (${msg.attempts || 1} 次尝试)`, 'success');
+        } else {
+          addLog(`❌ 目标失败: ${msg.goalId} - ${msg.error || '未知错误'}`, 'error');
+        }
+        // 生成目标完成摘要
+        const goalSummary = `**[目标执行完成]** ${msg.success ? '✓ 成功' : '✗ 失败'}\n` +
+          `- 目标ID: ${msg.goalId}\n` +
+          `- 尝试次数: ${msg.attempts || 1}\n` +
+          (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(goalSummary);
+        break;
+
+      case 'goal_status_result':
+        addLog(`📊 目标状态: ${msg.status?.status || '未知'} (${msg.status?.progress || 0}%)`, 'info');
+        break;
+
+      case 'goals_list':
+        addLog(`📋 活跃目标: ${msg.goals?.active?.length || 0}, 已完成: ${msg.goals?.completed || 0}`, 'info');
+        break;
+
+      case 'validated_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const vr = msg.result;
+        if (vr?.success && vr?.validated) {
+          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');
+        } else if (vr?.success && !vr?.validated) {
+          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');
+        } else {
+          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');
+        }
+        // 生成验证结果摘要
+        const vrSummary = `**[验证执行结果]** ${msg.tool}\n` +
+          `- 执行: ${vr?.success ? '✓' : '✗'}\n` +
+          `- 验证: ${vr?.validated ? '✓' : '✗'}\n` +
+          (vr?.result ? `\`\`\`\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\n\`\`\`\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(vrSummary);
+        break;
+
+      // ===== 异步命令执行 =====
+      case 'async_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          const modeText = msg.mode === 'async' ? ' (后台)' : '';
+          addLog(`✅ 命令执行成功${modeText}`, 'success');
+          if (msg.processId) {
+            addLog(`📋 进程ID: ${msg.processId}`, 'info');
+          }
+        } else {
+          addLog(`❌ 命令执行失败: ${msg.error}`, 'error');
+          if (msg.suggestion) {
+            addLog(`💡 建议: ${msg.suggestion}`, 'info');
+          }
+        }
+        // 生成异步结果摘要
+        const asyncSummary = `**[命令执行结果]** ${msg.success ? '✓ 成功' : '✗ 失败'}${msg.mode === 'async' ? ' (后台模式)' : ''}\n` +
+          (msg.processId ? `- 进程ID: ${msg.processId}\n` : '') +
+          (msg.logFile ? `- 日志文件: ${msg.logFile}\n` : '') +
+          (msg.warning ? `- ⚠️ ${msg.warning}\n` : '') +
+          (msg.output ? `\`\`\`\n${msg.output.slice(-2000)}\n\`\`\`\n` : '') +
+          (msg.error ? `- 错误: ${msg.error}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(asyncSummary);
+        break;
+
+      case 'async_output':
+        // 实时输出，仅记录日志
+        if (msg.output) {
+          addLog(`📤 ${msg.output.slice(0, 200)}`, 'info');
+        }
+        break;
+
+      case 'async_status_result':
+        if (msg.exists) {
+          addLog(`📊 进程 ${msg.processId}: ${msg.isRunning ? '运行中' : '已停止'}`, msg.isRunning ? 'success' : 'info');
+        } else {
+          addLog(`⚠️ 进程不存在: ${msg.processId}`, 'warning');
+        }
+        break;
+
+      case 'async_stop_result':
+        if (msg.success) {
+          addLog(`⏹️ 进程已停止: ${msg.processId}`, 'success');
+        } else {
+          addLog(`❌ 停止失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'async_log_result':
+        if (msg.success) {
+          addLog(`📋 日志 (${msg.lines} 行)`, 'info');
+          const logSummary = `**[进程日志]** ${msg.processId}\n` +
+            `- 文件: ${msg.logFile}\n` +
+            `- 总行数: ${msg.lines}\n` +
+            `\`\`\`\n${msg.content?.slice(-3000) || '(空)'}\n\`\`\`\n` +
+            `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          sendMessageToAI(logSummary);
+        } else {
+          addLog(`❌ 读取日志失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      // ===== 录制相关 =====
+      case 'recording_started':
+        addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');
+        break;
+
+      case 'recording_stopped':
+        addLog(`⏹️ 录制已停止: ${msg.recordingId} (${msg.summary?.totalSteps || 0} 步)`, 'success');
+        break;
+
+      case 'recordings_list':
+        if (msg.recordings?.length > 0) {
+          addLog(`📼 录制列表: ${msg.recordings.length} 个`, 'info');
+          msg.recordings.forEach(r => {
+            addLog(`  - ${r.id}: ${r.name || '未命名'} (${r.totalSteps} 步)`, 'info');
+          });
+        } else {
+          addLog('📼 暂无录制', 'info');
+        }
+        break;
+
+      case 'recording_loaded':
+        if (msg.success) {
+          addLog(`📂 录制已加载: ${msg.recording?.id}`, 'success');
+        } else {
+          addLog(`❌ 加载录制失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'replay_step_result':
+        const replayStatus = msg.success ? '✓' : '✗';
+        addLog(`▶️ 回放步骤 ${msg.stepIndex}: ${msg.tool} ${replayStatus}`, msg.success ? 'info' : 'warning');
+        break;
+
+      case 'replay_complete':
+        addLog(`🏁 回放完成: ${msg.stepsCompleted || 0}/${msg.totalSteps || 0} 成功`, 'success');
+        break;
+
+      case 'replay_error':
+        addLog(`❌ 回放错误: ${msg.error}`, 'error');
+        break;
+
       case 'tool_result':
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
@@ -1677,16 +2182,6 @@ ${tip}
         updateStatus();
         break;
       
-      // 服务器返回的在线 agents 列表
-      case 'online_agents':
-        if (msg.agents && msg.agents.length > 0) {
-          const list = msg.agents.map(a => `${a.agentId}@${a.site || 'unknown'}`).join(', ');
-          addLog(`👥 服务器在线: ${list}`, 'info');
-        } else {
-          addLog('📭 服务器暂无在线 Agent', 'info');
-        }
-        break;
-
       // 跨 Tab 消息
       case 'CROSS_TAB_MESSAGE':
         // 检查是否是回执消息（不注入聊天框，只显示日志）
@@ -1912,6 +2407,9 @@ ${tip}
     log('初始化 Agent v34 (Genspark)');
     
     createPanel();
+    
+    // 加载面板增强模块
+    loadPanelEnhancer();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
     

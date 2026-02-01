@@ -4674,7 +4674,304 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-kimi/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-kimi/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-kimi/content.js\tmodified\n@@ -1102,9 +1102,14 @@\n       }\n       \n       log('检测到工具调用:', tool.name, tool.params);\n       \n-      executeToolCall(tool, callHash);\n+      // 判断是否为批量调用\n+      if (tool.isBatch && tool.name === '__BATCH",
       "error": null
+    },
+    {
+      "id": 5551,
+      "timestamp": "2026-02-01T14:25:33.586Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'sync: 同步 executeBatchCall 函数到所有 extension 分支\n\n- 添加 executeBatchCall 函数\n- 添加批量调用判断逻辑\n- 同步到: extension-vear, extension-galaxy, extension-hixx, extension-kimi'"
+      },
+      "success": true,
+      "resultPreview": "[main 392f167] sync: 同步 executeBatchCall 函数到所有 extension 分支\n 6 files changed, 3311 insertions(+), 2687 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5552,
+      "timestamp": "2026-02-01T14:28:51.014Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batch_complete\\|batch_step_result' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5553,
+      "timestamp": "2026-02-01T14:29:01.009Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batch_complete\\|batch_step_result\\|batch_error' /Users/yay/workspace/genspark-agent/extension/content.js | head -15"
+      },
+      "success": true,
+      "resultPreview": "1807:      case 'batch_step_result':\n1843:      case 'batch_complete':\n1882:      case 'batch_error':\n",
+      "error": null
+    },
+    {
+      "id": 5554,
+      "timestamp": "2026-02-01T14:29:28.651Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'batch_complete\\|batch_step_result\\|batch_error' /Users/yay/workspace/genspark-agent/extension/content.js | head -15"
+      },
+      "success": true,
+      "resultPreview": "1807:      case 'batch_step_result':\n1843:      case 'batch_complete':\n1882:      case 'batch_error':\n",
+      "error": null
+    },
+    {
+      "id": 5555,
+      "timestamp": "2026-02-01T14:29:38.058Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1807,1900p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      case 'batch_step_result':\n        state.totalCalls++;  // 统计调用次数\n        if (msg.success) {\n          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');\n          state.batchResults.push({\n            stepIndex: msg.stepIndex,\n            tool: msg.tool,\n            success: true,\n            result: msg.result\n          });\n          // 更新进度条\n          if (window.PanelEnhancer) {\n            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'success', msg.tool);\n            win",
+      "error": null
+    },
+    {
+      "id": 5556,
+      "timestamp": "2026-02-01T14:29:47.221Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1807,1892p' /Users/yay/workspace/genspark-agent/extension/content.js > /tmp/batch_handlers.js && wc -l /tmp/batch_handlers.js"
+      },
+      "success": true,
+      "resultPreview": "      86 /tmp/batch_handlers.js\n",
+      "error": null
+    },
+    {
+      "id": 5557,
+      "timestamp": "2026-02-01T14:30:34.633Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'getAIMessages\\|getLatestAIMessage\\|getInputBox\\|querySelector\\|DOM' /Users/yay/workspace/genspark-agent/extension/content.js | head -30"
+      },
+      "success": true,
+      "resultPreview": "119:        const btn = document.querySelector(sel);\n123:    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');\n127:      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*=\"loading\"], [class*=\"typing\"]').length > 0) return true;\n129:    const globalInd = document.querySelectorAll('.generating, .loading-response, [class*=\"generating\"], [class*=\"streaming\"]');\n253:    // ============== DOM 操作 (Genspark 专用) ==============\n255:  function g",
+      "error": null
+    },
+    {
+      "id": 5558,
+      "timestamp": "2026-02-01T14:30:43.831Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'getAIMessages\\|getLatestAIMessage\\|getInputBox\\|DOM' /Users/yay/workspace/genspark-agent/extension-vear/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "233:    // ============== DOM 操作 (Genspark 专用) ==============\n235:  function getAIMessages() {\n239:  function getLatestAIMessage() {\n240:    const messages = getAIMessages();\n258:  function getInputBox() {\n302:    const input = getInputBox();\n359:        const inp = getInputBox();\n404:          const currentInput = getInputBox();\n410:              const inp = getInputBox();\n1024:    const { text, index } = getLatestAIMessage();\n1048:    const { text: textNow } = getLatestAIMessage();\n1957:    do",
+      "error": null
+    },
+    {
+      "id": 5559,
+      "timestamp": "2026-02-01T14:30:52.819Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,310p' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "    // ============== DOM 操作 (Genspark 专用) ==============\n  \n  function getAIMessages() {\n    return Array.from(document.querySelectorAll('.chata'));\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n    if (messages.length === 0) return { text: '', index: -1, element: null };\n    const lastMsg = messages[messages.length - 1];\n    \n    // Vear.com 使用 .answerContent 类\n    const contentEl = lastMsg.querySelector('.answerContent') ||\n                      lastMsg.querySel",
+      "error": null
+    },
+    {
+      "id": 5560,
+      "timestamp": "2026-02-01T14:31:05.412Z",
+      "tool": "run_command",
+      "params": {
+        "command": "wc -l /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "    2466 /Users/yay/workspace/genspark-agent/extension/content.js\n    1962 /Users/yay/workspace/genspark-agent/extension-vear/content.js\n    4428 total\n",
+      "error": null
+    },
+    {
+      "id": 5561,
+      "timestamp": "2026-02-01T14:31:19.025Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,310p' /Users/yay/workspace/genspark-agent/extension-vear/content.js > /tmp/vear_dom.js && echo 'Vear DOM 函数已保存' && wc -l /tmp/vear_dom.js"
+      },
+      "success": true,
+      "resultPreview": "Vear DOM 函数已保存\n      78 /tmp/vear_dom.js\n",
+      "error": null
+    },
+    {
+      "id": 5562,
+      "timestamp": "2026-02-01T14:31:28.221Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-vear/content.js && echo '已复制主 content.js 到 extension-vear'"
+      },
+      "success": true,
+      "resultPreview": "已复制主 content.js 到 extension-vear\n",
+      "error": null
+    },
+    {
+      "id": 5563,
+      "timestamp": "2026-02-01T14:31:38.218Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'DOM 操作' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "253:    // ============== DOM 操作 (Genspark 专用) ==============\n",
+      "error": null
+    },
+    {
+      "id": 5564,
+      "timestamp": "2026-02-01T14:31:47.410Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n '消息队列处理' /Users/yay/workspace/genspark-agent/extension-vear/content.js"
+      },
+      "success": true,
+      "resultPreview": "292:  // ============== 消息队列处理 ==============\n",
+      "error": null
+    },
+    {
+      "id": 5565,
+      "timestamp": "2026-02-01T14:32:00.089Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst vearDom = fs.readFileSync('/tmp/vear_dom.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', 'utf8');\nconst lines = content.split('\\n');\n// 保留 252 行之前，替换 253-291，保留 292 之后\nconst before = lines.slice(0, 252).join('\\n');\nconst after = lines.slice(291).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-vear/content.js', before + '\\n' + vearDom + after);\nconsole.log('extension-vear DOM 函数已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-vear DOM 函数已替换\n",
+      "error": null
+    },
+    {
+      "id": 5566,
+      "timestamp": "2026-02-01T14:32:14.976Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'DOM 操作' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js"
+      },
+      "success": true,
+      "resultPreview": "233:    // ============== DOM 操作 (Genspark 专用) ==============\n",
+      "error": null
+    },
+    {
+      "id": 5567,
+      "timestamp": "2026-02-01T14:32:44.630Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,300p' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js | head -50"
+      },
+      "success": true,
+      "resultPreview": "    // ============== DOM 操作 (Genspark 专用) ==============\n  \n  function getAIMessages() {\n    return Array.from(document.querySelectorAll('main [data-testid=\"message-content\"], main div.user-message'));\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n    if (messages.length === 0) return { text: '', index: -1, element: null };\n    const lastMsg = messages[messages.length - 1];\n    \n    const contentEl = lastMsg.querySelector('div.not-prose') ||\n                      ",
+      "error": null
+    },
+    {
+      "id": 5568,
+      "timestamp": "2026-02-01T14:32:54.334Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,275p' /Users/yay/workspace/genspark-agent/extension-galaxy/content.js > /tmp/galaxy_dom.js && cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-galaxy/content.js && echo 'galaxy 已复制'"
+      },
+      "success": true,
+      "resultPreview": "galaxy 已复制\n",
+      "error": null
+    },
+    {
+      "id": 5569,
+      "timestamp": "2026-02-01T14:33:15.286Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst dom = fs.readFileSync('/tmp/galaxy_dom.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 252).join('\\n');\nconst after = lines.slice(291).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-galaxy/content.js', before + '\\n' + dom + after);\nconsole.log('extension-galaxy DOM 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-galaxy DOM 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5570,
+      "timestamp": "2026-02-01T14:33:25.987Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,290p' /Users/yay/workspace/genspark-agent/extension-hixx/content.js > /tmp/hixx_dom.js && cat /tmp/hixx_dom.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "\n    if (state.skillsPrompt) {\n      return prompt + \"\\n\\n---\\n\\n\" + state.skillsPrompt;\n    }\n    return prompt;\n  }\n\n\n\n    // ============== DOM 操作 (Genspark 专用) ==============\n  \n  function getAIMessages() {\n    // HIXX AI: 消息在 .arco-scrollbar-container 内，AI 回复有 markdown-body 类\n    const container = document.querySelector('.arco-scrollbar-container');\n    if (!container) return [];\n    // 获取所有消息块（用户和AI）\n    return Array.from(container.querySelectorAll('.flex.relative.flex-row.justify-start.it",
+      "error": null
+    },
+    {
+      "id": 5571,
+      "timestamp": "2026-02-01T14:33:37.021Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'DOM 操作\\|消息队列处理' /Users/yay/workspace/genspark-agent/extension-hixx/content.js"
+      },
+      "success": true,
+      "resultPreview": "242:    // ============== DOM 操作 (Genspark 专用) ==============\n314:  // ============== 消息队列处理 ==============\n",
+      "error": null
+    },
+    {
+      "id": 5572,
+      "timestamp": "2026-02-01T14:33:47.220Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '242,313p' /Users/yay/workspace/genspark-agent/extension-hixx/content.js > /tmp/hixx_dom.js && cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-hixx/content.js && echo 'hixx 已复制'"
+      },
+      "success": true,
+      "resultPreview": "hixx 已复制\n",
+      "error": null
+    },
+    {
+      "id": 5573,
+      "timestamp": "2026-02-01T14:33:57.885Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst dom = fs.readFileSync('/tmp/hixx_dom.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 252).join('\\n');\nconst after = lines.slice(291).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-hixx/content.js', before + '\\n' + dom + after);\nconsole.log('extension-hixx DOM 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-hixx DOM 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5574,
+      "timestamp": "2026-02-01T14:34:08.825Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'DOM 操作\\|消息队列处理' /Users/yay/workspace/genspark-agent/extension-kimi/content.js"
+      },
+      "success": true,
+      "resultPreview": "233:    // ============== DOM 操作 (Genspark 专用) ==============\n281:  // ============== 消息队列处理 ==============\n",
+      "error": null
+    },
+    {
+      "id": 5575,
+      "timestamp": "2026-02-01T14:34:19.623Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '233,280p' /Users/yay/workspace/genspark-agent/extension-kimi/content.js > /tmp/kimi_dom.js && cp /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-kimi/content.js && echo 'kimi 已复制'"
+      },
+      "success": true,
+      "resultPreview": "kimi 已复制\n",
+      "error": null
+    },
+    {
+      "id": 5576,
+      "timestamp": "2026-02-01T14:34:29.671Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -e \"\nconst fs = require('fs');\nconst dom = fs.readFileSync('/tmp/kimi_dom.js', 'utf8');\nlet content = fs.readFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', 'utf8');\nconst lines = content.split('\\n');\nconst before = lines.slice(0, 252).join('\\n');\nconst after = lines.slice(291).join('\\n');\nfs.writeFileSync('/Users/yay/workspace/genspark-agent/extension-kimi/content.js', before + '\\n' + dom + after);\nconsole.log('extension-kimi DOM 已替换');\n\""
+      },
+      "success": true,
+      "resultPreview": "extension-kimi DOM 已替换\n",
+      "error": null
+    },
+    {
+      "id": 5577,
+      "timestamp": "2026-02-01T14:34:42.427Z",
+      "tool": "run_command",
+      "params": {
+        "command": "wc -l /Users/yay/workspace/genspark-agent/extension/content.js /Users/yay/workspace/genspark-agent/extension-*/content.js"
+      },
+      "success": true,
+      "resultPreview": "    2466 /Users/yay/workspace/genspark-agent/extension/content.js\n    2470 /Users/yay/workspace/genspark-agent/extension-galaxy/content.js\n    2499 /Users/yay/workspace/genspark-agent/extension-hixx/content.js\n    2475 /Users/yay/workspace/genspark-agent/extension-kimi/content.js\n    2505 /Users/yay/workspace/genspark-agent/extension-vear/content.js\n   12415 total\n",
+      "error": null
     }
   ],
-  "nextId": 5551
+  "nextId": 5578
 }
