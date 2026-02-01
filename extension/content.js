@@ -162,13 +162,13 @@ function log(...args) {
 ### 单个工具
 
 \`\`\`
-Ω{"tool":"工具名","params":{"参数":"值"}}
+前缀Ω + {"tool":"工具名","params":{"参数":"值"}}
 \`\`\`
 
 ### 批量执行
 
 \`\`\`
-ΩBATCH{"steps":[{"tool":"t1","params":{}},{"tool":"t2","params":{}}]}
+前缀ΩBATCH + {"steps":[{"tool":"t1","params":{}},{"tool":"t2","params":{}}]}
 \`\`\`
 
 适用：读取多文件、执行多命令、并行获取信息
@@ -197,7 +197,7 @@ ${toolSummary}
 ## 新对话首步
 
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}
+前缀Ω + {"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}
 \`\`\`
 
 ---
