@@ -1024,7 +1024,7 @@ ${toolSummary}
         addLog('提示：如果发送了工具调用但未执行，可能是格式问题', 'info');
         expectingToolCall = false;
       }
-    }, 30000);
+    }, 2000);
   }
 
   function clearToolCallDetection() {
