@@ -4756,7 +4756,106 @@
       "success": true,
       "resultPreview": "Done - ΩSTOP now required\n",
       "error": null
+    },
+    {
+      "id": 5968,
+      "timestamp": "2026-02-02T16:56:53.055Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -c /Users/yay/workspace/genspark-agent/extension/content.js && cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: 强制要求ΩSTOP结束标记，无标记则跳过执行'"
+      },
+      "success": true,
+      "resultPreview": "[main 24e54b2] feat: 强制要求ΩSTOP结束标记，无标记则跳过执行\n 2 files changed, 53 insertions(+), 3 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5969,
+      "timestamp": "2026-02-02T17:11:23.207Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n -A 5 'hasStop' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "917:            const hasStop = afterJson.trim().startsWith('ΩSTOP');\n918:            if (!hasStop) {\n919-              // 强制要求 ΩSTOP 结束标记，没有则跳过\n920-              searchStart = idx + marker.length + extracted.json.length;\n921-              continue;\n922-            }\n923-            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;\n924:            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: i",
+      "error": null
+    },
+    {
+      "id": 5970,
+      "timestamp": "2026-02-02T17:11:57.013Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo test"
+      },
+      "success": true,
+      "resultPreview": "test\n",
+      "error": null
+    },
+    {
+      "id": 5971,
+      "timestamp": "2026-02-02T17:13:09.212Z",
+      "tool": "list_directory",
+      "params": {
+        "path": "/tmp"
+      },
+      "success": true,
+      "resultPreview": "Access denied - path outside allowed directories: /tmp not in /Users/yay/workspace, /private/tmp",
+      "error": null
+    },
+    {
+      "id": 5972,
+      "timestamp": "2026-02-02T17:13:56.841Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'SCAN_INTERVAL\\|lastStableTime\\|500' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "13:    SCAN_INTERVAL: 200,\n15:    MAX_RESULT_LENGTH: 50000,\n33:    lastStableTime: 0,\n139:      else { setTimeout(() => { if (!isAIGenerating()) callback(); else setTimeout(check, 200); }, 500); }\n565:        // 500ms 后再检查\n566:        setTimeout(() => checkAndRetry(retryCount - 1), 500);\n593:            }, 500);\n1192:    // 检测消息大小（超过 500KB 可能有问题）\n1194:    if (payloadSize > 500000) {\n1281:      state.lastStableTime = Date.now();\n",
+      "error": null
+    },
+    {
+      "id": 5973,
+      "timestamp": "2026-02-02T17:14:21.084Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'SCAN_INTERVAL\\|lastStableTime\\|500' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "13:    SCAN_INTERVAL: 200,\n15:    MAX_RESULT_LENGTH: 50000,\n33:    lastStableTime: 0,\n139:      else { setTimeout(() => { if (!isAIGenerating()) callback(); else setTimeout(check, 200); }, 500); }\n565:        // 500ms 后再检查\n566:        setTimeout(() => checkAndRetry(retryCount - 1), 500);\n593:            }, 500);\n1192:    // 检测消息大小（超过 500KB 可能有问题）\n1194:    if (payloadSize > 500000) {\n1281:      state.lastStableTime = Date.now();\n",
+      "error": null
+    },
+    {
+      "id": 5974,
+      "timestamp": "2026-02-02T17:14:29.975Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1275,1295p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      log('等待工具调用输出完成...');\n      return;\n    }\n    \n    if (state.lastMessageText !== text) {\n      state.lastMessageText = text;\n      state.lastStableTime = Date.now();\n      return;\n    }\n    \n    if (Date.now() - state.lastStableTime < 500) {\n      return;\n    }\n    \n    const { text: textNow } = getLatestAIMessage();\n    if (textNow !== text) {\n      state.lastMessageText = textNow;\n      state.lastStableTime = Date.now();\n      return;\n    }\n    \n",
+      "error": null
+    },
+    {
+      "id": 5975,
+      "timestamp": "2026-02-02T17:14:39.019Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -i '' 's/lastStableTime < 500/lastStableTime < 800/' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5976,
+      "timestamp": "2026-02-02T17:15:01.584Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep 'lastStableTime' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "    lastStableTime: 0,\n      state.lastStableTime = Date.now();\n    if (Date.now() - state.lastStableTime < 800) {\n      state.lastStableTime = Date.now();\n",
+      "error": null
     }
   ],
-  "nextId": 5968
+  "nextId": 5977
 }

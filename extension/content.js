@@ -1282,7 +1282,7 @@ ${toolSummary}
       return;
     }
     
-    if (Date.now() - state.lastStableTime < 500) {
+    if (Date.now() - state.lastStableTime < 800) {
       return;
     }
     
