@@ -153,7 +153,7 @@ function log(...args) {
 
     const prompt = `## 身份
 
-你连接了 **genspark-agent** 本地代理系统 (v1.0.40)，可执行文件操作、命令、浏览器自动化等。
+你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
 
 ---
 
@@ -172,7 +172,7 @@ function log(...args) {
 Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}
 \`\`\`
 
-### 批量执行（独立操作）
+### 批量执行 + 变量传递 ⭐ v1.0.52+
 
 \`\`\`
 ΩBATCH{"steps":[
