@@ -257,7 +257,16 @@
       "test",
       "[",
       "time",
-      "seq"
+      "seq",
+      "top",
+      "sysctl",
+      "uptime",
+      "htop",
+      "vm_stat",
+      "iostat",
+      "netstat",
+      "vmstat",
+      "iotop"
     ],
     "dangerousOperations": [
       "write_file",
