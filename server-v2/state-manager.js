@@ -213,7 +213,20 @@ resolveTemplate(taskId, template) {
       }
       
       if (success !== undefined) {
-        return varValue.success === success;
+        // success 条件：检查该变量对应的步骤是否执行成功
+        // 如果变量存在，说明步骤成功（因为只有成功才会 saveAs）
+        if (success === true) {
+          return varValue !== undefined;
+        }
+        // 如果需要检查失败
+        if (success === false) {
+          return varValue === undefined;
+        }
+        // 兼容旧格式：如果 varValue 是对象且有 success 属性
+        if (typeof varValue === 'object' && varValue !== null && 'success' in varValue) {
+          return varValue.success === success;
+        }
+        return false;
       }
       
       if (contains) {
