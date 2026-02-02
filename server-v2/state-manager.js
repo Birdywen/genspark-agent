@@ -87,11 +87,18 @@ class StateManager {
     // 如果步骤有 saveAs，保存到变量
     const step = task.steps[stepIndex];
     if (step?.saveAs && result.success) {
-      this.setVariable(taskId, step.saveAs, {
-        success: result.success,
-        result: result.result,
-        tool: step.tool
-      });
+      // 直接保存结果值，尝试解析 JSON
+      let value = result.result;
+      if (typeof value === 'string') {
+        value = value.trim(); // 自动去除首尾空白和换行
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          // 保持字符串
+        }
+      }
+      this.setVariable(taskId, step.saveAs, value);
+      this.logger.info(`[StateManager] 💾 保存变量: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : value}`);
     }
     
     return task;
@@ -154,19 +161,19 @@ class StateManager {
     return this.variables.get(taskId) || {};
   }
 
-  // 模板替换: 使用高级解析器
-  resolveTemplate(taskId, template) {
-    const variables = this.variables.get(taskId) || {};
+  // 模板替换: 将 {{var.field}} 替换为实际值
+resolveTemplate(taskId, template) {
     try {
-      return this.resolver.resolve(template, variables);
-    } catch (e) {
-      this.logger.error(`[StateManager] 模板解析失败: ${e.message}`);
+      const vars = this.variables.get(taskId) || {};
+      return this.resolver.resolve(template, vars);
+    } catch (error) {
+      this.logger.error('[StateManager] 模板解析失败:', error.message);
       return template;
     }
   }
 
-  // 评估条件
   evaluateCondition(taskId, condition) {
+    this.logger.info('[StateManager] 🔍 评估条件:', JSON.stringify(condition));
     if (!condition) return true;
     
     const vars = this.variables.get(taskId) || {};
@@ -182,10 +189,28 @@ class StateManager {
     
     // 对象条件
     if (typeof condition === 'object') {
-      const { var: varName, success, contains, regex } = condition;
+      const { var: varName, success, contains, regex, equals, exists } = condition;
       const varValue = vars[varName];
       
-      if (!varValue) return false;
+      if (exists !== undefined) {
+        return exists ? !!varValue : !varValue;
+      }
+      
+      
+      if (equals !== undefined) {
+        this.logger.info('[StateManager] 检查 equals: varName=' + varName + ', equals=' + equals + ', varValue=', varValue);
+        // 支持深度访问如 apiResult.status
+        if (varName.includes('.')) {
+          const parts = varName.split('.');
+          this.logger.info('[StateManager] 深度访问: parts=', parts, ', vars=', Object.keys(vars));
+          let value = vars[parts[0]]; // 先获取根变量
+          for (let i = 1; i < parts.length; i++) {
+            value = value?.[parts[i]];
+          }
+          return value === equals;
+        }
+        return varValue === equals;
+      }
       
       if (success !== undefined) {
         return varValue.success === success;
