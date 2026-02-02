@@ -308,6 +308,33 @@ ${toolSummary}
 
 ---
 
+## 避免命令转义问题 ⭐
+
+**关键规则：使用 stdin 参数避免转义地狱**
+
+1. **简单命令** → 直接写 command
+   - 示例：{"command":"echo hello"}
+
+2. **有特殊字符/引号** → 使用 stdin ⚠️
+   - 示例：{"command":"python3","stdin":"print('{\"key\":\"value\"}')"}
+   - 优点：无需转义引号、支持复杂JSON、可读性好
+
+3. **多行脚本** → 使用 stdin ⚠️
+   - 示例：{"command":"bash","stdin":"#!/bin/bash\nfor i in 1 2 3; do\n  echo $i\ndone"}
+   - 优点：保持脚本结构、易于维护
+
+4. **超长/复杂脚本** → write_file + 执行
+   - 步骤1：write_file 到 /private/tmp/script.sh
+   - 步骤2：run_command bash /private/tmp/script.sh
+   - 步骤3：清理临时文件
+   - 注意：必须用 /private/tmp，不能用 /tmp
+
+**为什么重要：**
+- 避免多层转义（\" 和 \'）
+- 提高代码可读性
+- 减少语法错误
+- 支持任意复杂命令
+
 ## 代码修改后必须验证语法 ⚠️
 
 **关键规则**：每次修改代码文件后，必须立即验证语法！
