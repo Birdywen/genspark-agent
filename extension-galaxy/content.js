@@ -164,12 +164,12 @@ function log(...args) {
 ### 单个工具
 
 \`\`\`
-Ω{"tool":"工具名","params":{"参数":"值"}}
+Ω{"tool":"工具名","params":{"参数":"值"}}ΩSTOP
 \`\`\`
 
 示例：
 \`\`\`
-Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}
+Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}ΩSTOP
 \`\`\`
 
 ### 批量执行 + 变量传递 ⭐ v1.0.52+
@@ -266,12 +266,12 @@ ${toolSummary}
 
 **执行方法**：询问项目后执行
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}ΩSTOP
 \`\`\`
 
 示例（直接写项目名，不要用尖括号）：
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}ΩSTOP
 \`\`\`
 
 ---
@@ -769,8 +769,8 @@ ${toolSummary}
   }
 
   // 辅助函数: 提取平衡的 JSON 对象 (支持任意嵌套)
-  function extractBalancedJson(text, marker) {
-    const idx = text.indexOf(marker);
+  function extractBalancedJson(text, marker, fromEnd = false) {
+    const idx = fromEnd ? text.lastIndexOf(marker) : text.indexOf(marker);
     if (idx === -1) return null;
     const jsonStart = text.indexOf('{', idx + marker.length);
     if (jsonStart === -1) return null;
@@ -833,10 +833,11 @@ ${toolSummary}
     }
 
     // ========== ΩPLAN ==========
-    const planData = extractBalancedJson(text, 'ΩPLAN');
+    const planData = extractBalancedJson(text, 'ΩPLAN', true);
     if (planData && !state.executedCalls.has('plan:' + planData.start)) {
-      const beforePlan = text.substring(Math.max(0, planData.start - 100), planData.start);
-      if (!beforePlan.includes('格式') && !beforePlan.includes('示例')) {
+      const beforePlan = text.substring(Math.max(0, planData.start - 30), planData.start);
+      // 只检查紧邻的前文是否包含文档关键词
+      if (!beforePlan.includes('格式') && !beforePlan.includes('示例') && !beforePlan.includes('例如')) {
         try {
           const plan = safeJsonParse(planData.json);
           if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planData.start, end: planData.end, isPlan: true }];
@@ -845,10 +846,10 @@ ${toolSummary}
     }
 
     // ========== ΩFLOW ==========
-    const flowData = extractBalancedJson(text, 'ΩFLOW');
+    const flowData = extractBalancedJson(text, 'ΩFLOW', true);
     if (flowData && !state.executedCalls.has('flow:' + flowData.start)) {
-      const beforeFlow = text.substring(Math.max(0, flowData.start - 100), flowData.start);
-      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例')) {
+      const beforeFlow = text.substring(Math.max(0, flowData.start - 30), flowData.start);
+      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例') && !beforeFlow.includes('例如')) {
         try {
           const flow = safeJsonParse(flowData.json);
           if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];
@@ -857,10 +858,10 @@ ${toolSummary}
     }
 
     // ========== ΩRESUME ==========
-    const resumeData = extractBalancedJson(text, 'ΩRESUME');
+    const resumeData = extractBalancedJson(text, 'ΩRESUME', true);
     if (resumeData && !state.executedCalls.has('resume:' + resumeData.start)) {
-      const beforeResume = text.substring(Math.max(0, resumeData.start - 100), resumeData.start);
-      if (!beforeResume.includes('格式') && !beforeResume.includes('示例')) {
+      const beforeResume = text.substring(Math.max(0, resumeData.start - 30), resumeData.start);
+      if (!beforeResume.includes('格式') && !beforeResume.includes('示例') && !beforeResume.includes('例如')) {
         try {
           const resume = safeJsonParse(resumeData.json);
           if (resume) return [{ name: '__RESUME__', params: resume, raw: 'ΩRESUME' + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];
@@ -911,7 +912,16 @@ ${toolSummary}
             .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
           const parsed = safeJsonParse(jsonStr);
           if (parsed.tool) {
-            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
+            // 检查是否有 ΩSTOP 结束标记
+            const afterJson = text.substring(idx + marker.length + extracted.json.length, idx + marker.length + extracted.json.length + 10);
+            const hasStop = afterJson.trim().startsWith('ΩSTOP');
+            if (!hasStop) {
+              // 强制要求 ΩSTOP 结束标记，没有则跳过
+              searchStart = idx + marker.length + extracted.json.length;
+              continue;
+            }
+            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;
+            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: true });
           }
         } catch (e) {
           if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
@@ -1272,7 +1282,7 @@ ${toolSummary}
       return;
     }
     
-    if (Date.now() - state.lastStableTime < 500) {
+    if (Date.now() - state.lastStableTime < 800) {
       return;
     }
     
