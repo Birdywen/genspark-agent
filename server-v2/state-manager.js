@@ -230,16 +230,20 @@ resolveTemplate(taskId, template) {
       }
       
       if (contains) {
-        const resultStr = typeof varValue.result === 'string' 
-          ? varValue.result 
-          : JSON.stringify(varValue.result);
+        // varValue 就是结果字符串本身，不是 {result: ...} 对象
+        if (varValue === undefined) return false;
+        const resultStr = typeof varValue === 'string' 
+          ? varValue 
+          : JSON.stringify(varValue);
         return resultStr.includes(contains);
       }
       
       if (regex) {
-        const resultStr = typeof varValue.result === 'string' 
-          ? varValue.result 
-          : JSON.stringify(varValue.result);
+        // varValue 就是结果字符串本身
+        if (varValue === undefined) return false;
+        const resultStr = typeof varValue === 'string' 
+          ? varValue 
+          : JSON.stringify(varValue);
         return new RegExp(regex).test(resultStr);
       }
     }
