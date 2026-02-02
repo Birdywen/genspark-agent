@@ -1186,8 +1186,9 @@ ${toolSummary}
     
     if (index < 0 || !text) return;
     
-    // 检测到工具调用标记
-    const hasToolCall = text.includes('Ω{') || text.includes('ΩBATCH{');
+    // 检测到工具调用标记（只检测代码块中的）
+    const codeBlockPattern = /```[^`]*Ω(BATCH)?\{/;
+    const hasToolCall = codeBlockPattern.test(text);
     
     if (hasToolCall) {
       const callSignature = text.substring(0, 100); // 取前100字符作为签名
