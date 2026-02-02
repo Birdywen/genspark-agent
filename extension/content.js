@@ -858,7 +858,7 @@ ${toolSummary}
       
       // 检查前面100字符是否包含示例关键词
       const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用/.test(beforeMarker);
+      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用|方案|实现方式|实现|改进|修改|建议|应该|可以这样|如何|怎么|对比|优点|缺点|区别|表格|列表/.test(beforeMarker);
       if (isExample) {
         searchStart = idx + marker.length;
         continue;
