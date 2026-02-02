@@ -1035,8 +1035,7 @@ ${toolSummary}
     expectingToolCall = true;
     toolCallWarningTimer = setTimeout(() => {
       if (expectingToolCall) {
-        addLog('⚠️ 似乎没有检测到工具调用执行', 'warning');
-        addLog('提示：如果发送了工具调用但未执行，可能是格式问题', 'info');
+        // 静默失败，不显示任何提示
         expectingToolCall = false;
       }
     }, 2000);
