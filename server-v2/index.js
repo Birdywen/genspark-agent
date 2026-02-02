@@ -875,7 +875,7 @@ async function main() {
                 break;
               }
               try {
-                const { template, vars } = msg.params;
+                const { template, variables: vars } = msg.params;
                 const workflow = workflowTemplate.instantiate(template, vars || {});
                 if (!workflow.success) {
                   ws.send(JSON.stringify({ type: "workflow_error", error: workflow.error, missing: workflow.missing }));

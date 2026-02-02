@@ -4855,7 +4855,227 @@
       "success": true,
       "resultPreview": "    lastStableTime: 0,\n      state.lastStableTime = Date.now();\n    if (Date.now() - state.lastStableTime < 800) {\n      state.lastStableTime = Date.now();\n",
       "error": null
+    },
+    {
+      "id": 5977,
+      "timestamp": "2026-02-02T17:15:24.979Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'perf: 增加稳定检测时间800ms'"
+      },
+      "success": true,
+      "resultPreview": "[main 7d2353c] perf: 增加稳定检测时间800ms\n 2 files changed, 101 insertions(+), 2 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5978,
+      "timestamp": "2026-02-02T17:16:28.097Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'Test 1 - checking stability'"
+      },
+      "success": true,
+      "resultPreview": "Test 1 - checking stability\n",
+      "error": null
+    },
+    {
+      "id": 5979,
+      "timestamp": "2026-02-02T17:16:35.370Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'Test 2'"
+      },
+      "success": true,
+      "resultPreview": "Test 2\n",
+      "error": null
+    },
+    {
+      "id": 5980,
+      "timestamp": "2026-02-02T17:16:43.319Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'Test 3'"
+      },
+      "success": true,
+      "resultPreview": "Test 3\n",
+      "error": null
+    },
+    {
+      "id": 5981,
+      "timestamp": "2026-02-02T17:16:51.202Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'Test 4'"
+      },
+      "success": true,
+      "resultPreview": "Test 4\n",
+      "error": null
+    },
+    {
+      "id": 5982,
+      "timestamp": "2026-02-02T17:17:01.103Z",
+      "tool": "run_command",
+      "params": {
+        "command": "echo 'Test 5 - final'"
+      },
+      "success": true,
+      "resultPreview": "Test 5 - final\n",
+      "error": null
+    },
+    {
+      "id": 5983,
+      "timestamp": "2026-02-02T17:18:14.806Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git push"
+      },
+      "success": true,
+      "resultPreview": "To https://github.com/Birdywen/genspark-agent.git\n   c9ceed4..7d2353c  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 5984,
+      "timestamp": "2026-02-02T17:18:27.499Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git log --oneline -10"
+      },
+      "success": true,
+      "resultPreview": "7d2353c perf: 增加稳定检测时间800ms\n24e54b2 feat: 强制要求ΩSTOP结束标记，无标记则跳过执行\n2b16e1f feat: 添加ΩSTOP单步工具结束标记\nc5492c8 feat: 修复ΩPLAN/ΩFLOW/ΩRESUME高级功能\n769b6db fix: evaluateCondition success检查逻辑修复\nee5c160 docs: 系统提示词添加stdin使用指南 - 避免命令转义问题\n8b11a4a feat: 改进工具调用识别 - 增强关键词检测，避免讨论时误触发\nbf3e53a backup: 改进识别逻辑前的备份\nc74887b fix: 移除工具调用检测的警告提示，避免干扰和循环\n01da10d fix: 工具调用检测在新消息时启动而非发送消息时启动\n",
+      "error": null
+    },
+    {
+      "id": 5985,
+      "timestamp": "2026-02-02T17:19:29.715Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'templateId' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "1221:              const template = workflowTemplate.getTemplate(msg.templateId);\n1222:              const docs = template ? workflowTemplate.generateDocs(msg.templateId) : null;\n1229:              logger.info('[WS] 执行工作流: ' + msg.templateId);\n1230:              const instance = workflowTemplate.instantiate(msg.templateId, msg.variables || {});\n1271:              const filePath = workflowTemplate.saveTemplate(msg.templateId, msg.template);\n1272:              ws.send(JSON.stringify({ type: 'workf",
+      "error": null
+    },
+    {
+      "id": 5986,
+      "timestamp": "2026-02-02T17:19:55.784Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'workflow' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "230:内置模板：deploy-nodejs, backup-mysql, batch-process, health-check, log-analysis, git-workflow\n1422:          payload: { type: 'workflow_execute', params: tool.params, id: Date.now() }\n2109:      case 'workflow_step':\n2113:      case 'workflow_complete':\n2118:        sendMessageSafe('**[工作流完成]** ' + msg.workflowId + ' 成功: ' + msg.stepsCompleted + '/' + msg.totalSteps);\n2121:      case 'workflow_error':\n",
+      "error": null
+    },
+    {
+      "id": 5987,
+      "timestamp": "2026-02-02T17:20:04.846Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '870,895p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case \"workflow_execute\":\n            logger.info(\"[WS] workflow_execute FULL MSG:\", JSON.stringify(msg));\n            {\n              if (!workflowTemplate || !taskEngine) {\n                ws.send(JSON.stringify({ type: \"workflow_error\", error: \"WorkflowTemplate 未初始化\" }));\n                break;\n              }\n              try {\n                const { template, vars } = msg.params;\n                const workflow = workflowTemplate.instantiate(template, vars || {});\n                ",
+      "error": null
+    },
+    {
+      "id": 5988,
+      "timestamp": "2026-02-02T17:20:15.380Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '1215,1235p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "              ws.send(JSON.stringify({ type: 'workflows_list', templates }));\n            }\n            break;\n          \n          case 'get_workflow':\n            {\n              const template = workflowTemplate.getTemplate(msg.templateId);\n              const docs = template ? workflowTemplate.generateDocs(msg.templateId) : null;\n              ws.send(JSON.stringify({ type: 'workflow_detail', template, docs }));\n            }\n            break;\n          \n          case 'run_workflow':\n     ",
+      "error": null
+    },
+    {
+      "id": 5989,
+      "timestamp": "2026-02-02T17:20:47.385Z",
+      "tool": "list_directory",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/logs"
+      },
+      "success": true,
+      "resultPreview": "[FILE] agent.log\n[FILE] mcp_server.log",
+      "error": null
+    },
+    {
+      "id": 5990,
+      "timestamp": "2026-02-02T17:20:55.747Z",
+      "tool": "run_command",
+      "params": {
+        "command": "tail -30 /Users/yay/workspace/genspark-agent/server-v2/logs/agent.log | grep -i 'workflow\\|templateId'"
+      },
+      "success": true,
+      "resultPreview": "{\"timestamp\":\"2026-02-02T17:19:16.617Z\",\"level\":\"info\",\"message\":\"[WS] workflow_execute FULL MSG:\",\"data\":\"{\\\"type\\\":\\\"workflow_execute\\\",\\\"params\\\":{\\\"template\\\":\\\"deploy-nodejs\\\",\\\"variables\\\":{\\\"path\\\":\\\"/project\\\"}},\\\"id\\\":1770052756615}\"}\n{\"timestamp\":\"2026-02-02T17:19:16.618Z\",\"level\":\"error\",\"message\":\"[WS] 工作流执行失败:\",\"data\":\"templateId is not defined\"}\n{\"timestamp\":\"2026-02-02T17:19:29.689Z\",\"level\":\"info\",\"message\":\"工具调用: run_command\",\"data\":{\"command\":\"grep -n 'templateId' /Users/yay/wo",
+      "error": null
+    },
+    {
+      "id": 5991,
+      "timestamp": "2026-02-02T17:21:05.074Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '870,920p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case \"workflow_execute\":\n            logger.info(\"[WS] workflow_execute FULL MSG:\", JSON.stringify(msg));\n            {\n              if (!workflowTemplate || !taskEngine) {\n                ws.send(JSON.stringify({ type: \"workflow_error\", error: \"WorkflowTemplate 未初始化\" }));\n                break;\n              }\n              try {\n                const { template, vars } = msg.params;\n                const workflow = workflowTemplate.instantiate(template, vars || {});\n                ",
+      "error": null
+    },
+    {
+      "id": 5992,
+      "timestamp": "2026-02-02T17:21:15.891Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'templateId' /Users/yay/workspace/genspark-agent/server-v2/workflow-template.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "158:  getTemplate(templateId) {\n159:    return this.templates[templateId] || null;\n165:  registerTemplate(templateId, template) {\n166:    this.templates[templateId] = template;\n167:    this.logger.info(`[WorkflowTemplate] 注册模板: ${templateId}`);\n174:  saveTemplate(templateId, template) {\n179:    const filePath = path.join(this.templateDir, `${templateId}.json`);\n181:    this.templates[templateId] = template;\n189:  instantiate(templateId, variables = {}) {\n190:    const template = this.templates[t",
+      "error": null
+    },
+    {
+      "id": 5993,
+      "timestamp": "2026-02-02T17:21:25.961Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '189,230p' /Users/yay/workspace/genspark-agent/server-v2/workflow-template.js"
+      },
+      "success": true,
+      "resultPreview": "  instantiate(templateId, variables = {}) {\n    const template = this.templates[templateId];\n    if (!template) {\n      return { success: false, error: `模板不存在: ${templateId}` };\n    }\n    \n    // 1. 验证必填变量\n    const validation = this._validateVariables(template, variables);\n    if (!validation.valid) {\n      return { success: false, error: validation.error, missing: validation.missing };\n    }\n    \n    // 2. 合并默认值\n    const resolvedVars = this._resolveVariables(template, variables);\n    \n    // ",
+      "error": null
+    },
+    {
+      "id": 5994,
+      "timestamp": "2026-02-02T17:21:37.419Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n -A 5 'isFlow' /Users/yay/workspace/genspark-agent/extension/content.js | head -15"
+      },
+      "success": true,
+      "resultPreview": "855:          if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];\n856-        } catch (e) {}\n857-      }\n858-    }\n859-\n860-    // ========== ΩRESUME ==========\n--\n1418:      } else if (tool.isFlow && tool.name === '__FLOW__') {\n1419-        state.executedCalls.add(callHash);\n1420-        chrome.runtime.sendMessage({\n1421-          type: 'SEND_TO_SERVER',\n1422-          payload: { type: 'workflow_execute', p",
+      "error": null
+    },
+    {
+      "id": 5995,
+      "timestamp": "2026-02-02T17:21:49.257Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -i '' 's/const { template, vars } = msg.params;/const { template, variables: vars } = msg.params;/' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "",
+      "error": null
+    },
+    {
+      "id": 5996,
+      "timestamp": "2026-02-02T17:21:58.741Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'variables: vars' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "878:                const { template, variables: vars } = msg.params;\n",
+      "error": null
     }
   ],
-  "nextId": 5977
+  "nextId": 5997
 }
