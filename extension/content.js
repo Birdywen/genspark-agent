@@ -1202,7 +1202,9 @@ ${toolSummary}
         
         // 5秒后检查是否执行
         toolCallTimer = setTimeout(() => {
-          if (!state.agentRunning && pendingToolCall === callSignature) {
+          const executingEl = document.getElementById('agent-executing');
+          const isExecuting = state.agentRunning || (executingEl && executingEl.classList.contains('active'));
+          if (!isExecuting && pendingToolCall === callSignature) {
             addLog('⚠️ 工具调用未执行！可能格式有误或未被识别', 'error');
             
             // 显示工具调用内容片段
