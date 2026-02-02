@@ -1224,6 +1224,12 @@ ${toolSummary}
     
     if (index < 0 || !text) return;
     
+    // 检测到新消息，启动工具调用检测
+    if (state.lastMessageText !== text) {
+      state.lastMessageText = text;
+      startToolCallDetection();
+    }
+    
     // Removed: result check (conflicts with code containing these chars)
     
     const toolStartCount = (text.match(/\[\[TOOL:/g) || []).length;
