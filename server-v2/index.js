@@ -857,7 +857,7 @@ async function main() {
                 break;
               }
               try {
-                const plan = taskPlanner.analyze(msg.params.task || msg.params.steps, msg.params.context || {});
+                const plan = taskPlanner.analyze(msg.params.goal || msg.params.task || msg.params.steps, msg.params.context || {});
                 const visualization = taskPlanner.visualize(plan);
                 ws.send(JSON.stringify({ type: "plan_result", plan, visualization }));
                 logger.info("[WS] 任务规划完成:", plan.id);

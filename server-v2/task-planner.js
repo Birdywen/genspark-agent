@@ -48,6 +48,27 @@ const TaskPatterns = {
     ]
   },
   
+  
+  // 项目初始化模式
+  'project:init': {
+    pattern: /创建.*目录.*git|初始化.*项目|init.*project|mkdir.*git/i,
+    decompose: (params) => [
+      { tool: 'run_command', params: { command: `mkdir -p ${params.path}` }, saveAs: 'mkdir' },
+      { tool: 'run_command', params: { command: `cd ${params.path} && git init` }, saveAs: 'gitInit', when: { var: 'mkdir', success: true } },
+      { tool: 'run_command', params: { command: `echo '# Project' > ${params.path}/README.md` }, when: { var: 'gitInit', success: true } }
+    ]
+  },
+
+  // 系统信息收集
+  'system:info': {
+    pattern: /系统信息|system.*info|收集.*信息/i,
+    decompose: (params) => [
+      { tool: 'run_command', params: { command: 'uname -a' }, saveAs: 'os', parallel: true },
+      { tool: 'run_command', params: { command: 'node -v' }, saveAs: 'node', parallel: true },
+      { tool: 'run_command', params: { command: 'python3 --version' }, saveAs: 'python', parallel: true },
+      { tool: 'run_command', params: { command: 'git --version' }, saveAs: 'git', parallel: true }
+    ]
+  },
   // 批量文件处理
   'batch:files': {
     pattern: /批量.*文件|batch.*files/i,
