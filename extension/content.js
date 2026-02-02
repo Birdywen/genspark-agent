@@ -1005,9 +1005,40 @@ ${toolSummary}
   
   }
 
+  // ============== 工具调用检测 v2 ==============
+  let expectingToolCall = false;
+  let toolCallWarningTimer = null;
+
+  function startToolCallDetection() {
+    // 清除旧的定时器
+    if (toolCallWarningTimer) {
+      clearTimeout(toolCallWarningTimer);
+    }
+    
+    expectingToolCall = true;
+    
+    // 30秒后如果还没有工具执行，提示
+    toolCallWarningTimer = setTimeout(() => {
+      if (expectingToolCall) {
+        addLog('⚠️ 似乎没有检测到工具调用执行', 'warning');
+        addLog('提示：如果发送了工具调用但未执行，可能是格式问题', 'info');
+        expectingToolCall = false;
+      }
+    }, 30000);
+  }
+
+  function clearToolCallDetection() {
+    if (toolCallWarningTimer) {
+      clearTimeout(toolCallWarningTimer);
+      toolCallWarningTimer = null;
+    }
+    expectingToolCall = false;
+  }
+
   // ============== 工具执行 ==============
 
   function executeRetry(historyId) {
+    clearToolCallDetection(); // 工具开始执行，清除警告
     const callId = `retry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1041,6 +1072,7 @@ ${toolSummary}
 
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
+    clearToolCallDetection(); // 工具开始执行，清除警告
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1088,6 +1120,7 @@ ${toolSummary}
 
 
   function executeToolCall(tool, callHash) {
+    clearToolCallDetection(); // 工具开始执行，清除警告
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {
@@ -1299,6 +1332,8 @@ ${toolSummary}
   
   function updateLastAiMessageTime() {
     lastAiMessageTime = Date.now();
+    // 启动工具调用检测
+    startToolCallDetection();
   }
   
   function startWakeupMonitor() {
