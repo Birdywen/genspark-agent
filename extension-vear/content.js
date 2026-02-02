@@ -308,6 +308,27 @@ ${toolSummary}
 
 ---
 
+## 代码修改后必须验证语法 ⚠️
+
+**关键规则**：每次修改代码文件后，必须立即验证语法！
+
+**验证方法**：
+- JavaScript: node -c file.js
+- Python: python3 -m py_compile file.py
+
+**正确流程**：
+1. 修改代码（sed/python/edit_file/write_file）
+2. 立即验证语法
+3. 语法正确后再同步到其他 extension
+4. 最后提交 git
+
+**为什么重要**：
+- 避免破坏所有版本
+- 立即发现语法错误
+- 减少回退操作
+
+---
+
 ## 长内容处理
 
 当内容超过 50 行或包含大量特殊字符时，使用 heredoc 方式写入文件。
