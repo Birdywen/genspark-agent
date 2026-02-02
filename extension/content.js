@@ -1161,10 +1161,20 @@ ${toolSummary}
   }
 
   // ============== 扫描工具调用 ==============
+  // ============== 工具调用检测 ==============
+  let pendingToolCall = null;
+  let toolCallTimer = null;
 
   function scanForToolCalls() {
-    // console.log("[Agent] scanning...");
-    if (state.agentRunning) return;
+    // 如果已经在执行，清除待处理标记
+    if (state.agentRunning) {
+      if (toolCallTimer) {
+        clearTimeout(toolCallTimer);
+        toolCallTimer = null;
+        pendingToolCall = null;
+      }
+      return;
+    }
     
     // 如果 AI 正在生成中，跳过扫描
     if (isAIGenerating()) {
@@ -1175,6 +1185,34 @@ ${toolSummary}
     const { text, index } = getLatestAIMessage();
     
     if (index < 0 || !text) return;
+    
+    // 检测到工具调用标记
+    const hasToolCall = text.includes('Ω{') || text.includes('ΩBATCH{');
+    
+    if (hasToolCall) {
+      const callSignature = text.substring(0, 100); // 取前100字符作为签名
+      
+      if (pendingToolCall !== callSignature) {
+        // 新的工具调用
+        pendingToolCall = callSignature;
+        
+        // 清除旧的定时器
+        if (toolCallTimer) clearTimeout(toolCallTimer);
+        
+        // 5秒后检查是否执行
+        toolCallTimer = setTimeout(() => {
+          if (!state.agentRunning && pendingToolCall === callSignature) {
+            addLog('⚠️ 工具调用未执行！可能格式有误或未被识别', 'error');
+            
+            // 显示工具调用内容片段
+            const snippet = text.match(/Ω(BATCH)?\{[^}]*\}/)?.[0] || 'Ω...';
+            addLog(`未执行的调用: ${snippet.substring(0, 50)}...`, 'warning');
+          }
+          pendingToolCall = null;
+          toolCallTimer = null;
+        }, 5000);
+      }
+    }
     
     // Removed: result check (conflicts with code containing these chars)
     
