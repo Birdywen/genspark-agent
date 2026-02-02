@@ -4711,7 +4711,52 @@
       "success": true,
       "resultPreview": "Syntax OK\n",
       "error": null
+    },
+    {
+      "id": 5964,
+      "timestamp": "2026-02-02T16:53:54.449Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git status"
+      },
+      "success": true,
+      "resultPreview": "On branch main\nYour branch is ahead of 'origin/main' by 23 commits.\n  (use \"git push\" to publish your local commits)\n\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n\tmodified:   extension/content.js\n\tmodified:   server-v2/command-history.json\n\tmodified:   server-v2/history-archives/archive-2026-02-02.json\n\n",
+      "error": null
+    },
+    {
+      "id": 5965,
+      "timestamp": "2026-02-02T16:54:03.043Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git commit -m 'feat: 添加ΩSTOP单步工具结束标记'"
+      },
+      "success": true,
+      "resultPreview": "[main 2b16e1f] feat: 添加ΩSTOP单步工具结束标记\n 3 files changed, 1394 insertions(+), 1193 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 5966,
+      "timestamp": "2026-02-02T16:56:35.736Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/private/tmp/force-omega-stop.js",
+        "content": "import { readFileSync, writeFileSync } from 'fs';\nconst filePath = '/Users/yay/workspace/genspark-agent/extension/content.js';\nlet content = readFileSync(filePath, 'utf-8');\n\n// 找到当前的代码：不管有没有 ΩSTOP 都执行\nconst oldCode = `const hasStop = afterJson.trim().startsWith('ΩSTOP');\n            const endPos = hasStop ? idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5 : idx + marker.length + extracted.json.length;\n            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: hasStop });`;\n\n// 新代码：强制要求 ΩSTOP，没有则跳过\nconst newCode = `const hasStop = afterJson.trim().startsWith('ΩSTOP');\n            if (!hasStop) {\n              // 强制要求 ΩSTOP 结束标记，没有则跳过\n              searchStart = idx + marker.length + extracted.json.length;\n              continue;\n            }\n            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;\n            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: true });`;\n\nif (content.includes(oldCode)) {\n  content = content.replace(oldCode, newCode);\n  writeFileSync(filePath, content);\n  console.log('Done - ΩSTOP now required');\n} else {\n  console.log('Not found');\n}"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /private/tmp/force-omega-stop.js",
+      "error": null
+    },
+    {
+      "id": 5967,
+      "timestamp": "2026-02-02T16:56:44.809Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node /private/tmp/force-omega-stop.js"
+      },
+      "success": true,
+      "resultPreview": "Done - ΩSTOP now required\n",
+      "error": null
     }
   ],
-  "nextId": 5964
+  "nextId": 5968
 }

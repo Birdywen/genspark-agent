@@ -915,8 +915,13 @@ ${toolSummary}
             // 检查是否有 ΩSTOP 结束标记
             const afterJson = text.substring(idx + marker.length + extracted.json.length, idx + marker.length + extracted.json.length + 10);
             const hasStop = afterJson.trim().startsWith('ΩSTOP');
-            const endPos = hasStop ? idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5 : idx + marker.length + extracted.json.length;
-            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: hasStop });
+            if (!hasStop) {
+              // 强制要求 ΩSTOP 结束标记，没有则跳过
+              searchStart = idx + marker.length + extracted.json.length;
+              continue;
+            }
+            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;
+            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: true });
           }
         } catch (e) {
           if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
