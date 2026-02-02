@@ -164,12 +164,12 @@ function log(...args) {
 ### 单个工具
 
 \`\`\`
-Ω{"tool":"工具名","params":{"参数":"值"}}
+Ω{"tool":"工具名","params":{"参数":"值"}}ΩSTOP
 \`\`\`
 
 示例：
 \`\`\`
-Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}
+Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}ΩSTOP
 \`\`\`
 
 ### 批量执行 + 变量传递 ⭐ v1.0.52+
@@ -266,12 +266,12 @@ ${toolSummary}
 
 **执行方法**：询问项目后执行
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}ΩSTOP
 \`\`\`
 
 示例（直接写项目名，不要用尖括号）：
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}ΩSTOP
 \`\`\`
 
 ---
@@ -912,7 +912,11 @@ ${toolSummary}
             .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
           const parsed = safeJsonParse(jsonStr);
           if (parsed.tool) {
-            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: marker + extracted.json, start: idx, end: idx + marker.length + extracted.json.length });
+            // 检查是否有 ΩSTOP 结束标记
+            const afterJson = text.substring(idx + marker.length + extracted.json.length, idx + marker.length + extracted.json.length + 10);
+            const hasStop = afterJson.trim().startsWith('ΩSTOP');
+            const endPos = hasStop ? idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5 : idx + marker.length + extracted.json.length;
+            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: hasStop });
           }
         } catch (e) {
           if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
