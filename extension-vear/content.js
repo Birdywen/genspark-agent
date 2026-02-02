@@ -1005,19 +1005,13 @@ ${toolSummary}
   
   }
 
-  // ============== 工具调用检测 v2 ==============
+  // ============== 工具调用检测 ==============
   let expectingToolCall = false;
   let toolCallWarningTimer = null;
 
   function startToolCallDetection() {
-    // 清除旧的定时器
-    if (toolCallWarningTimer) {
-      clearTimeout(toolCallWarningTimer);
-    }
-    
+    if (toolCallWarningTimer) clearTimeout(toolCallWarningTimer);
     expectingToolCall = true;
-    
-    // 30秒后如果还没有工具执行，提示
     toolCallWarningTimer = setTimeout(() => {
       if (expectingToolCall) {
         addLog('⚠️ 似乎没有检测到工具调用执行', 'warning');
@@ -1038,7 +1032,7 @@ ${toolSummary}
   // ============== 工具执行 ==============
 
   function executeRetry(historyId) {
-    clearToolCallDetection(); // 工具开始执行，清除警告
+    clearToolCallDetection();
     const callId = `retry-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1072,7 +1066,7 @@ ${toolSummary}
 
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
-    clearToolCallDetection(); // 工具开始执行，清除警告
+    clearToolCallDetection();
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1120,7 +1114,7 @@ ${toolSummary}
 
 
   function executeToolCall(tool, callHash) {
-    clearToolCallDetection(); // 工具开始执行，清除警告
+    clearToolCallDetection();
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {
@@ -1194,16 +1188,10 @@ ${toolSummary}
   }
 
   // ============== 扫描工具调用 ==============
+
   function scanForToolCalls() {
-    // 如果已经在执行，清除待处理标记
-    if (state.agentRunning) {
-      if (toolCallTimer) {
-        clearTimeout(toolCallTimer);
-        toolCallTimer = null;
-        pendingToolCall = null;
-      }
-      return;
-    }
+    // console.log("[Agent] scanning...");
+    if (state.agentRunning) return;
     
     // 如果 AI 正在生成中，跳过扫描
     if (isAIGenerating()) {
@@ -1215,6 +1203,1145 @@ ${toolSummary}
     
     if (index < 0 || !text) return;
     
+    // Removed: result check (conflicts with code containing these chars)
+    
+    const toolStartCount = (text.match(/\[\[TOOL:/g) || []).length;
+    const toolEndCount = (text.match(/\[\[\/TOOL\]\]/g) || []).length;
+    
+    if (toolStartCount > toolEndCount) {
+      log('等待工具调用输出完成...');
+      return;
+    }
+    
+    if (state.lastMessageText !== text) {
+      state.lastMessageText = text;
+      state.lastStableTime = Date.now();
+      return;
+    }
+    
+    if (Date.now() - state.lastStableTime < 500) {
+      return;
+    }
+    
+    const { text: textNow } = getLatestAIMessage();
+    if (textNow !== text) {
+      state.lastMessageText = textNow;
+      state.lastStableTime = Date.now();
+      return;
+    }
+    
+    // 检查重试命令 @RETRY:#ID
+    const retryMatch = text.match(/@RETRY:\s*#?(\d+)/);
+
+
+    if (retryMatch) {
+      const retryId = parseInt(retryMatch[1]);
+      const retryHash = `${index}:retry:${retryId}`;
+      if (!state.executedCalls.has(retryHash)) {
+        state.executedCalls.add(retryHash);
+        addLog(`🔄 重试命令 #${retryId}`, 'tool');
+        executeRetry(retryId);
+        return;
+      }
+    }
+    
+    // 检查录制命令 @REC:action:name
+    const recMatch = text.match(/@REC:(start|stop|list|play)(?::([^:\s]+))?(?::([\{\[][^\s]*))?/);
+    if (recMatch) {
+      const recHash = `${index}:rec:${recMatch[0]}`;
+      if (!state.executedCalls.has(recHash)) {
+        state.executedCalls.add(recHash);
+        const action = recMatch[1];
+        const name = recMatch[2] || '';
+        
+        switch (action) {
+          case 'start':
+            if (name) {
+              addLog(`🎬 开始录制: ${name}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'start_recording', name: name, description: '' } });
+              state.currentRecordingId = name;
+            } else {
+              addLog('❌ 请指定录制名称: @REC:start:名称', 'error');
+            }
+            break;
+          case 'stop':
+            addLog('⏹️ 停止录制', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'stop_recording', recordingId: state.currentRecordingId || name } });
+            state.currentRecordingId = null;
+            break;
+          case 'list':
+            addLog('📼 获取录制列表...', 'tool');
+            chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'list_recordings' } });
+            break;
+          case 'play':
+            if (name) {
+              console.log('[REC DEBUG] recMatch:', recMatch);
+              const extraParam = recMatch[3];
+              console.log('[REC DEBUG] extraParam:', extraParam);
+              let playMsg = { type: 'replay_recording', recordingId: name };
+              let paramInfo = '';
+              
+              if (extraParam) {
+                try {
+                  const parsed = JSON.parse(extraParam);
+                  if (Array.isArray(parsed)) {
+                    // 循环模式: @REC:play:名称:["a","b","c"]
+                    playMsg.foreach = parsed;
+                    paramInfo = ` (循环 ${parsed.length} 次)`;
+                  } else if (typeof parsed === 'object') {
+                    // 参数模式: @REC:play:名称:{"server":"oracle"}
+                    playMsg.variables = parsed;
+                    paramInfo = ` (参数: ${Object.keys(parsed).join(', ')})`;
+                  }
+                } catch (e) {
+                  addLog(`⚠️ 参数解析失败: ${e.message}`, 'warning');
+                }
+              }
+              
+              addLog(`▶️ 回放录制: ${name}${paramInfo}`, 'tool');
+              chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: playMsg });
+            } else {
+              addLog('❌ 请指定录制名称: @REC:play:名称', 'error');
+            }
+            break;
+        }
+        return;
+      }
+    }
+    
+    // 先检查跨 Tab 发送命令 @SEND:agent_id:message
+    // 排除示例、代码块内、引用中的 @SEND
+    const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|Ω|@DONE|$)/);
+    const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
+    if (sendMatch && !isExampleSend) {
+      const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
+      if (!state.executedCalls.has(sendHash)) {
+        state.executedCalls.add(sendHash);
+        const toAgent = sendMatch[1];
+        const message = sendMatch[2].trim();
+        addLog(`📨 发送给 ${toAgent}...`, 'tool');
+        sendToAgent(toAgent, message);
+        setTimeout(() => {
+          sendMessageSafe(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
+        }, 500);
+        return;
+      }
+    }
+    
+    const toolCalls = parseToolCalls(text);
+    
+    for (const tool of toolCalls) {
+      const callHash = `${index}:${tool.name}:${JSON.stringify(tool.params)}`;
+      
+      if (state.executedCalls.has(callHash)) {
+        continue;
+      }
+      
+      log('检测到工具调用:', tool.name, tool.params);
+      
+      // 判断是否为批量调用
+      if (tool.isBatch && tool.name === '__BATCH__') {
+        executeBatchCall(tool.params, callHash);
+      } else if (tool.isPlan && tool.name === '__PLAN__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_plan', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('📋 任务规划请求已发送', 'info');
+          else addLog('❌ 任务规划请求失败', 'error');
+        });
+        return;
+      } else if (tool.isFlow && tool.name === '__FLOW__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'workflow_execute', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('🔄 工作流请求已发送', 'info');
+          else addLog('❌ 工作流请求失败', 'error');
+        });
+        return;
+      } else if (tool.isResume && tool.name === '__RESUME__') {
+        state.executedCalls.add(callHash);
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'task_resume', params: tool.params, id: Date.now() }
+        }, (resp) => {
+          if (resp && resp.success) addLog('▶️ 断点续传请求已发送', 'info');
+          else addLog('❌ 断点续传请求失败', 'error');
+        });
+        return;
+      } else {
+        executeToolCall(tool, callHash);
+      }
+      return;
+    }
+    
+    if (text.includes('@DONE') || text.includes('[[DONE]]')) {
+      const doneHash = `done:${index}`;
+      if (!state.executedCalls.has(doneHash)) {
+        state.executedCalls.add(doneHash);
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        state.pendingCalls.clear();
+        updateStatus();
+        addLog('✅ 任务完成', 'success');
+      }
+    }
+  }
+
+  // ============== 结果格式化 ==============
+
+  function incrementRound() {
+    state.roundCount++;
+    localStorage.setItem('agent_round_count', state.roundCount.toString());
+    // 每 30 轮发出预警
+    if (state.roundCount > 0 && state.roundCount % 30 === 0) {
+      addLog('⚠️ 已达 ' + state.roundCount + ' 轮，考虑开新对话', 'warn');
+    }
+    addLog('📊 轮次: ' + state.roundCount, 'info');
+    updateRoundDisplay();
+  }
+
+  function resetRound() {
+    state.roundCount = 0;
+    localStorage.setItem('agent_round_count', '0');
+    addLog('🔄 轮次已重置', 'info');
+    updateRoundDisplay();
+  }
+
+  function updateRoundDisplay() {
+    const el = document.getElementById('agent-round');
+    if (el) {
+      el.textContent = 'R:' + state.roundCount;
+      el.style.color = state.roundCount >= 30 ? '#f59e0b' : state.roundCount >= 20 ? '#eab308' : '#9ca3af';
+    }
+  }
+
+  
+  // ============== 智能提示系统 ==============
+  const SmartTips = {
+    toolTips: {
+      'take_screenshot': '截图已保存，可用 read_media_file 查看',
+      'take_snapshot': '快照包含 uid，用于 click/fill 等操作',
+      'click': '点击后可能需要 wait_for 等待页面变化',
+      'fill': '填写后通常需要 click 提交按钮',
+      'navigate_page': '导航后用 take_snapshot 获取页面内容',
+      'new_page': '新页面已创建，用 take_snapshot 查看内容',
+      'write_file': '文件已写入，大文件建议用 run_command',
+      'edit_file': '文件已修改，可用 read_file 验证',
+      'register_project_tool': '项目已注册，可用 get_symbols/find_text 分析',
+      'get_symbols': '符号列表可用于 find_usage 查引用',
+    },
+    errorTips: {
+      'timeout': '超时了，可拆分任务或后台执行: nohup cmd &',
+      'not found': '路径不存在，先用 list_directory 确认',
+      'permission denied': '权限不足，检查是否在允许目录内',
+      'enoent': '文件/目录不存在，检查路径拼写',
+      'eacces': '访问被拒绝，检查文件权限',
+      'no such file': '文件不存在，用 list_directory 查看目录',
+      'command not found': '命令不存在，检查是否已安装',
+      'not allowed': '路径不在允许目录内，检查 list_allowed_directories',
+      'syntax error': '语法错误，检查代码格式',
+    },
+    generalTips: [
+      '支持批量执行: ΩBATCH{"steps":[...]}',
+      '长内容用 run_command + heredoc 写入',
+      '项目记忆: memory_manager_v2.js projects',
+    ],
+    getTip(toolName, success, content, error) {
+      const text = ((content || '') + ' ' + (error || '')).toLowerCase();
+      if (!success) {
+        for (const [key, tip] of Object.entries(this.errorTips)) {
+          if (text.includes(key)) return tip;
+        }
+      }
+      if (success && this.toolTips[toolName]) {
+        return this.toolTips[toolName];
+      }
+      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];
+    }
+  };
+
+  function formatToolResult(msg) {
+    let content;
+    
+    if (msg.success) {
+      if (typeof msg.result === 'string') {
+        content = msg.result;
+      } else if (msg.result?.stdout !== undefined) {
+        content = msg.result.stdout || '(空输出)';
+        if (msg.result.stderr) {
+          content += '\n[stderr]: ' + msg.result.stderr;
+        }
+      } else {
+        content = JSON.stringify(msg.result, null, 2);
+      }
+    } else {
+      content = `错误: ${msg.error || msg.result?.stderr || '未知错误'}`;
+      // 添加错误类型和修复建议
+      if (msg.errorType) {
+        content += `\n[错误类型]: ${msg.errorType}`;
+      }
+      if (msg.recoverable) {
+        content += `\n[可恢复]: 是`;
+      }
+    }
+    
+    if (content.length > CONFIG.MAX_RESULT_LENGTH) {
+      content = content.slice(0, CONFIG.MAX_RESULT_LENGTH) + '\n...(内容已截断)';
+    }
+    
+    const status = msg.success ? '✓ 成功' : '✗ 失败';
+    
+    // 优先使用服务器返回的建议，否则使用本地 SmartTips
+    const tip = msg.suggestion || SmartTips.getTip(msg.tool, msg.success, content, msg.error);
+    
+    return `**[执行结果]** \`${msg.tool}\` ${status}:
+\`\`\`
+${content}
+\`\`\`
+${tip}
+请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+  }
+
+  // ============== UI ==============
+
+  function createPanel() {
+    if (document.getElementById('agent-panel')) return;
+
+    const panel = document.createElement('div');
+    panel.id = 'agent-panel';
+    panel.innerHTML = `
+      <div id="agent-header">
+        <span id="agent-title">🤖 Agent v34</span>
+        <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <span id="agent-status">初始化</span>
+        <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
+      </div>
+      <div id="agent-executing"><span class="exec-spinner">⚙️</span><span class="exec-tool">工具名</span><span class="exec-time">0.0s</span></div>
+      <div id="agent-tools"></div>
+      <div id="agent-logs"></div>
+      <div id="agent-actions">
+        <button id="agent-copy-prompt" title="复制系统提示词给AI">📋 提示词</button>
+        <button id="agent-clear" title="清除日志">🗑️</button>
+        <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
+        <button id="agent-reconnect" title="重连服务器">🔄</button>
+        <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
+        <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
+        <button id="agent-list" title="查看在线Agent">👥</button>
+        <button id="agent-minimize" title="最小化">➖</button>
+      </div>
+    `;
+    
+    document.body.appendChild(panel);
+
+    const style = document.createElement('style');
+    style.textContent = `
+      #agent-panel {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 300px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 1px solid #0f3460;
+        border-radius: 12px;
+        padding: 12px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 12px;
+        color: #e4e4e7;
+        z-index: 2147483647;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        transition: all 0.3s ease;
+      }
+      #agent-panel.minimized {
+        width: auto;
+        padding: 8px 12px;
+      }
+      #agent-panel.minimized #agent-tools,
+      #agent-panel.minimized #agent-logs,
+      #agent-panel.minimized #agent-actions button:not(#agent-minimize) {
+        display: none !important;
+      }
+      #agent-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #0f3460;
+      }
+      #agent-title { font-weight: 600; font-size: 13px; }
+      #agent-status {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        background: #6b7280;
+        color: white;
+      }
+      #agent-status.connected { background: #10b981; }
+      #agent-status.running { background: #f59e0b; animation: pulse 1.5s infinite; }
+      #agent-status.disconnected { background: #ef4444; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+      #agent-executing { display: none; padding: 10px 12px; margin-bottom: 10px; background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6f 50%, #1e3a5f 100%); background-size: 200% 100%; animation: shimmer 2s infinite linear; border-radius: 8px; font-size: 12px; color: #93c5fd; border: 1px solid #3b82f6; }
+      #agent-executing.active { display: flex; align-items: center; gap: 8px; }
+      #agent-executing .exec-spinner { animation: spin 1s linear infinite; font-size: 14px; }
+      #agent-executing .exec-tool { flex: 1; font-weight: 600; color: #60a5fa; }
+      #agent-executing .exec-time { font-family: monospace; color: #fbbf24; font-weight: 600; font-size: 13px; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      #agent-tools {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-bottom: 8px;
+        padding: 6px 8px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 6px;
+        display: none;
+      }
+      #agent-tools code {
+        background: #3730a3;
+        padding: 1px 4px;
+        border-radius: 3px;
+        margin: 0 2px;
+        font-size: 10px;
+      }
+      #agent-logs {
+        max-height: 180px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        padding: 8px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 8px;
+      }
+      .agent-log-entry {
+        margin-bottom: 4px;
+        padding: 4px 6px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.03);
+        border-left: 3px solid;
+        font-size: 11px;
+        line-height: 1.4;
+        word-break: break-all;
+      }
+      .agent-log-entry.info { border-color: #3b82f6; }
+      .agent-log-entry.success { border-color: #10b981; }
+      .agent-log-entry.error { border-color: #ef4444; }
+      .agent-log-entry.tool { border-color: #8b5cf6; }
+      .agent-log-entry.result { border-color: #06b6d4; }
+      .agent-log-time { color: #6b7280; font-size: 9px; margin-right: 4px; }
+      #agent-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+      #agent-actions button {
+        flex: 1;
+        min-width: 60px;
+        padding: 6px 8px;
+        border: none;
+        border-radius: 6px;
+        background: #374151;
+        color: #e4e4e7;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s;
+      }
+      #agent-actions button:hover { background: #4b5563; }
+      #agent-copy-prompt { background: #3730a3 !important; }
+      #agent-copy-prompt:hover { background: #4338ca !important; }
+    `;
+    document.head.appendChild(style);
+
+    document.getElementById('agent-clear').onclick = () => {
+      document.getElementById('agent-logs').innerHTML = '';
+      state.executedCalls.clear();
+      state.pendingCalls.clear();
+      state.agentRunning = false;
+        hideExecutingIndicator();
+      state.lastMessageText = '';
+      updateStatus();
+      addLog('🗑️ 已重置', 'info');
+    };
+    
+    document.getElementById('agent-retry-last').onclick = () => {
+      if (!state.lastToolCall) {
+        addLog('❌ 没有可重试的命令', 'error');
+        return;
+      }
+      const { tool, params, timestamp } = state.lastToolCall;
+      const age = Math.round((Date.now() - timestamp) / 1000);
+      addLog(`🔁 重试 ${tool} (${age}秒前)`, 'info');
+      
+      // 重新执行
+      const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      state.agentRunning = true;
+      showExecutingIndicator(tool);
+      updateStatus();
+      
+      chrome.runtime.sendMessage({
+        type: 'SEND_TO_SERVER',
+        payload: { type: 'tool_call', tool, params, id: callId }
+      }, (response) => {
+        if (chrome.runtime.lastError || !response?.success) {
+          addLog('❌ 重试发送失败', 'error');
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+        }
+      });
+    };
+    
+    document.getElementById('agent-reconnect').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'RECONNECT' });
+      addLog('🔄 重连中...', 'info');
+    };
+
+    // 刷新工具列表
+    document.getElementById('agent-reload-tools').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'RELOAD_TOOLS' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 发送刷新请求失败', 'error');
+          return;
+        }
+        if (resp?.success) {
+          addLog('🔧 正在刷新工具列表...', 'info');
+        } else {
+          addLog('❌ ' + (resp?.error || '刷新失败'), 'error');
+        }
+      });
+    };
+
+    // 切换本地/云端服务器
+    document.getElementById('agent-switch-server').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+        if (chrome.runtime.lastError) {
+          addLog('❌ 获取服务器信息失败', 'error');
+          return;
+        }
+        const newServer = info.current === 'local' ? 'cloud' : 'local';
+        chrome.runtime.sendMessage({ type: 'SWITCH_SERVER', server: newServer }, (resp) => {
+          if (resp?.success) {
+            const btn = document.getElementById('agent-switch-server');
+            btn.textContent = newServer === 'cloud' ? '🌐 云' : '💻 本地';
+            addLog('✅ 已切换到 ' + newServer + ': ' + resp.url, 'success');
+          } else {
+            addLog('❌ 切换失败: ' + (resp?.error || '未知错误'), 'error');
+          }
+        });
+      });
+    };
+
+    // 初始化服务器按钮状态
+    chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
+      if (info?.current) {
+        const btn = document.getElementById('agent-switch-server');
+        if (btn) btn.textContent = info.current === 'cloud' ? '🌐 云' : '💻 本地';
+      }
+    });
+    
+    document.getElementById('agent-copy-prompt').onclick = () => {
+      const prompt = generateSystemPrompt();
+      navigator.clipboard.writeText(prompt).then(() => {
+        addLog('📋 提示词已复制', 'success');
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = prompt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        addLog('📋 提示词已复制', 'success');
+      });
+    };
+    
+    document.getElementById('agent-minimize').onclick = () => {
+      const panel = document.getElementById('agent-panel');
+      const btn = document.getElementById('agent-minimize');
+      panel.classList.toggle('minimized');
+      btn.textContent = panel.classList.contains('minimized') ? '➕' : '➖';
+    };
+
+
+    // 轮次显示点击重置
+    document.getElementById('agent-round').onclick = () => {
+      if (confirm('重置轮次计数？')) {
+        resetRound();
+      }
+    };
+    // 初始化显示
+    updateRoundDisplay();
+    // 查看在线 Agent 列表
+    document.getElementById('agent-list').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          addLog(`❌ 查询失败: ${chrome.runtime.lastError.message}`, 'error');
+          return;
+        }
+        if (resp?.success && resp.agents) {
+          if (resp.agents.length === 0) {
+            addLog('📭 暂无在线 Agent', 'info');
+          } else {
+            const list = resp.agents.map(a => `${a.agentId}(Tab:${a.tabId})`).join(', ');
+            addLog(`👥 在线: ${list}`, 'info');
+          }
+        } else {
+          addLog('❌ 查询失败', 'error');
+        }
+      });
+    };
+
+    // 点击 Agent ID 也显示在线列表
+    document.getElementById('agent-id').onclick = () => {
+      document.getElementById('agent-list').click();
+    };
+
+    makeDraggable(panel);
+  }
+
+  // 更新面板上的 Agent ID 显示
+  function updateAgentIdDisplay() {
+    const el = document.getElementById('agent-id');
+    if (el) {
+      el.textContent = agentId ? `[${agentId}]` : '[未设置]';
+      el.style.color = agentId ? '#10b981' : '#9ca3af';
+    }
+  }
+
+  function makeDraggable(el) {
+    const header = el.querySelector('#agent-header');
+    let isDragging = false;
+    let startX, startY, startLeft, startBottom;
+    
+    header.style.cursor = 'move';
+    
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.id === 'agent-status') return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = el.offsetLeft;
+      startBottom = window.innerHeight - el.offsetTop - el.offsetHeight;
+      e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      el.style.left = (startLeft + e.clientX - startX) + 'px';
+      el.style.bottom = (startBottom - e.clientY + startY) + 'px';
+      el.style.right = 'auto';
+    });
+    
+    document.addEventListener('mouseup', () => { isDragging = false; });
+  }
+
+  function updateStatus() {
+    const el = document.getElementById('agent-status');
+    if (!el) return;
+    
+    el.classList.remove('connected', 'running', 'disconnected');
+    
+    if (state.agentRunning) {
+      el.textContent = '执行中...';
+      el.classList.add('running');
+    } else if (state.wsConnected) {
+      el.textContent = '已就绪';
+      el.classList.add('connected');
+    } else {
+      el.textContent = '未连接';
+      el.classList.add('disconnected');
+    }
+  }
+
+  function updateToolsDisplay() {
+    const el = document.getElementById('agent-tools');
+    if (!el) return;
+    if (state.availableTools.length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+    const cats = {};
+    state.availableTools.forEach(t => {
+      const name = t.name || t;
+      const p = name.includes('_') ? name.split('_')[0] : 'other';
+      cats[p] = (cats[p] || 0) + 1;
+    });
+    const sum = Object.entries(cats).map(([k,v]) => k + ':' + v).join(' ');
+    el.style.display = 'block';
+    el.innerHTML = '🔧 ' + state.availableTools.length + ' 工具 | ' + sum;
+  }
+
+  function addLog(msg, type = 'info') {
+    const logs = document.getElementById('agent-logs');
+    if (!logs) return;
+    
+    const time = new Date().toLocaleTimeString('en-US', { 
+      hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    });
+    
+    const entry = document.createElement('div');
+    entry.className = `agent-log-entry ${type}`;
+    entry.innerHTML = `<span class="agent-log-time">${time}</span>${msg.replace(/</g, '&lt;')}`;
+    
+    logs.appendChild(entry);
+    logs.scrollTop = logs.scrollHeight;
+    
+    while (logs.children.length > CONFIG.MAX_LOGS) {
+      logs.removeChild(logs.firstChild);
+    }
+  }
+
+  // ============== 消息监听 ==============
+
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    log('收到消息:', msg.type, msg);
+
+    switch (msg.type) {
+      case 'WS_STATUS':
+        state.wsConnected = msg.connected;
+        updateStatus();
+        addLog(msg.connected ? '✓ 服务器已连接' : '✗ 服务器断开', msg.connected ? 'success' : 'error');
+        break;
+
+      case 'connected':
+        state.wsConnected = true;
+        if (msg.tools) {
+          state.availableTools = msg.tools;
+          updateToolsDisplay();
+        }
+        updateStatus();
+        addLog('✓ 连接成功', 'success');
+        if (msg.skills) { state.availableSkills = msg.skills; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
+        break;
+
+      case 'update_tools':
+        if (msg.tools && msg.tools.length > 0) {
+          state.availableTools = msg.tools;
+          updateToolsDisplay();
+          addLog(`📦 加载了 ${msg.tools.length} 个工具`, 'info');
+        }
+        if (msg.skills) { state.availableSkills = msg.skills; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
+        break;
+
+      case 'tools_updated':
+        // 服务端热刷新后推送的工具更新
+        if (msg.tools && msg.tools.length > 0) {
+          const oldCount = state.availableTools.length;
+          state.availableTools = msg.tools;
+          updateToolsDisplay();
+          addLog(`🔄 工具已刷新: ${oldCount} → ${msg.tools.length}`, 'success');
+        }
+        break;
+
+      case 'reload_tools_result':
+        // reload_tools 请求的结果
+        if (msg.success) {
+          addLog(`✅ 工具刷新成功: ${msg.toolCount} 个工具`, 'success');
+        } else {
+          addLog(`❌ 工具刷新失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      // ===== 批量任务消息 =====
+      case 'batch_step_result':
+        state.totalCalls++;  // 统计调用次数
+        if (msg.success) {
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✓`, 'success');
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: true,
+            result: msg.result
+          });
+          // 更新进度条
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'success', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal);
+          }
+        } else if (msg.skipped) {
+          addLog(`📦 步骤${msg.stepIndex}: 跳过 (${msg.reason})`, 'info');
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'skipped', msg.tool);
+          }
+        } else {
+          addLog(`📦 步骤${msg.stepIndex}: ${msg.tool} ✗ ${msg.error}`, 'error');
+          state.batchResults.push({
+            stepIndex: msg.stepIndex,
+            tool: msg.tool,
+            success: false,
+            error: msg.error
+          });
+          // 更新进度条（错误状态）
+          if (window.PanelEnhancer) {
+            window.PanelEnhancer.updateStepStatus(msg.stepIndex, 'error', msg.tool);
+            window.PanelEnhancer.updateProgress(state.batchResults.length, state.currentBatchTotal, true);
+          }
+        }
+        break;
+
+      case 'batch_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        // 隐藏进度条
+        if (window.PanelEnhancer) {
+          window.PanelEnhancer.hideProgress();
+          // 显示 Toast 通知
+          if (msg.success) {
+            window.PanelEnhancer.showToast(`批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+          } else {
+            window.PanelEnhancer.showToast(`批量任务部分失败: ${msg.stepsFailed} 个错误`, 'error');
+          }
+        }
+        if (msg.success) {
+          addLog(`✅ 批量任务完成: ${msg.stepsCompleted}/${msg.totalSteps} 成功`, 'success');
+        } else {
+          addLog(`⚠️ 批量任务部分失败: ${msg.stepsCompleted}/${msg.totalSteps} 成功, ${msg.stepsFailed} 失败`, 'error');
+        }
+        // 生成包含详细结果的汇总
+        let detailedResults = '';
+        if (state.batchResults && state.batchResults.length > 0) {
+          detailedResults = state.batchResults.map((r, i) => {
+            if (r.success) {
+              let content = r.result || '';
+              if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
+            } else {
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error}`;
+            }
+          }).join('\n\n');
+          state.batchResults = []; // 清空
+        }
+        const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'} (${msg.stepsCompleted}/${msg.totalSteps})\n\n` +
+          detailedResults +
+          `\n\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageSafe(batchSummary);
+        break;
+
+      case 'batch_error':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');
+        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
+        break;
+
+      // ===== 第三阶段: 任务规划 =====
+      case 'plan_result':
+        addLog('📋 收到任务规划结果', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划完成]**\n\n' + (msg.visualization || '') + '\n\n' + JSON.stringify(msg.plan, null, 2).slice(0, 2000));
+        break;
+
+      case 'plan_error':
+        addLog('❌ 任务规划失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[任务规划失败]** ' + msg.error);
+        break;
+
+      case 'workflow_step':
+        addLog('🔄 工作流步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'workflow_complete':
+        addLog('✅ 工作流完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流完成]** ' + msg.workflowId + ' 成功: ' + msg.stepsCompleted + '/' + msg.totalSteps);
+        break;
+
+      case 'workflow_error':
+        addLog('❌ 工作流失败: ' + msg.error, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[工作流失败]** ' + msg.error);
+        break;
+
+      case 'resume_complete':
+        addLog('✅ 断点续传完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        break;
+
+      case 'resume_started':
+        addLog('▶️ 断点续传开始', 'info');
+        break;
+
+      case 'resume_step':
+        addLog('▶️ 恢复步骤 ' + msg.stepIndex, msg.success ? 'info' : 'error');
+        break;
+
+      case 'checkpoint_result':
+        addLog('💾 检查点操作完成', 'success');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        sendMessageSafe('**[检查点结果]** ' + JSON.stringify(msg, null, 2).slice(0, 1000));
+        break;
+
+      case 'checkpoint_error':
+        addLog('❌ 检查点失败: ' + msg.error, 'error');
+        break;
+
+      case 'templates_list':
+        addLog('📋 模板列表', 'success');
+        sendMessageSafe('**[工作流模板]**\n' + msg.templates.map(t => '- ' + t.id + ': ' + t.name).join('\n'));
+        break;
+
+      case 'resume_complete':
+        addLog(`✅ 任务恢复完成: ${msg.stepsCompleted}/${msg.totalSteps}`, 'success');
+        break;
+
+      case 'resume_error':
+        addLog(`❌ 任务恢复失败: ${msg.error}`, 'error');
+        break;
+
+      // ===== 目标驱动执行 =====
+      case 'goal_created':
+        addLog(`🎯 目标已创建: ${msg.goal?.id || msg.goalId}`, 'success');
+        break;
+
+      case 'goal_progress':
+        if (msg.step !== undefined) {
+          addLog(`🎯 目标进度: 步骤 ${msg.step} - ${msg.status || '执行中'}`, 'info');
+        }
+        break;
+
+      case 'goal_complete':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          addLog(`✅ 目标完成: ${msg.goalId} (${msg.attempts || 1} 次尝试)`, 'success');
+        } else {
+          addLog(`❌ 目标失败: ${msg.goalId} - ${msg.error || '未知错误'}`, 'error');
+        }
+        // 生成目标完成摘要
+        const goalSummary = `**[目标执行完成]** ${msg.success ? '✓ 成功' : '✗ 失败'}\n` +
+          `- 目标ID: ${msg.goalId}\n` +
+          `- 尝试次数: ${msg.attempts || 1}\n` +
+          (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(goalSummary);
+        break;
+
+      case 'goal_status_result':
+        addLog(`📊 目标状态: ${msg.status?.status || '未知'} (${msg.status?.progress || 0}%)`, 'info');
+        break;
+
+      case 'goals_list':
+        addLog(`📋 活跃目标: ${msg.goals?.active?.length || 0}, 已完成: ${msg.goals?.completed || 0}`, 'info');
+        break;
+
+      case 'validated_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const vr = msg.result;
+        if (vr?.success && vr?.validated) {
+          addLog(`✅ ${msg.tool} 执行并验证成功`, 'success');
+        } else if (vr?.success && !vr?.validated) {
+          addLog(`⚠️ ${msg.tool} 执行成功但验证失败`, 'warning');
+        } else {
+          addLog(`❌ ${msg.tool} 执行失败: ${vr?.error}`, 'error');
+        }
+        // 生成验证结果摘要
+        const vrSummary = `**[验证执行结果]** ${msg.tool}\n` +
+          `- 执行: ${vr?.success ? '✓' : '✗'}\n` +
+          `- 验证: ${vr?.validated ? '✓' : '✗'}\n` +
+          (vr?.result ? `\`\`\`\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\n\`\`\`\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(vrSummary);
+        break;
+
+      // ===== 异步命令执行 =====
+      case 'async_result':
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        if (msg.success) {
+          const modeText = msg.mode === 'async' ? ' (后台)' : '';
+          addLog(`✅ 命令执行成功${modeText}`, 'success');
+          if (msg.processId) {
+            addLog(`📋 进程ID: ${msg.processId}`, 'info');
+          }
+        } else {
+          addLog(`❌ 命令执行失败: ${msg.error}`, 'error');
+          if (msg.suggestion) {
+            addLog(`💡 建议: ${msg.suggestion}`, 'info');
+          }
+        }
+        // 生成异步结果摘要
+        const asyncSummary = `**[命令执行结果]** ${msg.success ? '✓ 成功' : '✗ 失败'}${msg.mode === 'async' ? ' (后台模式)' : ''}\n` +
+          (msg.processId ? `- 进程ID: ${msg.processId}\n` : '') +
+          (msg.logFile ? `- 日志文件: ${msg.logFile}\n` : '') +
+          (msg.warning ? `- ⚠️ ${msg.warning}\n` : '') +
+          (msg.output ? `\`\`\`\n${msg.output.slice(-2000)}\n\`\`\`\n` : '') +
+          (msg.error ? `- 错误: ${msg.error}\n` : '') +
+          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+        sendMessageToAI(asyncSummary);
+        break;
+
+      case 'async_output':
+        // 实时输出，仅记录日志
+        if (msg.output) {
+          addLog(`📤 ${msg.output.slice(0, 200)}`, 'info');
+        }
+        break;
+
+      case 'async_status_result':
+        if (msg.exists) {
+          addLog(`📊 进程 ${msg.processId}: ${msg.isRunning ? '运行中' : '已停止'}`, msg.isRunning ? 'success' : 'info');
+        } else {
+          addLog(`⚠️ 进程不存在: ${msg.processId}`, 'warning');
+        }
+        break;
+
+      case 'async_stop_result':
+        if (msg.success) {
+          addLog(`⏹️ 进程已停止: ${msg.processId}`, 'success');
+        } else {
+          addLog(`❌ 停止失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'async_log_result':
+        if (msg.success) {
+          addLog(`📋 日志 (${msg.lines} 行)`, 'info');
+          const logSummary = `**[进程日志]** ${msg.processId}\n` +
+            `- 文件: ${msg.logFile}\n` +
+            `- 总行数: ${msg.lines}\n` +
+            `\`\`\`\n${msg.content?.slice(-3000) || '(空)'}\n\`\`\`\n` +
+            `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          sendMessageToAI(logSummary);
+        } else {
+          addLog(`❌ 读取日志失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      // ===== 录制相关 =====
+      case 'recording_started':
+        addLog(`🎬 录制已开始: ${msg.recordingId}`, 'success');
+        break;
+
+      case 'recording_stopped':
+        addLog(`⏹️ 录制已停止: ${msg.recordingId} (${msg.summary?.totalSteps || 0} 步)`, 'success');
+        break;
+
+      case 'recordings_list':
+        if (msg.recordings?.length > 0) {
+          addLog(`📼 录制列表: ${msg.recordings.length} 个`, 'info');
+          msg.recordings.forEach(r => {
+            addLog(`  - ${r.id}: ${r.name || '未命名'} (${r.totalSteps} 步)`, 'info');
+          });
+        } else {
+          addLog('📼 暂无录制', 'info');
+        }
+        break;
+
+      case 'recording_loaded':
+        if (msg.success) {
+          addLog(`📂 录制已加载: ${msg.recording?.id}`, 'success');
+        } else {
+          addLog(`❌ 加载录制失败: ${msg.error}`, 'error');
+        }
+        break;
+
+      case 'replay_step_result':
+        const replayStatus = msg.success ? '✓' : '✗';
+        addLog(`▶️ 回放步骤 ${msg.stepIndex}: ${msg.tool} ${replayStatus}`, msg.success ? 'info' : 'warning');
+        break;
+
+      case 'replay_complete':
+        addLog(`🏁 回放完成: ${msg.stepsCompleted || 0}/${msg.totalSteps || 0} 成功`, 'success');
+        break;
+
+      case 'replay_error':
+        addLog(`❌ 回放错误: ${msg.error}`, 'error');
+        break;
+
+      case 'tool_result':
+        // 去重：用 tool + 结果内容生成 hash
+        const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
+        if (state.executedCalls.has(resultHash)) {
+          log('跳过重复的 tool_result:', msg.tool);
+          break;
+        }
+        state.executedCalls.add(resultHash);
+        
+        // 用 msg.id 精确匹配，而不是用 tool 名称
+        if (msg.id && state.pendingCalls.has(msg.id)) {
+          state.pendingCalls.delete(msg.id);
+        } else {
+          // 回退：按 tool 名称匹配（兼容旧版本）
+          for (const [id, call] of state.pendingCalls) {
+            if (call.tool === msg.tool) {
+              state.pendingCalls.delete(id);
+              break;
+            }
+          }
+        }
+        
+        addLog(`📥 ${msg.tool}: ${msg.success ? '成功' : '失败'}`, msg.success ? 'result' : 'error');
+        
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        
+        const resultText = formatToolResult(msg);
+        // 发送去重：同样内容 5 秒内不重复发送
+        const sendHash = `send:${resultText.slice(0, 100)}`;
+        if (state.executedCalls.has(sendHash)) {
+          log('跳过重复发送');
+          break;
+        }
+        state.executedCalls.add(sendHash);
+        setTimeout(() => {
+          state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
+        }, 5000);
+        sendMessageSafe(resultText);
+        incrementRound();
+        break;
+
+      case 'error':
+        addLog(`❌ ${msg.message || '未知错误'}`, 'error');
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        break;
+      
+      // 跨 Tab 消息
+      case 'CROSS_TAB_MESSAGE':
+        // 检查是否是回执消息（不注入聊天框，只显示日志）
+        if (msg.message && msg.message.startsWith('✅ [回执]')) {
+          addLog(`📬 ${msg.message}`, 'success');
+          break;
+        }
+        
+        addLog(`📩 收到来自 ${msg.from} 的消息`, 'success');
+        
+        // 发送回执给发送方
+        chrome.runtime.sendMessage({
+          type: 'CROSS_TAB_SEND',
+          to: msg.from,
+          message: `✅ [回执] ${agentId || '对方'} 已收到消息，正在处理...`
+        });
+        
+        const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
+        // 使用消息队列，避免多条消息同时到达时互相覆盖
+        setTimeout(() => {
+          enqueueMessage(crossTabMsg);
+        }, 500);
+        break;
+    }
+
     sendResponse({ ok: true });
     return true;
   });
@@ -1332,7 +2459,6 @@ ${toolSummary}
   
   function updateLastAiMessageTime() {
     lastAiMessageTime = Date.now();
-    // 启动工具调用检测
     startToolCallDetection();
   }
   
