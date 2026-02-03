@@ -36,6 +36,47 @@
         "generate_flow_diagram", "generate_district_map", "generate_pin_map",
         "generate_path_map", "generate_spreadsheet"
       ]
+    },
+    {
+      "name": "ffmpeg-media",
+      "description": "多媒体处理工具，支持视频/音频转换、剪辑、合并、提取、压缩、GIF制作等",
+      "source": "local",
+      "path": "./ffmpeg-media",
+      "skillFile": "SKILL.md",
+      "references": "references/",
+      "requiredMcp": ["shell", "filesystem"],
+      "tools": [
+        "ffmpeg-convert", "ffmpeg-extract-audio", "ffmpeg-cut", "ffmpeg-compress",
+        "ffmpeg-resize", "ffmpeg-concat", "ffmpeg-gif", "ffmpeg-watermark",
+        "ffmpeg-screenshot", "ffmpeg-audio-adjust", "ffprobe-info"
+      ]
+    },
+    {
+      "name": "sqlite-data",
+      "description": "SQLite 数据库操作工具，支持创建、查询、分析、导入导出数据",
+      "source": "local",
+      "path": "./sqlite-data",
+      "skillFile": "SKILL.md",
+      "references": "references/",
+      "requiredMcp": ["shell", "filesystem"],
+      "tools": [
+        "sqlite-query", "sqlite-create-table", "sqlite-import-csv", "sqlite-export-csv",
+        "sqlite-export-json", "sqlite-dump", "sqlite-restore", "sqlite-analyze"
+      ]
+    },
+    {
+      "name": "pandoc-docs",
+      "description": "万能文档转换工具，支持 Markdown、HTML、PDF、Word、EPUB、PPT 等格式互转",
+      "source": "local",
+      "path": "./pandoc-docs",
+      "skillFile": "SKILL.md",
+      "references": "references/",
+      "requiredMcp": ["shell", "filesystem"],
+      "tools": [
+        "pandoc-md-to-html", "pandoc-md-to-pdf", "pandoc-md-to-docx", "pandoc-md-to-epub",
+        "pandoc-md-to-pptx", "pandoc-html-to-md", "pandoc-docx-to-md", "pandoc-merge",
+        "pandoc-slides", "pandoc-ebook"
+      ]
     }
   ]
 }
