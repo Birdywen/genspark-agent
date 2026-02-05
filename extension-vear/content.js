@@ -27,7 +27,7 @@
     availableTools: [],
     availableSkills: [],
     skillsPrompt: "",
-    executedCalls: new Set(),
+    executedCalls: new Set(JSON.parse(localStorage.getItem('agent_executed_calls') || '[]')),
     pendingCalls: new Map(),
     lastMessageText: '',
     lastStableTime: 0,
@@ -47,6 +47,14 @@
     totalCalls: 0,
     sessionStart: Date.now()
   };
+
+  // 辅助函数：添加已执行命令并持久化
+  function addExecutedCall(hash) {
+    state.executedCalls.add(hash);
+    // 只保留最近 500 条记录，防止 localStorage 膨胀
+    const arr = Array.from(state.executedCalls).slice(-500);
+    localStorage.setItem('agent_executed_calls', JSON.stringify(arr));
+  }
 
   // 加载面板增强模块
   function loadPanelEnhancer() {
@@ -396,10 +404,49 @@ ${toolSummary}
 
 ---
 
+## 服务器重启 (Watchdog)
+
+当需要重启 genspark-agent 主服务器时（如更新了 config.json），使用独立的 watchdog 守护进程：
+
+\`\`\`bash
+curl http://localhost:8766/restart
+\`\`\`
+
+或者通过文件触发：
+\`\`\`bash
+touch /tmp/genspark-restart-trigger
+\`\`\`
+
+**注意**：有 5 秒冷却时间，防止频繁重启。
+
+---
+
+## 查看可用工具
+
+当不确定有哪些工具可用时，查看服务器日志：
+
+\`\`\`bash
+tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 'tools:|就绪'
+\`\`\`
+
+这会显示所有已加载的 MCP Server 及其工具列表。
+
+---
+
+## 输出格式规范
+
+**重要**：在输出工具调用代码块时，必须在文字说明和代码块之间留一个空行，否则可能导致命令不被识别执行。
+
+✅ 正确：说明文字后空一行，再写 Ω{...}ΩSTOP
+
+❌ 错误：说明文字和 Ω{...}ΩSTOP 紧挨着（可能不执行）
+
+---
+
 ## 其他标记
 
 - 重试：@RETRY:#ID
-- 协作：@SEND:agent:msg
+- 协作：ΩSEND:目标agent:消息内容ΩSENDEND
 `;
 
     if (state.skillsPrompt) {
@@ -611,7 +658,16 @@ ${toolSummary}
       addLog('⏳ 等待 AI 完成输出...', 'info');
       waitForGenerationComplete(() => sendMessage(text));
     } else {
-      setTimeout(() => sendMessage(text), 300);
+      // 增加延迟到 800ms，确保页面完全稳定后再发送
+      setTimeout(() => {
+        // 再次检查是否正在生成
+        if (isAIGenerating()) {
+          addLog('⏳ 检测到 AI 开始输出，等待完成...', 'info');
+          waitForGenerationComplete(() => sendMessage(text));
+        } else {
+          sendMessage(text);
+        }
+      }, 800);
     }
   }
 
@@ -886,7 +942,7 @@ ${toolSummary}
       
       // 检查前面100字符是否包含示例关键词
       const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|调用格式|工具调用|方案|实现方式|实现|改进|修改|建议|应该|可以这样|如何|怎么|对比|优点|缺点|区别|表格|列表/.test(beforeMarker);
+      const isExample = /格式[：:]|示例：|例如：|Example:|e.g./.test(beforeMarker);
       if (isExample) {
         searchStart = idx + marker.length;
         continue;
@@ -1127,7 +1183,7 @@ ${toolSummary}
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
-    state.executedCalls.add(callHash);
+    addExecutedCall(callHash);
     state.batchResults = [];  // 重置批量结果
     state.currentBatchId = batchId;
     state.currentBatchTotal = batch.steps.length;
@@ -1182,7 +1238,7 @@ ${toolSummary}
     });
     
     state.agentRunning = true;
-    state.executedCalls.add(callHash);
+    addExecutedCall(callHash);
     showExecutingIndicator(tool.name);
     updateStatus();
     
@@ -1301,7 +1357,7 @@ ${toolSummary}
       const retryId = parseInt(retryMatch[1]);
       const retryHash = `${index}:retry:${retryId}`;
       if (!state.executedCalls.has(retryHash)) {
-        state.executedCalls.add(retryHash);
+        addExecutedCall(retryHash);
         addLog(`🔄 重试命令 #${retryId}`, 'tool');
         executeRetry(retryId);
         return;
@@ -1313,7 +1369,7 @@ ${toolSummary}
     if (recMatch) {
       const recHash = `${index}:rec:${recMatch[0]}`;
       if (!state.executedCalls.has(recHash)) {
-        state.executedCalls.add(recHash);
+        addExecutedCall(recHash);
         const action = recMatch[1];
         const name = recMatch[2] || '';
         
@@ -1372,21 +1428,19 @@ ${toolSummary}
       }
     }
     
-    // 先检查跨 Tab 发送命令 @SEND:agent_id:message
+    // 先检查跨 Tab 发送命令 ΩSEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/@SEND:([\w_]+):([\s\S]+?)(?=@SEND:|Ω|@DONE|$)/);
+    const sendMatch = text.match(/ΩSEND:([\w_]+):([\s\S]+?)ΩSENDEND/);
     const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
-    if (sendMatch && !isExampleSend) {
+    const timeSinceStable = Date.now() - state.lastStableTime;
+    if (sendMatch && !isExampleSend && timeSinceStable >= 3000) {
       const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
       if (!state.executedCalls.has(sendHash)) {
-        state.executedCalls.add(sendHash);
+        addExecutedCall(sendHash);
         const toAgent = sendMatch[1];
         const message = sendMatch[2].trim();
         addLog(`📨 发送给 ${toAgent}...`, 'tool');
         sendToAgent(toAgent, message);
-        setTimeout(() => {
-          sendMessageSafe(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
-        }, 500);
         return;
       }
     }
@@ -1406,7 +1460,7 @@ ${toolSummary}
       if (tool.isBatch && tool.name === '__BATCH__') {
         executeBatchCall(tool.params, callHash);
       } else if (tool.isPlan && tool.name === '__PLAN__') {
-        state.executedCalls.add(callHash);
+        addExecutedCall(callHash);
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
           payload: { type: 'task_plan', params: tool.params, id: Date.now() }
@@ -1416,7 +1470,7 @@ ${toolSummary}
         });
         return;
       } else if (tool.isFlow && tool.name === '__FLOW__') {
-        state.executedCalls.add(callHash);
+        addExecutedCall(callHash);
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
           payload: { type: 'workflow_execute', params: tool.params, id: Date.now() }
@@ -1426,7 +1480,7 @@ ${toolSummary}
         });
         return;
       } else if (tool.isResume && tool.name === '__RESUME__') {
-        state.executedCalls.add(callHash);
+        addExecutedCall(callHash);
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
           payload: { type: 'task_resume', params: tool.params, id: Date.now() }
@@ -1444,7 +1498,7 @@ ${toolSummary}
     if (text.includes('@DONE') || text.includes('[[DONE]]')) {
       const doneHash = `done:${index}`;
       if (!state.executedCalls.has(doneHash)) {
-        state.executedCalls.add(doneHash);
+        addExecutedCall(doneHash);
         state.agentRunning = false;
         hideExecutingIndicator();
         state.pendingCalls.clear();
@@ -1959,9 +2013,16 @@ ${tip}
 
     switch (msg.type) {
       case 'WS_STATUS':
+        const wasConnected = state.wsConnected;
         state.wsConnected = msg.connected;
         updateStatus();
         addLog(msg.connected ? '✓ 服务器已连接' : '✗ 服务器断开', msg.connected ? 'success' : 'error');
+        // 自动通知 AI 服务器状态变化
+        if (!msg.connected && wasConnected) {
+          setTimeout(() => sendMessageSafe('[系统通知] 服务器重启中，请稍候...'), 500);
+        } else if (msg.connected && !wasConnected) {
+          setTimeout(() => sendMessageSafe('[系统通知] 服务器已重新连接，可以继续执行任务'), 1000);
+        }
         break;
 
       case 'connected':
@@ -2337,7 +2398,7 @@ ${tip}
           log('跳过重复的 tool_result:', msg.tool);
           break;
         }
-        state.executedCalls.add(resultHash);
+        addExecutedCall(resultHash);
         
         // 用 msg.id 精确匹配，而不是用 tool 名称
         if (msg.id && state.pendingCalls.has(msg.id)) {
@@ -2365,7 +2426,7 @@ ${tip}
           log('跳过重复发送');
           break;
         }
-        state.executedCalls.add(sendHash);
+        addExecutedCall(sendHash);
         setTimeout(() => {
           state.executedCalls.delete(sendHash);  // 5秒后允许再次发送
         }, 5000);
@@ -2390,18 +2451,51 @@ ${tip}
         
         addLog(`📩 收到来自 ${msg.from} 的消息`, 'success');
         
-        // 发送回执给发送方
-        chrome.runtime.sendMessage({
-          type: 'CROSS_TAB_SEND',
-          to: msg.from,
-          message: `✅ [回执] ${agentId || '对方'} 已收到消息，正在处理...`
-        });
+        // 发送回执给发送方（只发一次）
+        if (!state.crossTabBuffer) {
+          state.crossTabBuffer = {};
+        }
         
-        const crossTabMsg = `**[来自 ${msg.from} 的消息]**\n\n${msg.message}\n\n---\n请处理上述消息。完成后可以用 @SEND:${msg.from}:回复内容 来回复。`;
-        // 使用消息队列，避免多条消息同时到达时互相覆盖
-        setTimeout(() => {
-          enqueueMessage(crossTabMsg);
-        }, 500);
+        const fromAgent = msg.from;
+        
+        // 初始化该 agent 的缓冲区
+        if (!state.crossTabBuffer[fromAgent]) {
+          state.crossTabBuffer[fromAgent] = {
+            messages: [],
+            timer: null,
+            receiptSent: false
+          };
+        }
+        
+        const buffer = state.crossTabBuffer[fromAgent];
+        
+        // 只发送一次回执
+        if (!buffer.receiptSent) {
+          chrome.runtime.sendMessage({
+            type: 'CROSS_TAB_SEND',
+            to: fromAgent,
+            message: `✅ [回执] ${agentId || '对方'} 已收到消息，正在处理...`
+          });
+          buffer.receiptSent = true;
+        }
+        
+        // 累积消息
+        buffer.messages.push(msg.message);
+        
+        // 清除之前的定时器
+        if (buffer.timer) {
+          clearTimeout(buffer.timer);
+        }
+        
+        // 设置新定时器，等待 2 秒后合并发送（给足够时间让所有分段到达）
+        buffer.timer = setTimeout(() => {
+          const combinedMsg = buffer.messages.join('');
+          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容ΩSENDEND 来回复。`;
+          waitForGenerationComplete(() => enqueueMessage(crossTabMsg));
+          
+          // 清空缓冲区
+          delete state.crossTabBuffer[fromAgent];
+        }, 2000);
         break;
     }
 
@@ -2611,6 +2705,35 @@ ${tip}
     loadPanelEnhancer();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
+
+    // Notification polling from watchdog
+    let lastNotifyTime = null;
+    setInterval(async () => {
+      try {
+        const resp = await fetch("http://localhost:8766/notify");
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.message && data.timestamp !== lastNotifyTime) {
+            lastNotifyTime = data.timestamp;
+            sendMessageSafe("**[Watchdog]** " + data.message);
+          }
+        }
+      } catch (e) { }
+    }, 3000);
+    
+    // 自动检测并点击 "Regenerate response" 按钮
+    setInterval(() => {
+      const btn = document.querySelector('[data-v-374c52ef].button');
+      if (btn && btn.textContent && btn.textContent.includes('Regenerate')) {
+        console.log('[Agent] 检测到 Regenerate response 按钮，1秒后自动点击');
+        setTimeout(() => {
+          if (btn && document.contains(btn)) {
+            btn.click();
+            console.log('[Agent] 已点击 Regenerate response 按钮');
+          }
+        }, 1000);
+      }
+    }, 2000);
     
     // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
     let lastCheckedUserMsgCount = 0;

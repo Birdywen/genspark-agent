@@ -185,12 +185,12 @@ function connectWebSocket() {
           sendToTab(tabId, data);
           pendingCallsByTab.delete(data.id);
         } else {
-          // 找不到对应 Tab，回退到广播（兼容旧版本）
-          console.log('[BG] 未找到 Tab，广播结果');
-          broadcastToAllTabs(data);
+          // 找不到对应 Tab，不广播，只记录警告
+          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- 丢弃结果，不广播');
+          // 禁用广播，避免结果发到错误的 tab
         }
       } else {
-        // 其他消息广播给所有 Tab
+        // 其他消息（非 tool_result）广播给所有 Tab
         broadcastToAllTabs(data);
       }
     } catch(e) {
@@ -259,7 +259,7 @@ function sendToServer(message, tabId) {
       // 30秒后清理，防止内存泄漏
       setTimeout(() => {
         pendingCallsByTab.delete(message.id);
-      }, 30000);
+      }, 120000);  // 延长到120秒
     }
     
     socket.send(JSON.stringify(message));
@@ -290,14 +290,42 @@ function registerAgent(agentId, tabId) {
   console.log('[BG] 当前 Agents:', Array.from(agentTabs.entries()));
 }
 
+// Track last send time per agent to prevent spam
+const lastSendTimes = new Map();
+const SEND_COOLDOWN_MS = 10000; // 10 seconds
+
 // 发送跨 Tab 消息
 function sendCrossTabMessage(fromAgentId, toAgentId, message) {
-  const targetTabId = agentTabs.get(toAgentId);
+  // Check cooldown
+  const lastSend = lastSendTimes.get(fromAgentId) || 0;
+  const now = Date.now();
+  const timeSinceLastSend = now - lastSend;
+  
+  if (timeSinceLastSend < SEND_COOLDOWN_MS) {
+    const waitTime = Math.ceil((SEND_COOLDOWN_MS - timeSinceLastSend) / 1000);
+    console.log(`[BG] ${fromAgentId} 发送过于频繁，需等待 ${waitTime} 秒`);
+    return { 
+      success: false, 
+      error: `请等待 ${waitTime} 秒后再发送`,
+      cooldown: waitTime
+    };
+  }
+  
+  let targetTabId = agentTabs.get(toAgentId);
+  
+  // 支持 tab_xxx 格式直接路由到对应 tabId
+  if (!targetTabId && toAgentId.startsWith('tab_')) {
+    targetTabId = parseInt(toAgentId.replace('tab_', ''), 10);
+    console.log('[BG] 使用 tabId 直接路由:', targetTabId);
+  }
   
   if (!targetTabId) {
     console.log('[BG] 目标 Agent 未注册:', toAgentId);
     return { success: false, error: 'Agent not found: ' + toAgentId };
   }
+  
+  // Update last send time
+  lastSendTimes.set(fromAgentId, now);
   
   console.log('[BG] 跨 Tab 消息:', fromAgentId, '->', toAgentId, '(Tab:', targetTabId, ')');
   
@@ -567,7 +595,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     case 'CROSS_TAB_SEND':
       if (message.to && message.message) {
-        const fromAgent = tabAgents.get(sender.tab?.id) || 'unknown';
+        const fromAgent = tabAgents.get(sender.tab?.id) || 'tab_' + sender.tab.id;
         const result = sendCrossTabMessage(fromAgent, message.to, message.message);
         sendResponse(result);
       } else {
@@ -622,7 +650,7 @@ setInterval(() => {
       connectWebSocket();
     }
   }
-}, 30000);
+}, 120000);  // 延长到120秒
 
 // 清理关闭的 Tab
 chrome.tabs.onRemoved.addListener((tabId) => {

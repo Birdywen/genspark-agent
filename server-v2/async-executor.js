@@ -48,7 +48,7 @@ export default class AsyncExecutor {
     const { 
       forceAsync = false, 
       forceSync = false,
-      timeout = 30000,
+      timeout = 120000,
       onOutput = null 
     } = options;
 
@@ -64,7 +64,7 @@ export default class AsyncExecutor {
   /**
    * 同步执行（带超时）
    */
-  executeSync(command, timeout = 30000) {
+  executeSync(command, timeout = 120000) {
     return new Promise((resolve) => {
       const startTime = Date.now();
       
@@ -108,7 +108,7 @@ export default class AsyncExecutor {
    * 异步执行（后台运行 + 日志监控）
    */
   async executeAsync(command, options = {}) {
-    const { timeout = 60000, onOutput = null } = options;
+    const { timeout = 120000, onOutput = null } = options;
     const processId = `async-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const logFile = path.join(this.logDir, `${processId}.log`);
     const pidFile = path.join(this.logDir, `${processId}.pid`);

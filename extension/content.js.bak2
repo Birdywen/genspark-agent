@@ -423,13 +423,13 @@ touch /tmp/genspark-restart-trigger
 
 ## 查看可用工具
 
-执行以下命令查看所有 MCP Server 及其工具列表：
+当不确定有哪些工具可用时，查看服务器日志：
 
 \`\`\`bash
-node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
+tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 'tools:|就绪'
 \`\`\`
 
-该命令会实时查询服务器，按 MCP Server 分组显示所有可用工具。
+这会显示所有已加载的 MCP Server 及其工具列表。
 
 ---
 
@@ -446,7 +446,7 @@ node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
 ## 其他标记
 
 - 重试：@RETRY:#ID
-- 协作：ΩSEND:目标agent:消息内容ΩSENDEND
+- 协作：ΩSEND:agent:msg
 `;
 
     if (state.skillsPrompt) {
@@ -1430,7 +1430,7 @@ node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
     
     // 先检查跨 Tab 发送命令 ΩSEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/ΩSEND:([\w_]+):([\s\S]+?)ΩSENDEND/);
+    const sendMatch = text.match(/ΩSEND:([\w_]+):([\s\S]+?)(?=ΩSEND:|Ω{"tool"|@DONE|$)/);
     const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
     const timeSinceStable = Date.now() - state.lastStableTime;
     if (sendMatch && !isExampleSend && timeSinceStable >= 3000) {
@@ -1441,6 +1441,9 @@ node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
         const message = sendMatch[2].trim();
         addLog(`📨 发送给 ${toAgent}...`, 'tool');
         sendToAgent(toAgent, message);
+        setTimeout(() => {
+          sendMessageSafe(`**[跨Tab通信]** 已发送消息给 \`${toAgent}\`\n\n请继续其他任务，或等待对方回复。`);
+        }, 500);
         return;
       }
     }
@@ -2490,7 +2493,7 @@ ${tip}
         // 设置新定时器，等待 2 秒后合并发送（给足够时间让所有分段到达）
         buffer.timer = setTimeout(() => {
           const combinedMsg = buffer.messages.join('');
-          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容ΩSENDEND 来回复。`;
+          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容 来回复。`;
           waitForGenerationComplete(() => enqueueMessage(crossTabMsg));
           
           // 清空缓冲区
@@ -2789,67 +2792,4 @@ ${tip}
     setTimeout(init, 100);
   }
 
-})();
-
-// === Omega 手动执行快捷键 (Ctrl+Shift+E) ===
-(function() {
-  document.addEventListener('keydown', async function(e) {
-    // Ctrl+Shift+E 触发
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
-      e.preventDefault();
-      console.log('[Omega] 快捷键触发');
-      
-      // 获取最后一条 AI 消息
-      const msgs = document.querySelectorAll('.conversation-statement.assistant');
-      const lastMsg = msgs[msgs.length - 1];
-      if (!lastMsg) {
-        alert('No AI message found');
-        return;
-      }
-      
-      // 提取文本
-      const contentEl = lastMsg.querySelector('.markdown-viewer') || 
-                        lastMsg.querySelector('.bubble .content') ||
-                        lastMsg.querySelector('.bubble') || lastMsg;
-      const text = contentEl.innerText || lastMsg.innerText || '';
-      
-      // 匹配 Omega 命令
-      const match = text.match(/[ΩŒ©]\{[\s\S]*?\}[ΩŒ©]?STOP/);
-      if (!match) {
-        alert('No Omega command found in last message');
-        return;
-      }
-      
-      console.log('[Omega] Found command:', match[0].substring(0, 100) + '...');
-      
-      // 发送到本地服务器执行
-      try {
-        const resp = await fetch('http://localhost:7749/exec', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: match[0] })
-        });
-        const data = await resp.json();
-        
-        if (data.success) {
-          // 填入输入框
-          const input = document.querySelector('textarea.chat-input') || document.querySelector('textarea');
-          if (input) {
-            input.value = data.result;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
-            console.log('[Omega] Result pasted, press Enter to send');
-          } else {
-            navigator.clipboard.writeText(data.result);
-            alert('Result copied to clipboard!');
-          }
-        } else {
-          alert('Execution error: ' + data.error);
-        }
-      } catch (err) {
-        alert('Server error (is omega-server running?): ' + err.message);
-      }
-    }
-  });
-  console.log('[Omega] Hotkey Ctrl+Shift+E registered');
 })();

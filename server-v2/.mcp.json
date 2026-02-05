@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "forge_vscode": {
+      "url": "http://localhost:22271/mcp"
+    }
+  }
+}

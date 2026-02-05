@@ -1,4 +1,4 @@
-// Galaxy AI Agent Bridge - Background Service Worker v1 (基于 Genspark v5)
+// Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
 let socket = null;
 let reconnectTimer = null;
@@ -18,7 +18,13 @@ const processedResults = new Set();
 const agentTabs = new Map(); // agentId -> tabId
 const tabAgents = new Map(); // tabId -> agentId
 
-const WS_URL = 'ws://localhost:8765';
+// 服务器地址配置（可切换本地/云端）
+const SERVERS = {
+  local: 'ws://localhost:8765',
+  cloud: 'ws://157.151.227.157:8765'
+};
+let currentServer = 'local';  // 默认云端
+const WS_URL = SERVERS[currentServer];
 
 function connectWebSocket() {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -33,7 +39,7 @@ function connectWebSocket() {
   console.log('[BG] 连接 WebSocket...');
 
   try {
-    socket = new WebSocket(WS_URL);
+    socket = new WebSocket(SERVERS[currentServer]);
   } catch(e) {
     console.error('[BG] 创建失败:', e);
     scheduleReconnect();
@@ -83,30 +89,80 @@ function connectWebSocket() {
       
       if (data.type === 'pong') return;
       
-      // 跨扩展消息：转发给目标 agent 的 Tab
-      if (data.type === 'cross_extension_message') {
-        console.log('[BG] 收到跨扩展消息:', data.from, '->', data.to);
-        // 查找本地是否有这个 agent
-        const targetTabId = agentTabs.get(data.to);
-        if (targetTabId) {
-          sendToTab(targetTabId, {
-            type: 'CROSS_TAB_MESSAGE',
-            from: data.from,
-            message: data.message,
-            timestamp: data.timestamp,
-            via: 'server'
-          });
-          console.log('[BG] 跨扩展消息已转发到 Tab:', targetTabId);
-        } else {
-          console.log('[BG] 目标 agent 不在本扩展:', data.to);
-        }
+      // 工具列表更新：更新缓存并广播给所有 Tab
+      if (data.type === 'tools_updated') {
+        cachedTools = data.tools || [];
+        console.log('[BG] 工具列表已更新:', cachedTools.length);
+        broadcastToAllTabs({
+          type: 'tools_updated',
+          tools: cachedTools,
+          timestamp: data.timestamp
+        });
         return;
       }
       
-      // 在线 agent 列表（来自服务器）
-      if (data.type === 'online_agents') {
-        console.log('[BG] 服务器在线 agents:', data.agents);
-        // 广播给所有 Tab，让 UI 可以显示
+      // 批量任务结果
+      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {
+        console.log('[BG] 批量任务消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+
+      // 第三阶段: 任务规划、工作流、断点续传结果
+      if (data.type === 'plan_result' || data.type === 'plan_error') {
+        console.log('[BG] 任务规划消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'workflow_complete' || data.type === 'workflow_step' || data.type === 'workflow_error') {
+        console.log('[BG] 工作流消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'resume_started' || data.type === 'resume_step' || data.type === 'resume_complete' || data.type === 'resume_error') {
+        console.log('[BG] 断点续传消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      if (data.type === 'checkpoint_result' || data.type === 'checkpoint_error' || data.type === 'templates_list') {
+        console.log('[BG] 检查点/模板消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
+      // 任务恢复结果
+      if (data.type === 'resume_complete' || data.type === 'resume_error' || data.type === 'task_status_result') {
+        console.log('[BG] 任务状态消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
+      // 目标驱动执行结果
+      if (data.type === 'goal_created' || data.type === 'goal_progress' || 
+          data.type === 'goal_complete' || data.type === 'goal_status_result' ||
+          data.type === 'goals_list' || data.type === 'validated_result') {
+        console.log('[BG] 目标执行消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+
+      // 异步执行消息
+      if (data.type === 'async_result' || data.type === 'async_output' ||
+          data.type === 'async_status_result' || data.type === 'async_stop_result' ||
+          data.type === 'async_log_result') {
+        console.log('[BG] 异步执行消息:', data.type);
+        broadcastToAllTabs(data);
+        return;
+      }
+      
+      // reload_tools 结果
+      if (data.type === 'reload_tools_result') {
+        if (data.success) {
+          cachedTools = data.tools || [];
+          console.log('[BG] reload_tools 成功:', cachedTools.length);
+        } else {
+          console.error('[BG] reload_tools 失败:', data.error);
+        }
         broadcastToAllTabs(data);
         return;
       }
@@ -180,10 +236,10 @@ function sendToTab(tabId, message) {
   });
 }
 
-// 广播给所有 Galaxy Tab
+// 广播给所有 Genspark Tab
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
-  chrome.tabs.query({ url: ['https://www.hixx.ai/*', 'https://hixx.ai/*'] }, (tabs) => {
+  chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
     tabs.forEach((tab) => {
       chrome.tabs.sendMessage(tab.id, message).catch((e) => {
@@ -234,14 +290,36 @@ function registerAgent(agentId, tabId) {
   console.log('[BG] 当前 Agents:', Array.from(agentTabs.entries()));
 }
 
+// Track last send time per agent to prevent spam
+const lastSendTimes = new Map();
+const SEND_COOLDOWN_MS = 10000; // 10 seconds
+
 // 发送跨 Tab 消息
 function sendCrossTabMessage(fromAgentId, toAgentId, message) {
+  // Check cooldown
+  const lastSend = lastSendTimes.get(fromAgentId) || 0;
+  const now = Date.now();
+  const timeSinceLastSend = now - lastSend;
+  
+  if (timeSinceLastSend < SEND_COOLDOWN_MS) {
+    const waitTime = Math.ceil((SEND_COOLDOWN_MS - timeSinceLastSend) / 1000);
+    console.log(`[BG] ${fromAgentId} 发送过于频繁，需等待 ${waitTime} 秒`);
+    return { 
+      success: false, 
+      error: `请等待 ${waitTime} 秒后再发送`,
+      cooldown: waitTime
+    };
+  }
+  
   const targetTabId = agentTabs.get(toAgentId);
   
   if (!targetTabId) {
     console.log('[BG] 目标 Agent 未注册:', toAgentId);
     return { success: false, error: 'Agent not found: ' + toAgentId };
   }
+  
+  // Update last send time
+  lastSendTimes.set(fromAgentId, now);
   
   console.log('[BG] 跨 Tab 消息:', fromAgentId, '->', toAgentId, '(Tab:', targetTabId, ')');
   
@@ -309,20 +387,200 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
     
+    case 'CHECK_CONNECTION':
+      sendResponse({
+        connected: socket && socket.readyState === WebSocket.OPEN,
+        readyState: socket?.readyState,
+        readyStateText: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][socket?.readyState || 3],
+        reconnectAttempts: reconnectAttempts,
+        serverUrl: SERVERS[currentServer]
+      });
+      break;
+    
+    case 'RELOAD_TOOLS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'reload_tools' }));
+        console.log('[BG] 发送 reload_tools 请求');
+        sendResponse({ success: true, message: '已发送刷新请求' });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'RESTART_SERVER':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'restart_server' }));
+        console.log('[BG] 发送服务器重启请求');
+        sendResponse({ success: true, message: '服务器将在2秒后重启' });
+        
+        // 预期连接会断开，清理状态
+        reconnectAttempts = 0;
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'RESUME_TASK':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'resume_task', taskId: message.taskId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'TASK_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'task_status', taskId: message.taskId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    // ===== 录制相关 =====
+    case 'START_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'start_recording',
+          recordingId: message.recordingId,
+          name: message.name
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'STOP_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'stop_recording', recordingId: message.recordingId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'LIST_RECORDINGS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'list_recordings' }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'REPLAY_RECORDING':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'replay_recording', recordingId: message.recordingId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    // ===== 目标驱动执行 =====
+    case 'CREATE_GOAL':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'create_goal', 
+          goalId: message.goalId,
+          definition: message.definition 
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'EXECUTE_GOAL':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'execute_goal', goalId: message.goalId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'GOAL_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'goal_status', goalId: message.goalId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'LIST_GOALS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'list_goals' }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
+    case 'VALIDATED_EXECUTE':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'validated_execute', 
+          tool: message.tool,
+          params: message.params,
+          options: message.options
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    // ===== 异步命令执行 =====
+    case 'ASYNC_EXECUTE':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'async_execute', 
+          command: message.command,
+          forceAsync: message.forceAsync,
+          timeout: message.timeout
+        }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_STATUS':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_status', processId: message.processId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_STOP':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_stop', processId: message.processId }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+
+    case 'ASYNC_LOG':
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'async_log', processId: message.processId, tail: message.tail }));
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: '未连接到服务器' });
+      }
+      break;
+    
     // ===== 跨 Tab 通信 =====
     
     case 'REGISTER_AGENT':
       if (message.agentId && sender.tab?.id) {
-        // 本地注册
         registerAgent(message.agentId, sender.tab.id);
-        // 同时向服务器注册（支持跨扩展）
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({
-            type: 'register_agent',
-            agentId: message.agentId,
-            site: 'hixx.ai'
-          }));
-        }
         sendResponse({ success: true, tabId: sender.tab.id });
       } else {
         sendResponse({ success: false, error: 'Missing agentId or tabId' });
@@ -332,36 +590,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'CROSS_TAB_SEND':
       if (message.to && message.message) {
         const fromAgent = tabAgents.get(sender.tab?.id) || 'unknown';
-        // 优先通过服务器发送（支持跨扩展）
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({
-            type: 'cross_extension_send',
-            from: fromAgent,
-            to: message.to,
-            message: message.message
-          }));
-          console.log('[BG] 跨扩展消息已发送到服务器:', fromAgent, '->', message.to);
-          sendResponse({ success: true, via: 'server' });
-        } else {
-          // 服务器不可用，尝试本地发送（同扩展内）
-          const localResult = sendCrossTabMessage(fromAgent, message.to, message.message);
-          if (localResult.success) {
-            sendResponse(localResult);
-          } else {
-            sendResponse({ success: false, error: `Agent "${message.to}" 不在线且服务器未连接` });
-          }
-        }
+        const result = sendCrossTabMessage(fromAgent, message.to, message.message);
+        sendResponse(result);
       } else {
         sendResponse({ success: false, error: 'Missing to or message' });
       }
       break;
     
-    case 'GET_REGISTERED_AGENTS':
-      // 请求服务器的在线 agent 列表
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'list_online_agents' }));
+    case 'SWITCH_SERVER':
+      const target = message.server || 'local';
+      if (SERVERS[target]) {
+        currentServer = target;
+        console.log('[Agent] 切换服务器:', target, SERVERS[target]);
+        if (socket) socket.close();
+        setTimeout(connect, 500);
+        sendResponse({ success: true, server: target, url: SERVERS[target] });
+      } else {
+        sendResponse({ success: false, error: 'Unknown server: ' + target });
       }
-      // 同时返回本地列表
+      break;
+
+    case 'GET_SERVER_INFO':
+      sendResponse({ current: currentServer, servers: SERVERS });
+      break;
+
+    case 'GET_REGISTERED_AGENTS':
       sendResponse({ success: true, agents: getRegisteredAgents() });
       break;
     

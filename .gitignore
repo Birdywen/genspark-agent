@@ -28,3 +28,13 @@ test/
 server-v2/command-history.json
 ssh-key-*.key
 oracle-cloud.key
+
+# Sensitive files
+server-v2/config.json
+server-v2/history-archives/
+server-v2/config-fast.json
+server-v2/config-full.json
+server-v2/main_pid.txt
+server-v2/watchdog_pid.txt
+server-v2/*.db
+server-v2/--help

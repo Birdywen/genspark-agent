@@ -1,0 +1,269 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f7fa; min-height: 100vh; }
+.container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; }
+header h1 { font-size: 24px; }
+.header-actions { display: flex; align-items: center; gap: 15px; }
+.status-badge { padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+.status-badge.online { background: #28a745; }
+.status-badge.offline { background: #dc3545; }
+
+.tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 12px 20px; border: none; background: white; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; transition: all 0.2s; }
+.tab:hover { background: #f0f0f0; }
+.tab.active { background: white; color: #667eea; box-shadow: 0 -2px 0 #667eea inset; }
+.tab .badge { background: #667eea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 5px; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+.card h2 { font-size: 18px; margin-bottom: 15px; color: #333; }
+.card .info { font-size: 13px; color: #666; margin-bottom: 15px; }
+
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #555; }
+.form-row { display: flex; gap: 15px; }
+.form-row > * { flex: 1; }
+
+input[type="text"], input[type="password"], input[type="date"], input[type="time"], input[type="number"] {
+  width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: border-color 0.2s;
+}
+input:focus { outline: none; border-color: #667eea; }
+
+.btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.btn-success { background: #28a745; color: white; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+.btn-small { padding: 8px 16px; font-size: 12px; }
+.button-group { display: flex; gap: 10px; margin-top: 15px; }
+
+.slot-list, .task-list, .logs-list { max-height: 400px; overflow-y: auto; }
+.slot-item, .task-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; }
+.slot-item:hover, .task-item:hover { background: #e9ecef; }
+.slot-item input[type="checkbox"] { margin-right: 12px; }
+.slot-info, .task-info { flex: 1; }
+.slot-time, .task-info strong { font-weight: 600; color: #333; }
+.slot-title { font-size: 13px; color: #666; }
+
+.filters { display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+.filters label { display: flex; align-items: center; gap: 5px; font-size: 14px; cursor: pointer; }
+.filters input[type="text"] { width: 250px; padding: 8px 12px; }
+
+.polling-status { padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px; }
+.polling-status.active { background: #d4edda; border: 2px solid #28a745; }
+.status-indicator { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.pulse { width: 12px; height: 12px; background: #dc3545; border-radius: 50%; }
+.pulse.active { background: #28a745; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } }
+.status-stats { display: flex; gap: 20px; font-size: 14px; }
+.status-stats div { color: #555; }
+
+.log-item { display: flex; gap: 10px; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid #eee; font-family: monospace; }
+.log-time { color: #999; min-width: 80px; }
+.log-level { font-weight: 600; min-width: 60px; }
+.log-item.info .log-level { color: #17a2b8; }
+.log-item.success .log-level { color: #28a745; }
+.log-item.warn .log-level { color: #ffc107; }
+.log-item.error .log-level { color: #dc3545; }
+.log-message { flex: 1; color: #333; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: #999; }
+.action-buttons { display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+
+#messageArea { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+.message { padding: 15px 20px; border-radius: 8px; margin-top: 10px; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.message.success { background: #28a745; color: white; }
+.message.error { background: #dc3545; color: white; }
+.message.info { background: #667eea; color: white; }
+@keyframes slideIn { from { transform: translateX(100%); opacity:  0; } to { transform: translateX(0); opacity: 1; } }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+
+/* Mode Selector */
+.mode-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+}
+
+.mode-header {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #495057;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  background: white;
+  color: #666;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.mode-btn.active {
+  border-color: #28a745;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+}
+
+.mode-description {
+  background: white;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.mode-description strong {
+  color: #333;
+}
+
+/* Time Range Filter (新增) */
+.time-range-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.time-range-filter input[type="time"] {
+  width: 110px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.time-range-filter span {
+  color: #666;
+}
+
+/* Slot Duration & Color (新增) */
+.slot-item {
+  border-left: 4px solid #ccc;
+}
+
+.slot-duration {
+  font-size: 11px;
+  color: #888;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+/* Mode selector for slots (新增) */
+.slot-mode-select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-right: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.slot-mode-select:focus {
+  border-color: #667eea;
+  outline: none;
+}
+
+/* Task mode badge (新增) */
+.task-mode-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.task-mode-badge.book {
+  background: #d4edda;
+  color: #155724;
+}
+
+.task-mode-badge.waitlist {
+  background: #fff3cd;
+  color: #856404;
+}
+
+/* My Bookings (新增) */
+.booking-section {
+  margin-bottom: 20px;
+}
+
+.booking-section h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #eee;
+}
+
+.booking-section h3.appointments {
+  color: #28a745;
+}
+
+.booking-section h3.waitlists {
+  color: #ffc107;
+}
+
+.booking-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 4px solid #28a745;
+}
+
+.booking-item.waitlist {
+  border-left-color: #ffc107;
+}
+
+.booking-item input[type="checkbox"] {
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.booking-info {
+  flex: 1;
+}
+
+.booking-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.booking-datetime {
+  font-size: 13px;
+  color: #666;
+}
+
+.booking-position {
+  font-size: 12px;
+  color: #856404;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.booking-item:hover {
+  background: #e9ecef;
+}

@@ -201,7 +201,7 @@ ${toolSummary}
 ## 其他标记
 
 - 重试：@RETRY:#ID
-- 协作：@SEND:agent:msg
+- 协作：ΩSEND:目标agent:消息内容ΩSENDEND
 `;
 
 if (state.skillsPrompt) {

@@ -95,7 +95,7 @@
 ### 跨 Tab 通信
 
 ```
-@SEND:agent_id:消息内容
+ΩSEND:agent_id:消息内容
 ```
 
 ### 任务队列（持久化）
@@ -318,7 +318,7 @@ cat > /private/tmp/content.txt << 'EOF'
 ### 消息流转路径
 
 ```
-发送方 @SEND:target:msg
+发送方 ΩSEND:target:msg
   ↓
 content.js sendToAgent()
   ↓
