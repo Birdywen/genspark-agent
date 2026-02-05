@@ -34,6 +34,44 @@
       "command": "/Users/yay/.local/bin/mcp-server-tree-sitter",
       "args": []
     },
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sqlite"
+      ]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@kazuph/mcp-fetch"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
     "ssh-oracle": {
       "command": "npx",
       "args": [
@@ -60,6 +98,13 @@
         "--key=/Users/yay/.ssh/cpanel_ezmusic",
         "--timeout=60000",
         "--maxChars=none"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
       ]
     }
   },
@@ -266,7 +311,16 @@
       "iostat",
       "netstat",
       "vmstat",
-      "iotop"
+      "iotop",
+      "afplay",
+      "ffplay",
+      "say",
+      "musicxml2ly",
+      "abc2ly",
+      "abc2midi",
+      "xml2abc",
+      "lilypond",
+      "ssh"
     ],
     "dangerousOperations": [
       "write_file",

@@ -8,10 +8,12 @@
 import { createServer } from 'http';
 import { spawn, exec } from 'child_process';
 import { existsSync, unlinkSync, writeFileSync, readFileSync } from 'fs';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
+import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const PORT = 8766;
 const TRIGGER_FILE = '/tmp/genspark-restart-trigger';
 const NOTIFY_FILE = '/tmp/genspark-agent-notify.json';
@@ -23,6 +25,17 @@ let mainPid = null;
 
 function log(msg) {
   console.log(`[${new Date().toISOString()}] [watchdog] ${msg}`);
+}
+
+// 加载敏感环境变量
+const secretsPath = join(homedir(), '.agent_secrets');
+if (existsSync(secretsPath)) {
+  const secrets = readFileSync(secretsPath, 'utf8');
+  secrets.split('\n').forEach(line => {
+    const match = line.match(/^([^=]+)=(.*)$/);
+    if (match) process.env[match[1]] = match[2];
+  });
+  log('Loaded secrets from ~/.agent_secrets');
 }
 
 function notify(message, type = 'info') {
@@ -60,7 +73,8 @@ async function restartMainServer(reason = 'manual') {
     const child = spawn('node', ['index.js'], {
       cwd: __dirname,
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env }
     });
     
     mainPid = child.pid;

@@ -4,6 +4,14 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 加载敏感环境变量（如果存在）
+if [ -f ~/.agent_secrets ]; then
+  echo "Loading secrets from ~/.agent_secrets"
+  set -a
+  source ~/.agent_secrets
+  set +a
+fi
+
 echo "=== Genspark Agent Startup ==="
 echo "Directory: $SCRIPT_DIR"
 
