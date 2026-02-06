@@ -43,6 +43,8 @@
     batchResults: [],
     currentBatchId: null,
     currentBatchTotal: 0,
+    // 输出结束确认
+    generatingFalseCount: 0,
     // 统计
     totalCalls: 0,
     sessionStart: Date.now()
@@ -152,7 +154,7 @@ function log(...args) {
   // ============== 系统提示词模板 ==============
   
   function generateSystemPrompt() {
-    const toolCount = state.availableTools.length || 67;
+    const toolCount = state.availableTools.length || 131;
     const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：
 - **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
@@ -167,7 +169,7 @@ function log(...args) {
 
 ## 工具调用格式
 
-所有工具调用必须用代码块包裹。
+所有工具调用必须用代码块包裹。文字说明和代码块之间必须留一个空行。
 
 ### 单个工具
 
@@ -175,278 +177,109 @@ function log(...args) {
 Ω{"tool":"工具名","params":{"参数":"值"}}ΩSTOP
 \`\`\`
 
-示例：
-\`\`\`
-Ω{"tool":"read_file","params":{"path":"/path/to/file.txt"}}ΩSTOP
-\`\`\`
-
-### 批量执行 + 变量传递 ⭐ v1.0.52+
+### 批量执行 (ΩBATCH) v1.0.52+
 
 \`\`\`
 ΩBATCH{"steps":[
-  {"tool":"工具1","params":{...}},
-  {"tool":"工具2","params":{...}}
-]}ΩEND
-\`\`\`
-
-**关键特性**：
-
-1. **变量保存** (saveAs)：保存步骤结果
-   \`\`\`json
-   {"tool":"run_command","params":{"command":"date"},"saveAs":"myVar"}
-   \`\`\`
-
-2. **条件执行** (when)：根据前置结果决定是否执行
-   
-   语法：\`{"var":"变量名","条件":"值"}\` (注意使用 var 不是 variable)
-   
-   支持的条件：
-   - \`success\`: 检查是否成功 \`{"var":"step1","success":true}\`
-   - \`contains\`: 包含字符串 \`{"var":"step1","contains":"OK"}\`
-   - \`regex\`: 正则匹配 \`{"var":"step1","regex":"v[0-9]+"}\`
-
-3. **错误处理** (stopOnError)：
-   - \`false\`: 遇错继续执行
-   - \`true\` (默认): 遇错立即停止
-
-**完整示例**：
-\`\`\`
-ΩBATCH{"steps":[
-  {"tool":"run_command","params":{"command":"node -v"},"saveAs":"nodeVer"},
-  {"tool":"run_command","params":{"command":"npm -v"},"saveAs":"npmVer"},
-  {"tool":"run_command","params":{"command":"echo 'Node installed'"},
-   "when":{"var":"nodeVer","success":true}}
+  {"tool":"工具1","params":{...},"saveAs":"变量名"},
+  {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}}
 ],"stopOnError":false}ΩEND
 \`\`\`
 
-**适用场景**：读取多文件、环境检查、批量命令执行
+when 条件: success / contains / regex（注意用 var 不是 variable）
 
-### 智能规划 (ΩPLAN)
+### 高级调度
 
-\`\`\`
-ΩPLAN{"goal":"目标描述","context":{...}}
-\`\`\`
-
-自动分解任务、分析依赖、并行优化。内置模式：文件复制、部署、数据库备份等。
-
-### 工作流模板 (ΩFLOW)
-
-\`\`\`
-ΩFLOW{"template":"模板名","variables":{...}}
-\`\`\`
-
-内置模板：deploy-nodejs, backup-mysql, batch-process, health-check, log-analysis, git-workflow
-
-### 断点续传 (ΩRESUME)
-
-\`\`\`
-ΩRESUME{"taskId":"任务ID"}
-\`\`\`
-
-恢复中断的任务，从上次失败的步骤继续执行。
-
----
-
-## 可用工具
-
-${toolSummary}
+- ΩPLAN{"goal":"...","context":{...}} — 智能规划
+- ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
+- ΩRESUME{"taskId":"任务ID"} — 断点续传
 
 ---
 
 ## 核心规则
 
-1. **代码块包裹**：所有工具调用必须在代码块中
-2. **等待结果**：单个工具调用后等待结果再继续
-3. **批量执行**：多个独立操作用 ΩBATCH 批量执行
-4. **不编造结果**：永远不要假设或编造执行结果
-5. **转义引号**：JSON 中的引号使用 \\\"
-6. **完成标记**：任务完成后输出 @DONE
-7. **里程碑记录**：重要工作完成后记录里程碑
+1. 代码块包裹所有工具调用，等待结果再继续
+2. 多个独立操作用 ΩBATCH 批量执行
+3. 永远不要假设或编造执行结果
+4. 任务完成输出 @DONE
+5. JSON 中的引号使用 \\"
 
 ---
 
-## 新对话上下文恢复
+## 实战指南
 
-每次新对话涉及以下项目时，先恢复上下文：
-- genspark-agent (本地代理系统)
-- ezmusicstore (音乐商店)
-- oracle-cloud (云服务)
+### 命令转义（避免转义地狱）
 
-**执行方法**：询问项目后执行
+- 简单命令 → 直接写 command
+- 有引号/特殊字符 → 用 stdin: {"command":"python3","stdin":"print(123)"}
+- 多行脚本 → 用 stdin: {"command":"bash","stdin":"脚本内容"}
+- 超长脚本 → write_file 到 /private/tmp/ 再执行
+
+### 代码修改
+
+- 1-20 行小修改 → edit_file
+- 20+ 行或结构性修改 → write_file
+- 不确定 → 先 read_file 查看再决定
+- 修改后必须验证语法: JS 用 node -c，Python 用 python3 -m py_compile
+
+### 批量执行黄金法则
+
+适合批量: 查询操作、API调用、环境检查、简单命令
+不适合批量: write_file长内容(>50行)、edit_file复杂修改、巨大输出
+推荐模式: 批量收集信息 → 单独执行关键操作 → 批量验证结果
+
+### 长内容处理
+
+超过50行或含大量特殊字符时，用 run_command + stdin (python3/bash) 写入。
+
+---
+
+## 工作流程
+
+### 新对话上下文恢复
+
+涉及以下项目时先恢复上下文（直接写项目名，不用尖括号）:
+- genspark-agent / ezmusicstore / oracle-cloud
+
 \`\`\`
 Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}ΩSTOP
 \`\`\`
 
-示例（直接写项目名，不要用尖括号）：
-\`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest genspark-agent"}}ΩSTOP
-\`\`\`
+### TODO 机制
+
+必须创建: 用户列出多项任务、跨会话长期任务、复杂开发任务
+不需要: 探索性工作、即时操作、自然延伸
+位置: /Users/yay/workspace/TODO.md
+
+### 错误处理
+
+不编造结果，错误后先分析原因再重试，最多2次。
+工具未找到→检查拼写 | 权限拒绝→检查路径 | 文件不存在→list_directory确认
 
 ---
 
-## TODO 机制
+## 环境
 
-**必须创建 TODO** 的情况：
-1. 用户明确列出多项任务清单
-2. 跨会话的长期任务（需分多次完成）
-3. 复杂开发任务（新功能、重构、多文件修复）
+### 可用工具
 
-**不需要 TODO** 的情况：
-1. 探索性工作（调试、测试、学习）
-2. 即时操作（查询、读文件、单次命令）
-3. 对话中的自然延伸（基于上步结果的下一步）
+${toolSummary}
 
-**TODO 文件位置**：/Users/yay/workspace/TODO.md
+### 系统
 
----
+- macOS arm64 (Apple Silicon)
+- 可用: pandoc, ffmpeg, ImageMagick, jq, sqlite3, git, python3, node/npm, rg, fd, curl, wget
+- 允许目录: /Users/yay/workspace, /Users/yay/Documents, /tmp
 
-## 代码修改选择
+### 远程与运维
 
-**使用 edit_file**：
-- 1-20 行修改，位置明确
-- 修改配置值、单个函数
-- 更新 import、调整参数
+- SSH 禁止 run_command+ssh，使用 ssh-oracle:exec / ssh-cpanel:exec
+- 服务器重启: curl http://localhost:8766/restart 或 touch /tmp/genspark-restart-trigger
+- 查看所有工具: node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
 
-**使用 write_file**：
-- 20 行以上或结构性修改
-- 重构代码、批量修改
-- 创建新文件、模板生成
+### 其他标记
 
-**不确定时**：先 read_file 查看，再决定
-
----
-
-## 避免命令转义问题 ⭐
-
-**关键规则：使用 stdin 参数避免转义地狱**
-
-1. **简单命令** → 直接写 command
-   - 示例：{"command":"echo hello"}
-
-2. **有特殊字符/引号** → 使用 stdin ⚠️
-   - 示例：{"command":"python3","stdin":"print('{\"key\":\"value\"}')"}
-   - 优点：无需转义引号、支持复杂JSON、可读性好
-
-3. **多行脚本** → 使用 stdin ⚠️
-   - 示例：{"command":"bash","stdin":"#!/bin/bash\nfor i in 1 2 3; do\n  echo $i\ndone"}
-   - 优点：保持脚本结构、易于维护
-
-4. **超长/复杂脚本** → write_file + 执行
-   - 步骤1：write_file 到 /private/tmp/script.sh
-   - 步骤2：run_command bash /private/tmp/script.sh
-   - 步骤3：清理临时文件
-   - 注意：必须用 /private/tmp，不能用 /tmp
-
-**为什么重要：**
-- 避免多层转义（\" 和 \'）
-- 提高代码可读性
-- 减少语法错误
-- 支持任意复杂命令
-
-## 代码修改后必须验证语法 ⚠️
-
-**关键规则**：每次修改代码文件后，必须立即验证语法！
-
-**验证方法**：
-- JavaScript: node -c file.js
-- Python: python3 -m py_compile file.py
-
-**正确流程**：
-1. 修改代码（sed/python/edit_file/write_file）
-2. 立即验证语法
-3. 语法正确后再同步到其他 extension
-4. 最后提交 git
-
-**为什么重要**：
-- 避免破坏所有版本
-- 立即发现语法错误
-- 减少回退操作
-
----
-
-## 长内容处理
-
-当内容超过 50 行或包含大量特殊字符时，使用 heredoc 方式写入文件。
-
----
-
-## 错误处理
-
-**基本原则**：
-1. 永远不编造结果
-2. 错误后先分析原因再重试
-3. 最多重试 2 次，失败后向用户说明
-
-**常见错误应对**：
-- 工具未找到 → 检查拼写和工具列表
-- 参数错误 → 查看工具文档，补充参数
-- 权限拒绝 → 检查路径是否在允许目录、命令是否在白名单
-- 文件不存在 → 使用 list_directory 确认路径
-- 命令失败 → 检查 stderr，验证语法和依赖
-
----
-
-## SSH 远程
-
-禁止 run_command+ssh，使用专用工具：
-- ssh-oracle:exec (Oracle Cloud)
-- ssh-cpanel:exec (cPanel)
-
----
-
-## 本地环境
-
-- **系统**: macOS (arm64 Apple Silicon)
-- **工具**: pandoc, ffmpeg, ImageMagick, jq, sqlite3, git, python3, node/npm, rg, fd
-- **允许目录**: /Users/yay/workspace, /Users/yay/Documents, /tmp
-
-通过 run_command 调用以上工具。
-
----
-
-## 服务器重启 (Watchdog)
-
-当需要重启 genspark-agent 主服务器时（如更新了 config.json），使用独立的 watchdog 守护进程：
-
-\`\`\`bash
-curl http://localhost:8766/restart
-\`\`\`
-
-或者通过文件触发：
-\`\`\`bash
-touch /tmp/genspark-restart-trigger
-\`\`\`
-
-**注意**：有 5 秒冷却时间，防止频繁重启。
-
----
-
-## 查看可用工具
-
-当不确定有哪些工具可用时，查看服务器日志：
-
-\`\`\`bash
-tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 'tools:|就绪'
-\`\`\`
-
-这会显示所有已加载的 MCP Server 及其工具列表。
-
----
-
-## 输出格式规范
-
-**重要**：在输出工具调用代码块时，必须在文字说明和代码块之间留一个空行，否则可能导致命令不被识别执行。
-
-✅ 正确：说明文字后空一行，再写 Ω{...}ΩSTOP
-
-❌ 错误：说明文字和 Ω{...}ΩSTOP 紧挨着（可能不执行）
-
----
-
-## 其他标记
-
-- 重试：@RETRY:#ID
-- 协作：ΩSEND:目标agent:消息内容ΩSENDEND
+- 重试: @RETRY:#ID
+- 协作: ΩSEND:目标agent:消息内容ΩSENDEND
 `;
 
     if (state.skillsPrompt) {
@@ -454,6 +287,7 @@ tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 
     }
     return prompt;
   }
+
 
 
 
@@ -1306,9 +1140,16 @@ tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 
     // console.log("[Agent] scanning...");
     if (state.agentRunning) return;
     
-    // 如果 AI 正在生成中，跳过扫描
+    // 如果 AI 正在生成中，重置确认计数器并跳过
     if (isAIGenerating()) {
+      state.generatingFalseCount = 0;
       log('AI 正在生成中，跳过扫描');
+      return;
+    }
+    
+    // 要求连续 3 次 (约600ms) isAIGenerating()=false 才确认输出结束
+    state.generatingFalseCount++;
+    if (state.generatingFalseCount < 3) {
       return;
     }
     
@@ -1316,10 +1157,13 @@ tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 
     
     if (index < 0 || !text) return;
     
-    // 检测到新消息，启动工具调用检测
+    // 检测到新消息，重置所有计时器
     if (state.lastMessageText !== text) {
       state.lastMessageText = text;
+      state.lastStableTime = Date.now();
+      state.generatingFalseCount = 0;
       startToolCallDetection();
+      return;
     }
     
     // Removed: result check (conflicts with code containing these chars)
@@ -1332,20 +1176,17 @@ tail -100 /Users/yay/workspace/genspark-agent/server-v2/logs/main.log | grep -E 
       return;
     }
     
-    if (state.lastMessageText !== text) {
-      state.lastMessageText = text;
-      state.lastStableTime = Date.now();
+    // 文本稳定窗口: 1000ms 无变化
+    if (Date.now() - state.lastStableTime < 1000) {
       return;
     }
     
-    if (Date.now() - state.lastStableTime < 800) {
-      return;
-    }
-    
+    // 最终快照确认: 再取一次文本，确保真的没变
     const { text: textNow } = getLatestAIMessage();
     if (textNow !== text) {
       state.lastMessageText = textNow;
       state.lastStableTime = Date.now();
+      state.generatingFalseCount = 0;
       return;
     }
     
@@ -2789,4 +2630,67 @@ ${tip}
     setTimeout(init, 100);
   }
 
+})();
+
+// === Omega 手动执行快捷键 (Ctrl+Shift+E) ===
+(function() {
+  document.addEventListener('keydown', async function(e) {
+    // Ctrl+Shift+E 触发
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
+      console.log('[Omega] 快捷键触发');
+      
+      // 获取最后一条 AI 消息
+      const msgs = document.querySelectorAll('.conversation-statement.assistant');
+      const lastMsg = msgs[msgs.length - 1];
+      if (!lastMsg) {
+        alert('No AI message found');
+        return;
+      }
+      
+      // 提取文本
+      const contentEl = lastMsg.querySelector('.markdown-viewer') || 
+                        lastMsg.querySelector('.bubble .content') ||
+                        lastMsg.querySelector('.bubble') || lastMsg;
+      const text = contentEl.innerText || lastMsg.innerText || '';
+      
+      // 匹配 Omega 命令
+      const match = text.match(/[ΩŒ©]\{[\s\S]*?\}[ΩŒ©]?STOP/);
+      if (!match) {
+        alert('No Omega command found in last message');
+        return;
+      }
+      
+      console.log('[Omega] Found command:', match[0].substring(0, 100) + '...');
+      
+      // 发送到本地服务器执行
+      try {
+        const resp = await fetch('http://localhost:7749/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: match[0] })
+        });
+        const data = await resp.json();
+        
+        if (data.success) {
+          // 填入输入框
+          const input = document.querySelector('textarea.chat-input') || document.querySelector('textarea');
+          if (input) {
+            input.value = data.result;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+            console.log('[Omega] Result pasted, press Enter to send');
+          } else {
+            navigator.clipboard.writeText(data.result);
+            alert('Result copied to clipboard!');
+          }
+        } else {
+          alert('Execution error: ' + data.error);
+        }
+      } catch (err) {
+        alert('Server error (is omega-server running?): ' + err.message);
+      }
+    }
+  });
+  console.log('[Omega] Hotkey Ctrl+Shift+E registered');
 })();
