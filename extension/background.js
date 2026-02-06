@@ -403,6 +403,52 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       break;
     
+    case 'LIST_TABS':
+      chrome.tabs.query({}, (tabs) => {
+        const tabList = tabs.map(t => ({ id: t.id, title: t.title, url: t.url, active: t.active, windowId: t.windowId }));
+        chrome.tabs.sendMessage(sender.tab.id, { type: 'LIST_TABS_RESULT', callId: message.callId, success: true, result: JSON.stringify(tabList, null, 2) });
+      });
+      sendResponse({ success: true });
+      break;
+
+    case 'EVAL_JS':
+      if (sender.tab?.id) {
+        const senderTabId = sender.tab.id;
+        const targetTab = message.targetTabId || senderTabId;
+        const codeToRun = message.code || '';
+        chrome.scripting.executeScript({
+          target: { tabId: targetTab },
+          world: 'MAIN',
+          func: async (code) => {
+            try {
+              const fn = new Function(code);
+              let result = fn();
+              // 支持 Promise/async 返回值
+              if (result && typeof result.then === 'function') {
+                result = await result;
+              }
+              const serialized = (typeof result === 'object')
+                ? JSON.stringify(result, null, 2)
+                : String(result === undefined ? '(undefined)' : result);
+              return { success: true, result: serialized };
+            } catch (e) {
+              return { success: false, error: e.message };
+            }
+          },
+          args: [codeToRun]
+        }).then(results => {
+          const res = results?.[0]?.result || { success: false, error: 'No result' };
+          // 始终把结果发回发起请求的 tab（而非目标 tab）
+          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });
+        }).catch(err => {
+          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });
+        });
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: 'No tab id' });
+      }
+      break;
+
     case 'RELOAD_TOOLS':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'reload_tools' }));

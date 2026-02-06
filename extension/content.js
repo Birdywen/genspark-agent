@@ -159,11 +159,13 @@ function log(...args) {
 - **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
 - **命令执行** (1个): run_command
+- **页面脚本** (3个): eval_js(code, [tabId]) — 在当前或指定 tab 的 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie，绕过 CSP/Cloudflare。用 return 返回结果。list_tabs — 查询所有打开的标签页(id/title/url)。跨 tab 时先 list_tabs 获取 tabId，再 eval_js 指定 tabId 操作目标页面
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
 
 你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
+你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，先用一个简单命令测试，而不是拒绝。
 
 ---
 
@@ -1062,6 +1064,117 @@ ${toolSummary}
 
   function executeToolCall(tool, callHash) {
     clearToolCallDetection();
+    
+    // === 本地拦截: list_tabs 查询所有标签页 ===
+    if (tool.name === 'list_tabs') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('list_tabs');
+      state.agentRunning = true;
+      updateStatus();
+      addLog('🔧 list_tabs: 查询所有标签页', 'tool');
+      
+      const callId = 'list_tabs_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      
+      const resultHandler = (msg) => {
+        if (msg.type === 'LIST_TABS_RESULT' && msg.callId === callId) {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          clearTimeout(listTimeout);
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'list_tabs', success: msg.success, result: msg.result, error: msg.error });
+          sendMessageSafe(resultText);
+          addLog('✅ list_tabs 完成', 'success');
+        }
+      };
+      chrome.runtime.onMessage.addListener(resultHandler);
+      
+      const listTimeout = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(resultHandler);
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'list_tabs', success: false, error: '查询超时' });
+        sendMessageSafe(resultText);
+      }, 5000);
+      
+      chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: callId });
+      return;
+    }
+    
+    // === 本地拦截: eval_js 直接在页面执行 ===
+    if (tool.name === 'eval_js') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('eval_js');
+      state.agentRunning = true;
+      updateStatus();
+      
+      const code = tool.params.code || '';
+      const useMainWorld = tool.params.mainWorld === true;
+      addLog(`🔧 eval_js: ${code.substring(0, 80)}${code.length > 80 ? '...' : ''}`, 'tool');
+      
+      try {
+        // 通过 background script 的 chrome.scripting.executeScript 执行（绕过 CSP）
+        const callId = 'eval_js_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        
+        // 监听 background 返回的结果
+        const resultHandler = (msg) => {
+          if (msg.type === 'EVAL_JS_RESULT' && msg.callId === callId) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTimeout);
+            
+            state.agentRunning = false;
+            hideExecutingIndicator();
+            updateStatus();
+            const resultText = formatToolResult({
+              tool: 'eval_js',
+              success: msg.success,
+              result: msg.success ? msg.result : undefined,
+              error: msg.success ? undefined : msg.error
+            });
+            sendMessageSafe(resultText);
+            addLog(msg.success ? '✅ eval_js 完成' : '❌ eval_js 失败: ' + msg.error, msg.success ? 'success' : 'error');
+          }
+        };
+        chrome.runtime.onMessage.addListener(resultHandler);
+        
+        // 超时处理
+        const evalTimeout = setTimeout(() => {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (10秒)' });
+          sendMessageSafe(resultText);
+          addLog('❌ eval_js 超时', 'error');
+        }, 10000);
+        
+        // 发送给 background 执行（支持跨 tab）
+        const targetTabId = tool.params.tabId || null;
+        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: targetTabId }, (resp) => {
+          if (chrome.runtime.lastError) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTimeout);
+            state.agentRunning = false;
+            hideExecutingIndicator();
+            updateStatus();
+            const resultText = formatToolResult({ tool: 'eval_js', success: false, error: chrome.runtime.lastError.message });
+            sendMessageSafe(resultText);
+            addLog('❌ eval_js 发送失败: ' + chrome.runtime.lastError.message, 'error');
+          }
+        });
+      } catch (e) {
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'eval_js', success: false, error: e.message });
+        sendMessageSafe(resultText);
+        addLog(`❌ eval_js 异常: ${e.message}`, 'error');
+      }
+      return;
+    }
+    // === END eval_js 拦截 ===
+    
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {
@@ -1414,11 +1527,12 @@ ${toolSummary}
         for (const [key, tip] of Object.entries(this.errorTips)) {
           if (text.includes(key)) return tip;
         }
+        return '';
       }
-      if (success && this.toolTips[toolName]) {
+      if (this.toolTips[toolName]) {
         return this.toolTips[toolName];
       }
-      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];
+      return '';
     }
   };
 
@@ -1447,8 +1561,25 @@ ${toolSummary}
       }
     }
     
-    if (content.length > CONFIG.MAX_RESULT_LENGTH) {
-      content = content.slice(0, CONFIG.MAX_RESULT_LENGTH) + '\n...(内容已截断)';
+    // 智能截断：根据工具类型设定不同上限
+    const toolLimits = {
+      'read_file': 20000,
+      'read_multiple_files': 20000,
+      'directory_tree': 5000,
+      'run_command': 10000,
+      'browser_snapshot': 3000,
+      'find_text': 8000,
+      'find_usage': 8000,
+      'get_symbols': 8000,
+      'analyze_project': 8000
+    };
+    const maxLen = toolLimits[msg.tool] || 15000;
+    
+    if (content.length > maxLen) {
+      // 保留头尾，中间截断
+      const headLen = Math.floor(maxLen * 0.7);
+      const tailLen = Math.floor(maxLen * 0.2);
+      content = content.slice(0, headLen) + `\n\n...(截断了 ${content.length - headLen - tailLen} 字符)...\n\n` + content.slice(-tailLen);
     }
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
@@ -1461,7 +1592,7 @@ ${toolSummary}
 ${content}
 \`\`\`
 ${tip}
-请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+`;
   }
 
   // ============== UI ==============
@@ -1862,6 +1993,13 @@ ${tip}
         if (!msg.connected && wasConnected) {
           setTimeout(() => sendMessageSafe('[系统通知] 服务器重启中，请稍候...'), 500);
         } else if (msg.connected && !wasConnected) {
+          // 重连成功：重置所有执行状态，防止卡在"执行中"
+          if (state.agentRunning) {
+            addLog('🔄 重连后重置执行状态', 'info');
+          }
+          state.agentRunning = false;
+          state.pendingCalls.clear();
+          hideExecutingIndicator();
           setTimeout(() => sendMessageSafe('[系统通知] 服务器已重新连接，可以继续执行任务'), 1000);
         }
         break;
@@ -1979,7 +2117,7 @@ ${tip}
         }
         const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'} (${msg.stepsCompleted}/${msg.totalSteps})\n\n` +
           detailedResults +
-          `\n\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n\n`;
         sendMessageSafe(batchSummary);
         break;
 
@@ -2093,7 +2231,7 @@ ${tip}
           `- 目标ID: ${msg.goalId}\n` +
           `- 尝试次数: ${msg.attempts || 1}\n` +
           (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(goalSummary);
         break;
 
@@ -2122,7 +2260,7 @@ ${tip}
           `- 执行: ${vr?.success ? '✓' : '✗'}\n` +
           `- 验证: ${vr?.validated ? '✓' : '✗'}\n` +
           (vr?.result ? `\`\`\`\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\n\`\`\`\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(vrSummary);
         break;
 
@@ -2150,7 +2288,7 @@ ${tip}
           (msg.warning ? `- ⚠️ ${msg.warning}\n` : '') +
           (msg.output ? `\`\`\`\n${msg.output.slice(-2000)}\n\`\`\`\n` : '') +
           (msg.error ? `- 错误: ${msg.error}\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(asyncSummary);
         break;
 
@@ -2184,7 +2322,7 @@ ${tip}
             `- 文件: ${msg.logFile}\n` +
             `- 总行数: ${msg.lines}\n` +
             `\`\`\`\n${msg.content?.slice(-3000) || '(空)'}\n\`\`\`\n` +
-            `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+            `\n`;
           sendMessageToAI(logSummary);
         } else {
           addLog(`❌ 读取日志失败: ${msg.error}`, 'error');
