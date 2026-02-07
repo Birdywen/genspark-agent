@@ -399,6 +399,109 @@
           }
         },
       
+        // ===== 批量创建（一次登录创建多个项目） =====
+        async batchCreate(topics, onLog) {
+          const log = onLog || console.log;
+          const results = [];
+          
+          log('🔑 获取 Token...');
+          let auth;
+          try {
+            auth = await this.getOpusToken();
+            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
+          } catch(e) {
+            log('❌ Token 获取失败: ' + e.message);
+            throw e;
+          }
+          
+          for (let i = 0; i < topics.length; i++) {
+            const t = topics[i];
+            log('🎬 [' + (i+1) + '/' + topics.length + '] 创建: ' + t.topic.substring(0, 50) + '...');
+            try {
+              const project = await this.createProject(t.topic, t.category, t.sourceUrl || '', auth);
+              const metadata = this.buildYouTubeMetadata(t.topic, t.category);
+              results.push({
+                projectId: project.id,
+                topic: t.topic,
+                category: t.category,
+                metadata,
+                status: 'created',
+                createdAt: new Date().toISOString()
+              });
+              log('✅ 项目已创建: ' + project.id);
+            } catch(e) {
+              log('❌ 创建失败: ' + e.message);
+              results.push({ topic: t.topic, status: 'failed', error: e.message });
+            }
+            // 间隔 2 秒避免限流
+            if (i < topics.length - 1) await new Promise(r => setTimeout(r, 2000));
+          }
+          
+          // 保存待上传列表到 localStorage
+          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
+          pending.push(...results.filter(r => r.status === 'created'));
+          localStorage.setItem('video_pending_uploads', JSON.stringify(pending));
+          
+          log('📋 已创建 ' + results.filter(r => r.status === 'created').length + '/' + topics.length + ' 个项目，等待生成完成后上传');
+          return results;
+        },
+
+        // ===== 批量上传（检查完成的项目并上传） =====
+        async batchUpload(onLog) {
+          const log = onLog || console.log;
+          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
+          
+          if (pending.length === 0) {
+            log('📭 没有待上传的项目');
+            return [];
+          }
+          
+          log('🔑 获取 Token...');
+          let auth;
+          try {
+            auth = await this.getOpusToken();
+            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
+          } catch(e) {
+            log('❌ Token 获取失败: ' + e.message);
+            throw e;
+          }
+          
+          const results = [];
+          const stillPending = [];
+          
+          for (const item of pending) {
+            log('🔍 检查项目: ' + item.projectId);
+            try {
+              const project = await this.opusApiCall('GET', '/project/' + item.projectId, null, auth);
+              
+              if (project.stage === 'EDITOR' && project.resultVideo) {
+                log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');
+                log('📤 上传到 YouTube...');
+                const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);
+                log('✅ YouTube 上传成功! 标题: ' + item.metadata.title);
+                this.recordHistory(item.topic, item.category, project.resultVideo, item.metadata);
+                results.push({ ...item, status: 'uploaded', videoUrl: project.resultVideo });
+              } else if (project.stage === 'FAILED' || project.stage === 'ERROR') {
+                log('❌ 项目失败: ' + item.projectId);
+                results.push({ ...item, status: 'failed' });
+              } else {
+                log('⏳ 仍在生成中: ' + project.stage);
+                stillPending.push(item);
+                results.push({ ...item, status: 'pending', stage: project.stage });
+              }
+            } catch(e) {
+              log('⚠️ 查询失败: ' + e.message);
+              stillPending.push(item);
+            }
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          
+          // 更新待上传列表
+          localStorage.setItem('video_pending_uploads', JSON.stringify(stillPending));
+          log('📊 结果: ' + results.filter(r => r.status === 'uploaded').length + ' 已上传, ' + stillPending.length + ' 待处理');
+          return results;
+        },
+
         // ===== 历史记录 =====
         recordHistory(topic, category, videoUrl, metadata) {
           try {
@@ -453,12 +556,20 @@
                   </select>
                 </div>
                 <div class="vg-field">
-                  <label>话题 / 标题 *</label>
-                  <textarea id="vg-topic" rows="3" placeholder="输入视频话题，如：AI agents can now hire humans through a new platform"></textarea>
+                  <label>话题 1 *</label>
+                  <textarea id="vg-topic" rows="2" placeholder="第一个视频话题"></textarea>
                 </div>
                 <div class="vg-field">
-                  <label>来源 URL（可选）</label>
+                  <label>来源 URL 1（可选）</label>
                   <input id="vg-source" type="text" placeholder="https://..." />
+                </div>
+                <div class="vg-field">
+                  <label>话题 2（可选，留空则只创建1个）</label>
+                  <textarea id="vg-topic2" rows="2" placeholder="第二个视频话题"></textarea>
+                </div>
+                <div class="vg-field">
+                  <label>来源 URL 2（可选）</label>
+                  <input id="vg-source2" type="text" placeholder="https://..." />
                 </div>
                 <div class="vg-preview" id="vg-preview" style="display:none">
                   <div class="vg-preview-title">预览</div>
@@ -467,8 +578,9 @@
                 <div class="vg-status" id="vg-status"></div>
               </div>
               <div class="vg-footer">
+                <button id="vg-upload-btn" class="vg-btn vg-btn-secondary" style="background:#059669">📤 上传已完成</button>
                 <button id="vg-preview-btn" class="vg-btn vg-btn-secondary">👁️ 预览</button>
-                <button id="vg-start-btn" class="vg-btn vg-btn-primary">🚀 开始生成</button>
+                <button id="vg-start-btn" class="vg-btn vg-btn-primary">🚀 批量创建</button>
               </div>
             </div>
           `;
@@ -532,47 +644,78 @@
           };
       
           // 开始生成按钮
+          // 批量创建按钮
           dialog.querySelector('#vg-start-btn').onclick = async () => {
-            const topic = dialog.querySelector('#vg-topic').value.trim();
+            const topic1 = dialog.querySelector('#vg-topic').value.trim();
             const cat = dialog.querySelector('#vg-category').value;
-            const source = dialog.querySelector('#vg-source').value.trim();
-      
-            if (!topic) {
-              this.setStatus(dialog, '请输入话题', 'error');
+            const source1 = dialog.querySelector('#vg-source').value.trim();
+            const topic2 = dialog.querySelector('#vg-topic2') ? dialog.querySelector('#vg-topic2').value.trim() : '';
+            const source2 = dialog.querySelector('#vg-source2') ? dialog.querySelector('#vg-source2').value.trim() : '';
+
+            if (!topic1) {
+              this.setStatus(dialog, '请输入至少一个话题', 'error');
               return;
             }
-      
+
+            const topics = [{topic: topic1, category: cat, sourceUrl: source1}];
+            if (topic2) topics.push({topic: topic2, category: cat, sourceUrl: source2});
+
             const startBtn = dialog.querySelector('#vg-start-btn');
             const previewBtn = dialog.querySelector('#vg-preview-btn');
+            const uploadBtn = dialog.querySelector('#vg-upload-btn');
             startBtn.disabled = true;
             previewBtn.disabled = true;
-            startBtn.textContent = '⏳ 生成中...';
-      
-            const statusEl = dialog.querySelector('#vg-status');
+            if (uploadBtn) uploadBtn.disabled = true;
+            startBtn.textContent = '⏳ 创建中...';
+
             const logToDialog = (msg) => {
-              statusEl.className = 'vg-status';
-              statusEl.innerHTML += `<div class="vg-log">${msg}</div>`;
-              statusEl.scrollTop = statusEl.scrollHeight;
+              this.setStatus(dialog, msg);
               if (addLog) addLog(msg, 'info');
             };
-      
+
             try {
-              const result = await this.run(topic, {
-                category: cat,
-                sourceUrl: source,
-                onLog: logToDialog
-              });
-              
-              this.setStatus(dialog, '🎉 完成！视频已上传到 YouTube (Private)', 'success');
-              startBtn.textContent = '✅ 完成';
-              
-              // 3秒后自动关闭
-              setTimeout(() => dialog.remove(), 5000);
+              const results = await this.batchCreate(topics, logToDialog);
+              const created = results.filter(r => r.status === 'created').length;
+              this.setStatus(dialog, '🎉 已创建 ' + created + ' 个项目！等视频生成完成后点「📤 上传已完成」', 'success');
+              startBtn.textContent = '✅ 已创建 ' + created + ' 个';
+              if (uploadBtn) uploadBtn.disabled = false;
             } catch (error) {
               this.setStatus(dialog, '❌ ' + error.message, 'error');
               startBtn.disabled = false;
               previewBtn.disabled = false;
+              if (uploadBtn) uploadBtn.disabled = false;
               startBtn.textContent = '🚀 重试';
+            }
+          };
+
+          // 上传已完成的视频
+          dialog.querySelector('#vg-upload-btn').onclick = async () => {
+            const uploadBtn = dialog.querySelector('#vg-upload-btn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ 检查中...';
+
+            const logToDialog = (msg) => {
+              this.setStatus(dialog, msg);
+              if (addLog) addLog(msg, 'info');
+            };
+
+            try {
+              const results = await this.batchUpload(logToDialog);
+              const uploaded = results.filter(r => r.status === 'uploaded').length;
+              const pending = results.filter(r => r.status === 'pending').length;
+              if (uploaded > 0) {
+                this.setStatus(dialog, '🎉 ' + uploaded + ' 个视频已上传! ' + (pending > 0 ? pending + ' 个仍在生成中' : ''), 'success');
+              } else if (pending > 0) {
+                this.setStatus(dialog, '⏳ ' + pending + ' 个视频仍在生成中，稍后再试');
+              } else {
+                this.setStatus(dialog, '📭 没有待上传的项目');
+              }
+              uploadBtn.textContent = '📤 上传已完成';
+              uploadBtn.disabled = false;
+            } catch(error) {
+              this.setStatus(dialog, '❌ ' + error.message, 'error');
+              uploadBtn.textContent = '📤 重试上传';
+              uploadBtn.disabled = false;
             }
           };
         },
