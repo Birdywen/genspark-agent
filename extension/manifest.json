@@ -28,7 +28,9 @@
     "http://127.0.0.1:*/*",
     "https://wim.vree.org/js/*",
     "https://hix.ai/*",
-    "https://*.hix.ai/*"
+    "https://*.hix.ai/*",
+    "https://agent.opus.pro/*",
+    "https://*.opus.pro/*"
   ],
   "background": {
     "service_worker": "background.js"
