@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='UTF-8'?>
 <score-partwise version="3.0">
 	<work>
 		<work-title>Air on the ‘g’ string
@@ -9,20 +8,20 @@ Music by johann sebastian bach</work-title>
 		<encoding>
 			<software>Maestria_v2.7.2</software>
 			<encoding-date>2026-02-05</encoding-date>
-			<supports element="accidental" type="yes"/>
-			<supports element="beam" type="yes"/>
-			<supports attribute="new-page" element="print" type="yes" value="yes"/>
-			<supports attribute="new-system" element="print" type="yes" value="yes"/>
-			<supports element="stem" type="yes"/>
+			<supports element="accidental" type="yes" />
+			<supports element="beam" type="yes" />
+			<supports attribute="new-page" element="print" type="yes" value="yes" />
+			<supports attribute="new-system" element="print" type="yes" value="yes" />
+			<supports element="stem" type="yes" />
 		</encoding>
 	</identification>
 	<part-list>
 		<score-part id="P1">
-			<part-name/>
+			<part-name />
 			<score-instrument id="P1-I1">
 				<instrument-name>part 0</instrument-name>
 				<instrument-sound>keyboard.piano</instrument-sound>
-				<solo/>
+				<solo />
 			</score-instrument>
 		</score-part>
 	</part-list>
@@ -54,7 +53,7 @@ Music by johann sebastian bach</work-title>
 						<per-minute>90</per-minute>
 					</metronome>
 				</direction-type>
-				<sound tempo="90"/>
+				<sound tempo="90" />
 			</direction>
 			<harmony>
 				<root>
@@ -68,7 +67,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
@@ -76,23 +75,23 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -149,7 +148,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 			</note>
-		</measure>
+		<barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward" /></barline></measure>
 		<measure number="2">
 			<attributes>
 				<divisions>1</divisions>
@@ -161,32 +160,32 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="stop"/>
-				<tie type="start"/>
+				<tie type="stop" />
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
-					<tied type="start"/>
+					<tied type="stop" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="stop"/>
-				<tie type="start"/>
+				<tie type="stop" />
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
-					<tied type="start"/>
+					<tied type="stop" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -254,30 +253,30 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -295,7 +294,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>5</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -313,7 +312,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -337,7 +336,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -355,7 +354,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -371,7 +370,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -389,7 +388,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>4</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -406,7 +405,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -420,7 +419,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -439,7 +438,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -454,7 +453,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -478,14 +477,14 @@ Music by johann sebastian bach</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -499,7 +498,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -513,7 +512,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -582,28 +581,28 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<accidental>natural</accidental>
 				<staff>1</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -657,7 +656,7 @@ Music by johann sebastian bach</work-title>
 			</note>
 		</measure>
 		<measure number="6">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -674,30 +673,30 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -716,7 +715,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>4</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -732,7 +731,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -747,7 +746,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -765,7 +764,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -782,7 +781,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -797,7 +796,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -812,7 +811,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -883,7 +882,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>whole</type>
 				<staff>1</staff>
@@ -891,7 +890,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>5</fingering>
 					</technical>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -959,14 +958,14 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -984,7 +983,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>4</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -999,7 +998,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1014,7 +1013,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1029,7 +1028,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1045,7 +1044,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1060,7 +1059,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1076,7 +1075,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1148,12 +1147,12 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
@@ -1162,7 +1161,7 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -1183,7 +1182,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1198,7 +1197,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1215,7 +1214,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1229,7 +1228,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1244,7 +1243,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1259,12 +1258,12 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
 		<measure number="10">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -1286,7 +1285,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1302,7 +1301,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1318,7 +1317,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1334,7 +1333,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -1356,7 +1355,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1371,7 +1370,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1386,7 +1385,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1401,7 +1400,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1481,7 +1480,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1496,7 +1495,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -1518,7 +1517,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1535,7 +1534,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1550,7 +1549,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -1570,7 +1569,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1586,7 +1585,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1601,7 +1600,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1618,7 +1617,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1632,7 +1631,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1646,7 +1645,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1660,7 +1659,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -1685,7 +1684,7 @@ Music by johann sebastian bach</work-title>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1753,11 +1752,11 @@ Music by johann sebastian bach</work-title>
 			</note>
 			<barline location="right">
 				<bar-style>light-heavy</bar-style>
-				<repeat direction="backward" times="2"/>
+				<repeat direction="backward" times="2" />
 			</barline>
 		</measure>
 		<measure number="13">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -1769,7 +1768,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>8</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>half</type>
 				<stem>up</stem>
@@ -1778,9 +1777,9 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="start" number="1"/>
-					<slur type="start" number="2"/>
-					<tied type="start"/>
+					<slur type="start" number="1" />
+					<slur type="start" number="2" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
@@ -1790,16 +1789,16 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<slur type="continue" number="2"/>
-					<tied type="stop"/>
+					<slur type="continue" number="1" />
+					<slur type="continue" number="2" />
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -1815,8 +1814,8 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="1" />
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -1833,8 +1832,8 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="1" />
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -1850,8 +1849,8 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="1" />
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -1868,8 +1867,8 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="1" />
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -1884,8 +1883,8 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="2"/>
-					<slur type="continue" number="1"/>
+					<slur type="stop" number="2" />
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1905,7 +1904,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1919,7 +1918,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1933,7 +1932,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1947,7 +1946,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -1956,13 +1955,6 @@ Music by johann sebastian bach</work-title>
 				<divisions>1</divisions>
 				<staves>2</staves>
 			</attributes>
-			<direction placement="above">
-				<direction-type>
-					<words>Am®</words>
-				</direction-type>
-				<voice>1</voice>
-				<staff>1</staff>
-			</direction>
 			<note>
 				<pitch>
 					<step>C</step>
@@ -1971,16 +1963,16 @@ Music by johann sebastian bach</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<accidental>natural</accidental>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1988,7 +1980,7 @@ Music by johann sebastian bach</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -2006,7 +1998,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -2024,7 +2016,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2039,7 +2031,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2053,7 +2045,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2067,10 +2059,10 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
-		</measure>
+		<harmony><root><root-step>A</root-step></root><kind>minor</kind></harmony></measure>
 		<measure number="15">
 			<attributes>
 				<divisions>2</divisions>
@@ -2087,7 +2079,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2096,14 +2088,14 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tied type="start"/>
+					<slur type="continue" number="1" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
@@ -2112,15 +2104,15 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tied type="stop"/>
+					<slur type="continue" number="1" />
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -2135,7 +2127,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2150,7 +2142,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2166,7 +2158,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -2185,7 +2177,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2200,7 +2192,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2214,7 +2206,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2228,7 +2220,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -2237,13 +2229,6 @@ Music by johann sebastian bach</work-title>
 				<divisions>1</divisions>
 				<staves>2</staves>
 			</attributes>
-			<direction placement="above">
-				<direction-type>
-					<words>Em</words>
-				</direction-type>
-				<voice>1</voice>
-				<staff>1</staff>
-			</direction>
 			<note>
 				<pitch>
 					<step>F</step>
@@ -2256,7 +2241,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2270,7 +2255,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2337,9 +2322,9 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 			</note>
-		</measure>
+		<harmony><root><root-step>E</root-step></root><kind>minor</kind></harmony></measure>
 		<measure number="17">
-			<print new-system="yes" new-page="yes"/>
+			<print new-system="yes" new-page="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -2394,7 +2379,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
@@ -2403,7 +2388,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<harmony>
@@ -2419,14 +2404,14 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -2452,7 +2437,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
@@ -2461,7 +2446,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -2532,14 +2517,14 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -2581,7 +2566,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -2600,7 +2585,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2615,7 +2600,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2630,7 +2615,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2645,7 +2630,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -2672,7 +2657,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2687,7 +2672,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2706,7 +2691,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2721,7 +2706,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -2743,7 +2728,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2759,7 +2744,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2775,7 +2760,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -2797,7 +2782,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2813,7 +2798,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -2830,7 +2815,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2844,7 +2829,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2858,7 +2843,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2873,7 +2858,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -2898,7 +2883,7 @@ Music by johann sebastian bach</work-title>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -2951,7 +2936,7 @@ Music by johann sebastian bach</work-title>
 			</note>
 		</measure>
 		<measure number="21">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -2968,7 +2953,7 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>half</type>
 				<stem>up</stem>
@@ -2977,8 +2962,8 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="start" number="1"/>
-					<tied type="start"/>
+					<slur type="start" number="1" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
@@ -2987,15 +2972,15 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tied type="stop"/>
+					<slur type="continue" number="1" />
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -3011,7 +2996,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3026,7 +3011,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3041,7 +3026,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3060,7 +3045,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3076,7 +3061,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3091,7 +3076,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3106,7 +3091,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -3123,11 +3108,11 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3142,7 +3127,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3159,7 +3144,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3177,7 +3162,7 @@ Music by johann sebastian bach</work-title>
 				<accidental>sharp</accidental>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3194,7 +3179,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3208,7 +3193,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3222,7 +3207,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3236,7 +3221,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -3264,7 +3249,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3279,7 +3264,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -3301,7 +3286,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3316,7 +3301,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -3341,11 +3326,11 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3362,7 +3347,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3378,7 +3363,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3396,7 +3381,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3411,7 +3396,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3425,7 +3410,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3439,7 +3424,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -3463,11 +3448,11 @@ Music by johann sebastian bach</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3481,7 +3466,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3545,7 +3530,7 @@ Music by johann sebastian bach</work-title>
 			</note>
 		</measure>
 		<measure number="25">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -3564,7 +3549,7 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
@@ -3586,7 +3571,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3601,7 +3586,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3673,7 +3658,7 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -3689,7 +3674,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3705,7 +3690,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3780,7 +3765,7 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -3796,7 +3781,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -3811,7 +3796,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -3887,7 +3872,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>4</octave>
@@ -3946,7 +3931,7 @@ Music by johann sebastian bach</work-title>
 			</note>
 		</measure>
 		<measure number="29">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -3963,7 +3948,7 @@ Music by johann sebastian bach</work-title>
 					<octave>3</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>half</type>
 				<stem>up</stem>
@@ -3972,8 +3957,8 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="start" number="1"/>
-					<tied type="start"/>
+					<slur type="start" number="1" />
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
@@ -3982,15 +3967,15 @@ Music by johann sebastian bach</work-title>
 					<octave>3</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tied type="stop"/>
+					<slur type="continue" number="1" />
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -4009,7 +3994,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4024,7 +4009,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4039,7 +4024,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -4057,7 +4042,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4072,7 +4057,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4086,7 +4071,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4100,7 +4085,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -4127,7 +4112,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4145,7 +4130,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -4169,7 +4154,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4262,13 +4247,13 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>4</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>half</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<harmony>
@@ -4283,14 +4268,14 @@ Music by johann sebastian bach</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>eighth</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -4309,7 +4294,7 @@ Music by johann sebastian bach</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4324,7 +4309,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4340,7 +4325,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -4414,7 +4399,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4428,7 +4413,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4497,7 +4482,7 @@ Music by johann sebastian bach</work-title>
 			</note>
 		</measure>
 		<measure number="33">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -4521,7 +4506,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4536,7 +4521,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -4556,7 +4541,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4570,7 +4555,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -4587,7 +4572,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4601,7 +4586,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4615,7 +4600,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4629,7 +4614,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -4655,7 +4640,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4742,7 +4727,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -4760,7 +4745,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4774,7 +4759,7 @@ Music by johann sebastian bach</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4788,7 +4773,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4802,7 +4787,7 @@ Music by johann sebastian bach</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
@@ -4830,7 +4815,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4847,7 +4832,7 @@ Music by johann sebastian bach</work-title>
 				<beam number="1">continue</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4862,7 +4847,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -4883,7 +4868,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -4899,7 +4884,7 @@ Music by johann sebastian bach</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -4917,7 +4902,7 @@ Music by johann sebastian bach</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -4980,7 +4965,7 @@ Music by johann sebastian bach</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -5013,7 +4998,7 @@ Music by johann sebastian bach</work-title>
 				<type>whole</type>
 				<staff>1</staff>
 				<notations>
-					<fermata/>
+					<fermata />
 				</notations>
 			</note>
 			<backup>
@@ -5029,11 +5014,11 @@ Music by johann sebastian bach</work-title>
 				<type>whole</type>
 				<staff>2</staff>
 				<notations>
-					<fermata/>
+					<fermata />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>

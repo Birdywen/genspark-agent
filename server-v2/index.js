@@ -500,13 +500,32 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     let result = r;
     
     if (r && r.content && Array.isArray(r.content)) {
-      result = r.content.map(c => c.text || c).join('\n');
+      const textParts = [];
+      const imageParts = [];
+      for (const c of r.content) {
+        if (c.type === 'text') {
+          textParts.push(c.text);
+        } else if (c.type === 'image') {
+          imageParts.push({ type: 'image', data: c.data, mimeType: c.mimeType || 'image/png' });
+        } else if (typeof c === 'string') {
+          textParts.push(c);
+        } else {
+          textParts.push(JSON.stringify(c));
+        }
+      }
+      result = textParts.join('\n');
+      // 如果有图片，附加到 response 中
+      if (imageParts.length > 0) {
+        result = result || '(图片内容)';
+        // 将图片数据存储，供前端使用
+        r._images = imageParts;
+      }
     }
     
     let resultStr = typeof result === 'string' ? result : JSON.stringify(result);
     
     // 截断 take_snapshot 结果，限制返回的元素数量
-    if (tool === 'take_snapshot' && resultStr.length > 8000) {
+    if (tool === 'take_snapshot' && resultStr.length > 3000) {
       const lines = resultStr.split('\n');
       const maxLines = params.maxElements || 150; // 默认最多150个元素
       if (lines.length > maxLines) {
@@ -551,6 +570,25 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       success: true,
       result: isRetry ? `[重试 #${historyId}] ${resultStr}` : `[#${historyId}] ${resultStr}`
     };
+    // 如果有图片数据，保存到临时文件并附加路径信息
+    if (r && r._images && r._images.length > 0) {
+      const savedPaths = [];
+      for (let i = 0; i < r._images.length; i++) {
+        const img = r._images[i];
+        const ext = img.mimeType === 'image/jpeg' ? 'jpg' : 'png';
+        const imgPath = `/private/tmp/media-${id}-${i}.${ext}`;
+        try {
+          writeFileSync(imgPath, Buffer.from(img.data, 'base64'));
+          savedPaths.push(imgPath);
+        } catch (e) {
+          logger.error(`[WS] 保存图片失败: ${e.message}`);
+        }
+      }
+      if (savedPaths.length > 0) {
+        response.result += `\n图片已保存: ${savedPaths.join(', ')}`;
+        response.images = savedPaths;
+      }
+    }
     ws.send(JSON.stringify(response));
     logger.info(`[WS] 发送结果: id=${id}, tool=${tool}, historyId=${historyId}`);
   } catch (e) {

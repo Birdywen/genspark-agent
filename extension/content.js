@@ -72,14 +72,15 @@
   }
 
   function loadVideoGenerator() {
-    const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('video-generator.js');
-    script.onload = () => {
-      if (window.VideoGenerator) {
-        console.log('[Agent] VideoGenerator loaded');
-      }
-    };
-    document.head.appendChild(script);
+    try {
+      const url = chrome.runtime.getURL('video-generator.js');
+      fetch(url).then(r => r.text()).then(code => {
+        eval(code);
+        console.log('[Agent] VideoGenerator loaded, available:', !!window.VideoGenerator);
+      }).catch(e => console.error('[Agent] Failed to load VideoGenerator:', e));
+    } catch(e) {
+      console.error('[Agent] loadVideoGenerator error:', e);
+    }
   }
 
   

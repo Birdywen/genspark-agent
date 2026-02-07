@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='UTF-8'?>
 <score-partwise version="3.0">
 	<work>
 		<work-title>Ode to joy
@@ -10,20 +9,20 @@ Music by ludwig van beethoven</work-title>
 		<encoding>
 			<software>Maestria_v2.7.2</software>
 			<encoding-date>2026-02-05</encoding-date>
-			<supports element="accidental" type="yes"/>
-			<supports element="beam" type="yes"/>
-			<supports attribute="new-page" element="print" type="yes" value="yes"/>
-			<supports attribute="new-system" element="print" type="yes" value="yes"/>
-			<supports element="stem" type="yes"/>
+			<supports element="accidental" type="yes" />
+			<supports element="beam" type="yes" />
+			<supports attribute="new-page" element="print" type="yes" value="yes" />
+			<supports attribute="new-system" element="print" type="yes" value="yes" />
+			<supports element="stem" type="yes" />
 		</encoding>
 	</identification>
 	<part-list>
 		<score-part id="P1">
-			<part-name/>
+			<part-name />
 			<score-instrument id="P1-I1">
 				<instrument-name>part 0</instrument-name>
 				<instrument-sound>keyboard.piano</instrument-sound>
-				<solo/>
+				<solo />
 			</score-instrument>
 		</score-part>
 	</part-list>
@@ -55,11 +54,11 @@ Music by ludwig van beethoven</work-title>
 						<per-minute>90</per-minute>
 					</metronome>
 				</direction-type>
-				<sound tempo="90"/>
+				<sound tempo="90" />
 			</direction>
 			<direction placement="below">
 				<direction-type>
-					<words>St</words>
+					<words>Stately</words>
 				</direction-type>
 				<voice>1</voice>
 				<staff>1</staff>
@@ -81,7 +80,7 @@ Music by ludwig van beethoven</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -104,7 +103,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -127,7 +126,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -150,7 +149,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -181,7 +180,7 @@ Music by ludwig van beethoven</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -204,7 +203,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -233,7 +232,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -256,7 +255,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -279,7 +278,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -308,7 +307,7 @@ Music by ludwig van beethoven</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -334,7 +333,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -357,7 +356,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -485,11 +484,11 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>3</voice>
 				<type>quarter</type>
-			</note>
+			<staff>2</staff></note>
 			<note>
 				<pitch>
 					<step>G</step>
@@ -515,12 +514,12 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -528,7 +527,7 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -556,7 +555,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -582,7 +581,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -605,7 +604,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -618,7 +617,7 @@ Music by ludwig van beethoven</work-title>
 			</note>
 		</measure>
 		<measure number="5">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>1</divisions>
 				<staves>2</staves>
@@ -635,7 +634,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -658,7 +657,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -681,7 +680,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -704,7 +703,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -730,7 +729,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -753,7 +752,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -782,7 +781,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -805,7 +804,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -828,7 +827,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -852,7 +851,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -878,7 +877,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -901,7 +900,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -944,7 +943,7 @@ Music by ludwig van beethoven</work-title>
 				<root>
 					<root-step>C</root-step>
 				</root>
-				<kind parentheses-degrees="no">diminished</kind>
+				<kind parentheses-degrees="no">major</kind>
 			</harmony>
 			<note>
 				<pitch>
@@ -1036,11 +1035,11 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>3</voice>
 				<type>quarter</type>
-			</note>
+			<staff>2</staff></note>
 			<note>
 				<pitch>
 					<step>G</step>
@@ -1073,12 +1072,12 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1086,7 +1085,7 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -1133,7 +1132,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -1156,7 +1155,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>3</octave>
@@ -1169,7 +1168,7 @@ Music by ludwig van beethoven</work-title>
 			</note>
 		</measure>
 		<measure number="9">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>1</divisions>
 				<staves>2</staves>
@@ -1197,7 +1196,7 @@ Music by ludwig van beethoven</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1307,7 +1306,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1431,7 +1430,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1485,7 +1484,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -1509,7 +1508,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1583,7 +1582,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>4</octave>
@@ -1612,7 +1611,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -1652,7 +1651,7 @@ Music by ludwig van beethoven</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
@@ -1661,23 +1660,23 @@ Music by ludwig van beethoven</work-title>
 					<technical>
 						<fingering>31</fingering>
 					</technical>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<backup>
@@ -1719,7 +1718,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
@@ -1745,12 +1744,12 @@ Music by ludwig van beethoven</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 		</measure>
 		<measure number="13">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>1</divisions>
 				<staves>2</staves>
@@ -1761,30 +1760,30 @@ Music by ludwig van beethoven</work-title>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
-					<tied type="stop"/>
+					<slur type="stop" number="1" />
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>1</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>1</staff>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -1799,7 +1798,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -1828,7 +1827,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -1851,7 +1850,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -1889,7 +1888,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -1924,7 +1923,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>5</octave>
@@ -1947,7 +1946,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>5</octave>
@@ -1970,7 +1969,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -2007,13 +2006,13 @@ Music by ludwig van beethoven</work-title>
 					<octave>3</octave>
 				</pitch>
 				<duration>2</duration>
-				<tie type="start"/>
+				<tie type="start" />
 				<voice>2</voice>
 				<type>half</type>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<tied type="start"/>
+					<tied type="start" />
 				</notations>
 			</note>
 			<note>
@@ -2022,13 +2021,13 @@ Music by ludwig van beethoven</work-title>
 					<octave>3</octave>
 				</pitch>
 				<duration>1</duration>
-				<tie type="stop"/>
+				<tie type="stop" />
 				<voice>2</voice>
 				<type>quarter</type>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<tied type="stop"/>
+					<tied type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -2120,7 +2119,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -2149,7 +2148,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>4</octave>
@@ -2175,7 +2174,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>3</octave>
@@ -2198,7 +2197,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<alter>1</alter>
@@ -2222,7 +2221,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -2245,7 +2244,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>3</octave>
@@ -2277,12 +2276,12 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>4</octave>
@@ -2290,7 +2289,7 @@ Music by ludwig van beethoven</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>up</stem>
 				<staff>1</staff>
 			</note>
@@ -2337,7 +2336,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -2360,7 +2359,7 @@ Music by ludwig van beethoven</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>3</octave>

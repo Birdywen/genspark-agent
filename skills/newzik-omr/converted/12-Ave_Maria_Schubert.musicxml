@@ -1,29 +1,28 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='UTF-8'?>
 <score-partwise version="3.0">
 	<work>
-		<work-title>Ave maria
-Music by franz schubert</work-title>
+		<work-title>Ave Maria
+Music by Franz Schubert</work-title>
 	</work>
 	<identification>
 		<creator type="composer">Schubert</creator>
 		<encoding>
 			<software>Maestria_v2.7.2</software>
 			<encoding-date>2026-02-05</encoding-date>
-			<supports element="accidental" type="yes"/>
-			<supports element="beam" type="yes"/>
-			<supports attribute="new-page" element="print" type="yes" value="yes"/>
-			<supports attribute="new-system" element="print" type="yes" value="yes"/>
-			<supports element="stem" type="yes"/>
+			<supports element="accidental" type="yes" />
+			<supports element="beam" type="yes" />
+			<supports attribute="new-page" element="print" type="yes" value="yes" />
+			<supports attribute="new-system" element="print" type="yes" value="yes" />
+			<supports element="stem" type="yes" />
 		</encoding>
 	</identification>
 	<part-list>
 		<score-part id="P1">
-			<part-name/>
+			<part-name />
 			<score-instrument id="P1-I1">
 				<instrument-name>part 0</instrument-name>
 				<instrument-sound>keyboard.piano</instrument-sound>
-				<solo/>
+				<solo />
 			</score-instrument>
 		</score-part>
 	</part-list>
@@ -52,10 +51,10 @@ Music by franz schubert</work-title>
 				<direction-type>
 					<words>Moderato slow</words>
 				</direction-type>
-				<sound tempo="100"/>
+				<sound tempo="100" />
 			</direction>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>1</voice>
 				<type>eighth</type>
@@ -108,7 +107,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>1</voice>
 				<type>eighth</type>
@@ -189,7 +188,7 @@ Music by franz schubert</work-title>
 				<staves>2</staves>
 			</attributes>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>1</voice>
 				<type>eighth</type>
@@ -232,7 +231,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>1</voice>
 				<type>eighth</type>
@@ -316,14 +315,14 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -338,7 +337,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -354,14 +353,14 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -379,7 +378,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -394,7 +393,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -409,11 +408,11 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -435,7 +434,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -453,7 +452,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -468,7 +467,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -486,7 +485,7 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -500,12 +499,12 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 		</measure>
 		<measure number="4">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -525,12 +524,12 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="2"/>
-					<slur type="continue" number="1"/>
+					<slur type="start" number="2" />
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -545,8 +544,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="stop" number="1"/>
-					<slur type="continue" number="2"/>
+					<slur type="stop" number="1" />
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -561,14 +560,14 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<backup>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -586,7 +585,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -601,7 +600,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -616,11 +615,11 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -640,7 +639,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -655,7 +654,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -671,7 +670,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<backup>
@@ -688,7 +687,7 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 			<note>
@@ -702,7 +701,7 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="2"/>
+					<slur type="continue" number="2" />
 				</notations>
 			</note>
 		</measure>
@@ -726,15 +725,15 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="2"/>
+					<slur type="stop" number="2" />
 				</notations>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>1</voice>
 				<type>quarter</type>
@@ -744,7 +743,7 @@ Music by franz schubert</work-title>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -787,7 +786,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -874,14 +873,14 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
 					<technical>
 						<fingering>4</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -897,7 +896,7 @@ Music by franz schubert</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -913,7 +912,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -935,7 +934,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -950,7 +949,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -965,7 +964,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -980,7 +979,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<backup>
@@ -1002,7 +1001,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>3</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1020,7 +1019,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>5</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1037,7 +1036,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>1</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1051,11 +1050,11 @@ Music by franz schubert</work-title>
 				<stem>up</stem>
 				<staff>2</staff>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>E</step>
 					<alter>-1</alter>
@@ -1069,7 +1068,7 @@ Music by franz schubert</work-title>
 			</note>
 		</measure>
 		<measure number="7">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>2</divisions>
 				<staves>2</staves>
@@ -1093,11 +1092,11 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>1</voice>
 				<type>quarter</type>
@@ -1123,7 +1122,7 @@ Music by franz schubert</work-title>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1176,7 +1175,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1270,7 +1269,7 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 			</note>
@@ -1287,7 +1286,7 @@ Music by franz schubert</work-title>
 				<beam number="1">begin</beam>
 				<beam number="2">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1304,7 +1303,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -1325,7 +1324,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1340,7 +1339,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1358,7 +1357,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>4</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1374,14 +1373,14 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
 				<duration>16</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1426,7 +1425,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1528,7 +1527,7 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<harmony>
@@ -1550,11 +1549,11 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>1</staff>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>1</voice>
 				<type>eighth</type>
@@ -1575,7 +1574,7 @@ Music by franz schubert</work-title>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1619,7 +1618,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1688,7 +1687,7 @@ Music by franz schubert</work-title>
 			</note>
 		</measure>
 		<measure number="10">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>6</divisions>
 				<staves>2</staves>
@@ -1708,7 +1707,7 @@ Music by franz schubert</work-title>
 				<duration>9</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<accidental>natural</accidental>
 				<stem>down</stem>
 				<staff>1</staff>
@@ -1741,8 +1740,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
-					<tuplet type="start" bracket="no"/>
+					<slur type="start" number="1" />
+					<tuplet type="start" bracket="no" />
 				</notations>
 			</note>
 			<note>
@@ -1761,7 +1760,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1780,8 +1779,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tuplet type="stop"/>
+					<slur type="continue" number="1" />
+					<tuplet type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -1801,8 +1800,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tuplet type="start" bracket="no"/>
+					<slur type="continue" number="1" />
+					<tuplet type="start" bracket="no" />
 				</notations>
 			</note>
 			<note>
@@ -1821,7 +1820,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1840,8 +1839,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
-					<tuplet type="stop"/>
+					<slur type="stop" number="1" />
+					<tuplet type="stop" />
 				</notations>
 			</note>
 			<backup>
@@ -1917,7 +1916,7 @@ Music by franz schubert</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>half</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 			</note>
@@ -1936,7 +1935,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>5</fingering>
 					</technical>
-					<slur type="start" number="1"/>
+					<slur type="start" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -1951,14 +1950,14 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
+					<slur type="stop" number="1" />
 				</notations>
 			</note>
 			<backup>
 				<duration>8</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2001,7 +2000,7 @@ Music by franz schubert</work-title>
 				<beam number="1">end</beam>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>1</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2089,7 +2088,7 @@ Music by franz schubert</work-title>
 				<duration>9</duration>
 				<voice>1</voice>
 				<type>quarter</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 			</note>
@@ -2126,8 +2125,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="start" number="1"/>
-					<tuplet type="start" bracket="no"/>
+					<slur type="start" number="1" />
+					<tuplet type="start" bracket="no" />
 				</notations>
 			</note>
 			<note>
@@ -2150,7 +2149,7 @@ Music by franz schubert</work-title>
 					<technical>
 						<fingering>2</fingering>
 					</technical>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2169,8 +2168,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tuplet type="stop"/>
+					<slur type="continue" number="1" />
+					<tuplet type="stop" />
 				</notations>
 			</note>
 			<note>
@@ -2189,8 +2188,8 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
 				<notations>
-					<slur type="continue" number="1"/>
-					<tuplet type="start" bracket="no"/>
+					<slur type="continue" number="1" />
+					<tuplet type="start" bracket="no" />
 				</notations>
 			</note>
 			<note>
@@ -2209,7 +2208,7 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">continue</beam>
 				<notations>
-					<slur type="continue" number="1"/>
+					<slur type="continue" number="1" />
 				</notations>
 			</note>
 			<note>
@@ -2228,15 +2227,15 @@ Music by franz schubert</work-title>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<notations>
-					<slur type="stop" number="1"/>
-					<tuplet type="stop"/>
+					<slur type="stop" number="1" />
+					<tuplet type="stop" />
 				</notations>
 			</note>
 			<backup>
 				<duration>24</duration>
 			</backup>
 			<note>
-				<rest/>
+				<rest />
 				<duration>3</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2304,7 +2303,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>
@@ -2316,7 +2315,7 @@ Music by franz schubert</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<octave>3</octave>
@@ -2328,6 +2327,6 @@ Music by franz schubert</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 			</note>
-		</measure>
+		<forward><duration>12</duration><voice>2</voice><staff>2</staff></forward></measure>
 	</part>
 </score-partwise>

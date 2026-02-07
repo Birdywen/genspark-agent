@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<?xml version='1.0' encoding='UTF-8'?>
 <score-partwise version="3.0">
 	<work>
 		<work-title>Rondo in d minor
@@ -9,20 +8,20 @@ From “abdelazer”. Music by henry purcell</work-title>
 		<encoding>
 			<software>Maestria_v2.7.2</software>
 			<encoding-date>2026-02-05</encoding-date>
-			<supports element="accidental" type="yes"/>
-			<supports element="beam" type="yes"/>
-			<supports attribute="new-page" element="print" type="yes" value="yes"/>
-			<supports attribute="new-system" element="print" type="yes" value="yes"/>
-			<supports element="stem" type="yes"/>
+			<supports element="accidental" type="yes" />
+			<supports element="beam" type="yes" />
+			<supports attribute="new-page" element="print" type="yes" value="yes" />
+			<supports attribute="new-system" element="print" type="yes" value="yes" />
+			<supports element="stem" type="yes" />
 		</encoding>
 	</identification>
 	<part-list>
 		<score-part id="P1">
-			<part-name/>
+			<part-name />
 			<score-instrument id="P1-I1">
 				<instrument-name>part 0</instrument-name>
 				<instrument-sound>keyboard.piano</instrument-sound>
-				<solo/>
+				<solo />
 			</score-instrument>
 		</score-part>
 	</part-list>
@@ -51,7 +50,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<direction-type>
 					<words>Moderato</words>
 				</direction-type>
-				<sound tempo="100"/>
+				<sound tempo="100" />
 			</direction>
 			<harmony>
 				<root>
@@ -133,7 +132,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>
@@ -479,7 +478,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -507,7 +506,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -643,7 +642,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -671,7 +670,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -684,7 +683,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 		</measure>
 		<measure number="5">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -813,7 +812,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<alter>-1</alter>
@@ -837,7 +836,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<alter>-1</alter>
@@ -974,7 +973,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -997,7 +996,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -1081,7 +1080,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<root>
 					<root-step>A</root-step>
 				</root>
-				<kind parentheses-degrees="no">augmented</kind>
+				<kind parentheses-degrees="no">major</kind>
 			</harmony>
 			<note>
 				<pitch>
@@ -1347,7 +1346,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -1370,7 +1369,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>
@@ -1383,11 +1382,11 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 			<barline location="right">
 				<bar-style>light-heavy</bar-style>
-				<repeat direction="backward" times="2"/>
+				<repeat direction="backward" times="2" />
 			</barline>
 		</measure>
 		<measure number="9">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>1</divisions>
 				<staves>2</staves>
@@ -1472,7 +1471,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				</notations>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -1494,7 +1493,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 			</note>
-		</measure>
+		<barline location="left"><bar-style>heavy-light</bar-style><repeat direction="forward" /></barline></measure>
 		<measure number="10">
 			<attributes>
 				<divisions>4</divisions>
@@ -1673,7 +1672,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -1685,7 +1684,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -1849,7 +1848,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -1872,7 +1871,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -1895,7 +1894,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -1907,7 +1906,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2071,7 +2070,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -2094,7 +2093,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -2117,7 +2116,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -2129,7 +2128,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2137,7 +2136,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 		</measure>
 		<measure number="13">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -2292,7 +2291,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -2315,7 +2314,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -2338,7 +2337,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>4</octave>
@@ -2350,7 +2349,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2509,7 +2508,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>E</step>
 					<octave>4</octave>
@@ -2533,7 +2532,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>E</step>
 					<octave>4</octave>
@@ -2556,7 +2555,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>4</octave>
@@ -2568,7 +2567,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<rest/>
+				<rest />
 				<duration>2</duration>
 				<voice>2</voice>
 				<type>eighth</type>
@@ -2883,7 +2882,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -2894,9 +2893,9 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<stem>down</stem>
 				<staff>2</staff>
 			</note>
-		</measure>
+		<barline location="right"><bar-style>light-heavy</bar-style><repeat direction="backward" /></barline></measure>
 		<measure number="17">
-			<print new-system="yes" new-page="yes"/>
+			<print new-system="yes" new-page="yes" />
 			<attributes>
 				<divisions>1</divisions>
 				<staves>2</staves>
@@ -2938,7 +2937,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<root>
 					<root-step>A</root-step>
 				</root>
-				<kind parentheses-degrees="no">minor</kind>
+				<kind parentheses-degrees="no">major</kind>
 			</harmony>
 			<note>
 				<pitch>
@@ -2966,7 +2965,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>
@@ -3267,7 +3266,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -3290,7 +3289,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>D</step>
 					<octave>4</octave>
@@ -3421,7 +3420,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -3444,7 +3443,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<octave>4</octave>
@@ -3457,7 +3456,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 		</measure>
 		<measure number="21">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -3466,7 +3465,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<direction-type>
 					<words>To Coda</words>
 				</direction-type>
-				<sound tocoda="coda"/>
+				<sound tocoda="coda" />
 			</direction>
 			<harmony>
 				<root>
@@ -3585,7 +3584,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<alter>-1</alter>
@@ -3609,7 +3608,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>B</step>
 					<alter>-1</alter>
@@ -3746,7 +3745,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -3769,7 +3768,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -3848,7 +3847,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<root>
 					<root-step>A</root-step>
 				</root>
-				<kind parentheses-degrees="no">augmented</kind>
+				<kind parentheses-degrees="no">major</kind>
 			</harmony>
 			<note>
 				<pitch>
@@ -4110,7 +4109,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -4133,7 +4132,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>
@@ -4146,7 +4145,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 		</measure>
 		<measure number="25">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -4165,7 +4164,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<accidental>natural</accidental>
 				<stem>down</stem>
 				<staff>1</staff>
@@ -4324,7 +4323,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<accidental>natural</accidental>
 				<stem>down</stem>
 				<staff>1</staff>
@@ -4480,7 +4479,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
@@ -4697,7 +4696,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<alter>1</alter>
@@ -4723,7 +4722,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 		</measure>
 		<measure number="29">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -4742,7 +4741,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
@@ -4870,7 +4869,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>E</step>
 					<octave>3</octave>
@@ -4914,7 +4913,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>3</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
@@ -5060,20 +5059,15 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<divisions>4</divisions>
 				<staves>2</staves>
 			</attributes>
+			<harmony>
+				<root>
+					<root-step>G</root-step>
+				</root>
+				<kind parentheses-degrees="no">minor</kind>
+			</harmony>
 			<note>
 				<pitch>
-					<step>A</step>
-					<octave>3</octave>
-				</pitch>
-				<duration>4</duration>
-				<voice>1</voice>
-				<type>quarter</type>
-				<stem>down</stem>
-				<staff>2</staff>
-			</note>
-			<note>
-				<pitch>
-					<step>A</step>
+					<step>E</step>
 					<octave>5</octave>
 				</pitch>
 				<duration>1</duration>
@@ -5081,28 +5075,93 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<type>16th</type>
 				<stem>down</stem>
 				<staff>1</staff>
+				<beam number="1">begin</beam>
+				<beam number="2">begin</beam>
 			</note>
-			<backup>
-				<duration>5</duration>
-			</backup>
+			<note>
+				<pitch>
+					<step>F</step>
+					<octave>5</octave>
+				</pitch>
+				<duration>1</duration>
+				<voice>1</voice>
+				<type>16th</type>
+				<stem>down</stem>
+				<staff>1</staff>
+				<beam number="1">continue</beam>
+				<beam number="2">continue</beam>
+			</note>
+			<note>
+				<pitch>
+					<step>E</step>
+					<octave>5</octave>
+				</pitch>
+				<duration>1</duration>
+				<voice>1</voice>
+				<type>16th</type>
+				<stem>down</stem>
+				<staff>1</staff>
+				<beam number="1">continue</beam>
+				<beam number="2">continue</beam>
+			</note>
+			<note>
+				<pitch>
+					<step>D</step>
+					<octave>5</octave>
+				</pitch>
+				<duration>1</duration>
+				<voice>1</voice>
+				<type>16th</type>
+				<stem>down</stem>
+				<staff>1</staff>
+				<beam number="1">end</beam>
+				<beam number="2">end</beam>
+			</note>
+			<harmony>
+				<root>
+					<root-step>A</root-step>
+				</root>
+				<kind parentheses-degrees="no">major</kind>
+			</harmony>
+			<note>
+				<pitch>
+					<step>C</step>
+					<alter>1</alter>
+					<octave>5</octave>
+				</pitch>
+				<duration>2</duration>
+				<voice>1</voice>
+				<type>eighth</type>
+				<accidental>sharp</accidental>
+				<stem>down</stem>
+				<staff>1</staff>
+				<beam number="1">begin</beam>
+			</note>
 			<note>
 				<pitch>
 					<step>F</step>
 					<octave>5</octave>
 				</pitch>
 				<duration>2</duration>
-				<voice>2</voice>
+				<voice>1</voice>
 				<type>eighth</type>
 				<stem>down</stem>
 				<staff>1</staff>
+				<beam number="1">end</beam>
 			</note>
+			<harmony>
+				<root>
+					<root-step>G</root-step>
+				</root>
+				<kind parentheses-degrees="no">minor-sixth</kind>
+			</harmony>
 			<note>
 				<pitch>
 					<step>E</step>
 					<octave>5</octave>
 				</pitch>
 				<duration>1</duration>
-				<voice>2</voice>
+				<voice>1</voice>
 				<type>16th</type>
 				<stem>down</stem>
 				<staff>1</staff>
@@ -5115,7 +5174,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 					<octave>5</octave>
 				</pitch>
 				<duration>1</duration>
-				<voice>2</voice>
+				<voice>1</voice>
 				<type>16th</type>
 				<stem>down</stem>
 				<staff>1</staff>
@@ -5124,68 +5183,66 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</note>
 			<note>
 				<pitch>
-					<step>G</step>
+					<step>E</step>
 					<octave>5</octave>
 				</pitch>
 				<duration>1</duration>
-				<voice>2</voice>
+				<voice>1</voice>
+				<type>16th</type>
+				<stem>down</stem>
+				<staff>1</staff>
+				<beam number="1">continue</beam>
+				<beam number="2">continue</beam>
+			</note>
+			<note>
+				<pitch>
+					<step>D</step>
+					<octave>5</octave>
+				</pitch>
+				<duration>1</duration>
+				<voice>1</voice>
 				<type>16th</type>
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">end</beam>
 				<beam number="2">end</beam>
 			</note>
+			<backup>
+				<duration>12</duration>
+			</backup>
 			<note>
 				<pitch>
-					<step>C</step>
-					<alter>1</alter>
+					<step>G</step>
 					<octave>3</octave>
 				</pitch>
 				<duration>4</duration>
 				<voice>2</voice>
 				<type>quarter</type>
-				<accidental>sharp</accidental>
-				<stem>up</stem>
+				<stem>down</stem>
 				<staff>2</staff>
 			</note>
 			<note>
 				<pitch>
-					<step>G</step>
-					<octave>5</octave>
+					<step>A</step>
+					<octave>3</octave>
 				</pitch>
-				<duration>1</duration>
+				<duration>4</duration>
 				<voice>2</voice>
-				<type>16th</type>
+				<type>quarter</type>
 				<stem>down</stem>
-				<staff>1</staff>
-				<beam number="1">begin</beam>
-				<beam number="2">begin</beam>
+				<staff>2</staff>
 			</note>
 			<note>
 				<pitch>
-					<step>F</step>
-					<octave>5</octave>
+					<step>B</step>
+					<alter>-1</alter>
+					<octave>3</octave>
 				</pitch>
-				<duration>1</duration>
+				<duration>4</duration>
 				<voice>2</voice>
-				<type>16th</type>
+				<type>quarter</type>
 				<stem>down</stem>
-				<staff>1</staff>
-				<beam number="1">continue</beam>
-				<beam number="2">continue</beam>
-			</note>
-			<note>
-				<pitch>
-					<step>E</step>
-					<octave>5</octave>
-				</pitch>
-				<duration>1</duration>
-				<voice>2</voice>
-				<type>16th</type>
-				<stem>down</stem>
-				<staff>1</staff>
-				<beam number="1">end</beam>
-				<beam number="2">end</beam>
+				<staff>2</staff>
 			</note>
 		</measure>
 		<measure number="32">
@@ -5207,7 +5264,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
@@ -5239,7 +5296,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<duration>6</duration>
 				<voice>1</voice>
 				<type>eighth</type>
-				<dot/>
+				<dot />
 				<stem>down</stem>
 				<staff>1</staff>
 				<beam number="1">begin</beam>
@@ -5354,7 +5411,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>C</step>
 					<alter>1</alter>
@@ -5368,7 +5425,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>E</step>
 					<octave>3</octave>
@@ -5384,7 +5441,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 			</barline>
 		</measure>
 		<measure number="33">
-			<print new-system="yes"/>
+			<print new-system="yes" />
 			<attributes>
 				<divisions>4</divisions>
 				<staves>2</staves>
@@ -5393,7 +5450,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<direction-type>
 					<words>D.C. al Coda</words>
 				</direction-type>
-				<sound dacapo="yes"/>
+				<sound dacapo="yes" />
 			</direction>
 			<harmony>
 				<root>
@@ -5514,7 +5571,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -5537,7 +5594,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>A</step>
 					<octave>3</octave>
@@ -5616,7 +5673,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<root>
 					<root-step>A</root-step>
 				</root>
-				<kind parentheses-degrees="no">augmented</kind>
+				<kind parentheses-degrees="no">major</kind>
 			</harmony>
 			<note>
 				<pitch>
@@ -5878,7 +5935,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>G</step>
 					<octave>3</octave>
@@ -5901,7 +5958,7 @@ From “abdelazer”. Music by henry purcell</work-title>
 				<staff>2</staff>
 			</note>
 			<note>
-				<chord/>
+				<chord />
 				<pitch>
 					<step>F</step>
 					<octave>3</octave>

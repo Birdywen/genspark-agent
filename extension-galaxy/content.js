@@ -1414,11 +1414,12 @@ ${toolSummary}
         for (const [key, tip] of Object.entries(this.errorTips)) {
           if (text.includes(key)) return tip;
         }
+        return '';
       }
-      if (success && this.toolTips[toolName]) {
+      if (this.toolTips[toolName]) {
         return this.toolTips[toolName];
       }
-      return this.generalTips[Math.floor(Math.random() * this.generalTips.length)];
+      return '';
     }
   };
 
@@ -1447,8 +1448,25 @@ ${toolSummary}
       }
     }
     
-    if (content.length > CONFIG.MAX_RESULT_LENGTH) {
-      content = content.slice(0, CONFIG.MAX_RESULT_LENGTH) + '\n...(内容已截断)';
+    // 智能截断：根据工具类型设定不同上限
+    const toolLimits = {
+      'read_file': 20000,
+      'read_multiple_files': 20000,
+      'directory_tree': 5000,
+      'run_command': 10000,
+      'browser_snapshot': 3000,
+      'find_text': 8000,
+      'find_usage': 8000,
+      'get_symbols': 8000,
+      'analyze_project': 8000
+    };
+    const maxLen = toolLimits[msg.tool] || 15000;
+    
+    if (content.length > maxLen) {
+      // 保留头尾，中间截断
+      const headLen = Math.floor(maxLen * 0.7);
+      const tailLen = Math.floor(maxLen * 0.2);
+      content = content.slice(0, headLen) + `\n\n...(截断了 ${content.length - headLen - tailLen} 字符)...\n\n` + content.slice(-tailLen);
     }
     
     const status = msg.success ? '✓ 成功' : '✗ 失败';
@@ -1461,7 +1479,7 @@ ${toolSummary}
 ${content}
 \`\`\`
 ${tip}
-请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+`;
   }
 
   // ============== UI ==============
@@ -1862,6 +1880,13 @@ ${tip}
         if (!msg.connected && wasConnected) {
           setTimeout(() => sendMessageSafe('[系统通知] 服务器重启中，请稍候...'), 500);
         } else if (msg.connected && !wasConnected) {
+          // 重连成功：重置所有执行状态，防止卡在"执行中"
+          if (state.agentRunning) {
+            addLog('🔄 重连后重置执行状态', 'info');
+          }
+          state.agentRunning = false;
+          state.pendingCalls.clear();
+          hideExecutingIndicator();
           setTimeout(() => sendMessageSafe('[系统通知] 服务器已重新连接，可以继续执行任务'), 1000);
         }
         break;
@@ -1979,7 +2004,7 @@ ${tip}
         }
         const batchSummary = `**[批量执行完成]** ${msg.success ? '✓ 成功' : '✗ 部分失败'} (${msg.stepsCompleted}/${msg.totalSteps})\n\n` +
           detailedResults +
-          `\n\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n\n`;
         sendMessageSafe(batchSummary);
         break;
 
@@ -2093,7 +2118,7 @@ ${tip}
           `- 目标ID: ${msg.goalId}\n` +
           `- 尝试次数: ${msg.attempts || 1}\n` +
           (msg.gaps?.length ? `- 未满足条件: ${msg.gaps.length}\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(goalSummary);
         break;
 
@@ -2122,7 +2147,7 @@ ${tip}
           `- 执行: ${vr?.success ? '✓' : '✗'}\n` +
           `- 验证: ${vr?.validated ? '✓' : '✗'}\n` +
           (vr?.result ? `\`\`\`\n${typeof vr.result === 'string' ? vr.result.slice(0, 1000) : JSON.stringify(vr.result).slice(0, 1000)}\n\`\`\`\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(vrSummary);
         break;
 
@@ -2150,7 +2175,7 @@ ${tip}
           (msg.warning ? `- ⚠️ ${msg.warning}\n` : '') +
           (msg.output ? `\`\`\`\n${msg.output.slice(-2000)}\n\`\`\`\n` : '') +
           (msg.error ? `- 错误: ${msg.error}\n` : '') +
-          `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+          `\n`;
         sendMessageToAI(asyncSummary);
         break;
 
@@ -2184,7 +2209,7 @@ ${tip}
             `- 文件: ${msg.logFile}\n` +
             `- 总行数: ${msg.lines}\n` +
             `\`\`\`\n${msg.content?.slice(-3000) || '(空)'}\n\`\`\`\n` +
-            `\n请根据上述结果继续。如果任务已完成，请输出 @DONE`;
+            `\n`;
           sendMessageToAI(logSummary);
         } else {
           addLog(`❌ 读取日志失败: ${msg.error}`, 'error');
