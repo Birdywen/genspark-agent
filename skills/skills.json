@@ -13,6 +13,15 @@
       ]
     },
     {
+      "name": "opus-video",
+      "description": "Agent Opus (opus.pro) AI 视频生成平台 API，支持创建视频项目、查询状态、获取结果",
+      "source": "local",
+      "path": "./opus-video",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": []
+    },
+    {
       "name": "megacmd",
       "description": "MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享",
       "source": "local",
