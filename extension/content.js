@@ -1813,6 +1813,7 @@ ${tip}
         <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
+        <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -1930,8 +1931,56 @@ ${tip}
       #agent-actions button:hover { background: #4b5563; }
       #agent-copy-prompt { background: #3730a3 !important; }
       #agent-copy-prompt:hover { background: #4338ca !important; }
+      #agent-save { background: #065f46 !important; }
+      #agent-save:hover { background: #047857 !important; }
     `;
     document.head.appendChild(style);
+
+    document.getElementById('agent-save').onclick = () => {
+      addLog('💾 存档中...', 'info');
+      const saveBtn = document.getElementById('agent-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = '⏳';
+      
+      // 先获取命令历史路径
+      const historyPath = '/Users/yay/workspace/genspark-agent/server-v2/command-history.json';
+      
+      // 先查活跃项目，再 digest
+      chrome.runtime.sendMessage({
+        type: 'SEND_TO_SERVER',
+        payload: {
+          type: 'tool_call',
+          id: 'save_check_' + Date.now(),
+          tool: 'run_command',
+          params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js status' }
+        }
+      }, (statusResp) => {
+        // 从 status 输出中提取项目名，或使用默认值
+        let project = 'genspark-agent';
+        if (statusResp && statusResp.result) {
+          const match = String(statusResp.result).match(/当前项目:\s*(\S+)/);
+          if (match && match[1] !== '(未设置)') project = match[1];
+        }
+        
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: {
+            type: 'tool_call',
+            id: 'save_' + Date.now(),
+            tool: 'run_command',
+            params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
+          }
+        }, (resp) => {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 存档';
+          if (resp && resp.success) {
+            addLog('💾 存档成功！项目: ' + project, 'success');
+          } else {
+            addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
+          }
+        });
+      });
+    };
 
     document.getElementById('agent-clear').onclick = () => {
       document.getElementById('agent-logs').innerHTML = '';
