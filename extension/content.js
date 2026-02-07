@@ -85,7 +85,7 @@
           opusApiBase: 'https://api.opus.pro/api',
           webhookUrl: 'https://flow.sokt.io/func/scri42hM0QuZ',
           pollInterval: 30000, // 30秒轮询一次
-          maxPollTime: 600000, // 最长等待10分钟
+          maxPollTime: 3600000, // 最长等待60分钟
           opusTabId: null // opus.pro 的 tab ID
         },
       
@@ -257,10 +257,23 @@
       
         async pollProjectStatus(projectId, auth, onUpdate) {
           const startTime = Date.now();
+          let consecutiveErrors = 0;
           
           while (Date.now() - startTime < this.config.maxPollTime) {
             try {
-              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, auth);
+              // Re-fetch token each poll cycle (may have been refreshed)
+              let currentAuth = auth;
+              try {
+                currentAuth = await this.getOpusToken();
+              } catch(tokenErr) {
+                // Token expired, wait and retry
+                if (onUpdate) onUpdate('TOKEN_EXPIRED - please login opus.pro', null);
+                await new Promise(r => setTimeout(r, 60000)); // wait 1 min
+                continue;
+              }
+              
+              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, currentAuth);
+              consecutiveErrors = 0;
               
               if (onUpdate) onUpdate(project.stage, project);
       
@@ -272,11 +285,17 @@
                 throw new Error('Project failed: ' + (project.error || project.stage));
               }
             } catch (e) {
-              // Token 可能过期，尝试刷新
-              if (e.message.includes('401')) {
-                throw new Error('Token expired during polling. Please refresh opus.pro login.');
+              consecutiveErrors++;
+              if (e.message.includes('401') || e.message.includes('Unauthorized')) {
+                if (onUpdate) onUpdate('⚠️ Token expired, retrying in 60s... (login opus.pro to refresh)', null);
+                await new Promise(r => setTimeout(r, 60000));
+                if (consecutiveErrors > 10) {
+                  throw new Error('Too many auth failures. Please login opus.pro and retry.');
+                }
+                continue;
               }
-              throw e;
+              if (consecutiveErrors > 5) throw e;
+              if (onUpdate) onUpdate('⚠️ Error: ' + e.message + ', retrying...', null);
             }
       
             await new Promise(r => setTimeout(r, this.config.pollInterval));

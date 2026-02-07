@@ -5461,7 +5461,64 @@
       "success": true,
       "resultPreview": "SUCCESS: updated EVAL_IN_TAB to support async\n",
       "error": null
+    },
+    {
+      "id": 7736,
+      "timestamp": "2026-02-07T15:46:14.621Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: EVAL_IN_TAB async support + opusApiCall reads token from opus.pro tab localStorage\n\n- background.js: EVAL_IN_TAB now awaits Promise results (supports async code)\n- content.js: opusApiCall reads token directly from opus.pro localStorage (avoids CORS)\n- Safer param passing via JSON string concatenation instead of template literals' && git push"
+      },
+      "success": true,
+      "resultPreview": "[main d658f4f] fix: EVAL_IN_TAB async support + opusApiCall reads token from opus.pro tab localStorage\n 8 files changed, 599 insertions(+), 19 deletions(-)\n create mode 100644 scripts/add_eval_in_tab.py\n create mode 100644 scripts/add_scripting_perm.py\n create mode 100644 scripts/fix_eval_in_tab.py\n create mode 100644 scripts/fix_opus_api_call.py\n create mode 100644 scripts/fix_opus_api_v2.py\n\nTo https://github.com/Birdywen/genspark-agent.git\n   bdf04e4..d658f4f  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 7737,
+      "timestamp": "2026-02-07T16:02:35.223Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/fix_polling_token.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\n\nold_poll = '''        async pollProjectStatus(projectId, auth, onUpdate) {\n          const startTime = Date.now();\n          \n          while (Date.now() - startTime < this.config.maxPollTime) {\n            try {\n              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, auth);\n              \n              if (onUpdate) onUpdate(project.stage, project);\n      \n              if (project.stage === 'EDITOR' && project.resultVideo) {\n                return project;\n              }\n      \n              if (project.stage === 'FAILED' || project.stage === 'ERROR') {\n                throw new Error('Project failed: ' + (project.error || project.stage));\n              }\n            } catch (e) {\n              // Token 可能过期，尝试刷新\n              if (e.message.includes('401')) {\n                throw new Error('Token expired during polling. Please refresh opus.pro login.');\n              }\n              throw e;\n            }\n      \n            await new Promise(r => setTimeout(r, this.config.pollInterval));\n          }\n      \n          throw new Error('Polling timeout: video generation took too long');\n        },'''\n\nnew_poll = '''        async pollProjectStatus(projectId, auth, onUpdate) {\n          const startTime = Date.now();\n          let consecutiveErrors = 0;\n          \n          while (Date.now() - startTime < this.config.maxPollTime) {\n            try {\n              // Re-fetch token each poll cycle (may have been refreshed)\n              let currentAuth = auth;\n              try {\n                currentAuth = await this.getOpusToken();\n              } catch(tokenErr) {\n                // Token expired, wait and retry\n                if (onUpdate) onUpdate('TOKEN_EXPIRED - please login opus.pro', null);\n                await new Promise(r => setTimeout(r, 60000)); // wait 1 min\n                continue;\n              }\n              \n              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, currentAuth);\n              consecutiveErrors = 0;\n              \n              if (onUpdate) onUpdate(project.stage, project);\n      \n              if (project.stage === 'EDITOR' && project.resultVideo) {\n                return project;\n              }\n      \n              if (project.stage === 'FAILED' || project.stage === 'ERROR') {\n                throw new Error('Project failed: ' + (project.error || project.stage));\n              }\n            } catch (e) {\n              consecutiveErrors++;\n              if (e.message.includes('401') || e.message.includes('Unauthorized')) {\n                if (onUpdate) onUpdate('⚠️ Token expired, retrying in 60s... (login opus.pro to refresh)', null);\n                await new Promise(r => setTimeout(r, 60000));\n                if (consecutiveErrors > 10) {\n                  throw new Error('Too many auth failures. Please login opus.pro and retry.');\n                }\n                continue;\n              }\n              if (consecutiveErrors > 5) throw e;\n              if (onUpdate) onUpdate('⚠️ Error: ' + e.message + ', retrying...', null);\n            }\n      \n            await new Promise(r => setTimeout(r, this.config.pollInterval));\n          }\n      \n          throw new Error('Polling timeout: video generation took too long');\n        },'''\n\nif old_poll in content:\n    content = content.replace(old_poll, new_poll)\n    open('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\n    print('SUCCESS: updated pollProjectStatus with token retry logic')\nelse:\n    print('ERROR: old poll not found')\n    idx = content.find('async pollProjectStatus')\n    print('found at:', idx)\n    if idx > -1:\n        print(repr(content[idx:idx+100]))\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/fix_polling_token.py",
+      "error": null
+    },
+    {
+      "id": 7738,
+      "timestamp": "2026-02-07T16:02:48.520Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/fix_polling_token.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: updated pollProjectStatus with token retry logic\n",
+      "error": null
+    },
+    {
+      "id": 7739,
+      "timestamp": "2026-02-07T16:03:00.026Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/fix_poll_timeout.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\ncontent = content.replace(\n    'maxPollTime: 600000, // 最长等待10分钟',\n    'maxPollTime: 3600000, // 最长等待60分钟'\n)\nopen('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\nprint('updated maxPollTime to 60 minutes')\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/fix_poll_timeout.py",
+      "error": null
+    },
+    {
+      "id": 7740,
+      "timestamp": "2026-02-07T16:03:10.647Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/fix_poll_timeout.py"
+      },
+      "success": true,
+      "resultPreview": "updated maxPollTime to 60 minutes\n",
+      "error": null
     }
   ],
-  "nextId": 7736
+  "nextId": 7741
 }
