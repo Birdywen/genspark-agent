@@ -238,6 +238,7 @@
               type: 'voice-over',
               voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'
             },
+            hookTemplateName: 'hook_slidecut_down',
             enableCaption: true
           };
       
