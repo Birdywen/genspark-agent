@@ -108,6 +108,13 @@ function connectWebSocket() {
         return;
       }
 
+      // 浏览器工具反向调用：server 请求浏览器执行 js_flow/eval_js/list_tabs
+      if (data.type === 'browser_tool_call') {
+        console.log('[BG] 浏览器工具调用:', data.tool, data.callId);
+        broadcastToAllTabs(data);
+        return;
+      }
+
       // 第三阶段: 任务规划、工作流、断点续传结果
       if (data.type === 'plan_result' || data.type === 'plan_error') {
         console.log('[BG] 任务规划消息:', data.type);

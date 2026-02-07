@@ -9,6 +9,13 @@ class TaskEngine {
     this.safety = safety;
     this.errorClassifier = errorClassifier;
     this.stateManager = new StateManager(logger);
+    this.browserCallHandler = null;
+  }
+
+  static BROWSER_TOOLS = ['list_tabs', 'eval_js', 'js_flow'];
+
+  setBrowserCallHandler(handler) {
+    this.browserCallHandler = handler;
   }
 
   /**
@@ -79,7 +86,16 @@ class TaskEngine {
     // 执行工具调用
     try {
       this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);
-      const result = await this.hub.call(step.tool, resolvedParams);
+      
+      // 浏览器端工具走 browserCallHandler
+      const isBrowserTool = TaskEngine.BROWSER_TOOLS.includes(step.tool);
+      let result;
+      if (isBrowserTool && this.browserCallHandler) {
+        this.logger.info(`[TaskEngine] 浏览器工具 ${step.tool}，委托浏览器执行`);
+        result = await this.browserCallHandler(step.tool, resolvedParams);
+      } else {
+        result = await this.hub.call(step.tool, resolvedParams);
+      }
       
       let resultStr = result;
       if (result && result.content && Array.isArray(result.content)) {

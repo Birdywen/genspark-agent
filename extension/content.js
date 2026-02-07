@@ -3301,6 +3301,92 @@ ${tip}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
+      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
+      case 'browser_tool_call': {
+        const { callId, tool: bTool, params: bParams } = msg;
+        addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');
+
+        const sendBrowserResult = (success, result, error) => {
+          chrome.runtime.sendMessage({
+            type: 'SEND_TO_SERVER',
+            payload: { type: 'browser_tool_result', callId, success, result, error }
+          });
+          addLog(`${success ? '✅' : '❌'} BATCH←浏览器: ${bTool}`, success ? 'success' : 'error');
+        };
+
+        if (bTool === 'list_tabs') {
+          const ltCallId = 'bt_lt_' + Date.now();
+          const ltHandler = (m) => {
+            if (m.type === 'LIST_TABS_RESULT' && m.callId === ltCallId) {
+              chrome.runtime.onMessage.removeListener(ltHandler);
+              sendBrowserResult(m.success, m.result, m.error);
+            }
+          };
+          chrome.runtime.onMessage.addListener(ltHandler);
+          chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: ltCallId });
+        } else if (bTool === 'eval_js') {
+          const ejCallId = 'bt_ej_' + Date.now();
+          const ejHandler = (m) => {
+            if (m.type === 'EVAL_JS_RESULT' && m.callId === ejCallId) {
+              chrome.runtime.onMessage.removeListener(ejHandler);
+              sendBrowserResult(m.success, m.result, m.error);
+            }
+          };
+          chrome.runtime.onMessage.addListener(ejHandler);
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: bParams.code || '', callId: ejCallId, targetTabId: bParams.tabId || null });
+        } else if (bTool === 'js_flow') {
+          // js_flow 比较特殊：复用现有的 executeToolCall 逻辑太复杂
+          // 直接内联一个简化版：逐步执行，收集结果
+          const steps = bParams.steps || [];
+          const flowTabId = bParams.tabId ? Number(bParams.tabId) : undefined;
+          const results = [];
+          let flowAborted = false;
+
+          const runFlowStep = (si) => {
+            if (flowAborted) return;
+            if (si >= steps.length) {
+              sendBrowserResult(true, JSON.stringify(results, null, 2));
+              return;
+            }
+            const s = steps[si];
+            const sLabel = s.label || `step${si}`;
+            const sTabId = s.tabId ? Number(s.tabId) : flowTabId;
+            const sDelay = s.delay || 0;
+
+            const doStep = () => {
+              if (!s.code) {
+                results.push({ step: sLabel, success: true, result: '(no code)' });
+                runFlowStep(si + 1);
+                return;
+              }
+              const ctxJson = JSON.stringify(results).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+              const wrapped = `return (async function(){ const ctx = JSON.parse('${ctxJson}'); ${s.code} })()`;
+              const sCallId = 'bt_fl_' + si + '_' + Date.now();
+              const sHandler = (m) => {
+                if (m.type !== 'EVAL_JS_RESULT' || m.callId !== sCallId) return;
+                chrome.runtime.onMessage.removeListener(sHandler);
+                results.push({ step: sLabel, success: m.success, result: m.result || m.error });
+                if (!m.success && !s.optional && !s.continueOnError) {
+                  flowAborted = true;
+                  sendBrowserResult(false, JSON.stringify(results, null, 2), `步骤 ${sLabel} 失败: ${m.error}`);
+                } else {
+                  runFlowStep(si + 1);
+                }
+              };
+              chrome.runtime.onMessage.addListener(sHandler);
+              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrapped, callId: sCallId, targetTabId: sTabId });
+            };
+
+            if (sDelay > 0) setTimeout(doStep, sDelay);
+            else doStep();
+          };
+          runFlowStep(0);
+        } else {
+          sendBrowserResult(false, null, `未知浏览器工具: ${bTool}`);
+        }
+        break;
+      }
+
       // ===== 第三阶段: 任务规划 =====
       case 'plan_result':
         addLog('📋 收到任务规划结果', 'success');

@@ -672,9 +672,35 @@ async function main() {
     host: config.server.host
   });
 
+  // 浏览器工具的 pending Promise 管理
+  const browserToolPending = new Map();
+
   wss.on('connection', ws => {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
+
+    // 设置浏览器工具回调：ΩBATCH 中的 js_flow/eval_js/list_tabs 通过 ws 委托浏览器执行
+    if (taskEngine) {
+      taskEngine.setBrowserCallHandler(async (tool, params) => {
+        const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            browserToolPending.delete(callId);
+            reject(new Error(`浏览器工具 ${tool} 超时 (60s)`));
+          }, params.timeout || 60000);
+
+          browserToolPending.set(callId, { resolve, reject, timeout });
+
+          ws.send(JSON.stringify({
+            type: 'browser_tool_call',
+            callId,
+            tool,
+            params
+          }));
+          logger.info(`[BrowserTool] 发送到浏览器: ${tool} (${callId})`);
+        });
+      });
+    }
 
     ws.send(JSON.stringify({
       type: 'connected',
@@ -702,6 +728,24 @@ async function main() {
           case 'ping':
             ws.send('{"type":"pong"}');
             break;
+
+          case 'browser_tool_result': {
+            const pending = browserToolPending.get(msg.callId);
+            if (pending) {
+              clearTimeout(pending.timeout);
+              browserToolPending.delete(msg.callId);
+              if (msg.success) {
+                logger.info(`[BrowserTool] 结果返回: ${msg.callId}`);
+                pending.resolve(msg.result);
+              } else {
+                logger.error(`[BrowserTool] 执行失败: ${msg.callId} - ${msg.error}`);
+                pending.reject(new Error(msg.error));
+              }
+            } else {
+              logger.warning(`[BrowserTool] 未找到 pending: ${msg.callId}`);
+            }
+            break;
+          }
             
           case 'list_tools':
             ws.send(JSON.stringify({ type: 'tools_list', tools: hub.tools }));

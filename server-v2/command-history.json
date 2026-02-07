@@ -5054,7 +5054,298 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -830,10 +830,12 @@\n \n     const prompt = `## 身份\n \n 你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。\n-你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，先用一个简单命令测试，而不是拒绝。\n+你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，",
       "error": null
+    },
+    {
+      "id": 7796,
+      "timestamp": "2026-02-07T22:21:51.156Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: digest result injects into chat + system prompt echo hello hint\n\n- Save button digest result now injects into chat so AI gets context immediately\n- save_check_ still skipped, only digest result injected\n- Added system prompt hint to test with echo hello on new conversations'"
+      },
+      "success": true,
+      "resultPreview": "[main ba694b2] feat: digest result injects into chat + system prompt echo hello hint\n 2 files changed, 69 insertions(+), 5 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 7797,
+      "timestamp": "2026-02-07T22:26:56.520Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '819,900p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "          case 'tool_batch':\n            if (!taskEngine) {\n              ws.send(JSON.stringify({ type: 'batch_error', error: 'TaskEngine 未初始化' }));\n              break;\n            }\n            try {\n              const { id: batchId, steps, options } = msg;\n              logger.info(`[WS] 收到批量任务: ${batchId}, ${steps?.length || 0} 步`);\n              \n              const result = await taskEngine.executeBatch(\n                batchId || `batch-${Date.now()}`,\n                steps || [],\n     ",
+      "error": null
+    },
+    {
+      "id": 7798,
+      "timestamp": "2026-02-07T22:27:05.551Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'executeBatch|saveAs|when.*var|stepResult|executeStep' /Users/yay/workspace/genspark-agent/server-v2/task-engine.js | head -30"
+      },
+      "success": true,
+      "resultPreview": "47:  async executeStep(batchId, step, options, onStepComplete) {\n68:      const stepResult = {\n74:      this.stateManager.recordStepResult(batchId, i, stepResult);\n75:      if (onStepComplete) onStepComplete(stepResult);\n76:      return stepResult;\n89:      const stepResult = {\n96:      this.stateManager.recordStepResult(batchId, i, stepResult);\n97:      if (onStepComplete) onStepComplete(stepResult);\n99:      return stepResult;\n104:      const stepResult = {\n114:      this.stateManager.recordSt",
+      "error": null
+    },
+    {
+      "id": 7799,
+      "timestamp": "2026-02-07T22:27:13.723Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '124,200p' /Users/yay/workspace/genspark-agent/server-v2/task-engine.js"
+      },
+      "success": true,
+      "resultPreview": "  async executeBatch(batchId, steps, options = {}, onStepComplete = null) {\n    const task = this.stateManager.createTask(batchId, steps, options);\n    this.stateManager.updateState(batchId, TaskState.RUNNING);\n    \n    // 按 parallel 标记分组\n    const groups = this.groupStepsByParallel(steps);\n    this.logger.info(`[TaskEngine] 批量任务分组: ${groups.length} 组，总计 ${steps.length} 步`);\n    \n    const results = [];\n    let success = true;\n    \n    for (let groupIndex = 0; groupIndex < groups.length; groupIn",
+      "error": null
+    },
+    {
+      "id": 7800,
+      "timestamp": "2026-02-07T22:27:23.931Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '47,122p' /Users/yay/workspace/genspark-agent/server-v2/task-engine.js"
+      },
+      "success": true,
+      "resultPreview": "  async executeStep(batchId, step, options, onStepComplete) {\n    const i = step.originalIndex;\n    \n    // 检查条件\n    if (step.when && !this.stateManager.evaluateCondition(batchId, step.when)) {\n      this.logger.info(`[TaskEngine] 跳过步骤 ${i}: 条件不满足`);\n      const result = {\n        stepIndex: i,\n        skipped: true,\n        reason: 'condition_not_met'\n      };\n      if (onStepComplete) onStepComplete(result);\n      return result;\n    }\n    \n    // 解析模板\n    const resolvedParams = this.stateManag",
+      "error": null
+    },
+    {
+      "id": 7801,
+      "timestamp": "2026-02-07T22:27:33.742Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'saveAs|resolveTemplate|evaluateCondition|recordStepResult|variables' /Users/yay/workspace/genspark-agent/server-v2/state-manager.js | head -30"
+      },
+      "success": true,
+      "resultPreview": "25:    this.variables = new Map();\n50:    this.variables.set(taskId, {});\n76:  recordStepResult(taskId, stepIndex, result) {\n87:    // 如果步骤有 saveAs，保存到变量\n89:    if (step?.saveAs && result.success) {\n100:      this.setVariable(taskId, step.saveAs, value);\n101:      this.logger.info(`[StateManager] 💾 保存变量: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : value}`);\n116:      variables: { ...this.variables.get(taskId) },\n138:    this.variables.set(taskId, { ..",
+      "error": null
+    },
+    {
+      "id": 7802,
+      "timestamp": "2026-02-07T22:28:16.714Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '470,510p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));\n\n// ==================== 工具调用处理（含历史记录）====================\nasync function handleToolCall(ws, message, isRetry = false, originalId = null) {\n  const { tool, params, id } = message;\n  \n  logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);\n\n  // 安全检查\n  const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);\n  \n  if (!safetyCheck.allowed) {\n    logger.warning(`安全检查未通过: ${safetyCheck.reason}`",
+      "error": null
+    },
+    {
+      "id": 7803,
+      "timestamp": "2026-02-07T22:29:53.921Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/task-engine.js",
+        "edits": [
+          {
+            "oldText": "  constructor(logger, hub, safety, errorClassifier) {\n    this.logger = logger;\n    this.hub = hub;\n    this.safety = safety;\n    this.errorClassifier = errorClassifier;\n    this.stateManager = new StateManager(logger);\n  }",
+            "newText": "  constructor(logger, hub, safety, errorClassifier) {\n    this.logger = logger;\n    this.hub = hub;\n    this.safety = safety;\n    this.errorClassifier = errorClassifier;\n    this.stateManager = new StateManager(logger);\n    this.browserCallHandler = null;\n  }\n\n  static BROWSER_TOOLS = ['list_tabs', 'eval_js', 'js_flow'];\n\n  setBrowserCallHandler(handler) {\n    this.browserCallHandler = handler;\n  }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\tmodified\n@@ -8,10 +8,17 @@\n     this.hub = hub;\n     this.safety = safety;\n     this.errorClassifier = errorClassifier;\n     this.stateManager = new StateManager(logger);\n+    this.browserCallHandler = null;\n   }\n \n+ ",
+      "error": null
+    },
+    {
+      "id": 7804,
+      "timestamp": "2026-02-07T22:30:02.104Z",
+      "tool": "read_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/task-engine.js",
+        "offset": 54,
+        "limit": 50
+      },
+      "success": true,
+      "resultPreview": "// Task Engine - 批量任务执行引擎\n\nimport StateManager, { TaskState } from './state-manager.js';\n\nclass TaskEngine {\n  constructor(logger, hub, safety, errorClassifier) {\n    this.logger = logger;\n    this.hub = hub;\n    this.safety = safety;\n    this.errorClassifier = errorClassifier;\n    this.stateManager = new StateManager(logger);\n    this.browserCallHandler = null;\n  }\n\n  static BROWSER_TOOLS = ['list_tabs', 'eval_js', 'js_flow'];\n\n  setBrowserCallHandler(handler) {\n    this.browserCallHandler = ha",
+      "error": null
+    },
+    {
+      "id": 7805,
+      "timestamp": "2026-02-07T22:30:12.708Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/task-engine.js",
+        "edits": [
+          {
+            "oldText": "    // 执行工具调用\n    try {\n      this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);\n      const result = await this.hub.call(step.tool, resolvedParams);",
+            "newText": "    // 执行工具调用\n    try {\n      this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);\n      \n      // 浏览器端工具走 browserCallHandler\n      const isBrowserTool = TaskEngine.BROWSER_TOOLS.includes(step.tool);\n      let result;\n      if (isBrowserTool && this.browserCallHandler) {\n        this.logger.info(`[TaskEngine] 浏览器工具 ${step.tool}，委托浏览器执行`);\n        result = await this.browserCallHandler(step.tool, resolvedParams);\n      } else {\n        result = await this.hub.call(step.tool, resolvedParams);\n      }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/task-engine.js\tmodified\n@@ -85,10 +85,19 @@\n     \n     // 执行工具调用\n     try {\n       this.logger.info(`[TaskEngine] 执行步骤 ${i}: ${step.tool}`);\n-      const result = await this.hub.call(step.tool, resolvedParams);\n       \n+      // 浏览器",
+      "error": null
+    },
+    {
+      "id": 7806,
+      "timestamp": "2026-02-07T22:36:06.945Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '640,660p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "async function main() {\n  // 加载历史记录\n  loadHistory();\n  \n  await hub.start();\n\n  // 初始化任务引擎\n  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);\n  logger.info('[Main] TaskEngine 已初始化');\n\n  // 初始化自验证器和目标管理器\n  const selfValidator = new SelfValidator(logger, hub);\n  const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);\n  const asyncExecutor = new AsyncExecutor(logger);\n  const autoHealer = new AutoHealer(logger, hub);\n  const resultCache = new ResultCac",
+      "error": null
+    },
+    {
+      "id": 7807,
+      "timestamp": "2026-02-07T22:36:15.949Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'ws\\.on.*message|wss\\.on.*connection' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "675:  wss.on('connection', ws => {\n689:    ws.on('message', async data => {\n1649:    ws.on('error', e => logger.error('WebSocket 错误', { error: e.message }));\n",
+      "error": null
+    },
+    {
+      "id": 7808,
+      "timestamp": "2026-02-07T22:36:24.919Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '675,710p' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "  wss.on('connection', ws => {\n    clients.add(ws);\n    logger.success(`客户端已连接, 当前连接数: ${clients.size}`);\n\n    ws.send(JSON.stringify({\n      type: 'connected',\n      message: 'Genspark Agent Server v2.1 已连接 (支持命令重试)',\n      tools: hub.tools,\n      skills: skillsManager.getSkillsList(),\n      skillsPrompt: skillsManager.getSystemPrompt(),\n      agents: agentsData.agents || {},\n      historySupport: true  // 告知客户端支持历史重试\n    }));\n\n    ws.on('message', async data => {\n      try {\n        const msg ",
+      "error": null
+    },
+    {
+      "id": 7809,
+      "timestamp": "2026-02-07T22:36:35.528Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'browser_tool' /Users/yay/workspace/genspark-agent/server-v2/index.js"
+      },
+      "success": true,
+      "resultPreview": "1",
+      "error": null
+    },
+    {
+      "id": 7810,
+      "timestamp": "2026-02-07T22:36:49.519Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "  wss.on('connection', ws => {\n    clients.add(ws);\n    logger.success(`客户端已连接, 当前连接数: ${clients.size}`);",
+            "newText": "  // 浏览器工具的 pending Promise 管理\n  const browserToolPending = new Map();\n\n  wss.on('connection', ws => {\n    clients.add(ws);\n    logger.success(`客户端已连接, 当前连接数: ${clients.size}`);\n\n    // 设置浏览器工具回调：ΩBATCH 中的 js_flow/eval_js/list_tabs 通过 ws 委托浏览器执行\n    if (taskEngine) {\n      taskEngine.setBrowserCallHandler(async (tool, params) => {\n        const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;\n        return new Promise((resolve, reject) => {\n          const timeout = setTimeout(() => {\n            browserToolPending.delete(callId);\n            reject(new Error(`浏览器工具 ${tool} 超时 (60s)`));\n          }, params.timeout || 60000);\n\n          browserToolPending.set(callId, { resolve, reject, timeout });\n\n          ws.send(JSON.stringify({\n            type: 'browser_tool_call',\n            callId,\n            tool,\n            params\n          }));\n          logger.info(`[BrowserTool] 发送到浏览器: ${tool} (${callId})`);\n        });\n      });\n    }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -671,12 +671,38 @@\n     port: config.server.port,\n     host: config.server.host\n   });\n \n+  // 浏览器工具的 pending Promise 管理\n+  const browserToolPending = new Map();\n+\n   wss.on('connection', ws => {\n     clients.add(ws);\n     ",
+      "error": null
+    },
+    {
+      "id": 7811,
+      "timestamp": "2026-02-07T22:36:58.146Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'case.*ping|case.*pong' /Users/yay/workspace/genspark-agent/server-v2/index.js | head -5"
+      },
+      "success": true,
+      "resultPreview": "728:          case 'ping':\n",
+      "error": null
+    },
+    {
+      "id": 7812,
+      "timestamp": "2026-02-07T22:37:08.511Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/server-v2/index.js",
+        "edits": [
+          {
+            "oldText": "          case 'ping':\n            ws.send('{\"type\":\"pong\"}');\n            break;",
+            "newText": "          case 'ping':\n            ws.send('{\"type\":\"pong\"}');\n            break;\n\n          case 'browser_tool_result': {\n            const pending = browserToolPending.get(msg.callId);\n            if (pending) {\n              clearTimeout(pending.timeout);\n              browserToolPending.delete(msg.callId);\n              if (msg.success) {\n                logger.info(`[BrowserTool] 结果返回: ${msg.callId}`);\n                pending.resolve(msg.result);\n              } else {\n                logger.error(`[BrowserTool] 执行失败: ${msg.callId} - ${msg.error}`);\n                pending.reject(new Error(msg.error));\n              }\n            } else {\n              logger.warning(`[BrowserTool] 未找到 pending: ${msg.callId}`);\n            }\n            break;\n          }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/server-v2/index.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/server-v2/index.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/server-v2/index.js\tmodified\n@@ -727,8 +727,26 @@\n             \n           case 'ping':\n             ws.send('{\"type\":\"pong\"}');\n             break;\n+\n+          case 'browser_tool_result': {\n+            const pending = browserToolPending.get(msg.callId)",
+      "error": null
+    },
+    {
+      "id": 7813,
+      "timestamp": "2026-02-07T22:37:21.134Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '95,115p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "        console.log('[BG] 工具列表已更新:', cachedTools.length);\n        broadcastToAllTabs({\n          type: 'tools_updated',\n          tools: cachedTools,\n          timestamp: data.timestamp\n        });\n        return;\n      }\n      \n      // 批量任务结果\n      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {\n        console.log('[BG] 批量任务消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n\n      // 第三阶段: 任务规划、工作流、断点续传结果\n     ",
+      "error": null
+    },
+    {
+      "id": 7814,
+      "timestamp": "2026-02-07T22:37:32.711Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "      // 批量任务结果\n      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {\n        console.log('[BG] 批量任务消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }",
+            "newText": "      // 批量任务结果\n      if (data.type === 'batch_step_result' || data.type === 'batch_complete' || data.type === 'batch_error') {\n        console.log('[BG] 批量任务消息:', data.type);\n        broadcastToAllTabs(data);\n        return;\n      }\n\n      // 浏览器工具反向调用：server 请求浏览器执行 js_flow/eval_js/list_tabs\n      if (data.type === 'browser_tool_call') {\n        console.log('[BG] 浏览器工具调用:', data.tool, data.callId);\n        broadcastToAllTabs(data);\n        return;\n      }"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -107,8 +107,15 @@\n         broadcastToAllTabs(data);\n         return;\n       }\n \n+      // 浏览器工具反向调用：server 请求浏览器执行 js_flow/eval_js/list_tabs\n+      if (data.type === 'browser_tool_call') {\n+        console.l",
+      "error": null
+    },
+    {
+      "id": 7815,
+      "timestamp": "2026-02-07T22:37:41.544Z",
+      "tool": "run_command",
+      "params": {
+        "command": "rg -n 'case.*batch_step_result|case.*batch_complete|case.*batch_error' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "3221:      case 'batch_step_result':\n3257:      case 'batch_complete':\n3296:      case 'batch_error':\n",
+      "error": null
+    },
+    {
+      "id": 7816,
+      "timestamp": "2026-02-07T22:37:49.526Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '3296,3320p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "      case 'batch_error':\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        addLog(`❌ 批量任务错误: ${msg.error}`, 'error');\n        sendMessageSafe(`**[批量执行错误]** ${msg.error}`);\n        break;\n\n      // ===== 第三阶段: 任务规划 =====\n      case 'plan_result':\n        addLog('📋 收到任务规划结果', 'success');\n        state.agentRunning = false;\n        hideExecutingIndicator();\n        updateStatus();\n        sendMessageSafe('**[任务规划完成]**\\n\\n' + (msg.visualization |",
+      "error": null
+    },
+    {
+      "id": 7817,
+      "timestamp": "2026-02-07T22:38:14.519Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/content.js",
+        "edits": [
+          {
+            "oldText": "      // ===== 第三阶段: 任务规划 =====\n      case 'plan_result':",
+            "newText": "      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====\n      case 'browser_tool_call': {\n        const { callId, tool: bTool, params: bParams } = msg;\n        addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');\n\n        const sendBrowserResult = (success, result, error) => {\n          chrome.runtime.sendMessage({\n            type: 'SEND_TO_SERVER',\n            payload: { type: 'browser_tool_result', callId, success, result, error }\n          });\n          addLog(`${success ? '✅' : '❌'} BATCH←浏览器: ${bTool}`, success ? 'success' : 'error');\n        };\n\n        if (bTool === 'list_tabs') {\n          const ltCallId = 'bt_lt_' + Date.now();\n          const ltHandler = (m) => {\n            if (m.type === 'LIST_TABS_RESULT' && m.callId === ltCallId) {\n              chrome.runtime.onMessage.removeListener(ltHandler);\n              sendBrowserResult(m.success, m.result, m.error);\n            }\n          };\n          chrome.runtime.onMessage.addListener(ltHandler);\n          chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: ltCallId });\n        } else if (bTool === 'eval_js') {\n          const ejCallId = 'bt_ej_' + Date.now();\n          const ejHandler = (m) => {\n            if (m.type === 'EVAL_JS_RESULT' && m.callId === ejCallId) {\n              chrome.runtime.onMessage.removeListener(ejHandler);\n              sendBrowserResult(m.success, m.result, m.error);\n            }\n          };\n          chrome.runtime.onMessage.addListener(ejHandler);\n          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: bParams.code || '', callId: ejCallId, targetTabId: bParams.tabId || null });\n        } else if (bTool === 'js_flow') {\n          // js_flow 比较特殊：复用现有的 executeToolCall 逻辑太复杂\n          // 直接内联一个简化版：逐步执行，收集结果\n          const steps = bParams.steps || [];\n          const flowTabId = bParams.tabId ? Number(bParams.tabId) : undefined;\n          const results = [];\n          let flowAborted = false;\n\n          const runFlowStep = (si) => {\n            if (flowAborted) return;\n            if (si >= steps.length) {\n              sendBrowserResult(true, JSON.stringify(results, null, 2));\n              return;\n            }\n            const s = steps[si];\n            const sLabel = s.label || `step${si}`;\n            const sTabId = s.tabId ? Number(s.tabId) : flowTabId;\n            const sDelay = s.delay || 0;\n\n            const doStep = () => {\n              if (!s.code) {\n                results.push({ step: sLabel, success: true, result: '(no code)' });\n                runFlowStep(si + 1);\n                return;\n              }\n              const ctxJson = JSON.stringify(results).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, \"\\\\'\");\n              const wrapped = `return (async function(){ const ctx = JSON.parse('${ctxJson}'); ${s.code} })()`;\n              const sCallId = 'bt_fl_' + si + '_' + Date.now();\n              const sHandler = (m) => {\n                if (m.type !== 'EVAL_JS_RESULT' || m.callId !== sCallId) return;\n                chrome.runtime.onMessage.removeListener(sHandler);\n                results.push({ step: sLabel, success: m.success, result: m.result || m.error });\n                if (!m.success && !s.optional && !s.continueOnError) {\n                  flowAborted = true;\n                  sendBrowserResult(false, JSON.stringify(results, null, 2), `步骤 ${sLabel} 失败: ${m.error}`);\n                } else {\n                  runFlowStep(si + 1);\n                }\n              };\n              chrome.runtime.onMessage.addListener(sHandler);\n              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrapped, callId: sCallId, targetTabId: sTabId });\n            };\n\n            if (sDelay > 0) setTimeout(doStep, sDelay);\n            else doStep();\n          };\n          runFlowStep(0);\n        } else {\n          sendBrowserResult(false, null, `未知浏览器工具: ${bTool}`);\n        }\n        break;\n      }\n\n      // ===== 第三阶段: 任务规划 =====\n      case 'plan_result':"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/content.js\tmodified\n@@ -3300,8 +3300,94 @@\n         addLog(`❌ 批量任务错误: ${msg.error}`, 'error');\n         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);\n         break;\n \n+      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====\n+",
+      "error": null
+    },
+    {
+      "id": 7818,
+      "timestamp": "2026-02-07T22:39:53.786Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent/server-v2 && node -e \"const fs=require('fs'); fs.readFileSync('task-engine.js','utf8'); fs.readFileSync('index.js','utf8'); console.log('files ok')\""
+      },
+      "success": true,
+      "resultPreview": "files ok\n",
+      "error": null
     }
   ],
-  "nextId": 7796
+  "nextId": 7819
 }
