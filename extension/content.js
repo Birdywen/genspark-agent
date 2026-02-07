@@ -2796,6 +2796,16 @@ ${tip}
         break;
 
       case 'tool_result':
+        // 终端命令的结果不注入聊天框，由终端自己处理
+        if (msg.id && msg.id.startsWith('term_')) {
+          log('终端结果，跳过聊天框注入:', msg.id);
+          break;
+        }
+        // 存档命令的结果也不注入聊天框
+        if (msg.id && (msg.id.startsWith('save_') || msg.id.startsWith('save_check_'))) {
+          log('存档结果，跳过聊天框注入:', msg.id);
+          break;
+        }
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
         if (state.executedCalls.has(resultHash)) {
