@@ -198,22 +198,12 @@
       
         // ===== Prompt 构建 =====
         buildPrompt(topic, category, sourceUrl) {
-          const cat = this.getCategoryConfig(category);
-          return `Create a 45-second video about: ${topic}
-      
-      IMPORTANT FIRST FRAME: The first 2-3 seconds MUST be a bold, eye-catching title card with large text showing a short punchy title on a vivid, high-contrast background. This serves as the video thumbnail on YouTube Shorts.
-      
-      Style: ${cat.tone}
-      Category: ${cat.label}
-      ${sourceUrl ? 'Source: ' + sourceUrl : ''}
-      
-      Rules:
-      - Hook the viewer in the first 3 seconds with a surprising fact or question
-      - Language: English
-      - Include source citations where applicable
-      - End with a thought-provoking statement or call to action
-      - Keep the script concise and punchy — every sentence must earn its place
-      - Use visual storytelling with relevant B-roll footage`;
+          // Keep prompt short and natural - Opus AI agents handle the rest
+          let prompt = topic;
+          if (sourceUrl) {
+            prompt += '\nReference: ' + sourceUrl;
+          }
+          return prompt;
         },
       
         // ===== YouTube 元数据 =====
