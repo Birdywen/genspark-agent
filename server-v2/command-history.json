@@ -4675,7 +4675,30 @@
       "success": true,
       "resultPreview": "            hookTemplateName: 'hook_slidecut_down',\n            enableCaption: true\n          };\n",
       "error": null
+    },
+    {
+      "id": 7766,
+      "timestamp": "2026-02-07T20:15:24.740Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: add hook template support (hook_slidecut_down) + simplified prompt format' && git push"
+      },
+      "success": true,
+      "resultPreview": "[main 2a70c03] feat: add hook template support (hook_slidecut_down) + simplified prompt format\n 3 files changed, 80 insertions(+), 1125 deletions(-)\n create mode 100644 scripts/fix_create_project.py\n\nTo https://github.com/Birdywen/genspark-agent.git\n   826bb9b..2a70c03  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 7767,
+      "timestamp": "2026-02-07T20:20:32.000Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/docs/OPUS_API_NOTES.md",
+        "content": "# Opus Pro (Agent Opus) API Notes\n\n## 认证\n- JWT Token，5 分钟有效期，无法自动刷新\n- 需要手动登录 opus.pro 获取新 token\n- Token 存储在 localStorage: `atom:user:access-token`\n- Org ID: `atom:user:org-id`\n- User ID: `atom:user:org-user-id`\n\n## 创建项目 API\n```\nPOST https://api.opus.pro/api/project\n```\n\n### Headers\n- Authorization: Bearer {token}\n- Content-Type: application/json\n- X-OPUS-ORG-ID: {orgId}\n- X-OPUS-USER-ID: {userId}\n- X-OPUS-SHARED-ID: (empty)\n\n### Body\n```json\n{\n  \"initialText\": \"话题描述，简洁自然即可\",\n  \"voice\": {\n    \"labels\": [\"English (US)\", \"Female\", \"Entertainment\", \"Engaging\"],\n    \"name\": \"Lily\",\n    \"provider\": \"minimax\",\n    \"type\": \"voice-over\",\n    \"voiceId\": \"moss_audio_c12a59b9-7115-11f0-a447-9613c873494c\"\n  },\n  \"hookTemplateName\": \"hook_slidecut_down\",\n  \"enableCaption\": true\n}\n```\n\n### Prompt 最佳实践\n- 保持简短自然，不要塞指令\n- Opus 的 AI 团队（Scriptwriter、Research Agent、Asset Manager 等）会自动处理\n- 好的例子：`Why Do People Watch Others Eat? The Strange Rise of Mukbang Culture`\n- 差的例子：`Create a 45-second video about... IMPORTANT FIRST FRAME... Rules:...`（太长，可能导致失败）\n- 可选：加来源 URL 让 Opus 参考\n\n### Hook 模板名称\n| UI 名称 | API 参数 |\n|---------|----------|\n| Intelligent pick | (不传或 null) |\n| Slide down fast | `hook_slidecut_down` |\n| Fast cut | `hook_fast_cut` (待确认) |\n| Article highlight | `hook_article_highlight` (待确认) |\n| Slide left | `hook_slide_left` (待确认) |\n| Glide layout | `hook_glide_layout` (待确认) |\n| Wipe cut | `hook_wipe_cut` (待确认) |\n| Grid reveal | `hook_grid_reveal` (待确认) |\n| Slide left fast | `hook_slide_left_fast` (待确认) |\n\n### 图片引用\n- 格式：`@img[filename.jpeg](fileId)`\n- fileId 需要先通过页面上传获取，API 暂无公开上传接口\n- 示例：`@img[5MvZeqvR.jpeg](5MvZeqvR.jpeg-4a8dae0fea62dcf875c3a30b3a1e96e0)`\n\n## 查询项目状态\n```\nGET https://api.opus.pro/api/project/{projectId}\n```\n\n### 项目阶段\n- INITIALIZING → SCRIPTING → GENERATING → EDITOR（完成）\n- resultVideo: 完成后的视频 URL\n- previewThumbnail: 缩略图 URL\n\n## 查询项目资产\n```\nGET https://api.opus.pro/api/project/{projectId}/assets\n```\n\n## 查询场景\n```\nGET https://api.opus.pro/api/project/{projectId}/scene\n```\n\n## 查询历史\n```\nGET https://api.opus.pro/api/history/{projectId}?page=1&pageSize=5\n```\n\n## 注意事项\n- 免费账户有每日配额限制\n- 视频生成时间 3-30 分钟不等\n- Agent Opus 官方说没有公开 API（我们用的是内部 API）\n- 生成完成后会发邮件通知\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/docs/OPUS_API_NOTES.md",
+      "error": null
     }
   ],
-  "nextId": 7766
+  "nextId": 7768
 }
