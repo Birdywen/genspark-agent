@@ -112,7 +112,8 @@ async 示例 (fetch API):
   - `waitTimeout` (number) — waitFor 超时，默认 15000ms
   - `optional` (boolean) — 失败时是否继续下一步
   - `continueOnError` (boolean) — 出错时是否继续
-- `tabId` (number, 可选) — 目标标签页 ID
+  - `tabId` (number) — **步骤级 tabId**，覆盖 flow 级 tabId，实现跨 tab 工作流
+- `tabId` (number, 可选) — flow 级默认目标标签页 ID，可被每步的 step.tabId 覆盖
 - `timeout` (number, 可选) — 总超时，默认 60000ms
 
 **上下文传递**: 每步代码中可访问 `ctx` 数组，包含前面所有步骤的结果:
@@ -159,6 +160,7 @@ ctx = [
 
 ### 跨 Tab 操作
 
+#### 方式一: eval_js 逐步操作
 1. 先用 `list_tabs` 获取所有标签页，找到目标 tab 的 ID
 2. 用 `eval_js` + `tabId` 在目标 tab 中执行代码
 
@@ -169,6 +171,19 @@ ctx = [
 # 第二步: 在目标 tab 中抓取数据
 Ω{"tool":"eval_js","params":{"code":"return document.querySelector('h1').textContent","tabId":目标tabId}}ΩSTOP
 ```
+
+#### 方式二: js_flow 跨 tab 工作流 (v1.0.53+)
+在一个 js_flow 中，不同步骤可以操作不同的标签页，ctx 自动跨 tab 传递：
+
+```
+Ω{"tool":"js_flow","params":{"timeout":30000,"steps":[
+  {"label":"get_from_A","tabId":111,"code":"return document.querySelector('.price').textContent"},
+  {"label":"get_from_B","tabId":222,"code":"return document.querySelector('.price').textContent"},
+  {"label":"compare","tabId":111,"code":"const priceA = ctx[0].result; const priceB = ctx[1].result; return `A: ${priceA}, B: ${priceB}`"}
+]}}ΩSTOP
+```
+
+每步的 `step.tabId` 会覆盖 flow 级的 `tabId`，未指定则使用 flow 级默认值或当前 tab。
 
 ### 页面数据抓取
 

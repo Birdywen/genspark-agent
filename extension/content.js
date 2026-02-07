@@ -824,8 +824,8 @@ function log(...args) {
 - **页面脚本** (3个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
   - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
   - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
-  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError。适合: 输入→延迟→发送→等待回复 等多步浏览器交互
-  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow 指定 tabId 操作目标页面
+  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId。适合: 输入→延迟→发送→等待回复 等多步浏览器交互。每步可设独立 tabId 实现跨 tab 工作流，ctx 自动跨页面传递
+  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow 指定 tabId 操作目标页面。js_flow 支持步骤级 tabId，一个 flow 可操作多个 tab
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
@@ -1887,7 +1887,8 @@ ${toolSummary}
         const stepDelay = step.delay || 0;
         const stepLabel = step.label || `step${stepIndex}`;
 
-        addLog(`▶ js_flow [${stepIndex + 1}/${steps.length}] ${stepLabel}${stepDelay ? ' (delay ' + stepDelay + 'ms)' : ''}`, 'info');
+        const stepTargetTab = step.tabId ? `tab=${step.tabId}` : '';
+        addLog(`▶ js_flow [${stepIndex + 1}/${steps.length}] ${stepLabel}${stepTargetTab ? ' (' + stepTargetTab + ')' : ''}${stepDelay ? ' (delay ' + stepDelay + 'ms)' : ''}`, 'info');
 
         const executeCode = () => {
           // waitFor: 等待选择器出现或 JS 条件为真
@@ -1919,7 +1920,8 @@ ${toolSummary}
                 return;
               }
 
-              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: `return (function(){ try { return !!(${waitCode}); } catch(e) { return false; } })()`, callId: waitCallId + '_' + Date.now(), targetTabId: targetTabId });
+              const stepTabId = step.tabId ? Number(step.tabId) : targetTabId;
+              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: `return (function(){ try { return !!(${waitCode}); } catch(e) { return false; } })()`, callId: waitCallId + '_' + Date.now(), targetTabId: stepTabId });
 
               // 简化: 用 onMessage 监听结果
               const onWaitResult = (msg) => {
@@ -1991,7 +1993,8 @@ ${toolSummary}
           }, 15000);
 
           const actualCallId = execCallId + '_' + Date.now();
-          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrappedCode, callId: actualCallId, targetTabId: targetTabId }, (resp) => {
+          const stepTabId = step.tabId ? Number(step.tabId) : targetTabId;
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrappedCode, callId: actualCallId, targetTabId: stepTabId }, (resp) => {
             if (chrome.runtime.lastError) {
               chrome.runtime.onMessage.removeListener(onExecResult);
               clearTimeout(execTimeout);
