@@ -5180,7 +5180,63 @@
       "success": true,
       "resultPreview": "  function loadVideoGenerator() {\n    try {\n      const url = chrome.runtime.getURL('video-generator.js');\n      fetch(url).then(r => r.text()).then(code => {\n        eval(code);\n        console.log('[Agent] VideoGenerator loaded, available:', !!window.VideoGenerator);\n      }).catch(e => console.error('[Agent] Failed to load VideoGenerator:', e));\n    } catch(e) {\n      console.error('[Agent] loadVideoGenerator error:', e);\n    }\n  }\n",
       "error": null
+    },
+    {
+      "id": 7711,
+      "timestamp": "2026-02-07T15:02:35.639Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: load VideoGenerator via fetch+eval in content script isolated world' && git push"
+      },
+      "success": true,
+      "resultPreview": "[main 5a7f265] fix: load VideoGenerator via fetch+eval in content script isolated world\n 24 files changed, 6548 insertions(+), 4994 deletions(-)\n create mode 100644 scripts/fix_manifest.py\n create mode 100644 scripts/fix_video_loader.py\n create mode 100644 scripts/insert_loader_call.py\n create mode 100644 scripts/insert_video_gen.py\n create mode 100644 scripts/insert_video_onclick.py\n create mode 100644 scripts/video-automation/content-scheduler.js\n create mode 100644 scripts/video-automation/to",
+      "error": null
+    },
+    {
+      "id": 7712,
+      "timestamp": "2026-02-07T15:36:31.661Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '74,84p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "  function loadVideoGenerator() {\n    try {\n      const url = chrome.runtime.getURL('video-generator.js');\n      fetch(url).then(r => r.text()).then(code => {\n        eval(code);\n        console.log('[Agent] VideoGenerator loaded, available:', !!window.VideoGenerator);\n      }).catch(e => console.error('[Agent] Failed to load VideoGenerator:', e));\n    } catch(e) {\n      console.error('[Agent] loadVideoGenerator error:', e);\n    }\n  }\n",
+      "error": null
+    },
+    {
+      "id": 7713,
+      "timestamp": "2026-02-07T15:36:48.637Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/inline_video_gen.py",
+        "content": "# Read video-generator.js content\nvg_code = open('/Users/yay/workspace/genspark-agent/extension/video-generator.js').read()\n\n# Read content.js\ncontent = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\n\n# Replace loadVideoGenerator function with inline version\nold_func = \"\"\"  function loadVideoGenerator() {\n    try {\n      const url = chrome.runtime.getURL('video-generator.js');\n      fetch(url).then(r => r.text()).then(code => {\n        eval(code);\n        console.log('[Agent] VideoGenerator loaded, available:', !!window.VideoGenerator);\n      }).catch(e => console.error('[Agent] Failed to load VideoGenerator:', e));\n    } catch(e) {\n      console.error('[Agent] loadVideoGenerator error:', e);\n    }\n  }\"\"\"\n\n# Strip the export/module wrapper from video-generator.js\n# Remove the last block: if (typeof module...) else { window.VideoGenerator = VideoGenerator; }\nvg_clean = vg_code.replace(\"\"\"// 导出\nif (typeof module !== 'undefined' && module.exports) {\n  module.exports = VideoGenerator;\n} else {\n  window.VideoGenerator = VideoGenerator;\n}\"\"\", '// VideoGenerator is now available in scope')\n\nnew_func = \"\"\"  // === VideoGenerator 内联模块 ===\n  function loadVideoGenerator() {\n    try {\n\"\"\" + '\\n'.join('      ' + line for line in vg_clean.split('\\n')) + \"\"\"\n      window.VideoGenerator = VideoGenerator;\n      console.log('[Agent] VideoGenerator loaded (inline)');\n    } catch(e) {\n      console.error('[Agent] loadVideoGenerator error:', e);\n    }\n  }\"\"\"\n\nif old_func in content:\n    content = content.replace(old_func, new_func)\n    open('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\n    print('SUCCESS: inlined VideoGenerator into content.js')\nelse:\n    print('ERROR: old function not found')\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/inline_video_gen.py",
+      "error": null
+    },
+    {
+      "id": 7714,
+      "timestamp": "2026-02-07T15:36:59.346Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/inline_video_gen.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: inlined VideoGenerator into content.js\n",
+      "error": null
+    },
+    {
+      "id": 7715,
+      "timestamp": "2026-02-07T15:37:09.246Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'VideoGenerator.*inline\\|loadVideoGenerator' /Users/yay/workspace/genspark-agent/extension/content.js | head -10"
+      },
+      "success": true,
+      "resultPreview": "75:  function loadVideoGenerator() {\n545:      console.log('[Agent] VideoGenerator loaded (inline)');\n547:      console.error('[Agent] loadVideoGenerator error:', e);\n3677:    loadVideoGenerator();\n",
+      "error": null
     }
   ],
-  "nextId": 7711
+  "nextId": 7716
 }
