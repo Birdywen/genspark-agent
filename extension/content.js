@@ -71,6 +71,17 @@
     document.head.appendChild(script);
   }
 
+  function loadVideoGenerator() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('video-generator.js');
+    script.onload = () => {
+      if (window.VideoGenerator) {
+        console.log('[Agent] VideoGenerator loaded');
+      }
+    };
+    document.head.appendChild(script);
+  }
+
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
   function safeJsonParse(jsonStr) {
@@ -1814,6 +1825,7 @@ ${tip}
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
+        <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -1933,6 +1945,8 @@ ${tip}
       #agent-copy-prompt:hover { background: #4338ca !important; }
       #agent-save { background: #065f46 !important; }
       #agent-save:hover { background: #047857 !important; }
+      #agent-video { background: #dc2626 !important; }
+      #agent-video:hover { background: #ef4444 !important; }
       #agent-terminal { background: #7c3aed !important; }
       #agent-terminal:hover { background: #8b5cf6 !important; }
       #mini-terminal {
@@ -2052,6 +2066,14 @@ ${tip}
           }
         });
       });
+    };
+
+    document.getElementById('agent-video').onclick = () => {
+      if (window.VideoGenerator) {
+        window.VideoGenerator.showTopicDialog(addLog);
+      } else {
+        addLog('❌ VideoGenerator 模块未加载，请刷新页面', 'error');
+      }
     };
 
     document.getElementById('agent-clear').onclick = () => {
@@ -3186,6 +3208,7 @@ ${tip}
     
     // 加载面板增强模块
     loadPanelEnhancer();
+    loadVideoGenerator();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 

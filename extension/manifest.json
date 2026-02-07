@@ -52,7 +52,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["panel-enhancer.js"],
+      "resources": ["panel-enhancer.js", "video-generator.js"],
       "matches": ["https://www.genspark.ai/*"]
     }
   ]
