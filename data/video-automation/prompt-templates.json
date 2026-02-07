@@ -1,0 +1,75 @@
+{
+  "thumbnail_instruction": "THUMBNAIL REQUIREMENT: The very first scene (first 2-3 seconds) MUST be a bold, eye-catching title card that works as a video thumbnail. Use large, clear text with the main topic/hook on a vivid, high-contrast background. Make it visually striking — this frame will be the video's cover image on YouTube.",
+
+  "common_rules": [
+    "Hook the viewer in the first 3 seconds with a surprising fact or question",
+    "Language: English",
+    "Include source citations where applicable",
+    "End with a thought-provoking statement or call to action",
+    "Keep the script concise and punchy — every sentence must earn its place"
+  ],
+
+  "templates": {
+    "tech": {
+      "category": "Science & Technology",
+      "duration": 45,
+      "prompt": "Create a {duration} second engaging video about this tech news: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with the most surprising implication of this technology\n- Tone: Informative yet exciting, like explaining to a smart friend\n- Audience: Tech enthusiasts aged 18-35\n- Reference: {source_url}\n- Style: Fast-paced, data-driven, future-oriented\n- End with: What this means for the average person\n- {common_rules}"
+    },
+    "people": {
+      "category": "People & Stories",
+      "duration": 50,
+      "prompt": "Create a {duration} second compelling video about: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with the most unexpected fact about this person\n- Tone: Storytelling, narrative-driven, emotionally engaging\n- Audience: Biography and history enthusiasts\n- Reference: {source_url}\n- Style: Cinematic narration, dramatic arc (struggle → triumph or revelation)\n- End with: A lasting legacy or lesson\n- {common_rules}"
+    },
+    "society": {
+      "category": "Society & Culture",
+      "duration": 45,
+      "prompt": "Create a {duration} second thought-provoking video about: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with a statistic or contrast that challenges assumptions\n- Tone: Balanced, analytical, empathetic\n- Audience: Socially aware young adults 20-40\n- Reference: {source_url}\n- Style: Investigative, present multiple perspectives\n- End with: A question that makes viewers think\n- {common_rules}"
+    },
+    "science": {
+      "category": "Science & Education",
+      "duration": 50,
+      "prompt": "Create a {duration} second educational video explaining: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with 'What if...' or a mind-blowing fact\n- Tone: Curious, wonder-driven, accessible\n- Audience: Curious learners of all ages\n- Reference: {source_url}\n- Style: Use analogies and everyday examples to explain complex concepts\n- End with: Why this matters or what comes next\n- {common_rules}"
+    },
+    "business": {
+      "category": "Business & Economy",
+      "duration": 45,
+      "prompt": "Create a {duration} second insightful video about: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with the money/impact number\n- Tone: Sharp, analytical, slightly provocative\n- Audience: Entrepreneurs, professionals, business-minded viewers\n- Reference: {source_url}\n- Style: Case-study format, cause-and-effect, actionable insights\n- End with: The key takeaway or prediction\n- {common_rules}"
+    },
+    "culture": {
+      "category": "Pop Culture & Trends",
+      "duration": 50,
+      "prompt": "Create a {duration} second engaging video about: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: Start with a cultural reference everyone recognizes\n- Tone: Conversational, insightful, slightly witty\n- Audience: Culture enthusiasts, trend followers\n- Reference: {source_url}\n- Style: Connect pop culture to deeper meaning, find the unexpected angle\n- End with: Why this cultural moment matters\n- {common_rules}"
+    },
+    "wildcard": {
+      "category": "Wildcard / Hot Topics",
+      "duration": 45,
+      "prompt": "Create a {duration} second viral-worthy video about: [{topic}]\n\n{thumbnail_instruction}\n\nRequirements:\n- Hook: The most shareable, jaw-dropping angle\n- Tone: Energetic, direct, bold\n- Audience: General public, broad appeal\n- Reference: {source_url}\n- Style: Fast facts, emotional punch, meme-worthy moments\n- End with: Something viewers will want to share\n- {common_rules}"
+    }
+  },
+
+  "youtube_metadata": {
+    "title_templates": {
+      "tech": "{hook} — {topic_short} #Shorts #Tech",
+      "people": "The Untold Story of {person} #Shorts #History",
+      "society": "Why {phenomenon} Matters More Than You Think #Shorts",
+      "science": "{concept} Explained in 60 Seconds #Shorts #Science",
+      "business": "How {subject} Is Disrupting {industry} #Shorts",
+      "culture": "The Hidden Meaning Behind {topic_short} #Shorts #Culture",
+      "wildcard": "{topic_short} — What You Need to Know #Shorts"
+    },
+    "description_template": "{hook_sentence}\n\n{summary_2_3_sentences}\n\nSource: {source_url}\n\n{hashtags}\n\n---\nThis video was created with AI assistance. All facts have been verified.",
+    "hashtag_rules": {
+      "must_include": ["#Shorts"],
+      "per_category": {
+        "tech": ["#Tech", "#AI", "#Innovation"],
+        "people": ["#History", "#Biography", "#Inspiration"],
+        "society": ["#Society", "#Culture", "#Perspective"],
+        "science": ["#Science", "#Education", "#DidYouKnow"],
+        "business": ["#Business", "#Startup", "#Economy"],
+        "culture": ["#Culture", "#PopCulture", "#Trending"],
+        "wildcard": ["#Trending", "#Viral", "#MustWatch"]
+      },
+      "max_count": 5
+    }
+  }
+}
