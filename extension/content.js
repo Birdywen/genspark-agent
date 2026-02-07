@@ -2086,6 +2086,7 @@ ${tip}
     const termInput = document.getElementById('mini-terminal-input');
     const termHistory = [];
     let termHistoryIndex = -1;
+    let termCwd = '/Users/yay/workspace';
 
     // 拖拽支持
     let isDragging = false, dragOffX = 0, dragOffY = 0;
@@ -2118,12 +2119,28 @@ ${tip}
     }
 
     // 终端结果监听器
-    const termPendingCalls = new Map(); // callId -> true
+    const termPendingCalls = new Map(); // callId -> true 或 { type: 'cd_check' }
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === 'tool_result' && msg.id && termPendingCalls.has(msg.id)) {
+        const callInfo = termPendingCalls.get(msg.id);
         termPendingCalls.delete(msg.id);
         termInput.disabled = false;
         termInput.focus();
+
+        // cd 验证结果
+        if (callInfo && callInfo.type === 'cd_check') {
+          if (msg.success) {
+            const realPath = String(msg.result || '').replace(/^\[#\d+\]\s*/, '').trim();
+            if (realPath) termCwd = realPath;
+            termAppend(`<span class="term-dim">${termCwd}</span>\n`);
+            document.querySelector('#mini-terminal-input-row .prompt').textContent = termCwd.split('/').pop() + ' ❯';
+          } else {
+            termCwd = '/Users/yay/workspace';
+            termAppend(`<span class="term-err">cd: no such directory</span>\n`);
+          }
+          return;
+        }
+
         if (msg.success) {
           // 去掉 [#xxx] 前缀
           const text = String(msg.result || '').replace(/^\[#\d+\]\s*/, '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2141,7 +2158,59 @@ ${tip}
       termHistoryIndex = termHistory.length;
       termAppend(`<span class="term-cmd">❯ ${cmd}</span>\n`);
       termInput.value = '';
+
+      // 处理 cd 命令
+      const cdMatch = cmd.trim().match(/^cd\s+(.+)/);
+      if (cdMatch) {
+        let target = cdMatch[1].trim().replace(/["']/g, '');
+        // 解析相对路径
+        if (target === '..') {
+          termCwd = termCwd.replace(/\/[^\/]+$/, '') || '/';
+        } else if (target === '~') {
+          termCwd = '/Users/yay';
+        } else if (target.startsWith('/')) {
+          termCwd = target;
+        } else if (target === '-') {
+          // 忽略 cd - 
+        } else {
+          termCwd = termCwd + '/' + target;
+        }
+        // 验证目录是否存在
+        termInput.disabled = true;
+        const checkId = 'term_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        termPendingCalls.set(checkId, { type: 'cd_check' });
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'tool_call', tool: 'run_command', params: { command: `cd ${termCwd} && pwd` }, id: checkId }
+        }, (resp) => {
+          if (chrome.runtime.lastError || !resp || !resp.success) {
+            termPendingCalls.delete(checkId);
+            termCwd = termHistory.length > 1 ? termCwd : '/Users/yay/workspace';
+            termInput.disabled = false;
+            termInput.focus();
+            termAppend(`<span class="term-err">cd: no such directory</span>\n`);
+          }
+        });
+        setTimeout(() => {
+          if (termPendingCalls.has(checkId)) {
+            termPendingCalls.delete(checkId);
+            termInput.disabled = false;
+            termInput.focus();
+          }
+        }, 10000);
+        return;
+      }
+
+      // 处理 clear 命令
+      if (cmd.trim() === 'clear' || cmd.trim() === 'cls') {
+        termOutput.innerHTML = '';
+        return;
+      }
+
       termInput.disabled = true;
+
+      // 实际命令：加上 cwd 前缀
+      const actualCmd = `cd ${termCwd} && ${cmd}`;
 
       const callId = 'term_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
       termPendingCalls.set(callId, true);
@@ -2161,7 +2230,7 @@ ${tip}
         payload: {
           type: 'tool_call',
           tool: 'run_command',
-          params: { command: cmd },
+          params: { command: actualCmd },
           id: callId
         }
       }, (resp) => {
