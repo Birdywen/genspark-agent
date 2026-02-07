@@ -5236,7 +5236,232 @@
       "success": true,
       "resultPreview": "75:  function loadVideoGenerator() {\n545:      console.log('[Agent] VideoGenerator loaded (inline)');\n547:      console.error('[Agent] loadVideoGenerator error:', e);\n3677:    loadVideoGenerator();\n",
       "error": null
+    },
+    {
+      "id": 7716,
+      "timestamp": "2026-02-07T15:37:19.853Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'fix: inline VideoGenerator into content.js to avoid CSP eval restriction' && git push"
+      },
+      "success": true,
+      "resultPreview": "[main bdf04e4] fix: inline VideoGenerator into content.js to avoid CSP eval restriction\n 3 files changed, 572 insertions(+), 6 deletions(-)\n create mode 100644 scripts/inline_video_gen.py\n\nTo https://github.com/Birdywen/genspark-agent.git\n   5a7f265..bdf04e4  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 7717,
+      "timestamp": "2026-02-07T15:41:53.979Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cat /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "// Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)\n\nlet socket = null;\nlet reconnectTimer = null;\nlet reconnectAttempts = 0;\nlet cachedTools = [];\nlet cachedSkills = [];\nlet cachedSkillsPrompt = '';\nlet cachedAgents = {};\n\n// 记录每个工具调用来自哪个 Tab\nconst pendingCallsByTab = new Map(); // callId -> tabId\n\n// 记录已处理的 tool_result，防止重复\nconst processedResults = new Set();\n\n// 记录每个 Agent 对应的 Tab\nconst agentTabs = new Map(); // agentId -> tabId\nconst tabAgents = new Map(); // tabId -> agentId\n",
+      "error": null
+    },
+    {
+      "id": 7718,
+      "timestamp": "2026-02-07T15:42:12.752Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/add_eval_in_tab.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/background.js').read()\n\n# Find the SWITCH_SERVER case and insert EVAL_IN_TAB before it\neval_in_tab_code = \"\"\"    case 'EVAL_IN_TAB':\n      // Execute code in a tab matching the given URL pattern\n      (async () => {\n        try {\n          const tabUrl = message.tabUrl || '';\n          const code = message.code || '';\n          \n          // Find tab matching URL\n          const tabs = await chrome.tabs.query({});\n          const targetTab = tabs.find(t => t.url && t.url.includes(tabUrl));\n          \n          if (!targetTab) {\n            sendResponse({ success: false, error: 'No tab found matching: ' + tabUrl });\n            return;\n          }\n          \n          // Execute script in the target tab\n          const results = await chrome.scripting.executeScript({\n            target: { tabId: targetTab.id },\n            func: (codeStr) => {\n              try {\n                const fn = new Function(codeStr);\n                return fn();\n              } catch(e) {\n                return { error: e.message };\n              }\n            },\n            args: [code],\n            world: 'MAIN'\n          });\n          \n          const result = results && results[0] ? results[0].result : null;\n          sendResponse({ success: true, result });\n        } catch(e) {\n          console.error('[BG] EVAL_IN_TAB error:', e);\n          sendResponse({ success: false, error: e.message });\n        }\n      })();\n      break;\n\n\"\"\"\n\ntarget = \"    case 'SWITCH_SERVER':\"\nif target in content:\n    content = content.replace(target, eval_in_tab_code + target)\n    open('/Users/yay/workspace/genspark-agent/extension/background.js', 'w').write(content)\n    print('SUCCESS: added EVAL_IN_TAB case to background.js')\nelse:\n    print('ERROR: SWITCH_SERVER case not found')\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/add_eval_in_tab.py",
+      "error": null
+    },
+    {
+      "id": 7719,
+      "timestamp": "2026-02-07T15:42:23.032Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/add_eval_in_tab.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: added EVAL_IN_TAB case to background.js\n",
+      "error": null
+    },
+    {
+      "id": 7720,
+      "timestamp": "2026-02-07T15:42:33.573Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep 'permissions' /Users/yay/workspace/genspark-agent/extension/manifest.json"
+      },
+      "success": true,
+      "resultPreview": "  \"permissions\": [\n  \"host_permissions\": [\n",
+      "error": null
+    },
+    {
+      "id": 7721,
+      "timestamp": "2026-02-07T15:42:45.560Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/add_scripting_perm.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/manifest.json').read()\nif '\"scripting\"' not in content:\n    content = content.replace(\n        '\"activeTab\",',\n        '\"activeTab\",\\n    \"scripting\",'\n    )\n    open('/Users/yay/workspace/genspark-agent/extension/manifest.json', 'w').write(content)\n    print('added scripting permission')\nelse:\n    print('scripting permission already exists')\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/add_scripting_perm.py",
+      "error": null
+    },
+    {
+      "id": 7722,
+      "timestamp": "2026-02-07T15:42:55.018Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/add_scripting_perm.py"
+      },
+      "success": true,
+      "resultPreview": "scripting permission already exists\n",
+      "error": null
+    },
+    {
+      "id": 7723,
+      "timestamp": "2026-02-07T15:43:06.371Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -n 'getOpusToken\\|EVAL_IN_TAB\\|chrome.runtime.sendMessage' /Users/yay/workspace/genspark-agent/extension/content.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "100:        async getOpusToken() {\n103:            chrome.runtime.sendMessage({\n104:              type: 'EVAL_IN_TAB',\n297:              auth = await this.getOpusToken();\n1472:    chrome.runtime.sendMessage({\n1518:    chrome.runtime.sendMessage({\n1582:      chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: callId });\n1635:        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: targetTabId }, (resp) => {\n1737:              chrome.runtime.sendMessage({ ",
+      "error": null
+    },
+    {
+      "id": 7724,
+      "timestamp": "2026-02-07T15:43:17.756Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '100,125p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "        async getOpusToken() {\n          // 在 opus.pro tab 里读取 localStorage token\n          return new Promise((resolve, reject) => {\n            chrome.runtime.sendMessage({\n              type: 'EVAL_IN_TAB',\n              tabUrl: 'opus.pro',\n              code: `\n                const token = JSON.parse(localStorage.getItem('atom:user:access-token'));\n                const orgId = JSON.parse(localStorage.getItem('atom:user:org-id'));\n                const userId = JSON.parse(localStorage.getIt",
+      "error": null
+    },
+    {
+      "id": 7725,
+      "timestamp": "2026-02-07T15:43:29.996Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -A 30 'EVAL_IN_TAB' /Users/yay/workspace/genspark-agent/extension/background.js | head -40"
+      },
+      "success": true,
+      "resultPreview": "    case 'EVAL_IN_TAB':\n      // Execute code in a tab matching the given URL pattern\n      (async () => {\n        try {\n          const tabUrl = message.tabUrl || '';\n          const code = message.code || '';\n          \n          // Find tab matching URL\n          const tabs = await chrome.tabs.query({});\n          const targetTab = tabs.find(t => t.url && t.url.includes(tabUrl));\n          \n          if (!targetTab) {\n            sendResponse({ success: false, error: 'No tab found matching: '",
+      "error": null
+    },
+    {
+      "id": 7726,
+      "timestamp": "2026-02-07T15:43:47.557Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '128,155p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "        async opusApiCall(method, endpoint, body, auth) {\n          const headers = {\n            'Content-Type': 'application/json',\n            'Accept': 'application/json',\n            'Authorization': 'Bearer ' + auth.token,\n            'X-OPUS-ORG-ID': auth.orgId,\n            'X-OPUS-USER-ID': auth.userId,\n            'X-OPUS-SHARED-ID': ''\n          };\n      \n          const opts = { method, headers };\n          if (body) opts.body = JSON.stringify(body);\n      \n          const resp = awai",
+      "error": null
+    },
+    {
+      "id": 7727,
+      "timestamp": "2026-02-07T15:44:06.972Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/fix_opus_api_call.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\n\nold_api_call = \"\"\"        async opusApiCall(method, endpoint, body, auth) {\n          const headers = {\n            'Content-Type': 'application/json',\n            'Accept': 'application/json',\n            'Authorization': 'Bearer ' + auth.token,\n            'X-OPUS-ORG-ID': auth.orgId,\n            'X-OPUS-USER-ID': auth.userId,\n            'X-OPUS-SHARED-ID': ''\n          };\n      \n          const opts = { method, headers };\n          if (body) opts.body = JSON.stringify(body);\n      \n          const resp = await fetch(this.config.opusApiBase + endpoint, opts);\n          if (!resp.ok) {\n            const text = await resp.text();\n            throw new Error(`API ${resp.status}: ${text}`);\n          }\n          return resp.json();\n        },\"\"\"\n\nnew_api_call = \"\"\"        async opusApiCall(method, endpoint, body, auth) {\n          // Execute API call in opus.pro tab context to avoid CORS\n          return new Promise((resolve, reject) => {\n            const bodyStr = body ? JSON.stringify(body) : 'null';\n            const code = `\n              return (async () => {\n                const headers = {\n                  'Content-Type': 'application/json',\n                  'Accept': 'application/json',\n                  'Authorization': 'Bearer ' + '${auth.token}',\n                  'X-OPUS-ORG-ID': '${auth.orgId}',\n                  'X-OPUS-USER-ID': '${auth.userId}',\n                  'X-OPUS-SHARED-ID': ''\n                };\n                const opts = { method: '${method}', headers };\n                const bodyData = ${bodyStr};\n                if (bodyData) opts.body = JSON.stringify(bodyData);\n                const resp = await fetch('https://api.opus.pro/api${endpoint}', opts);\n                if (!resp.ok) {\n                  const text = await resp.text();\n                  return { __error: true, status: resp.status, message: text };\n                }\n                return resp.json();\n              })()\n            `;\n            chrome.runtime.sendMessage({\n              type: 'EVAL_IN_TAB',\n              tabUrl: 'opus.pro',\n              code: code\n            }, (resp) => {\n              if (resp && resp.success && resp.result) {\n                if (resp.result.__error) {\n                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));\n                } else {\n                  resolve(resp.result);\n                }\n              } else {\n                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));\n              }\n            });\n          });\n        },\"\"\"\n\nif old_api_call in content:\n    content = content.replace(old_api_call, new_api_call)\n    open('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\n    print('SUCCESS: replaced opusApiCall with EVAL_IN_TAB version')\nelse:\n    print('ERROR: old opusApiCall not found')\n    # Debug\n    idx = content.find('async opusApiCall')\n    if idx > -1:\n        print('Found at index', idx)\n        print(repr(content[idx:idx+200]))\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/fix_opus_api_call.py",
+      "error": null
+    },
+    {
+      "id": 7728,
+      "timestamp": "2026-02-07T15:44:17.027Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/fix_opus_api_call.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: replaced opusApiCall with EVAL_IN_TAB version\n",
+      "error": null
+    },
+    {
+      "id": 7729,
+      "timestamp": "2026-02-07T15:44:28.167Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '128,170p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "        async opusApiCall(method, endpoint, body, auth) {\n          // Execute API call in opus.pro tab context to avoid CORS\n          return new Promise((resolve, reject) => {\n            const bodyStr = body ? JSON.stringify(body) : 'null';\n            const code = `\n              return (async () => {\n                const headers = {\n                  'Content-Type': 'application/json',\n                  'Accept': 'application/json',\n                  'Authorization': 'Bearer ' + '${auth.to",
+      "error": null
+    },
+    {
+      "id": 7730,
+      "timestamp": "2026-02-07T15:44:52.978Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/fix_opus_api_v2.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\n\nold_call = '''        async opusApiCall(method, endpoint, body, auth) {\n          // Execute API call in opus.pro tab context to avoid CORS\n          return new Promise((resolve, reject) => {\n            const bodyStr = body ? JSON.stringify(body) : 'null';\n            const code = `\n              return (async () => {\n                const headers = {\n                  'Content-Type': 'application/json',\n                  'Accept': 'application/json',\n                  'Authorization': 'Bearer ' + '${auth.token}',\n                  'X-OPUS-ORG-ID': '${auth.orgId}',\n                  'X-OPUS-USER-ID': '${auth.userId}',\n                  'X-OPUS-SHARED-ID': ''\n                };\n                const opts = { method: '${method}', headers };\n                const bodyData = ${bodyStr};\n                if (bodyData) opts.body = JSON.stringify(bodyData);\n                const resp = await fetch('https://api.opus.pro/api${endpoint}', opts);\n                if (!resp.ok) {\n                  const text = await resp.text();\n                  return { __error: true, status: resp.status, message: text };\n                }\n                return resp.json();\n              })()\n            `;\n            chrome.runtime.sendMessage({\n              type: 'EVAL_IN_TAB',\n              tabUrl: 'opus.pro',\n              code: code\n            }, (resp) => {\n              if (resp && resp.success && resp.result) {\n                if (resp.result.__error) {\n                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));\n                } else {\n                  resolve(resp.result);\n                }\n              } else {\n                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));\n              }\n            });\n          });\n        },'''\n\nnew_call = '''        async opusApiCall(method, endpoint, body, auth) {\n          // Execute API call in opus.pro tab context to avoid CORS\n          // Pass params as JSON-safe strings to avoid injection issues\n          return new Promise((resolve, reject) => {\n            const safeBody = body ? JSON.stringify(JSON.stringify(body)) : 'null';\n            const code = [\n              'return (async () => {',\n              '  const token = JSON.parse(localStorage.getItem(\"atom:user:access-token\"));',\n              '  const orgId = JSON.parse(localStorage.getItem(\"atom:user:org-id\"));',\n              '  const userId = JSON.parse(localStorage.getItem(\"atom:user:org-user-id\"));',\n              '  const headers = {',\n              '    \"Content-Type\": \"application/json\",',\n              '    \"Accept\": \"application/json\",',\n              '    \"Authorization\": \"Bearer \" + token,',\n              '    \"X-OPUS-ORG-ID\": orgId,',\n              '    \"X-OPUS-USER-ID\": userId,',\n              '    \"X-OPUS-SHARED-ID\": \"\"',\n              '  };',\n              '  const opts = { method: \"' + method + '\", headers };',\n              '  const bodyData = ' + safeBody + ';',\n              '  if (bodyData && bodyData !== \"null\") opts.body = bodyData;',\n              '  const resp = await fetch(\"https://api.opus.pro/api' + endpoint + '\", opts);',\n              '  if (!resp.ok) {',\n              '    const text = await resp.text();',\n              '    return { __error: true, status: resp.status, message: text };',\n              '  }',\n              '  return resp.json();',\n              '})()'\n            ].join('\\\\n');\n            chrome.runtime.sendMessage({\n              type: 'EVAL_IN_TAB',\n              tabUrl: 'opus.pro',\n              code: code\n            }, (resp) => {\n              if (resp && resp.success && resp.result) {\n                if (resp.result.__error) {\n                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));\n                } else {\n                  resolve(resp.result);\n                }\n              } else {\n                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));\n              }\n            });\n          });\n        },'''\n\nif old_call in content:\n    content = content.replace(old_call, new_call)\n    open('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\n    print('SUCCESS: replaced opusApiCall v2 - reads token from localStorage in opus.pro tab')\nelse:\n    print('ERROR: old call not found')\n    idx = content.find('async opusApiCall')\n    print('found at:', idx)\n    if idx > -1:\n        print(repr(content[idx:idx+100]))\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/fix_opus_api_v2.py",
+      "error": null
+    },
+    {
+      "id": 7731,
+      "timestamp": "2026-02-07T15:45:03.643Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/fix_opus_api_v2.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: replaced opusApiCall v2 - reads token from localStorage in opus.pro tab\n",
+      "error": null
+    },
+    {
+      "id": 7732,
+      "timestamp": "2026-02-07T15:45:17.960Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '128,175p' /Users/yay/workspace/genspark-agent/extension/content.js"
+      },
+      "success": true,
+      "resultPreview": "        async opusApiCall(method, endpoint, body, auth) {\n          // Execute API call in opus.pro tab context to avoid CORS\n          // Pass params as JSON-safe strings to avoid injection issues\n          return new Promise((resolve, reject) => {\n            const safeBody = body ? JSON.stringify(JSON.stringify(body)) : 'null';\n            const code = [\n              'return (async () => {',\n              '  const token = JSON.parse(localStorage.getItem(\"atom:user:access-token\"));',\n        ",
+      "error": null
+    },
+    {
+      "id": 7733,
+      "timestamp": "2026-02-07T15:45:29.177Z",
+      "tool": "run_command",
+      "params": {
+        "command": "grep -A 15 'case .EVAL_IN_TAB' /Users/yay/workspace/genspark-agent/extension/background.js | head -20"
+      },
+      "success": true,
+      "resultPreview": "    case 'EVAL_IN_TAB':\n      // Execute code in a tab matching the given URL pattern\n      (async () => {\n        try {\n          const tabUrl = message.tabUrl || '';\n          const code = message.code || '';\n          \n          // Find tab matching URL\n          const tabs = await chrome.tabs.query({});\n          const targetTab = tabs.find(t => t.url && t.url.includes(tabUrl));\n          \n          if (!targetTab) {\n            sendResponse({ success: false, error: 'No tab found matching: '",
+      "error": null
+    },
+    {
+      "id": 7734,
+      "timestamp": "2026-02-07T15:45:50.771Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/fix_eval_in_tab.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/background.js').read()\n\nold_exec = \"\"\"          // Execute script in the target tab\n          const results = await chrome.scripting.executeScript({\n            target: { tabId: targetTab.id },\n            func: (codeStr) => {\n              try {\n                const fn = new Function(codeStr);\n                return fn();\n              } catch(e) {\n                return { error: e.message };\n              }\n            },\n            args: [code],\n            world: 'MAIN'\n          });\"\"\"\n\nnew_exec = \"\"\"          // Execute script in the target tab (supports async code)\n          const results = await chrome.scripting.executeScript({\n            target: { tabId: targetTab.id },\n            func: async (codeStr) => {\n              try {\n                const fn = new Function(codeStr);\n                const result = fn();\n                // If result is a Promise, await it\n                if (result && typeof result.then === 'function') {\n                  return await result;\n                }\n                return result;\n              } catch(e) {\n                return { error: e.message };\n              }\n            },\n            args: [code],\n            world: 'MAIN'\n          });\"\"\"\n\nif old_exec in content:\n    content = content.replace(old_exec, new_exec)\n    open('/Users/yay/workspace/genspark-agent/extension/background.js', 'w').write(content)\n    print('SUCCESS: updated EVAL_IN_TAB to support async')\nelse:\n    print('ERROR: old exec block not found')\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/fix_eval_in_tab.py",
+      "error": null
+    },
+    {
+      "id": 7735,
+      "timestamp": "2026-02-07T15:46:01.025Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/fix_eval_in_tab.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: updated EVAL_IN_TAB to support async\n",
+      "error": null
     }
   ],
-  "nextId": 7716
+  "nextId": 7736
 }

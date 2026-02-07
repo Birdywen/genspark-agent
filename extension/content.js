@@ -126,24 +126,50 @@
       
         // ===== API 调用 =====
         async opusApiCall(method, endpoint, body, auth) {
-          const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + auth.token,
-            'X-OPUS-ORG-ID': auth.orgId,
-            'X-OPUS-USER-ID': auth.userId,
-            'X-OPUS-SHARED-ID': ''
-          };
-      
-          const opts = { method, headers };
-          if (body) opts.body = JSON.stringify(body);
-      
-          const resp = await fetch(this.config.opusApiBase + endpoint, opts);
-          if (!resp.ok) {
-            const text = await resp.text();
-            throw new Error(`API ${resp.status}: ${text}`);
-          }
-          return resp.json();
+          // Execute API call in opus.pro tab context to avoid CORS
+          // Pass params as JSON-safe strings to avoid injection issues
+          return new Promise((resolve, reject) => {
+            const safeBody = body ? JSON.stringify(JSON.stringify(body)) : 'null';
+            const code = [
+              'return (async () => {',
+              '  const token = JSON.parse(localStorage.getItem("atom:user:access-token"));',
+              '  const orgId = JSON.parse(localStorage.getItem("atom:user:org-id"));',
+              '  const userId = JSON.parse(localStorage.getItem("atom:user:org-user-id"));',
+              '  const headers = {',
+              '    "Content-Type": "application/json",',
+              '    "Accept": "application/json",',
+              '    "Authorization": "Bearer " + token,',
+              '    "X-OPUS-ORG-ID": orgId,',
+              '    "X-OPUS-USER-ID": userId,',
+              '    "X-OPUS-SHARED-ID": ""',
+              '  };',
+              '  const opts = { method: "' + method + '", headers };',
+              '  const bodyData = ' + safeBody + ';',
+              '  if (bodyData && bodyData !== "null") opts.body = bodyData;',
+              '  const resp = await fetch("https://api.opus.pro/api' + endpoint + '", opts);',
+              '  if (!resp.ok) {',
+              '    const text = await resp.text();',
+              '    return { __error: true, status: resp.status, message: text };',
+              '  }',
+              '  return resp.json();',
+              '})()'
+            ].join('\n');
+            chrome.runtime.sendMessage({
+              type: 'EVAL_IN_TAB',
+              tabUrl: 'opus.pro',
+              code: code
+            }, (resp) => {
+              if (resp && resp.success && resp.result) {
+                if (resp.result.__error) {
+                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));
+                } else {
+                  resolve(resp.result);
+                }
+              } else {
+                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));
+              }
+            });
+          });
         },
       
         // ===== 内容调度 =====
