@@ -1808,7 +1808,7 @@ ${tip}
       <div id="agent-actions">
         <button id="agent-copy-prompt" title="复制系统提示词给AI">📋 提示词</button>
         <button id="agent-clear" title="清除日志">🗑️</button>
-        <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
+        <button id="agent-terminal" title="迷你终端">⌨️ 终端</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
         <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
@@ -1933,6 +1933,78 @@ ${tip}
       #agent-copy-prompt:hover { background: #4338ca !important; }
       #agent-save { background: #065f46 !important; }
       #agent-save:hover { background: #047857 !important; }
+      #agent-terminal { background: #7c3aed !important; }
+      #agent-terminal:hover { background: #8b5cf6 !important; }
+      #mini-terminal {
+        display: none;
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        width: 480px;
+        height: 320px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        z-index: 2147483647;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        font-size: 12px;
+        color: #c9d1d9;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #mini-terminal.visible { display: flex; }
+      #mini-terminal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        cursor: move;
+        user-select: none;
+      }
+      #mini-terminal-header span { font-size: 11px; color: #8b949e; }
+      #mini-terminal-close {
+        background: none;
+        border: none;
+        color: #8b949e;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0 4px;
+      }
+      #mini-terminal-close:hover { color: #f85149; }
+      #mini-terminal-output {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        font-size: 11.5px;
+        line-height: 1.5;
+      }
+      #mini-terminal-output .term-cmd { color: #58a6ff; }
+      #mini-terminal-output .term-ok { color: #7ee787; }
+      #mini-terminal-output .term-err { color: #f85149; }
+      #mini-terminal-output .term-dim { color: #484f58; }
+      #mini-terminal-input-row {
+        display: flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-top: 1px solid #30363d;
+        background: #0d1117;
+      }
+      #mini-terminal-input-row .prompt { color: #7ee787; margin-right: 6px; font-weight: bold; }
+      #mini-terminal-input {
+        flex: 1;
+        background: none;
+        border: none;
+        outline: none;
+        color: #c9d1d9;
+        font-family: inherit;
+        font-size: 12px;
+        caret-color: #58a6ff;
+      }
     `;
     document.head.appendChild(style);
 
@@ -1993,33 +2065,144 @@ ${tip}
       addLog('🗑️ 已重置', 'info');
     };
     
-    document.getElementById('agent-retry-last').onclick = () => {
-      if (!state.lastToolCall) {
-        addLog('❌ 没有可重试的命令', 'error');
-        return;
+    // === 迷你终端 ===
+    const terminalHTML = `
+      <div id="mini-terminal">
+        <div id="mini-terminal-header">
+          <span>⌨️ Mini Terminal</span>
+          <button id="mini-terminal-close">✕</button>
+        </div>
+        <div id="mini-terminal-output"><span class="term-dim">Welcome. Type commands and press Enter.</span>\n</div>
+        <div id="mini-terminal-input-row">
+          <span class="prompt">❯</span>
+          <input id="mini-terminal-input" type="text" placeholder="ls, git status, node -v ..." autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', terminalHTML);
+
+    const termEl = document.getElementById('mini-terminal');
+    const termOutput = document.getElementById('mini-terminal-output');
+    const termInput = document.getElementById('mini-terminal-input');
+    const termHistory = [];
+    let termHistoryIndex = -1;
+
+    // 拖拽支持
+    let isDragging = false, dragOffX = 0, dragOffY = 0;
+    document.getElementById('mini-terminal-header').addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragOffX = e.clientX - termEl.getBoundingClientRect().left;
+      dragOffY = e.clientY - termEl.getBoundingClientRect().top;
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      termEl.style.left = (e.clientX - dragOffX) + 'px';
+      termEl.style.top = (e.clientY - dragOffY) + 'px';
+      termEl.style.right = 'auto';
+      termEl.style.bottom = 'auto';
+    });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+
+    document.getElementById('agent-terminal').onclick = () => {
+      termEl.classList.toggle('visible');
+      if (termEl.classList.contains('visible')) termInput.focus();
+    };
+
+    document.getElementById('mini-terminal-close').onclick = () => {
+      termEl.classList.remove('visible');
+    };
+
+    function termAppend(html) {
+      termOutput.innerHTML += html;
+      termOutput.scrollTop = termOutput.scrollHeight;
+    }
+
+    // 终端结果监听器
+    const termPendingCalls = new Map(); // callId -> true
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === 'tool_result' && msg.id && termPendingCalls.has(msg.id)) {
+        termPendingCalls.delete(msg.id);
+        termInput.disabled = false;
+        termInput.focus();
+        if (msg.success) {
+          // 去掉 [#xxx] 前缀
+          const text = String(msg.result || '').replace(/^\[#\d+\]\s*/, '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          termAppend(`<span class="term-ok">${text}</span>\n`);
+        } else {
+          const err = String(msg.error || 'Unknown error').replace(/</g, '&lt;');
+          termAppend(`<span class="term-err">${err}</span>\n`);
+        }
       }
-      const { tool, params, timestamp } = state.lastToolCall;
-      const age = Math.round((Date.now() - timestamp) / 1000);
-      addLog(`🔁 重试 ${tool} (${age}秒前)`, 'info');
-      
-      // 重新执行
-      const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      state.agentRunning = true;
-      showExecutingIndicator(tool);
-      updateStatus();
-      
+    });
+
+    function termExec(cmd) {
+      if (!cmd.trim()) return;
+      termHistory.push(cmd);
+      termHistoryIndex = termHistory.length;
+      termAppend(`<span class="term-cmd">❯ ${cmd}</span>\n`);
+      termInput.value = '';
+      termInput.disabled = true;
+
+      const callId = 'term_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      termPendingCalls.set(callId, true);
+
+      // 超时保护
+      setTimeout(() => {
+        if (termPendingCalls.has(callId)) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Timeout (30s)</span>\n`);
+        }
+      }, 30000);
+
       chrome.runtime.sendMessage({
         type: 'SEND_TO_SERVER',
-        payload: { type: 'tool_call', tool, params, id: callId }
-      }, (response) => {
-        if (chrome.runtime.lastError || !response?.success) {
-          addLog('❌ 重试发送失败', 'error');
-          state.agentRunning = false;
-          hideExecutingIndicator();
-          updateStatus();
+        payload: {
+          type: 'tool_call',
+          tool: 'run_command',
+          params: { command: cmd },
+          id: callId
+        }
+      }, (resp) => {
+        if (chrome.runtime.lastError) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Send failed: ${chrome.runtime.lastError.message}</span>\n`);
+          return;
+        }
+        if (!resp || !resp.success) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Server not connected</span>\n`);
         }
       });
-    };
+    }
+
+    termInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        termExec(termInput.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (termHistoryIndex > 0) {
+          termHistoryIndex--;
+          termInput.value = termHistory[termHistoryIndex];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (termHistoryIndex < termHistory.length - 1) {
+          termHistoryIndex++;
+          termInput.value = termHistory[termHistoryIndex];
+        } else {
+          termHistoryIndex = termHistory.length;
+          termInput.value = '';
+        }
+      } else if (e.key === 'Escape') {
+        termEl.classList.remove('visible');
+      }
+    });
     
     document.getElementById('agent-reconnect').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
