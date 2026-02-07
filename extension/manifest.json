@@ -30,7 +30,9 @@
     "https://hix.ai/*",
     "https://*.hix.ai/*",
     "https://agent.opus.pro/*",
-    "https://*.opus.pro/*"
+    "https://*.opus.pro/*",
+    "https://flow.viasocket.com/*",
+    "https://*.viasocket.com/*"
   ],
   "background": {
     "service_worker": "background.js"
