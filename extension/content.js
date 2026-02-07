@@ -159,7 +159,11 @@ function log(...args) {
 - **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
 - **命令执行** (1个): run_command
-- **页面脚本** (3个): eval_js(code, [tabId]) — 在当前或指定 tab 的 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie，绕过 CSP/Cloudflare。用 return 返回结果。list_tabs — 查询所有打开的标签页(id/title/url)。跨 tab 时先 list_tabs 获取 tabId，再 eval_js 指定 tabId 操作目标页面
+- **页面脚本** (3个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
+  - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
+  - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
+  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError。适合: 输入→延迟→发送→等待回复 等多步浏览器交互
+  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow 指定 tabId 操作目标页面
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
@@ -1174,7 +1178,196 @@ ${toolSummary}
       return;
     }
     // === END eval_js 拦截 ===
-    
+
+    // === 本地拦截: js_flow 浏览器 JS 微型工作流 ===
+    if (tool.name === 'js_flow') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('js_flow');
+      state.agentRunning = true;
+      updateStatus();
+
+      const steps = tool.params.steps || [];
+      const targetTabId = tool.params.tabId ? Number(tool.params.tabId) : undefined;
+      const totalTimeout = tool.params.timeout || 60000;
+      const flowId = 'js_flow_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      addLog(`🔄 js_flow: ${steps.length} 步骤, tab=${targetTabId || 'current'}, timeout=${totalTimeout}ms`, 'tool');
+
+      const flowStartTime = Date.now();
+      const results = [];
+      let aborted = false;
+
+      const runStep = (stepIndex) => {
+        if (aborted) return;
+        if (stepIndex >= steps.length) {
+          // 全部完成
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'js_flow', success: true, result: JSON.stringify(results, null, 2) });
+          sendMessageSafe(resultText);
+          addLog(`✅ js_flow 完成: ${results.length} 步`, 'success');
+          return;
+        }
+
+        if (Date.now() - flowStartTime > totalTimeout) {
+          aborted = true;
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `总超时 ${totalTimeout}ms, 完成 ${stepIndex}/${steps.length} 步`, result: JSON.stringify(results, null, 2) });
+          sendMessageSafe(resultText);
+          addLog(`❌ js_flow 总超时`, 'error');
+          return;
+        }
+
+        const step = steps[stepIndex];
+        const stepDelay = step.delay || 0;
+        const stepLabel = step.label || `step${stepIndex}`;
+
+        addLog(`▶ js_flow [${stepIndex + 1}/${steps.length}] ${stepLabel}${stepDelay ? ' (delay ' + stepDelay + 'ms)' : ''}`, 'info');
+
+        const executeCode = () => {
+          // waitFor: 等待选择器出现或 JS 条件为真
+          if (step.waitFor) {
+            const waitTimeout = step.waitTimeout || 15000;
+            const waitCode = step.waitFor.startsWith('!')
+              || step.waitFor.includes('(') || step.waitFor.includes('.')
+              || step.waitFor.includes('=') || step.waitFor.includes('>')
+              ? step.waitFor  // JS 表达式
+              : `!!document.querySelector('${step.waitFor.replace(/'/g, "\\'")}')`; // CSS 选择器
+
+            const waitCallId = flowId + '_wait_' + stepIndex;
+            const waitStart = Date.now();
+
+            const pollWait = () => {
+              if (aborted) return;
+              if (Date.now() - waitStart > waitTimeout) {
+                results.push({ step: stepLabel, success: false, error: `waitFor 超时: ${step.waitFor}` });
+                if (step.optional) { runStep(stepIndex + 1); }
+                else {
+                  aborted = true;
+                  state.agentRunning = false;
+                  hideExecutingIndicator();
+                  updateStatus();
+                  const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} waitFor 超时`, result: JSON.stringify(results, null, 2) });
+                  sendMessageSafe(resultText);
+                  addLog(`❌ js_flow waitFor 超时: ${step.waitFor}`, 'error');
+                }
+                return;
+              }
+
+              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: `return (function(){ try { return !!(${waitCode}); } catch(e) { return false; } })()`, callId: waitCallId + '_' + Date.now(), targetTabId: targetTabId });
+
+              // 简化: 用 onMessage 监听结果
+              const onWaitResult = (msg) => {
+                if (msg.type !== 'EVAL_JS_RESULT') return;
+                chrome.runtime.onMessage.removeListener(onWaitResult);
+                if (msg.result === 'true' || msg.result === true) {
+                  doExec();
+                } else {
+                  setTimeout(pollWait, 500);
+                }
+              };
+              chrome.runtime.onMessage.addListener(onWaitResult);
+            };
+            pollWait();
+          } else {
+            doExec();
+          }
+        };
+
+        const doExec = () => {
+          if (!step.code) {
+            // 纯延迟/等待步骤，没有代码
+            results.push({ step: stepLabel, success: true, result: '(no code)' });
+            runStep(stepIndex + 1);
+            return;
+          }
+
+          // 注入 ctx (前几步的结果)
+          const ctxJson = JSON.stringify(results).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const wrappedCode = `return (async function(){ const ctx = JSON.parse('${ctxJson}'); ${step.code} })()`;
+
+          const execCallId = flowId + '_exec_' + stepIndex;
+          const onExecResult = (msg) => {
+            if (msg.type !== 'EVAL_JS_RESULT' || !msg.callId || !msg.callId.startsWith(flowId + '_exec_' + stepIndex)) return;
+            chrome.runtime.onMessage.removeListener(onExecResult);
+            clearTimeout(execTimeout);
+            results.push({ step: stepLabel, success: msg.success, result: msg.result || msg.error });
+            addLog(`${msg.success ? '✓' : '✗'} ${stepLabel}: ${(msg.result || msg.error || '').substring(0, 100)}`, msg.success ? 'info' : 'error');
+            if (!msg.success && !step.optional) {
+              if (step.continueOnError) {
+                runStep(stepIndex + 1);
+              } else {
+                aborted = true;
+                state.agentRunning = false;
+                hideExecutingIndicator();
+                updateStatus();
+                const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} 失败: ${msg.error}`, result: JSON.stringify(results, null, 2) });
+                sendMessageSafe(resultText);
+                addLog(`❌ js_flow 在 ${stepLabel} 失败`, 'error');
+              }
+            } else {
+              runStep(stepIndex + 1);
+            }
+          };
+
+          chrome.runtime.onMessage.addListener(onExecResult);
+          const execTimeout = setTimeout(() => {
+            chrome.runtime.onMessage.removeListener(onExecResult);
+            results.push({ step: stepLabel, success: false, error: '执行超时 (15s)' });
+            if (step.optional || step.continueOnError) { runStep(stepIndex + 1); }
+            else {
+              aborted = true;
+              state.agentRunning = false;
+              hideExecutingIndicator();
+              updateStatus();
+              const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} 执行超时`, result: JSON.stringify(results, null, 2) });
+              sendMessageSafe(resultText);
+            }
+          }, 15000);
+
+          const actualCallId = execCallId + '_' + Date.now();
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrappedCode, callId: actualCallId, targetTabId: targetTabId }, (resp) => {
+            if (chrome.runtime.lastError) {
+              chrome.runtime.onMessage.removeListener(onExecResult);
+              clearTimeout(execTimeout);
+              results.push({ step: stepLabel, success: false, error: chrome.runtime.lastError.message });
+              if (step.optional || step.continueOnError) { runStep(stepIndex + 1); }
+              else {
+                aborted = true;
+                state.agentRunning = false;
+                hideExecutingIndicator();
+                updateStatus();
+                const resultText = formatToolResult({ tool: 'js_flow', success: false, error: chrome.runtime.lastError.message, result: JSON.stringify(results, null, 2) });
+                sendMessageSafe(resultText);
+              }
+            }
+          });
+        };
+
+        if (stepDelay > 0) {
+          setTimeout(executeCode, stepDelay);
+        } else {
+          executeCode();
+        }
+      };
+
+      try {
+        runStep(0);
+      } catch (e) {
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'js_flow', success: false, error: e.message });
+        sendMessageSafe(resultText);
+        addLog(`❌ js_flow 异常: ${e.message}`, 'error');
+      }
+      return;
+    }
+    // === END js_flow 拦截 ===
+
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {

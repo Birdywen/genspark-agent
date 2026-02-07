@@ -9,7 +9,26 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://www.genspark.ai/*"
+    "https://www.genspark.ai/*",
+    "https://*.google.com/*",
+    "https://*.github.com/*",
+    "https://*.stackoverflow.com/*",
+    "https://*.youtube.com/*",
+    "https://*.wikipedia.org/*",
+    "https://*.amazon.com/*",
+    "https://*.twitter.com/*",
+    "https://*.x.com/*",
+    "https://*.reddit.com/*",
+    "https://*.openai.com/*",
+    "https://*.anthropic.com/*",
+    "https://*.cloudflare.com/*",
+    "https://*.vercel.app/*",
+    "https://*.netlify.app/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "https://wim.vree.org/js/*",
+    "https://hix.ai/*",
+    "https://*.hix.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

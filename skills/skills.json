@@ -2,6 +2,17 @@
   "version": "1.0.0",
   "skills": [
     {
+      "name": "browser-scripting",
+      "description": "浏览器页面脚本工具，通过 Chrome 扩展直接操控浏览器标签页，支持跨 tab 执行 JavaScript、抓取页面数据、操作 DOM",
+      "source": "local",
+      "path": "./browser-scripting",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "list_tabs", "eval_js", "js_flow"
+      ]
+    },
+    {
       "name": "megacmd",
       "description": "MEGA 云存储命令行工具，支持文件上传、下载、同步、备份和分享",
       "source": "local",
