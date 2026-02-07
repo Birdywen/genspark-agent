@@ -467,7 +467,13 @@
               
               if (project.stage === 'EDITOR' && project.resultVideo) {
                 log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');
-                log('📤 上传到 YouTube...');
+                // Enhance metadata with actual project data
+                if (project.name) item.metadata.title = (project.name + ' #Shorts').substring(0, 100);
+                if (project.script) {
+                  const scriptPreview = project.script.substring(0, 200) + '...';
+                  item.metadata.description = project.name + '\n\n' + scriptPreview + '\n\n' + (item.metadata.description || '');
+                }
+                log('📤 上传到 YouTube... 标题: ' + item.metadata.title);
                 const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);
                 log('✅ YouTube 上传成功! 标题: ' + item.metadata.title);
                 this.recordHistory(item.topic, item.category, project.resultVideo, item.metadata);

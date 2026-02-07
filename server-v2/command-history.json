@@ -4698,7 +4698,41 @@
       "success": true,
       "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/docs/OPUS_API_NOTES.md",
       "error": null
+    },
+    {
+      "id": 7768,
+      "timestamp": "2026-02-07T20:20:42.600Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'docs: add Opus Pro API notes - auth, endpoints, hook templates, best practices' && git push"
+      },
+      "success": true,
+      "resultPreview": "[main 1bc1728] docs: add Opus Pro API notes - auth, endpoints, hook templates, best practices\n 2 files changed, 116 insertions(+), 1 deletion(-)\n create mode 100644 docs/OPUS_API_NOTES.md\n\nTo https://github.com/Birdywen/genspark-agent.git\n   2a70c03..1bc1728  main -> main\n",
+      "error": null
+    },
+    {
+      "id": 7769,
+      "timestamp": "2026-02-07T20:58:41.780Z",
+      "tool": "write_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/scripts/enhance_upload.py",
+        "content": "content = open('/Users/yay/workspace/genspark-agent/extension/content.js').read()\n\n# Find the upload section where we get project data and enhance metadata\nold_upload_log = \"\"\"                log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');\n                log('📤 上传到 YouTube...');\n                const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);\"\"\"\n\nnew_upload_log = \"\"\"                log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');\n                // Enhance metadata with actual project data\n                if (project.name) item.metadata.title = (project.name + ' #Shorts').substring(0, 100);\n                if (project.script) {\n                  const scriptPreview = project.script.substring(0, 200) + '...';\n                  item.metadata.description = project.name + '\\\\n\\\\n' + scriptPreview + '\\\\n\\\\n' + (item.metadata.description || '');\n                }\n                log('📤 上传到 YouTube... 标题: ' + item.metadata.title);\n                const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);\"\"\"\n\nif old_upload_log in content:\n    content = content.replace(old_upload_log, new_upload_log)\n    open('/Users/yay/workspace/genspark-agent/extension/content.js', 'w').write(content)\n    print('SUCCESS: enhanced upload with project metadata')\nelse:\n    print('ERROR: old upload log not found')\n    idx = content.find('视频已完成')\n    if idx > -1:\n        print('found at:', idx)\n        print(repr(content[idx:idx+200]))\n"
+      },
+      "success": true,
+      "resultPreview": "Successfully wrote to /Users/yay/workspace/genspark-agent/scripts/enhance_upload.py",
+      "error": null
+    },
+    {
+      "id": 7770,
+      "timestamp": "2026-02-07T20:58:54.441Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && python3 scripts/enhance_upload.py"
+      },
+      "success": true,
+      "resultPreview": "SUCCESS: enhanced upload with project metadata\n",
+      "error": null
     }
   ],
-  "nextId": 7768
+  "nextId": 7771
 }
