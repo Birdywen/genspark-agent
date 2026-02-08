@@ -198,10 +198,27 @@
       
         // ===== Prompt 构建 =====
         buildPrompt(topic, category, sourceUrl) {
-          // Keep prompt short and natural - Opus AI agents handle the rest
-          let prompt = topic;
+          // 使用 prompt-templates 构建高质量 prompt
+          const templates = {
+            thumbnail: 'THUMBNAIL REQUIREMENT: The very first scene (first 2-3 seconds) MUST be a bold, eye-catching title card that works as a video thumbnail. Use large, clear text with the main topic/hook on a vivid, high-contrast background.',
+            common: 'Hook the viewer in the first 3 seconds. Language: English. Include source citations where applicable. End with a thought-provoking statement or call to action. Keep the script concise and punchy.',
+            tech: 'Create a 45 second engaging video about this tech news: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with the most surprising implication\n- Tone: Informative yet exciting\n- Audience: Tech enthusiasts 18-35\n- Style: Fast-paced, data-driven, future-oriented\n- End with: What this means for the average person\n- {common}',
+            people: 'Create a 50 second compelling video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with the most unexpected fact about this person\n- Tone: Storytelling, emotionally engaging\n- Style: Cinematic narration, dramatic arc\n- End with: A lasting legacy or lesson\n- {common}',
+            society: 'Create a 45 second thought-provoking video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with a striking statistic or contrast\n- Tone: Balanced, analytical, empathetic\n- Style: Investigative, multiple perspectives\n- End with: What we can learn from this\n- {common}',
+            science: 'Create a 50 second mind-expanding video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with a mind-blowing fact\n- Tone: Curious, wonder-inducing\n- Style: Visual metaphors, step-by-step revelation\n- End with: Why this matters for humanity\n- {common}',
+            business: 'Create a 45 second insightful video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with a surprising number or trend\n- Tone: Sharp, analytical\n- Style: Case study format with clear takeaways\n- End with: Actionable insight\n- {common}',
+            culture: 'Create a 50 second fascinating video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with an ironic or surprising observation\n- Tone: Witty, observational\n- Style: Pop culture references, relatable examples\n- End with: Why this reflects who we are\n- {common}',
+            wildcard: 'Create a 45 second viral-worthy video about: [{topic}]\n\n{thumbnail}\n\nRequirements:\n- Hook: Start with the most shareable angle\n- Tone: Energetic, conversation-starting\n- Style: Trending format, bold visuals\n- End with: Something that makes viewers want to share\n- {common}'
+          };
+          
+          const template = templates[category] || templates.wildcard;
+          let prompt = template
+            .replace(/\{topic\}/g, topic)
+            .replace(/\{thumbnail\}/g, templates.thumbnail)
+            .replace(/\{common\}/g, templates.common);
+          
           if (sourceUrl) {
-            prompt += '\nReference: ' + sourceUrl;
+            prompt += '\n\nReference source: ' + sourceUrl;
           }
           return prompt;
         },

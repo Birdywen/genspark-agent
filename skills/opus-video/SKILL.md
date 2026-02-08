@@ -1,11 +1,20 @@
 ---
 name: opus-video
-description: Agent Opus (opus.pro) AI 视频生成平台 API，支持通过 API 创建视频项目、查询状态、获取结果。需要在浏览器中已登录 opus.pro
+description: Agent Opus (opus.pro) AI 视频生成 + YouTube 自动上传，支持分类 prompt 模板、自动 metadata 提取
 ---
 
 # Agent Opus Video Skill
 
-通过 Agent Opus 的 API 实现自动化视频生成。所有 API 调用需在 opus.pro 的 tab 中通过 eval_js 执行（利用已登录的 session）。
+通过 Agent Opus API 实现自动化视频生成并上传 YouTube。
+
+## 核心流程（一键）
+
+```
+话题 → 分类 prompt 模板 → Opus 创建项目 → AI 自动生成脚本/分镜/视频
+→ 从项目结果提取 name/script → 构建 YouTube metadata → viaSocket webhook → YouTube
+```
+
+**关键点**: 只需要提供话题和类别，其他全自动。Opus 生成的 `name` 就是最好的 YouTube 标题，`script` 前几句就是最好的描述。
 
 ## 前置条件
 
@@ -13,219 +22,72 @@ description: Agent Opus (opus.pro) AI 视频生成平台 API，支持通过 API 
 2. manifest.json 中已添加 `opus.pro` 的 host_permissions
 3. 用 `list_tabs` 找到 opus.pro 的 tabId
 
-## 认证信息
+## 快速使用
 
-所有 API 请求需要以下 headers，可从 localStorage 获取：
+### 1. 创建视频（AI 自动处理一切）
 
-```javascript
-const token = JSON.parse(localStorage.getItem('atom:user:access-token'));
-const orgId = JSON.parse(localStorage.getItem('atom:user:org-id'));
-const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id'));
-
-const headers = {
-  'Authorization': 'Bearer ' + token,
-  'X-OPUS-ORG-ID': orgId,
-  'X-OPUS-USER-ID': userId,
-  'X-OPUS-SHARED-ID': '',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
-};
+```
+Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project', {method: 'POST', headers: h, body: JSON.stringify({initialText: 'YOUR_PROMPT_HERE', voice: {labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'], name: 'Lily', provider: 'minimax', type: 'voice-over', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'}, enableCaption: true})}); const p = await r.json(); return JSON.stringify({id: p.id, stage: p.stage, name: p.name}); })()","tabId":OPUS_TAB_ID}}ΩSTOP
 ```
 
-## API 基础路径
+### 2. 查询项目状态
 
-`https://api.opus.pro`
-
-## API 端点
-
-### 1. 创建视频项目
-
-**POST** `/api/project`
-
-创建新的视频生成项目。提交后 AI Agent 会自动开始处理（研究主题、写脚本、生成分镜、渲染视频）。
-
-**请求体：**
-```json
-{
-  "initialText": "Create a video of this news [主题内容]. Please ensure the facts are accurate. Here are additional sources to reference: [参考链接]",
-  "voice": {
-    "labels": ["English (US)", "Female", "Entertainment", "Engaging"],
-    "name": "Lily",
-    "provider": "minimax",
-    "type": "voice-over",
-    "voiceId": "moss_audio_c12a59b9-7115-11f0-a447-9613c873494c"
-  },
-  "enableCaption": true
-}
+```
+Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project/PROJECT_ID', {headers: h}); const p = await r.json(); return JSON.stringify({stage: p.stage, name: p.name, script: p.script?.substring(0,300), resultVideo: p.resultVideo, previewThumbnail: p.previewThumbnail}); })()","tabId":OPUS_TAB_ID}}ΩSTOP
 ```
 
-**initialText 格式模板：**
-- 新闻视频: `Create a video of this news [标题]. Please ensure the facts are accurate. Here are additional sources to reference: [URL]`
-- 普通主题: `Create a video about [主题描述]`
-- 带脚本: `Create a video with this script: [完整脚本]`
+### 3. 视频完成后上传 YouTube（via viaSocket webhook）
 
-**返回:** 201 Created，包含项目详情（id, stage, name 等）
+Webhook URL: `https://flow.sokt.io/func/scri42hM0QuZ`
 
-**示例：**
-```
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project', {method: 'POST', headers: h, body: JSON.stringify({initialText: 'Create a video about AI trends in 2026', voice: {labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'], name: 'Lily', provider: 'minimax', type: 'voice-over', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'}, enableCaption: true})}); return await r.json(); })()","tabId":OPUS_TAB_ID}}ΩSTOP
-```
+需要的字段（全部从 Opus 项目数据提取）:
+- `video_url`: project.resultVideo
+- `youtube_title`: project.name + " #Shorts" (最多 100 字符)
+- `youtube_description`: script 前 2-3 句 + hashtags + AI disclosure
+- `youtube_tags`: 从标题和类别提取
 
----
+## Prompt 模板（按类别）
 
-### 2. 获取项目详情
+| 类别 | 星期 | 时长 | 风格 |
+|------|------|------|------|
+| tech | Mon/Thu | 45s | 快节奏、数据驱动 |
+| people | Tue | 50s | 电影叙事、戏剧弧线 |
+| society | Wed | 45s | 调查式、多角度 |
+| science | (轮换) | 50s | 视觉隐喻、层层揭示 |
+| business | Fri | 45s | 案例分析、可操作洞察 |
+| culture | Sat | 50s | 机智观察、流行文化 |
+| wildcard | Sun | 45s | 热门话题、病毒传播 |
 
-**GET** `/api/project/{projectId}`
+每个模板自动包含:
+- Thumbnail instruction（首帧必须是醒目标题卡）
+- Hook requirement（前 3 秒抓住观众）
+- AI disclosure statement
+- Source citation requirement
 
-获取项目的完整信息，包括当前阶段、脚本、视频结果等。
+## 配额
 
-**关键返回字段：**
-- `id` — 项目 ID
-- `stage` — 当前阶段: INITIALIZING → SCRIPT → STORYBOARD → RENDERING → COMPLETE
-- `script` — AI 生成的视频脚本
-- `scriptConfirmed` — 脚本是否已确认
-- `resultVideo` — 最终视频 URL（生成完成后）
-- `watermarkVideo` — 带水印的预览视频 URL
-- `previewThumbnail` — 视频缩略图
-- `voiceOverJson` — 配音设置
-- `isDeleted` — 是否已删除
-- `createdAt` / `updatedAt` — 时间戳
+- 免费账户: 每 12 小时 2 次视频生成
+- 检查配额: GET `/api/quotas` → `s2v.daily.available`
 
----
+## 声音选项
 
-### 3. 查询 Agent 状态
-
-**GET** `/api/agent/{projectId}/status`
-
-检查视频生成 Agent 是否还在运行。
-
-**返回：**
-```json
-{"data": {"isRunning": true, "clientCount": 1}}
-```
-
----
-
-### 4. 获取项目场景
-
-**GET** `/api/project/{projectId}/scene`
-
-获取视频的分镜/场景列表。
-
----
-
-### 5. 获取项目资产
-
-**GET** `/api/project/{projectId}/assets`
-
-获取项目使用的素材资源。
-
----
-
-### 6. 获取项目历史
-
-**GET** `/api/history/{projectId}?page=1&pageSize=100`
-
-获取 Agent 的完整对话历史，包括:
-- Director 意图分析
-- Scriptwriter 脚本生成
-- 用户确认记录
-- 各阶段进度
-
----
-
-### 7. 获取项目列表
-
-**GET** `/api/project?page=1&pageSize=18&q=me&sort=createdAt`
-
-获取当前用户的所有项目。
-
----
-
-### 8. 获取配额
-
-**GET** `/api/quotas`
-
-获取当前账户的使用配额：
-- `s2v` — 视频生成次数（每日限额 + 奖励）
-- `aimg` — AI 图片次数
-- `storyMode` — Story 模式次数
-- `promptEnhance` — 提示词增强次数（每小时）
-
----
-
-### 9. 获取权益
-
-**GET** `/api/ao/entitlements?q=mine`
-
-获取当前账户的计划类型（FREE / PRO 等）。
-
----
-
-## 可用声音
-
-### 预设声音
-| 名称 | voiceId | 标签 |
+| 名称 | voiceId | 特点 |
 |------|---------|------|
-| Lily | moss_audio_c12a59b9-7115-11f0-a447-9613c873494c | English (US), Female, Entertainment, Engaging |
-| Emma | English_captivating_female1 | English (US), Female, Educational explainers, Captivating |
+| Lily | moss_audio_c12a59b9-7115-11f0-a447-9613c873494c | English (US), Female, Engaging（默认）|
+| Emma | English_captivating_female1 | English (US), Female, Captivating |
+| Tennis | MM0375rv1dy8 | 克隆声音 |
 
-### 克隆声音
-| 名称 | voiceId | Provider |
-|------|---------|----------|
-| Tennis | MM0375rv1dy8 | minimax |
-
-声音在创建项目时通过 `voice` 参数指定。
-
----
-
-## 视频生成阶段
+## 视频阶段
 
 ```
-INITIALIZING → SCRIPT → STORYBOARD → RENDERING → COMPLETE
+INITIALIZING → SCRIPT → STORYBOARD → RENDERING → EDITOR (COMPLETE)
 ```
 
-1. **INITIALIZING** — 项目创建，AI 开始分析意图
-2. **SCRIPT** — Scriptwriter 生成脚本，等待用户确认
-3. **STORYBOARD** — 生成分镜、场景规划
-4. **RENDERING** — 渲染视频
-5. **COMPLETE** — 视频生成完成，`resultVideo` 可用
-
----
-
-## 典型工作流
-
-### 完整的视频生成流程
-
-```
-# 1. 找到 opus.pro tab
-Ω{"tool":"list_tabs","params":{}}ΩSTOP
-
-# 2. 创建项目
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project', {method: 'POST', headers: h, body: JSON.stringify({initialText: 'YOUR_PROMPT_HERE', voice: {labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'], name: 'Lily', provider: 'minimax', type: 'voice-over', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'}, enableCaption: true})}); return await r.json(); })()","tabId":OPUS_TAB_ID}}ΩSTOP
-
-# 3. 轮询状态直到完成
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project/PROJECT_ID', {headers: h}); const p = await r.json(); return {stage: p.stage, resultVideo: p.resultVideo, script: p.script?.substring(0, 200)}; })()","tabId":OPUS_TAB_ID}}ΩSTOP
-
-# 4. 视频完成后下载
-Ω{"tool":"run_command","params":{"command":"curl -o /tmp/video.mp4 'VIDEO_URL'"}}ΩSTOP
-```
-
-### 与 YouTube 自动上传整合
-
-```
-# 1. 创建视频 (Agent Opus)
-# 2. 轮询等待完成
-# 3. 下载视频到本地
-# 4. 上传到 YouTube (待整合)
-```
-
----
+通常需要 3-10 分钟完成。`stage === 'EDITOR' && resultVideo` 表示视频已就绪。
 
 ## 注意事项
 
-1. **配额限制** — 免费账户每天 2 次视频生成，注意 `/api/quotas` 检查剩余次数
-2. **Token 过期** — JWT token 有过期时间，如果 401 需要刷新页面重新获取
-3. **脚本确认** — 部分流程需要用户确认脚本才能继续，可通过 API 或页面操作确认
-4. **生成时间** — 视频生成通常需要几分钟，用 agent/status 轮询
-5. **跨域执行** — 所有 fetch 必须在 opus.pro 的 tab 中执行（通过 eval_js），确保同源
+1. JWT token 有效期短，刷新 opus.pro 页面可更新
+2. 所有 API 调用必须在 opus.pro tab 中通过 eval_js 执行（同源策略）
+3. YouTube 上传后默认 Private，需手动审核后改为 Public
+4. 遵守 YouTube 2025 AI 内容政策：每个视频必须有独特叙事，不批量模板化
