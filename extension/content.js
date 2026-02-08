@@ -3960,20 +3960,9 @@ ${tip}
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 
-    // Notification polling from watchdog
-    let lastNotifyTime = null;
-    setInterval(async () => {
-      try {
-        const resp = await fetch("http://localhost:8766/notify");
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.message && data.timestamp !== lastNotifyTime) {
-            lastNotifyTime = data.timestamp;
-            sendMessageSafe("**[Watchdog]** " + data.message);
-          }
-        }
-      } catch (e) { }
-    }, 3000);
+    // Notification polling - 已移除，改用 WebSocket 实时通道
+    // 旧的 fetch http://localhost:8766/notify 会触发 CORS 错误
+    // 如需 watchdog 通知，应通过 background.js 中转
     
     // 自动检测并点击 "Regenerate response" 按钮
     setInterval(() => {
