@@ -22,6 +22,55 @@ description: Agent Opus (opus.pro) AI 视频生成 + YouTube 自动上传，支�
 2. manifest.json 中已添加 `opus.pro` 的 host_permissions
 3. 用 `list_tabs` 找到 opus.pro 的 tabId
 
+## 两种模式
+
+### 模式 A: Story Video（故事版，推荐）
+
+新 API，支持 16:9，直接给 transcript，Opus 生成画面。
+
+**端点**: `POST /api/long-take-videos`
+
+**参数**:
+- `prompt`: transcript 全文（最长约 450 words）
+- `ratio`: `"16:9"` 或 `"9:16"`（Shorts）
+- `customStyle`: `false`（用预设风格）或 `true`
+- `styleText`: 风格描述文本
+- `voiceId`: 配音 ID
+
+**可用 Style**:
+| Style | 适合题材 |
+|-------|----------|
+| 2D Line | 轻松、教育 |
+| Animation | 通用 |
+| Collage | 趣味、文化 |
+| Blue Vox | 科技、未来 |
+| Claire | 优雅、人物 |
+| Claymation | 趣味、儿童 |
+| Economic | 商业、数据 |
+| Halftone | 新闻、纪实 |
+| Marcinelle | 漫画风 |
+| Pen&Ink | 严肃、历史 |
+| Schematic | 科学、技术 |
+| Watercolor | 艺术、文化 |
+| Vox | 新闻解说 |
+
+**Style 对应的 styleText**:
+```
+2D Line: "Clean 2D line art animation with minimal color palette"
+Pen&Ink: "Stylize the image with whimsical corporate line art, hand-drawn doodle fidelity, a stark black-and-white palette with spot-color accents, and loose ink contours with stipple-dot shading."
+Halftone: "Halftone print style with bold dots, newspaper aesthetic, dramatic contrast"
+Watercolor: "Soft watercolor painting style with flowing colors and gentle brushstrokes"
+```
+
+**示例**:
+```
+Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/long-take-videos', {method: 'POST', headers: h, body: JSON.stringify({prompt: 'YOUR_TRANSCRIPT', ratio: '16:9', customStyle: false, styleText: 'YOUR_STYLE', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'})}); return await r.json(); })()","tabId":OPUS_TAB_ID}}ΩSTOP
+```
+
+### 模式 B: AI Agent Video（传统模式）
+
+旧 API，给 topic，Opus AI 自动研究、写脚本、生成视频。适合新闻类。
+
 ## 快速使用
 
 ### 1. 创建视频（AI 自动处理一切）

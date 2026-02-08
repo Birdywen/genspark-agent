@@ -257,7 +257,26 @@
           return { title, description, tags };
         },
       
-        // ===== 核心流程 =====
+        // ===== Story Video 模式（新 API，支持 16:9）=====
+        async createStoryVideo(transcript, options = {}) {
+          const ratio = options.ratio || '16:9';
+          const styleText = options.styleText || 'Clean 2D line art animation with minimal color palette';
+          const voiceId = options.voiceId || 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c';
+          const customStyle = options.customStyle || false;
+          
+          const body = {
+            prompt: transcript,
+            ratio: ratio,
+            customStyle: customStyle,
+            styleText: styleText,
+            voiceId: voiceId
+          };
+          
+          const result = await this.opusApiCall('POST', '/long-take-videos', body);
+          return result;
+        },
+
+        // ===== AI Agent 模式（旧 API，给 topic 自动生成）=====
         async createProject(topic, category, sourceUrl, auth) {
           const prompt = this.buildPrompt(topic, category, sourceUrl);
           
