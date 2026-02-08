@@ -869,11 +869,12 @@ function log(...args) {
 - **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
 - **命令执行** (1个): run_command
-- **页面脚本** (3个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
+- **页面脚本** (4个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
   - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
   - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
-  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId。适合: 输入→延迟→发送→等待回复 等多步浏览器交互。每步可设独立 tabId 实现跨 tab 工作流，ctx 自动跨页面传递
-  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow 指定 tabId 操作目标页面。js_flow 支持步骤级 tabId，一个 flow 可操作多个 tab
+  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId
+  - **async_task(code, condition, [tabId], [interval], [timeout], [label])** — 后台异步监控器。非阻塞启动，定期在目标 tab 执行 code，condition 满足时自动回报结果。支持持久化（扩展刷新后恢复）。condition 语法: result.key === value, result.a && result.b 等
+  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
