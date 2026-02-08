@@ -851,3 +851,20 @@ scp -P 1394 -i /Users/yay/.ssh/cpanel_ezmusic <本地文件> ezmusics@ezmusicsto
 1. 传输文件优先用 `scp`，不要用 heredoc
 2. cpanel 服务器通常使用非标准 SSH 端口
 3. 查看 MCP 配置文件获取正确的连接参数
+
+## 2026-02-08: 工具调用偶尔不执行 - 排查线索
+
+### 已知的扫描延迟
+- scanForToolCalls 每 200ms 扫描
+- 需连续 3 次 isAIGenerating()=false (600ms)
+- 文本稳定 1000ms 后才解析
+- 总延迟约 1.6s，这是正常设计
+
+### 疑似根因
+1. **ΩSTOP 检测时序**: 流式渲染时 JSON 先出来但 ΩSTOP 还没渲染，扫描器扫到后因为没有 ΩSTOP 而跳过。后续 ΩSTOP 出来后文本变化触发重置，又要等 1.6s
+2. **innerText vs markdown**: getLatestAIMessage 用 innerText 获取文本，代码块内的 Ω 符号可能被 HTML 渲染影响
+3. **parseToolCodeBlock bug**: regex.test() 消耗了 lastIndex，导致后续 exec 跳过第一个匹配（但仅影响 ```tool 格式）
+
+### 待验证
+- 在 scanForToolCalls 中加日志，记录每次扫描到的文本和解析结果
+- 特别关注 ΩSTOP 是否在文本中
