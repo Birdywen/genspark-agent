@@ -256,6 +256,32 @@ result.x || result.y              // OR 组合
 
 ---
 
+## scan_page — 页面元素扫描与索引
+
+操作新网站前，先查数据库是否有已知元素：
+```sql
+SELECT tag, selector, text_content, element_type FROM page_elements WHERE site='目标站点'
+```
+
+如果没有记录，用 eval_js 扫描并存入：
+```
+Ω{"tool":"eval_js","params":{"code":"扫描DOM可交互元素...","tabId":TAB_ID}}ΩSTOP
+```
+
+扫描脚本提取：tag, selector, text_content, placeholder, aria_label, role, element_type, position, size, visibility。
+
+结果通过 Python 写入 page_elements 表：
+```python
+sqlite3 project_knowledge.db "INSERT OR REPLACE INTO page_elements (site, page_url, page_title, element_index, tag, selector, text_content, placeholder, role, element_type) VALUES (...)"
+```
+
+### 已收录站点
+- google.com (9 elements): 搜索框 #APjFqb, 搜索按钮 input[name=btnK]
+- chatgpt.com (12 elements): 输入框 #prompt-textarea, 发送按钮 button.composer-submit-button-color
+- genspark.ai (8 elements): 输入框 textarea.search-input, 发送按钮 .enter-icon-wrapper
+
+---
+
 ## 注意事项
 
 1. **用 return 返回结果** — eval_js 内部会用 `new Function(code)` 包裹代码，必须用 `return` 才能拿到返回值

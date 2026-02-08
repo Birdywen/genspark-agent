@@ -875,6 +875,7 @@ function log(...args) {
   - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId
   - **async_task(code, condition, [tabId], [interval], [timeout], [label])** — 后台异步监控器。非阻塞启动，定期在目标 tab 执行 code，condition 满足时自动回报结果。支持持久化（扩展刷新后恢复）。condition 语法: result.key === value, result.a && result.b 等
   - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
+  - **操作网页前**: 先查 page_elements 表获取已知选择器 (SELECT selector,text_content FROM page_elements WHERE site='站点名')，没有记录才扫描
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
