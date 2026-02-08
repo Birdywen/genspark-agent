@@ -1,4 +1,4 @@
-// content.js v1.0.0 - ChatGPT Agent Bridge
+// content.js v1.0.0 - ChatGPT Agent Bridge - Ω标记格式 - Agent 心跳机制
 (function() { console.log('=== CHATGPT AGENT v1.0.0 LOADED ===');
   'use strict';
 
@@ -71,6 +71,668 @@
     document.head.appendChild(script);
   }
 
+  // === VideoGenerator 内联模块 ===
+  function loadVideoGenerator() {
+    try {
+      /**
+       * 视频生成模块 - Agent Opus → YouTube 自动化
+       * 流程：选题 → 构建 Prompt → 创建 Opus 项目 → 轮询完成 → Webhook 上传 YouTube
+       */
+      
+      const VideoGenerator = {
+        // 配置
+        config: {
+          opusApiBase: 'https://api.opus.pro/api',
+          webhookUrl: 'https://flow.sokt.io/func/scri42hM0QuZ',
+          pollInterval: 30000, // 30秒轮询一次
+          maxPollTime: 3600000, // 最长等待60分钟
+          opusTabId: null // opus.pro 的 tab ID
+        },
+      
+        // 状态
+        state: {
+          isRunning: false,
+          currentStep: null,
+          projectId: null
+        },
+      
+        // ===== Token 管理 =====
+        async getOpusToken() {
+          // 在 opus.pro tab 里读取 localStorage token
+          return new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({
+              type: 'EVAL_IN_TAB',
+              tabUrl: 'opus.pro',
+              code: `
+                const token = JSON.parse(localStorage.getItem('atom:user:access-token'));
+                const orgId = JSON.parse(localStorage.getItem('atom:user:org-id'));
+                const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id'));
+                if (!token) return {error: 'no token'};
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                const now = Math.floor(Date.now()/1000);
+                if (now > payload.exp) return {error: 'token expired', remainingSec: payload.exp - now};
+                return {token, orgId, userId, remainingSec: payload.exp - now};
+              `
+            }, (resp) => {
+              if (resp && resp.result && !resp.result.error) {
+                resolve(resp.result);
+              } else {
+                reject(new Error(resp?.result?.error || 'Failed to get opus token'));
+              }
+            });
+          });
+        },
+      
+        // ===== API 调用 =====
+        async opusApiCall(method, endpoint, body, auth) {
+          // Execute API call in opus.pro tab context to avoid CORS
+          // Pass params as JSON-safe strings to avoid injection issues
+          return new Promise((resolve, reject) => {
+            const safeBody = body ? JSON.stringify(JSON.stringify(body)) : 'null';
+            const code = [
+              'return (async () => {',
+              '  const token = JSON.parse(localStorage.getItem("atom:user:access-token"));',
+              '  const orgId = JSON.parse(localStorage.getItem("atom:user:org-id"));',
+              '  const userId = JSON.parse(localStorage.getItem("atom:user:org-user-id"));',
+              '  const headers = {',
+              '    "Content-Type": "application/json",',
+              '    "Accept": "application/json",',
+              '    "Authorization": "Bearer " + token,',
+              '    "X-OPUS-ORG-ID": orgId,',
+              '    "X-OPUS-USER-ID": userId,',
+              '    "X-OPUS-SHARED-ID": ""',
+              '  };',
+              '  const opts = { method: "' + method + '", headers };',
+              '  const bodyData = ' + safeBody + ';',
+              '  if (bodyData && bodyData !== "null") opts.body = bodyData;',
+              '  const resp = await fetch("https://api.opus.pro/api' + endpoint + '", opts);',
+              '  if (!resp.ok) {',
+              '    const text = await resp.text();',
+              '    return { __error: true, status: resp.status, message: text };',
+              '  }',
+              '  return resp.json();',
+              '})()'
+            ].join('\n');
+            chrome.runtime.sendMessage({
+              type: 'EVAL_IN_TAB',
+              tabUrl: 'opus.pro',
+              code: code
+            }, (resp) => {
+              if (resp && resp.success && resp.result) {
+                if (resp.result.__error) {
+                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));
+                } else {
+                  resolve(resp.result);
+                }
+              } else {
+                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));
+              }
+            });
+          });
+        },
+      
+        // ===== 内容调度 =====
+        getTodayCategory() {
+          const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+          const today = days[new Date().getDay()];
+          const schedule = {
+            mon: 'tech', tue: 'people', wed: 'society',
+            thu: 'science', fri: 'business', sat: 'culture', sun: 'wildcard'
+          };
+          return schedule[today] || 'tech';
+        },
+      
+        getCategoryConfig(categoryId) {
+          const categories = {
+            tech: { label: '科技趋势', hashtags: ['#Tech', '#AI', '#Innovation'], tone: 'informative, forward-looking' },
+            people: { label: '人物传记', hashtags: ['#Biography', '#Inspiring', '#People'], tone: 'storytelling, emotional' },
+            society: { label: '社会热点', hashtags: ['#Society', '#Trending', '#News'], tone: 'analytical, thought-provoking' },
+            science: { label: '科学解读', hashtags: ['#Science', '#Discovery', '#Facts'], tone: 'educational, wonder-inducing' },
+            business: { label: '商业分析', hashtags: ['#Business', '#Money', '#Strategy'], tone: 'analytical, actionable' },
+            culture: { label: '文化现象', hashtags: ['#Culture', '#Viral', '#Entertainment'], tone: 'observational, witty' },
+            wildcard: { label: '百搭话题', hashtags: ['#Interesting', '#MustWatch'], tone: 'engaging, versatile' }
+          };
+          return categories[categoryId] || categories.tech;
+        },
+      
+        // ===== Prompt 构建 =====
+        buildPrompt(topic, category, sourceUrl) {
+          // Keep prompt short and natural - Opus AI agents handle the rest
+          let prompt = topic;
+          if (sourceUrl) {
+            prompt += '\nReference: ' + sourceUrl;
+          }
+          return prompt;
+        },
+      
+        // ===== YouTube 元数据 =====
+        buildYouTubeMetadata(topic, category) {
+          const cat = this.getCategoryConfig(category);
+          
+          // 标题: 最多 100 字符，推荐 60
+          let title = topic.length > 55 ? topic.substring(0, 52) + '...' : topic;
+          title += ' #Shorts';
+          if (title.length > 100) title = title.substring(0, 97) + '...';
+      
+          // 描述
+          const hashtags = ['#Shorts', ...cat.hashtags].slice(0, 5).join(' ');
+          const description = `${topic}\n\n${hashtags}\n\nThis video was created with AI assistance. All facts have been verified.`;
+      
+          // Tags
+          const tags = ['Shorts', category, ...cat.hashtags.map(h => h.replace('#', ''))];
+      
+          return { title, description, tags };
+        },
+      
+        // ===== 核心流程 =====
+        async createProject(topic, category, sourceUrl, auth) {
+          const prompt = this.buildPrompt(topic, category, sourceUrl);
+          
+          const body = {
+            initialText: prompt,
+            voice: {
+              labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'],
+              name: 'Lily',
+              provider: 'minimax',
+              type: 'voice-over',
+              voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'
+            },
+            hookTemplateName: 'hook_slidecut_down',
+            enableCaption: true
+          };
+      
+          const result = await this.opusApiCall('POST', '/project', body, auth);
+          return result;
+        },
+      
+        async pollProjectStatus(projectId, auth, onUpdate) {
+          const startTime = Date.now();
+          let consecutiveErrors = 0;
+          
+          while (Date.now() - startTime < this.config.maxPollTime) {
+            try {
+              // Re-fetch token each poll cycle (may have been refreshed)
+              let currentAuth = auth;
+              try {
+                currentAuth = await this.getOpusToken();
+              } catch(tokenErr) {
+                // Token expired, wait and retry
+                if (onUpdate) onUpdate('TOKEN_EXPIRED - please login opus.pro', null);
+                await new Promise(r => setTimeout(r, 60000)); // wait 1 min
+                continue;
+              }
+              
+              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, currentAuth);
+              consecutiveErrors = 0;
+              
+              if (onUpdate) onUpdate(project.stage, project);
+      
+              if (project.stage === 'EDITOR' && project.resultVideo) {
+                return project;
+              }
+      
+              if (project.stage === 'FAILED' || project.stage === 'ERROR') {
+                throw new Error('Project failed: ' + (project.error || project.stage));
+              }
+            } catch (e) {
+              consecutiveErrors++;
+              if (e.message.includes('401') || e.message.includes('Unauthorized')) {
+                if (onUpdate) onUpdate('⚠️ Token expired, retrying in 60s... (login opus.pro to refresh)', null);
+                await new Promise(r => setTimeout(r, 60000));
+                if (consecutiveErrors > 10) {
+                  throw new Error('Too many auth failures. Please login opus.pro and retry.');
+                }
+                continue;
+              }
+              if (consecutiveErrors > 5) throw e;
+              if (onUpdate) onUpdate('⚠️ Error: ' + e.message + ', retrying...', null);
+            }
+      
+            await new Promise(r => setTimeout(r, this.config.pollInterval));
+          }
+      
+          throw new Error('Polling timeout: video generation took too long');
+        },
+      
+        async uploadToYouTube(videoUrl, metadata) {
+          const payload = {
+            video_url: videoUrl,
+            youtube_title: metadata.title,
+            youtube_description: metadata.description,
+            youtube_tags: metadata.tags
+          };
+      
+          const resp = await fetch(this.config.webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+      
+          return resp.json();
+        },
+      
+        // ===== 主流程 =====
+        async run(topic, options = {}) {
+          if (this.state.isRunning) {
+            throw new Error('视频生成正在进行中，请等待完成');
+          }
+      
+          this.state.isRunning = true;
+          this.state.currentStep = 'init';
+          const log = options.onLog || console.log;
+          const category = options.category || this.getTodayCategory();
+          const sourceUrl = options.sourceUrl || '';
+      
+          try {
+            // Step 1: 获取 Token
+            log('🔑 获取 Opus Pro Token...');
+            this.state.currentStep = 'auth';
+            let auth;
+            try {
+              auth = await this.getOpusToken();
+              log(`✅ Token 有效，剩余 ${auth.remainingSec}s`);
+            } catch (e) {
+              log('❌ Token 获取失败: ' + e.message);
+              log('💡 请在 opus.pro 页面重新登录后再试');
+              throw e;
+            }
+      
+            // Step 2: 创建项目
+            log(`🎬 创建视频项目... 类别: ${category}`);
+            this.state.currentStep = 'create';
+            const project = await this.createProject(topic, category, sourceUrl, auth);
+            this.state.projectId = project.id;
+            log(`✅ 项目已创建: ${project.id}`);
+      
+            // Step 3: 轮询等待
+            log('⏳ 等待视频生成（可能需要 3-8 分钟）...');
+            this.state.currentStep = 'polling';
+            
+            const completed = await this.pollProjectStatus(project.id, auth, (stage, data) => {
+              log(`  📊 状态: ${stage}`);
+            });
+            
+            const videoUrl = completed.resultVideo;
+            log(`✅ 视频生成完成: ${videoUrl}`);
+      
+            // Step 4: 构建 YouTube 元数据
+            log('📝 生成 YouTube 元数据...');
+            this.state.currentStep = 'metadata';
+            const metadata = this.buildYouTubeMetadata(topic, category);
+            log(`  标题: ${metadata.title}`);
+      
+            // Step 5: 上传到 YouTube
+            log('📤 上传到 YouTube (Private)...');
+            this.state.currentStep = 'upload';
+            const uploadResult = await this.uploadToYouTube(videoUrl, metadata);
+            log('✅ YouTube 上传成功！');
+      
+            // Step 6: 记录历史
+            this.state.currentStep = 'done';
+            this.recordHistory(topic, category, videoUrl, metadata);
+            log('🎉 全流程完成！视频已上传为 Private，请在 YouTube Studio 审核后公开。');
+      
+            return {
+              success: true,
+              projectId: project.id,
+              videoUrl,
+              metadata,
+              uploadResult
+            };
+      
+          } catch (error) {
+            log('❌ 失败: ' + error.message);
+            throw error;
+          } finally {
+            this.state.isRunning = false;
+            this.state.currentStep = null;
+          }
+        },
+      
+        // ===== 批量创建（一次登录创建多个项目） =====
+        async batchCreate(topics, onLog) {
+          const log = onLog || console.log;
+          const results = [];
+          
+          log('🔑 获取 Token...');
+          let auth;
+          try {
+            auth = await this.getOpusToken();
+            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
+          } catch(e) {
+            log('❌ Token 获取失败: ' + e.message);
+            throw e;
+          }
+          
+          for (let i = 0; i < topics.length; i++) {
+            const t = topics[i];
+            log('🎬 [' + (i+1) + '/' + topics.length + '] 创建: ' + t.topic.substring(0, 50) + '...');
+            try {
+              const project = await this.createProject(t.topic, t.category, t.sourceUrl || '', auth);
+              const metadata = this.buildYouTubeMetadata(t.topic, t.category);
+              results.push({
+                projectId: project.id,
+                topic: t.topic,
+                category: t.category,
+                metadata,
+                status: 'created',
+                createdAt: new Date().toISOString()
+              });
+              log('✅ 项目已创建: ' + project.id);
+            } catch(e) {
+              log('❌ 创建失败: ' + e.message);
+              results.push({ topic: t.topic, status: 'failed', error: e.message });
+            }
+            // 间隔 2 秒避免限流
+            if (i < topics.length - 1) await new Promise(r => setTimeout(r, 2000));
+          }
+          
+          // 保存待上传列表到 localStorage
+          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
+          pending.push(...results.filter(r => r.status === 'created'));
+          localStorage.setItem('video_pending_uploads', JSON.stringify(pending));
+          
+          log('📋 已创建 ' + results.filter(r => r.status === 'created').length + '/' + topics.length + ' 个项目，等待生成完成后上传');
+          return results;
+        },
+
+        // ===== 批量上传（检查完成的项目并上传） =====
+        async batchUpload(onLog) {
+          const log = onLog || console.log;
+          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
+          
+          if (pending.length === 0) {
+            log('📭 没有待上传的项目');
+            return [];
+          }
+          
+          log('🔑 获取 Token...');
+          let auth;
+          try {
+            auth = await this.getOpusToken();
+            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
+          } catch(e) {
+            log('❌ Token 获取失败: ' + e.message);
+            throw e;
+          }
+          
+          const results = [];
+          const stillPending = [];
+          
+          for (const item of pending) {
+            log('🔍 检查项目: ' + item.projectId);
+            try {
+              const project = await this.opusApiCall('GET', '/project/' + item.projectId, null, auth);
+              
+              if (project.stage === 'EDITOR' && project.resultVideo) {
+                log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');
+                // Enhance metadata with actual project data
+                if (project.name) item.metadata.title = (project.name + ' #Shorts').substring(0, 100);
+                if (project.script) {
+                  const scriptPreview = project.script.substring(0, 200) + '...';
+                  item.metadata.description = project.name + '\n\n' + scriptPreview + '\n\n' + (item.metadata.description || '');
+                }
+                log('📤 上传到 YouTube... 标题: ' + item.metadata.title);
+                const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);
+                log('✅ YouTube 上传成功! 标题: ' + item.metadata.title);
+                this.recordHistory(item.topic, item.category, project.resultVideo, item.metadata);
+                results.push({ ...item, status: 'uploaded', videoUrl: project.resultVideo });
+              } else if (project.stage === 'FAILED' || project.stage === 'ERROR') {
+                log('❌ 项目失败: ' + item.projectId);
+                results.push({ ...item, status: 'failed' });
+              } else {
+                log('⏳ 仍在生成中: ' + project.stage);
+                stillPending.push(item);
+                results.push({ ...item, status: 'pending', stage: project.stage });
+              }
+            } catch(e) {
+              log('⚠️ 查询失败: ' + e.message);
+              stillPending.push(item);
+            }
+            await new Promise(r => setTimeout(r, 1000));
+          }
+          
+          // 更新待上传列表
+          localStorage.setItem('video_pending_uploads', JSON.stringify(stillPending));
+          log('📊 结果: ' + results.filter(r => r.status === 'uploaded').length + ' 已上传, ' + stillPending.length + ' 待处理');
+          return results;
+        },
+
+        // ===== 历史记录 =====
+        recordHistory(topic, category, videoUrl, metadata) {
+          try {
+            const history = JSON.parse(localStorage.getItem('video_content_history') || '{"published":[],"topics_used":[]}');
+            history.published.push({
+              date: new Date().toISOString(),
+              topic,
+              category,
+              videoUrl,
+              youtubeTitle: metadata.title,
+              status: 'uploaded_private'
+            });
+            history.topics_used.push(topic.substring(0, 100));
+            // 只保留最近 100 条
+            if (history.published.length > 100) history.published = history.published.slice(-100);
+            if (history.topics_used.length > 200) history.topics_used = history.topics_used.slice(-200);
+            localStorage.setItem('video_content_history', JSON.stringify(history));
+          } catch (e) {
+            console.error('Failed to record history:', e);
+          }
+        },
+      
+        // ===== UI: 弹出选题对话框 =====
+        showTopicDialog(addLog) {
+          // 如果已有对话框，移除
+          const existing = document.getElementById('video-gen-dialog');
+          if (existing) existing.remove();
+      
+          const category = this.getTodayCategory();
+          const catConfig = this.getCategoryConfig(category);
+      
+          const dialog = document.createElement('div');
+          dialog.id = 'video-gen-dialog';
+          dialog.innerHTML = `
+            <div class="vg-overlay"></div>
+            <div class="vg-modal">
+              <div class="vg-header">
+                <span>🎬 生成视频</span>
+                <button class="vg-close">✕</button>
+              </div>
+              <div class="vg-body">
+                <div class="vg-field">
+                  <label>今日类别</label>
+                  <select id="vg-category">
+                    <option value="tech" ${category === 'tech' ? 'selected' : ''}>🔧 科技趋势 (Mon)</option>
+                    <option value="people" ${category === 'people' ? 'selected' : ''}>👤 人物传记 (Tue)</option>
+                    <option value="society" ${category === 'society' ? 'selected' : ''}>🌍 社会热点 (Wed)</option>
+                    <option value="science" ${category === 'science' ? 'selected' : ''}>🔬 科学解读 (Thu)</option>
+                    <option value="business" ${category === 'business' ? 'selected' : ''}>💼 商业分析 (Fri)</option>
+                    <option value="culture" ${category === 'culture' ? 'selected' : ''}>🎭 文化现象 (Sat)</option>
+                    <option value="wildcard" ${category === 'wildcard' ? 'selected' : ''}>🎲 百搭话题 (Sun)</option>
+                  </select>
+                </div>
+                <div class="vg-field">
+                  <label>话题 1 *</label>
+                  <textarea id="vg-topic" rows="2" placeholder="第一个视频话题"></textarea>
+                </div>
+                <div class="vg-field">
+                  <label>来源 URL 1（可选）</label>
+                  <input id="vg-source" type="text" placeholder="https://..." />
+                </div>
+                <div class="vg-field">
+                  <label>话题 2（可选，留空则只创建1个）</label>
+                  <textarea id="vg-topic2" rows="2" placeholder="第二个视频话题"></textarea>
+                </div>
+                <div class="vg-field">
+                  <label>来源 URL 2（可选）</label>
+                  <input id="vg-source2" type="text" placeholder="https://..." />
+                </div>
+                <div class="vg-preview" id="vg-preview" style="display:none">
+                  <div class="vg-preview-title">预览</div>
+                  <div id="vg-preview-content"></div>
+                </div>
+                <div class="vg-status" id="vg-status"></div>
+              </div>
+              <div class="vg-footer">
+                <button id="vg-upload-btn" class="vg-btn vg-btn-secondary" style="background:#059669">📤 上传已完成</button>
+                <button id="vg-preview-btn" class="vg-btn vg-btn-secondary">👁️ 预览</button>
+                <button id="vg-start-btn" class="vg-btn vg-btn-primary">🚀 批量创建</button>
+              </div>
+            </div>
+          `;
+      
+          // 样式
+          const style = document.createElement('style');
+          style.id = 'video-gen-styles';
+          if (!document.getElementById('video-gen-styles')) {
+            style.textContent = `
+              #video-gen-dialog { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10002; display: flex; align-items: center; justify-content: center; }
+              .vg-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); }
+              .vg-modal { position: relative; background: #1a1a2e; color: #e0e0e0; border-radius: 12px; width: 460px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+              .vg-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #333; font-size: 16px; font-weight: 600; }
+              .vg-close { background: none; border: none; color: #999; font-size: 18px; cursor: pointer; }
+              .vg-close:hover { color: #fff; }
+              .vg-body { padding: 20px; }
+              .vg-field { margin-bottom: 16px; }
+              .vg-field label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; font-weight: 500; }
+              .vg-field select, .vg-field input, .vg-field textarea { width: 100%; padding: 10px 12px; background: #0f0f23; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 14px; box-sizing: border-box; }
+              .vg-field textarea { resize: vertical; font-family: inherit; }
+              .vg-field select:focus, .vg-field input:focus, .vg-field textarea:focus { outline: none; border-color: #6366f1; }
+              .vg-preview { background: #0f0f23; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+              .vg-preview-title { font-size: 11px; color: #6366f1; font-weight: 600; margin-bottom: 8px; }
+              #vg-preview-content { font-size: 12px; color: #ccc; white-space: pre-wrap; max-height: 150px; overflow-y: auto; }
+              .vg-status { font-size: 12px; color: #aaa; min-height: 20px; }
+              .vg-status.error { color: #ef4444; }
+              .vg-status.success { color: #22c55e; }
+              .vg-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px; border-top: 1px solid #333; }
+              .vg-btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+              .vg-btn-secondary { background: #333; color: #e0e0e0; }
+              .vg-btn-secondary:hover { background: #444; }
+              .vg-btn-primary { background: #6366f1; color: white; }
+              .vg-btn-primary:hover { background: #5558e6; }
+              .vg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+              .vg-log { font-size: 11px; padding: 4px 0; border-bottom: 1px solid #1a1a2e; }
+            `;
+            document.head.appendChild(style);
+          }
+      
+          document.body.appendChild(dialog);
+      
+          // 事件绑定
+          dialog.querySelector('.vg-close').onclick = () => dialog.remove();
+          dialog.querySelector('.vg-overlay').onclick = () => dialog.remove();
+      
+          // 预览按钮
+          dialog.querySelector('#vg-preview-btn').onclick = () => {
+            const topic = dialog.querySelector('#vg-topic').value.trim();
+            const cat = dialog.querySelector('#vg-category').value;
+            const source = dialog.querySelector('#vg-source').value.trim();
+            if (!topic) {
+              this.setStatus(dialog, '请输入话题', 'error');
+              return;
+            }
+            const prompt = this.buildPrompt(topic, cat, source);
+            const metadata = this.buildYouTubeMetadata(topic, cat);
+            const preview = dialog.querySelector('#vg-preview');
+            preview.style.display = 'block';
+            dialog.querySelector('#vg-preview-content').textContent = 
+              `📺 YouTube 标题: ${metadata.title}\n\n📝 Opus Prompt:\n${prompt}\n\n🏷️ Tags: ${metadata.tags.join(', ')}`;
+          };
+      
+          // 开始生成按钮
+          // 批量创建按钮
+          dialog.querySelector('#vg-start-btn').onclick = async () => {
+            const topic1 = dialog.querySelector('#vg-topic').value.trim();
+            const cat = dialog.querySelector('#vg-category').value;
+            const source1 = dialog.querySelector('#vg-source').value.trim();
+            const topic2 = dialog.querySelector('#vg-topic2') ? dialog.querySelector('#vg-topic2').value.trim() : '';
+            const source2 = dialog.querySelector('#vg-source2') ? dialog.querySelector('#vg-source2').value.trim() : '';
+
+            if (!topic1) {
+              this.setStatus(dialog, '请输入至少一个话题', 'error');
+              return;
+            }
+
+            const topics = [{topic: topic1, category: cat, sourceUrl: source1}];
+            if (topic2) topics.push({topic: topic2, category: cat, sourceUrl: source2});
+
+            const startBtn = dialog.querySelector('#vg-start-btn');
+            const previewBtn = dialog.querySelector('#vg-preview-btn');
+            const uploadBtn = dialog.querySelector('#vg-upload-btn');
+            startBtn.disabled = true;
+            previewBtn.disabled = true;
+            if (uploadBtn) uploadBtn.disabled = true;
+            startBtn.textContent = '⏳ 创建中...';
+
+            const logToDialog = (msg) => {
+              this.setStatus(dialog, msg);
+              if (addLog) addLog(msg, 'info');
+            };
+
+            try {
+              const results = await this.batchCreate(topics, logToDialog);
+              const created = results.filter(r => r.status === 'created').length;
+              this.setStatus(dialog, '🎉 已创建 ' + created + ' 个项目！等视频生成完成后点「📤 上传已完成」', 'success');
+              startBtn.textContent = '✅ 已创建 ' + created + ' 个';
+              if (uploadBtn) uploadBtn.disabled = false;
+            } catch (error) {
+              this.setStatus(dialog, '❌ ' + error.message, 'error');
+              startBtn.disabled = false;
+              previewBtn.disabled = false;
+              if (uploadBtn) uploadBtn.disabled = false;
+              startBtn.textContent = '🚀 重试';
+            }
+          };
+
+          // 上传已完成的视频
+          dialog.querySelector('#vg-upload-btn').onclick = async () => {
+            const uploadBtn = dialog.querySelector('#vg-upload-btn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ 检查中...';
+
+            const logToDialog = (msg) => {
+              this.setStatus(dialog, msg);
+              if (addLog) addLog(msg, 'info');
+            };
+
+            try {
+              const results = await this.batchUpload(logToDialog);
+              const uploaded = results.filter(r => r.status === 'uploaded').length;
+              const pending = results.filter(r => r.status === 'pending').length;
+              if (uploaded > 0) {
+                this.setStatus(dialog, '🎉 ' + uploaded + ' 个视频已上传! ' + (pending > 0 ? pending + ' 个仍在生成中' : ''), 'success');
+              } else if (pending > 0) {
+                this.setStatus(dialog, '⏳ ' + pending + ' 个视频仍在生成中，稍后再试');
+              } else {
+                this.setStatus(dialog, '📭 没有待上传的项目');
+              }
+              uploadBtn.textContent = '📤 上传已完成';
+              uploadBtn.disabled = false;
+            } catch(error) {
+              this.setStatus(dialog, '❌ ' + error.message, 'error');
+              uploadBtn.textContent = '📤 重试上传';
+              uploadBtn.disabled = false;
+            }
+          };
+        },
+      
+        setStatus(dialog, msg, type) {
+          const el = dialog.querySelector('#vg-status');
+          el.className = 'vg-status ' + (type || '');
+          el.innerHTML += `<div class="vg-log">${msg}</div>`;
+        }
+      };
+      
+      // VideoGenerator is now available in scope
+      
+      window.VideoGenerator = VideoGenerator;
+      console.log('[Agent] VideoGenerator loaded (inline)');
+    } catch(e) {
+      console.error('[Agent] loadVideoGenerator error:', e);
+    }
+  }
+
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
   function safeJsonParse(jsonStr) {
@@ -123,9 +785,7 @@ function log(...args) {
     const stopBtnSelectors = [
       'button[data-testid="stop-button"]',
       'button[aria-label*="stop" i]',
-      'button[aria-label*="Stop" i]',
-      'button.composer-submit-button-color svg.icon-stop',
-      '[data-testid="stop-button"]'
+      'button[aria-label*="Stop"]'
     ];
     for (const sel of stopBtnSelectors) {
       try {
@@ -133,12 +793,11 @@ function log(...args) {
         if (btn && btn.offsetParent !== null) return true;
       } catch (e) {}
     }
-    // ChatGPT: 检查最后一条 AI 消息是否还在流式输出
+    // ChatGPT: 检查最后一条消息是否还在流式输出
     const turns = document.querySelectorAll('article[data-testid^="conversation-turn-"]');
     if (turns.length > 0) {
       const lastTurn = turns[turns.length - 1];
-      // 检查是否有 streaming/typing 指示
-      if (lastTurn.querySelector('.result-streaming, .streaming, [class*="streaming"]')) return true;
+      if (lastTurn.querySelector('.result-streaming, [class*="streaming"]')) return true;
     }
     return false;
   }
@@ -161,11 +820,19 @@ function log(...args) {
 - **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
 - **命令执行** (1个): run_command
+- **页面脚本** (3个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
+  - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
+  - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
+  - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId。适合: 输入→延迟→发送→等待回复 等多步浏览器交互。每步可设独立 tabId 实现跨 tab 工作流，ctx 自动跨页面传递
+  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow 指定 tabId 操作目标页面。js_flow 支持步骤级 tabId，一个 flow 可操作多个 tab
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
 
 你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
+你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，先用一个简单命令测试（如 echo hello），而不是拒绝。
+
+> ⚠️ 重要：新对话开始时，请先执行一条简单命令验证系统连通性（如 \`echo hello\`），确认工具可用后再继续。不要假设工具不存在而拒绝执行。
 
 ---
 
@@ -244,7 +911,7 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - genspark-agent / ezmusicstore / oracle-cloud
 
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}ΩSTOP
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/context_loader.js 项目名"}}ΩSTOP
 \`\`\`
 
 ### TODO 机制
@@ -293,12 +960,15 @@ ${toolSummary}
 
 
 
-    // ============== DOM 操作 (Genspark 专用) ==============
+    // ============== DOM 操作 (ChatGPT 专用) ==============
   
   function getAIMessages() {
-    // ChatGPT: AI 回答是偶数 turn（turn-2, turn-4, ...）
+    // ChatGPT: article[data-testid=conversation-turn-N], AI 是偶数 turn (2,4,6...)
     const allTurns = document.querySelectorAll('article[data-testid^="conversation-turn-"]');
-    return Array.from(allTurns).filter((el, idx) => idx % 2 === 1); // 偶数索引=用户, 奇数索引=AI
+    return Array.from(allTurns).filter(el => {
+      // AI 回答包含 data-message-author-role="assistant" 或在偶数位置
+      return el.querySelector('[data-message-author-role="assistant"]') !== null;
+    });
   }
 
   function getLatestAIMessage() {
@@ -318,7 +988,7 @@ ${toolSummary}
   }
 
   function getInputBox() {
-    // ChatGPT: 输入框是 contenteditable div
+    // ChatGPT: 输入框是 #prompt-textarea (contenteditable div)
     const selectors = [
       '#prompt-textarea',
       'div[contenteditable="true"][data-placeholder]',
@@ -390,8 +1060,7 @@ ${toolSummary}
         'button.composer-submit-button-color',
         'button[data-testid="send-button"]',
         'button[aria-label*="send" i]',
-        'button[aria-label*="Send"]',
-        'form button[type="submit"]'
+        'button[aria-label*="Send"]'
       ];
       
       // 按 Enter 发送
@@ -415,7 +1084,8 @@ ${toolSummary}
       // 检查并重试发送的函数
       const checkAndRetry = (retryCount) => {
         const inp = getInputBox();
-        if (!inp || !inp.value || inp.value.length <= 5) {
+        const inputContent = inp ? (inp.value || inp.innerText || '') : '';
+        if (!inp || !inputContent || inputContent.trim().length <= 5) {
           // 发送成功了
           return;
         }
@@ -466,7 +1136,8 @@ ${toolSummary}
             // 再次检查
             setTimeout(() => {
               const inp = getInputBox();
-              if (inp && inp.value && inp.value.length > 10) {
+              const remainingText = inp ? (inp.value || inp.innerText || '') : '';
+              if (inp && remainingText && remainingText.trim().length > 10) {
                 addLog('⚠️ 请手动点击发送', 'error');
               } else {
                 addLog('📤 已发送', 'info');
@@ -1062,6 +1733,309 @@ ${toolSummary}
 
   function executeToolCall(tool, callHash) {
     clearToolCallDetection();
+    
+    // === 本地拦截: list_tabs 查询所有标签页 ===
+    if (tool.name === 'list_tabs') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('list_tabs');
+      state.agentRunning = true;
+      updateStatus();
+      addLog('🔧 list_tabs: 查询所有标签页', 'tool');
+      
+      const callId = 'list_tabs_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      
+      const resultHandler = (msg) => {
+        if (msg.type === 'LIST_TABS_RESULT' && msg.callId === callId) {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          clearTimeout(listTimeout);
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'list_tabs', success: msg.success, result: msg.result, error: msg.error });
+          sendMessageSafe(resultText);
+          addLog('✅ list_tabs 完成', 'success');
+        }
+      };
+      chrome.runtime.onMessage.addListener(resultHandler);
+      
+      const listTimeout = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(resultHandler);
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'list_tabs', success: false, error: '查询超时' });
+        sendMessageSafe(resultText);
+      }, 5000);
+      
+      chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: callId });
+      return;
+    }
+    
+    // === 本地拦截: eval_js 直接在页面执行 ===
+    if (tool.name === 'eval_js') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('eval_js');
+      state.agentRunning = true;
+      updateStatus();
+      
+      const code = tool.params.code || '';
+      const useMainWorld = tool.params.mainWorld === true;
+      addLog(`🔧 eval_js: ${code.substring(0, 80)}${code.length > 80 ? '...' : ''}`, 'tool');
+      
+      try {
+        // 通过 background script 的 chrome.scripting.executeScript 执行（绕过 CSP）
+        const callId = 'eval_js_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        
+        // 监听 background 返回的结果
+        const resultHandler = (msg) => {
+          if (msg.type === 'EVAL_JS_RESULT' && msg.callId === callId) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTimeout);
+            
+            state.agentRunning = false;
+            hideExecutingIndicator();
+            updateStatus();
+            const resultText = formatToolResult({
+              tool: 'eval_js',
+              success: msg.success,
+              result: msg.success ? msg.result : undefined,
+              error: msg.success ? undefined : msg.error
+            });
+            sendMessageSafe(resultText);
+            addLog(msg.success ? '✅ eval_js 完成' : '❌ eval_js 失败: ' + msg.error, msg.success ? 'success' : 'error');
+          }
+        };
+        chrome.runtime.onMessage.addListener(resultHandler);
+        
+        // 超时处理
+        const evalTimeout = setTimeout(() => {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (10秒)' });
+          sendMessageSafe(resultText);
+          addLog('❌ eval_js 超时', 'error');
+        }, 10000);
+        
+        // 发送给 background 执行（支持跨 tab）
+        const targetTabId = tool.params.tabId || null;
+        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: targetTabId }, (resp) => {
+          if (chrome.runtime.lastError) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTimeout);
+            state.agentRunning = false;
+            hideExecutingIndicator();
+            updateStatus();
+            const resultText = formatToolResult({ tool: 'eval_js', success: false, error: chrome.runtime.lastError.message });
+            sendMessageSafe(resultText);
+            addLog('❌ eval_js 发送失败: ' + chrome.runtime.lastError.message, 'error');
+          }
+        });
+      } catch (e) {
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'eval_js', success: false, error: e.message });
+        sendMessageSafe(resultText);
+        addLog(`❌ eval_js 异常: ${e.message}`, 'error');
+      }
+      return;
+    }
+    // === END eval_js 拦截 ===
+
+    // === 本地拦截: js_flow 浏览器 JS 微型工作流 ===
+    if (tool.name === 'js_flow') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('js_flow');
+      state.agentRunning = true;
+      updateStatus();
+
+      const steps = tool.params.steps || [];
+      const targetTabId = tool.params.tabId ? Number(tool.params.tabId) : undefined;
+      const totalTimeout = tool.params.timeout || 60000;
+      const flowId = 'js_flow_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      addLog(`🔄 js_flow: ${steps.length} 步骤, tab=${targetTabId || 'current'}, timeout=${totalTimeout}ms`, 'tool');
+
+      const flowStartTime = Date.now();
+      const results = [];
+      let aborted = false;
+
+      const runStep = (stepIndex) => {
+        if (aborted) return;
+        if (stepIndex >= steps.length) {
+          // 全部完成
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'js_flow', success: true, result: JSON.stringify(results, null, 2) });
+          sendMessageSafe(resultText);
+          addLog(`✅ js_flow 完成: ${results.length} 步`, 'success');
+          return;
+        }
+
+        if (Date.now() - flowStartTime > totalTimeout) {
+          aborted = true;
+          state.agentRunning = false;
+          hideExecutingIndicator();
+          updateStatus();
+          const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `总超时 ${totalTimeout}ms, 完成 ${stepIndex}/${steps.length} 步`, result: JSON.stringify(results, null, 2) });
+          sendMessageSafe(resultText);
+          addLog(`❌ js_flow 总超时`, 'error');
+          return;
+        }
+
+        const step = steps[stepIndex];
+        const stepDelay = step.delay || 0;
+        const stepLabel = step.label || `step${stepIndex}`;
+
+        const stepTargetTab = step.tabId ? `tab=${step.tabId}` : '';
+        addLog(`▶ js_flow [${stepIndex + 1}/${steps.length}] ${stepLabel}${stepTargetTab ? ' (' + stepTargetTab + ')' : ''}${stepDelay ? ' (delay ' + stepDelay + 'ms)' : ''}`, 'info');
+
+        const executeCode = () => {
+          // waitFor: 等待选择器出现或 JS 条件为真
+          if (step.waitFor) {
+            const waitTimeout = step.waitTimeout || 15000;
+            const waitCode = step.waitFor.startsWith('!')
+              || step.waitFor.includes('(') || step.waitFor.includes('.')
+              || step.waitFor.includes('=') || step.waitFor.includes('>')
+              ? step.waitFor  // JS 表达式
+              : `!!document.querySelector('${step.waitFor.replace(/'/g, "\\'")}')`; // CSS 选择器
+
+            const waitCallId = flowId + '_wait_' + stepIndex;
+            const waitStart = Date.now();
+
+            const pollWait = () => {
+              if (aborted) return;
+              if (Date.now() - waitStart > waitTimeout) {
+                results.push({ step: stepLabel, success: false, error: `waitFor 超时: ${step.waitFor}` });
+                if (step.optional) { runStep(stepIndex + 1); }
+                else {
+                  aborted = true;
+                  state.agentRunning = false;
+                  hideExecutingIndicator();
+                  updateStatus();
+                  const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} waitFor 超时`, result: JSON.stringify(results, null, 2) });
+                  sendMessageSafe(resultText);
+                  addLog(`❌ js_flow waitFor 超时: ${step.waitFor}`, 'error');
+                }
+                return;
+              }
+
+              const stepTabId = step.tabId ? Number(step.tabId) : targetTabId;
+              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: `return (function(){ try { return !!(${waitCode}); } catch(e) { return false; } })()`, callId: waitCallId + '_' + Date.now(), targetTabId: stepTabId });
+
+              // 简化: 用 onMessage 监听结果
+              const onWaitResult = (msg) => {
+                if (msg.type !== 'EVAL_JS_RESULT') return;
+                chrome.runtime.onMessage.removeListener(onWaitResult);
+                if (msg.result === 'true' || msg.result === true) {
+                  doExec();
+                } else {
+                  setTimeout(pollWait, 500);
+                }
+              };
+              chrome.runtime.onMessage.addListener(onWaitResult);
+            };
+            pollWait();
+          } else {
+            doExec();
+          }
+        };
+
+        const doExec = () => {
+          if (!step.code) {
+            // 纯延迟/等待步骤，没有代码
+            results.push({ step: stepLabel, success: true, result: '(no code)' });
+            runStep(stepIndex + 1);
+            return;
+          }
+
+          // 注入 ctx (前几步的结果)
+          const ctxJson = JSON.stringify(results).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const wrappedCode = `return (async function(){ const ctx = JSON.parse('${ctxJson}'); ${step.code} })()`;
+
+          const execCallId = flowId + '_exec_' + stepIndex;
+          const onExecResult = (msg) => {
+            if (msg.type !== 'EVAL_JS_RESULT' || !msg.callId || !msg.callId.startsWith(flowId + '_exec_' + stepIndex)) return;
+            chrome.runtime.onMessage.removeListener(onExecResult);
+            clearTimeout(execTimeout);
+            results.push({ step: stepLabel, success: msg.success, result: msg.result || msg.error });
+            addLog(`${msg.success ? '✓' : '✗'} ${stepLabel}: ${(msg.result || msg.error || '').substring(0, 100)}`, msg.success ? 'info' : 'error');
+            if (!msg.success && !step.optional) {
+              if (step.continueOnError) {
+                runStep(stepIndex + 1);
+              } else {
+                aborted = true;
+                state.agentRunning = false;
+                hideExecutingIndicator();
+                updateStatus();
+                const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} 失败: ${msg.error}`, result: JSON.stringify(results, null, 2) });
+                sendMessageSafe(resultText);
+                addLog(`❌ js_flow 在 ${stepLabel} 失败`, 'error');
+              }
+            } else {
+              runStep(stepIndex + 1);
+            }
+          };
+
+          chrome.runtime.onMessage.addListener(onExecResult);
+          const execTimeout = setTimeout(() => {
+            chrome.runtime.onMessage.removeListener(onExecResult);
+            results.push({ step: stepLabel, success: false, error: '执行超时 (15s)' });
+            if (step.optional || step.continueOnError) { runStep(stepIndex + 1); }
+            else {
+              aborted = true;
+              state.agentRunning = false;
+              hideExecutingIndicator();
+              updateStatus();
+              const resultText = formatToolResult({ tool: 'js_flow', success: false, error: `步骤 ${stepLabel} 执行超时`, result: JSON.stringify(results, null, 2) });
+              sendMessageSafe(resultText);
+            }
+          }, 15000);
+
+          const actualCallId = execCallId + '_' + Date.now();
+          const stepTabId = step.tabId ? Number(step.tabId) : targetTabId;
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrappedCode, callId: actualCallId, targetTabId: stepTabId }, (resp) => {
+            if (chrome.runtime.lastError) {
+              chrome.runtime.onMessage.removeListener(onExecResult);
+              clearTimeout(execTimeout);
+              results.push({ step: stepLabel, success: false, error: chrome.runtime.lastError.message });
+              if (step.optional || step.continueOnError) { runStep(stepIndex + 1); }
+              else {
+                aborted = true;
+                state.agentRunning = false;
+                hideExecutingIndicator();
+                updateStatus();
+                const resultText = formatToolResult({ tool: 'js_flow', success: false, error: chrome.runtime.lastError.message, result: JSON.stringify(results, null, 2) });
+                sendMessageSafe(resultText);
+              }
+            }
+          });
+        };
+
+        if (stepDelay > 0) {
+          setTimeout(executeCode, stepDelay);
+        } else {
+          executeCode();
+        }
+      };
+
+      try {
+        runStep(0);
+      } catch (e) {
+        state.agentRunning = false;
+        hideExecutingIndicator();
+        updateStatus();
+        const resultText = formatToolResult({ tool: 'js_flow', success: false, error: e.message });
+        sendMessageSafe(resultText);
+        addLog(`❌ js_flow 异常: ${e.message}`, 'error');
+      }
+      return;
+    }
+    // === END js_flow 拦截 ===
+
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {
@@ -1502,11 +2476,13 @@ ${tip}
       <div id="agent-actions">
         <button id="agent-copy-prompt" title="复制系统提示词给AI">📋 提示词</button>
         <button id="agent-clear" title="清除日志">🗑️</button>
-        <button id="agent-retry-last" title="重试上一个命令">🔁 重试</button>
+        <button id="agent-terminal" title="迷你终端">⌨️ 终端</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
         <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
+        <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
+        <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -1624,8 +2600,138 @@ ${tip}
       #agent-actions button:hover { background: #4b5563; }
       #agent-copy-prompt { background: #3730a3 !important; }
       #agent-copy-prompt:hover { background: #4338ca !important; }
+      #agent-save { background: #065f46 !important; }
+      #agent-save:hover { background: #047857 !important; }
+      #agent-video { background: #dc2626 !important; }
+      #agent-video:hover { background: #ef4444 !important; }
+      #agent-terminal { background: #7c3aed !important; }
+      #agent-terminal:hover { background: #8b5cf6 !important; }
+      #mini-terminal {
+        display: none;
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        width: 480px;
+        height: 320px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        z-index: 2147483647;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        font-size: 12px;
+        color: #c9d1d9;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #mini-terminal.visible { display: flex; }
+      #mini-terminal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        cursor: move;
+        user-select: none;
+      }
+      #mini-terminal-header span { font-size: 11px; color: #8b949e; }
+      #mini-terminal-close {
+        background: none;
+        border: none;
+        color: #8b949e;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0 4px;
+      }
+      #mini-terminal-close:hover { color: #f85149; }
+      #mini-terminal-output {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        font-size: 11.5px;
+        line-height: 1.5;
+      }
+      #mini-terminal-output .term-cmd { color: #58a6ff; }
+      #mini-terminal-output .term-ok { color: #7ee787; }
+      #mini-terminal-output .term-err { color: #f85149; }
+      #mini-terminal-output .term-dim { color: #484f58; }
+      #mini-terminal-input-row {
+        display: flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-top: 1px solid #30363d;
+        background: #0d1117;
+      }
+      #mini-terminal-input-row .prompt { color: #7ee787; margin-right: 6px; font-weight: bold; }
+      #mini-terminal-input {
+        flex: 1;
+        background: none;
+        border: none;
+        outline: none;
+        color: #c9d1d9;
+        font-family: inherit;
+        font-size: 12px;
+        caret-color: #58a6ff;
+      }
     `;
     document.head.appendChild(style);
+
+    document.getElementById('agent-save').onclick = () => {
+      addLog('💾 存档中...', 'info');
+      const saveBtn = document.getElementById('agent-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = '⏳';
+      
+      // 先获取命令历史路径
+      const historyPath = '/Users/yay/workspace/genspark-agent/server-v2/command-history.json';
+      
+      // 先查活跃项目，再 digest
+      chrome.runtime.sendMessage({
+        type: 'SEND_TO_SERVER',
+        payload: {
+          type: 'tool_call',
+          id: 'save_check_' + Date.now(),
+          tool: 'run_command',
+          params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js status' }
+        }
+      }, (statusResp) => {
+        // 从 status 输出中提取项目名，或使用默认值
+        let project = 'genspark-agent';
+        if (statusResp && statusResp.result) {
+          const match = String(statusResp.result).match(/当前项目:\s*(\S+)/);
+          if (match && match[1] !== '(未设置)') project = match[1];
+        }
+        
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: {
+            type: 'tool_call',
+            id: 'save_' + Date.now(),
+            tool: 'run_command',
+            params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
+          }
+        }, (resp) => {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 存档';
+          if (resp && resp.success) {
+            addLog('💾 存档成功！项目: ' + project, 'success');
+          } else {
+            addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
+          }
+        });
+      });
+    };
+
+    document.getElementById('agent-video').onclick = () => {
+      if (window.VideoGenerator) {
+        window.VideoGenerator.showTopicDialog(addLog);
+      } else {
+        addLog('❌ VideoGenerator 模块未加载，请刷新页面', 'error');
+      }
+    };
 
     document.getElementById('agent-clear').onclick = () => {
       document.getElementById('agent-logs').innerHTML = '';
@@ -1638,33 +2744,213 @@ ${tip}
       addLog('🗑️ 已重置', 'info');
     };
     
-    document.getElementById('agent-retry-last').onclick = () => {
-      if (!state.lastToolCall) {
-        addLog('❌ 没有可重试的命令', 'error');
+    // === 迷你终端 ===
+    const terminalHTML = `
+      <div id="mini-terminal">
+        <div id="mini-terminal-header">
+          <span>⌨️ Mini Terminal</span>
+          <button id="mini-terminal-close">✕</button>
+        </div>
+        <div id="mini-terminal-output"><span class="term-dim">Welcome. Type commands and press Enter.</span>\n</div>
+        <div id="mini-terminal-input-row">
+          <span class="prompt">❯</span>
+          <input id="mini-terminal-input" type="text" placeholder="ls, git status, node -v ..." autocomplete="off" spellcheck="false" />
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', terminalHTML);
+
+    const termEl = document.getElementById('mini-terminal');
+    const termOutput = document.getElementById('mini-terminal-output');
+    const termInput = document.getElementById('mini-terminal-input');
+    const termHistory = [];
+    let termHistoryIndex = -1;
+    let termCwd = '/Users/yay/workspace';
+
+    // 拖拽支持
+    let isDragging = false, dragOffX = 0, dragOffY = 0;
+    document.getElementById('mini-terminal-header').addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragOffX = e.clientX - termEl.getBoundingClientRect().left;
+      dragOffY = e.clientY - termEl.getBoundingClientRect().top;
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      termEl.style.left = (e.clientX - dragOffX) + 'px';
+      termEl.style.top = (e.clientY - dragOffY) + 'px';
+      termEl.style.right = 'auto';
+      termEl.style.bottom = 'auto';
+    });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+
+    document.getElementById('agent-terminal').onclick = () => {
+      termEl.classList.toggle('visible');
+      if (termEl.classList.contains('visible')) termInput.focus();
+    };
+
+    document.getElementById('mini-terminal-close').onclick = () => {
+      termEl.classList.remove('visible');
+    };
+
+    function termAppend(html) {
+      termOutput.innerHTML += html;
+      termOutput.scrollTop = termOutput.scrollHeight;
+    }
+
+    // 终端结果监听器
+    const termPendingCalls = new Map(); // callId -> true 或 { type: 'cd_check' }
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === 'tool_result' && msg.id && termPendingCalls.has(msg.id)) {
+        const callInfo = termPendingCalls.get(msg.id);
+        termPendingCalls.delete(msg.id);
+        termInput.disabled = false;
+        termInput.focus();
+
+        // cd 验证结果
+        if (callInfo && callInfo.type === 'cd_check') {
+          if (msg.success) {
+            const realPath = String(msg.result || '').replace(/^\[#\d+\]\s*/, '').trim();
+            if (realPath) termCwd = realPath;
+            termAppend(`<span class="term-dim">${termCwd}</span>\n`);
+            document.querySelector('#mini-terminal-input-row .prompt').textContent = termCwd.split('/').pop() + ' ❯';
+          } else {
+            termCwd = '/Users/yay/workspace';
+            termAppend(`<span class="term-err">cd: no such directory</span>\n`);
+          }
+          return;
+        }
+
+        if (msg.success) {
+          // 去掉 [#xxx] 前缀
+          const text = String(msg.result || '').replace(/^\[#\d+\]\s*/, '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          termAppend(`<span class="term-ok">${text}</span>\n`);
+        } else {
+          const err = String(msg.error || 'Unknown error').replace(/</g, '&lt;');
+          termAppend(`<span class="term-err">${err}</span>\n`);
+        }
+      }
+    });
+
+    function termExec(cmd) {
+      if (!cmd.trim()) return;
+      termHistory.push(cmd);
+      termHistoryIndex = termHistory.length;
+      termAppend(`<span class="term-cmd">❯ ${cmd}</span>\n`);
+      termInput.value = '';
+
+      // 处理 cd 命令
+      const cdMatch = cmd.trim().match(/^cd\s+(.+)/);
+      if (cdMatch) {
+        let target = cdMatch[1].trim().replace(/["']/g, '');
+        // 解析相对路径
+        if (target === '..') {
+          termCwd = termCwd.replace(/\/[^\/]+$/, '') || '/';
+        } else if (target === '~') {
+          termCwd = '/Users/yay';
+        } else if (target.startsWith('/')) {
+          termCwd = target;
+        } else if (target === '-') {
+          // 忽略 cd - 
+        } else {
+          termCwd = termCwd + '/' + target;
+        }
+        // 验证目录是否存在
+        termInput.disabled = true;
+        const checkId = 'term_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        termPendingCalls.set(checkId, { type: 'cd_check' });
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { type: 'tool_call', tool: 'run_command', params: { command: `cd ${termCwd} && pwd` }, id: checkId }
+        }, (resp) => {
+          if (chrome.runtime.lastError || !resp || !resp.success) {
+            termPendingCalls.delete(checkId);
+            termCwd = termHistory.length > 1 ? termCwd : '/Users/yay/workspace';
+            termInput.disabled = false;
+            termInput.focus();
+            termAppend(`<span class="term-err">cd: no such directory</span>\n`);
+          }
+        });
+        setTimeout(() => {
+          if (termPendingCalls.has(checkId)) {
+            termPendingCalls.delete(checkId);
+            termInput.disabled = false;
+            termInput.focus();
+          }
+        }, 10000);
         return;
       }
-      const { tool, params, timestamp } = state.lastToolCall;
-      const age = Math.round((Date.now() - timestamp) / 1000);
-      addLog(`🔁 重试 ${tool} (${age}秒前)`, 'info');
-      
-      // 重新执行
-      const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      state.agentRunning = true;
-      showExecutingIndicator(tool);
-      updateStatus();
-      
+
+      // 处理 clear 命令
+      if (cmd.trim() === 'clear' || cmd.trim() === 'cls') {
+        termOutput.innerHTML = '';
+        return;
+      }
+
+      termInput.disabled = true;
+
+      // 实际命令：加上 cwd 前缀
+      const actualCmd = `cd ${termCwd} && ${cmd}`;
+
+      const callId = 'term_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      termPendingCalls.set(callId, true);
+
+      // 超时保护
+      setTimeout(() => {
+        if (termPendingCalls.has(callId)) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Timeout (30s)</span>\n`);
+        }
+      }, 30000);
+
       chrome.runtime.sendMessage({
         type: 'SEND_TO_SERVER',
-        payload: { type: 'tool_call', tool, params, id: callId }
-      }, (response) => {
-        if (chrome.runtime.lastError || !response?.success) {
-          addLog('❌ 重试发送失败', 'error');
-          state.agentRunning = false;
-          hideExecutingIndicator();
-          updateStatus();
+        payload: {
+          type: 'tool_call',
+          tool: 'run_command',
+          params: { command: actualCmd },
+          id: callId
+        }
+      }, (resp) => {
+        if (chrome.runtime.lastError) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Send failed: ${chrome.runtime.lastError.message}</span>\n`);
+          return;
+        }
+        if (!resp || !resp.success) {
+          termPendingCalls.delete(callId);
+          termInput.disabled = false;
+          termInput.focus();
+          termAppend(`<span class="term-err">Server not connected</span>\n`);
         }
       });
-    };
+    }
+
+    termInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        termExec(termInput.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (termHistoryIndex > 0) {
+          termHistoryIndex--;
+          termInput.value = termHistory[termHistoryIndex];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (termHistoryIndex < termHistory.length - 1) {
+          termHistoryIndex++;
+          termInput.value = termHistory[termHistoryIndex];
+        } else {
+          termHistoryIndex = termHistory.length;
+          termInput.value = '';
+        }
+      } else if (e.key === 'Escape') {
+        termEl.classList.remove('visible');
+      }
+    });
     
     document.getElementById('agent-reconnect').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RECONNECT' });
@@ -2016,6 +3302,92 @@ ${tip}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
+      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
+      case 'browser_tool_call': {
+        const { callId, tool: bTool, params: bParams } = msg;
+        addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');
+
+        const sendBrowserResult = (success, result, error) => {
+          chrome.runtime.sendMessage({
+            type: 'SEND_TO_SERVER',
+            payload: { type: 'browser_tool_result', callId, success, result, error }
+          });
+          addLog(`${success ? '✅' : '❌'} BATCH←浏览器: ${bTool}`, success ? 'success' : 'error');
+        };
+
+        if (bTool === 'list_tabs') {
+          const ltCallId = 'bt_lt_' + Date.now();
+          const ltHandler = (m) => {
+            if (m.type === 'LIST_TABS_RESULT' && m.callId === ltCallId) {
+              chrome.runtime.onMessage.removeListener(ltHandler);
+              sendBrowserResult(m.success, m.result, m.error);
+            }
+          };
+          chrome.runtime.onMessage.addListener(ltHandler);
+          chrome.runtime.sendMessage({ type: 'LIST_TABS', callId: ltCallId });
+        } else if (bTool === 'eval_js') {
+          const ejCallId = 'bt_ej_' + Date.now();
+          const ejHandler = (m) => {
+            if (m.type === 'EVAL_JS_RESULT' && m.callId === ejCallId) {
+              chrome.runtime.onMessage.removeListener(ejHandler);
+              sendBrowserResult(m.success, m.result, m.error);
+            }
+          };
+          chrome.runtime.onMessage.addListener(ejHandler);
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: bParams.code || '', callId: ejCallId, targetTabId: bParams.tabId || null });
+        } else if (bTool === 'js_flow') {
+          // js_flow 比较特殊：复用现有的 executeToolCall 逻辑太复杂
+          // 直接内联一个简化版：逐步执行，收集结果
+          const steps = bParams.steps || [];
+          const flowTabId = bParams.tabId ? Number(bParams.tabId) : undefined;
+          const results = [];
+          let flowAborted = false;
+
+          const runFlowStep = (si) => {
+            if (flowAborted) return;
+            if (si >= steps.length) {
+              sendBrowserResult(true, JSON.stringify(results, null, 2));
+              return;
+            }
+            const s = steps[si];
+            const sLabel = s.label || `step${si}`;
+            const sTabId = s.tabId ? Number(s.tabId) : flowTabId;
+            const sDelay = s.delay || 0;
+
+            const doStep = () => {
+              if (!s.code) {
+                results.push({ step: sLabel, success: true, result: '(no code)' });
+                runFlowStep(si + 1);
+                return;
+              }
+              const ctxJson = JSON.stringify(results).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+              const wrapped = `return (async function(){ const ctx = JSON.parse('${ctxJson}'); ${s.code} })()`;
+              const sCallId = 'bt_fl_' + si + '_' + Date.now();
+              const sHandler = (m) => {
+                if (m.type !== 'EVAL_JS_RESULT' || m.callId !== sCallId) return;
+                chrome.runtime.onMessage.removeListener(sHandler);
+                results.push({ step: sLabel, success: m.success, result: m.result || m.error });
+                if (!m.success && !s.optional && !s.continueOnError) {
+                  flowAborted = true;
+                  sendBrowserResult(false, JSON.stringify(results, null, 2), `步骤 ${sLabel} 失败: ${m.error}`);
+                } else {
+                  runFlowStep(si + 1);
+                }
+              };
+              chrome.runtime.onMessage.addListener(sHandler);
+              chrome.runtime.sendMessage({ type: 'EVAL_JS', code: wrapped, callId: sCallId, targetTabId: sTabId });
+            };
+
+            if (sDelay > 0) setTimeout(doStep, sDelay);
+            else doStep();
+          };
+          runFlowStep(0);
+        } else {
+          sendBrowserResult(false, null, `未知浏览器工具: ${bTool}`);
+        }
+        break;
+      }
+
       // ===== 第三阶段: 任务规划 =====
       case 'plan_result':
         addLog('📋 收到任务规划结果', 'success');
@@ -2258,6 +3630,22 @@ ${tip}
         break;
 
       case 'tool_result':
+        // 终端命令的结果不注入聊天框，由终端自己处理
+        if (msg.id && msg.id.startsWith('term_')) {
+          log('终端结果，跳过聊天框注入:', msg.id);
+          break;
+        }
+        // 存档检查命令不注入聊天框，但 digest 结果需要注入
+        if (msg.id && msg.id.startsWith('save_check_')) {
+          log('存档检查结果，跳过聊天框注入:', msg.id);
+          break;
+        }
+        if (msg.id && msg.id.startsWith('save_') && msg.success && msg.result) {
+          log('存档完成，注入 digest 结果到聊天框');
+          const digestText = '💾 **项目上下文已更新：**\n\n' + msg.result;
+          sendMessageSafe(digestText);
+          break;
+        }
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
         if (state.executedCalls.has(resultHash)) {
@@ -2563,12 +3951,13 @@ ${tip}
   }
 
   function init() {
-    log('初始化 Agent v34 (Genspark)');
+    log('初始化 Agent v1.0.0 (ChatGPT)');
     
     createPanel();
     
     // 加载面板增强模块
     loadPanelEnhancer();
+    loadVideoGenerator();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 

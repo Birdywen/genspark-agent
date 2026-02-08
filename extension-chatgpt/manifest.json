@@ -12,7 +12,19 @@
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
     "https://chat.openai.com/*",
-    "https://*.openai.com/*"
+    "https://*.openai.com/*",
+    "https://*.google.com/*",
+    "https://*.github.com/*",
+    "https://*.youtube.com/*",
+    "https://*.wikipedia.org/*",
+    "https://*.amazon.com/*",
+    "https://*.reddit.com/*",
+    "https://*.vercel.app/*",
+    "https://*.netlify.app/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*",
+    "https://*.opus.pro/*",
+    "https://*.viasocket.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -29,5 +41,11 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["panel-enhancer.js"],
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"]
+    }
+  ]
 }

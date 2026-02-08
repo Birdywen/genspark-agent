@@ -4970,7 +4970,82 @@
       "success": true,
       "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\tmodified\n@@ -386,16 +386,13 @@\n     }\n \n     const trySend = (attempt = 1) => {\n       const btnSelectors = [\n-        '.enter-icon-wrapper',\n-        'div[class*=enter-icon]',\n-        'button[type=\"submi",
       "error": null
+    },
+    {
+      "id": 7886,
+      "timestamp": "2026-02-08T02:41:29.761Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-chatgpt/content.js",
+        "edits": [
+          {
+            "oldText": "  function isAIGenerating() {\n    const stopBtnSelectors = [\n      'button[aria-label*=\"stop\" i]', 'button[aria-label*=\"停止\" i]',\n      'button.stop-button', 'button[class*=\"stop\"]', '.stop-generating',\n      '[data-testid=\"stop-button\"]', '.generating-indicator', '.typing-indicator'\n    ];\n    for (const sel of stopBtnSelectors) {\n      try {\n        const btn = document.querySelector(sel);\n        if (btn && btn.offsetParent !== null) return true;\n      } catch (e) {}\n    }\n    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');\n    if (lastMsg) {\n      const cl = lastMsg.className.toLowerCase();\n      if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;\n      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*=\"loading\"], [class*=\"typing\"]').length > 0) return true;\n    }\n    const globalInd = document.querySelectorAll('.generating, .loading-response, [class*=\"generating\"], [class*=\"streaming\"]');\n    for (const el of globalInd) { if (el.offsetParent !== null) return true; }\n    return false;\n  }",
+            "newText": "  function isAIGenerating() {\n    // ChatGPT: 停止按钮出现表示正在生成\n    const stopBtnSelectors = [\n      'button[data-testid=\"stop-button\"]',\n      'button[aria-label*=\"stop\" i]',\n      'button[aria-label*=\"Stop\"]'\n    ];\n    for (const sel of stopBtnSelectors) {\n      try {\n        const btn = document.querySelector(sel);\n        if (btn && btn.offsetParent !== null) return true;\n      } catch (e) {}\n    }\n    // ChatGPT: 检查最后一条消息是否还在流式输出\n    const turns = document.querySelectorAll('article[data-testid^=\"conversation-turn-\"]');\n    if (turns.length > 0) {\n      const lastTurn = turns[turns.length - 1];\n      if (lastTurn.querySelector('.result-streaming, [class*=\"streaming\"]')) return true;\n    }\n    return false;\n  }"
+          },
+          {
+            "oldText": "  function getAIMessages() {\n    return Array.from(document.querySelectorAll('.conversation-statement.assistant'));\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n    if (messages.length === 0) return { text: '', index: -1, element: null };\n    const lastMsg = messages[messages.length - 1];\n    \n    const contentEl = lastMsg.querySelector('.markdown-viewer') || \n                      lastMsg.querySelector('.bubble .content') ||\n                      lastMsg.querySelector('.bubble');\n    \n    return { \n      text: contentEl?.innerText || lastMsg.innerText || '', \n      index: messages.length - 1,\n      element: lastMsg\n    };\n  }",
+            "newText": "  function getAIMessages() {\n    // ChatGPT: article[data-testid=conversation-turn-N], AI 是偶数 turn (2,4,6...)\n    const allTurns = document.querySelectorAll('article[data-testid^=\"conversation-turn-\"]');\n    return Array.from(allTurns).filter(el => {\n      // AI 回答包含 data-message-author-role=\"assistant\" 或在偶数位置\n      return el.querySelector('[data-message-author-role=\"assistant\"]') !== null;\n    });\n  }\n\n  function getLatestAIMessage() {\n    const messages = getAIMessages();\n    if (messages.length === 0) return { text: '', index: -1, element: null };\n    const lastMsg = messages[messages.length - 1];\n    \n    const contentEl = lastMsg.querySelector('.markdown.prose') || \n                      lastMsg.querySelector('.markdown') ||\n                      lastMsg.querySelector('[data-message-author-role=\"assistant\"]');\n    \n    return { \n      text: contentEl?.innerText || lastMsg.innerText || '', \n      index: messages.length - 1,\n      element: lastMsg\n    };\n  }"
+          },
+          {
+            "oldText": "  function getInputBox() {\n    const selectors = [\n      'textarea.search-input',\n      'textarea[placeholder*=\"消息\"]',\n      'textarea[placeholder*=\"message\" i]',\n      'div[contenteditable=\"true\"].search-input',\n      'div[contenteditable=\"true\"]',\n      'textarea'\n    ];\n    \n    for (const sel of selectors) {\n      const el = document.querySelector(sel);\n      if (el && el.offsetParent !== null) return el;\n    }\n    return null;\n  }",
+            "newText": "  function getInputBox() {\n    // ChatGPT: 输入框是 #prompt-textarea (contenteditable div)\n    const selectors = [\n      '#prompt-textarea',\n      'div[contenteditable=\"true\"][data-placeholder]',\n      'div[contenteditable=\"true\"].ProseMirror',\n      'div[contenteditable=\"true\"]'\n    ];\n    \n    for (const sel of selectors) {\n      const el = document.querySelector(sel);\n      if (el && el.offsetParent !== null) return el;\n    }\n    return null;\n  }"
+          },
+          {
+            "oldText": "      const btnSelectors = [\n        '.enter-icon-wrapper',\n        'div[class*=enter-icon]',\n        'button[type=\"submit\"]',\n        'button.send-button',\n        'button[aria-label*=\"send\" i]',\n        'button[aria-label*=\"发送\"]',\n        '.search-input-container button',\n        'form button:not([type=\"button\"])'\n      ];",
+            "newText": "      const btnSelectors = [\n        'button.composer-submit-button-color',\n        'button[data-testid=\"send-button\"]',\n        'button[aria-label*=\"send\" i]',\n        'button[aria-label*=\"Send\"]'\n      ];"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\tmodified\n@@ -780,27 +780,26 @@\n \n   // ============== AI 生成状态检测 ==============\n   \n   function isAIGenerating() {\n+    // ChatGPT: 停止按钮出现表示正在生成\n     const stopBtnSelectors = [\n-      'button[aria-label*=\"s",
+      "error": null
+    },
+    {
+      "id": 7887,
+      "timestamp": "2026-02-08T02:41:54.133Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-chatgpt/content.js",
+        "edits": [
+          {
+            "oldText": "// content.js v1.0.53 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n(function() { console.log('=== GENSPARK AGENT v35 LOADED ===');",
+            "newText": "// content.js v1.0.0 - ChatGPT Agent Bridge - Ω标记格式 - Agent 心跳机制\n(function() { console.log('=== CHATGPT AGENT v1.0.0 LOADED ===');"
+          },
+          {
+            "oldText": "    // ============== DOM 操作 (Genspark 专用) ==============",
+            "newText": "    // ============== DOM 操作 (ChatGPT 专用) =============="
+          },
+          {
+            "oldText": "    log('初始化 Agent v34 (Genspark)');",
+            "newText": "    log('初始化 Agent v1.0.0 (ChatGPT)');"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\tmodified\n@@ -1,6 +1,6 @@\n-// content.js v1.0.53 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠\n-(function() { console.log('=== GENSPARK AGENT v35 LOADED ===');\n+// content.js v1.0.0 - ChatGPT Agent Bridge - ",
+      "error": null
+    },
+    {
+      "id": 7888,
+      "timestamp": "2026-02-08T02:42:15.506Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension-chatgpt/content.js",
+        "edits": [
+          {
+            "oldText": "        if (!inp || !inp.value || inp.value.length <= 5) {\n          // 发送成功了\n          return;\n        }",
+            "newText": "        const inputContent = inp ? (inp.value || inp.innerText || '') : '';\n        if (!inp || !inputContent || inputContent.trim().length <= 5) {\n          // 发送成功了\n          return;\n        }"
+          },
+          {
+            "oldText": "              if (inp && inp.value && inp.value.length > 10) {",
+            "newText": "              const remainingText = inp ? (inp.value || inp.innerText || '') : '';\n              if (inp && remainingText && remainingText.trim().length > 10) {"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension-chatgpt/content.js\tmodified\n@@ -1083,9 +1083,10 @@\n       \n       // 检查并重试发送的函数\n       const checkAndRetry = (retryCount) => {\n         const inp = getInputBox();\n-        if (!inp || !inp.value || inp.value.length <= 5) {\n+",
+      "error": null
     }
   ],
-  "nextId": 7886
+  "nextId": 7889
 }

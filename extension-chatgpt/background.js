@@ -108,6 +108,13 @@ function connectWebSocket() {
         return;
       }
 
+      // 浏览器工具反向调用：server 请求浏览器执行 js_flow/eval_js/list_tabs
+      if (data.type === 'browser_tool_call') {
+        console.log('[BG] 浏览器工具调用:', data.tool, data.callId);
+        broadcastToAllTabs(data);
+        return;
+      }
+
       // 第三阶段: 任务规划、工作流、断点续传结果
       if (data.type === 'plan_result' || data.type === 'plan_error') {
         console.log('[BG] 任务规划消息:', data.type);
@@ -185,12 +192,12 @@ function connectWebSocket() {
           sendToTab(tabId, data);
           pendingCallsByTab.delete(data.id);
         } else {
-          // 找不到对应 Tab，回退到广播（兼容旧版本）
-          console.log('[BG] 未找到 Tab，广播结果');
-          broadcastToAllTabs(data);
+          // 找不到对应 Tab，不广播，只记录警告
+          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- 丢弃结果，不广播');
+          // 禁用广播，避免结果发到错误的 tab
         }
       } else {
-        // 其他消息广播给所有 Tab
+        // 其他消息（非 tool_result）广播给所有 Tab
         broadcastToAllTabs(data);
       }
     } catch(e) {
@@ -259,7 +266,7 @@ function sendToServer(message, tabId) {
       // 30秒后清理，防止内存泄漏
       setTimeout(() => {
         pendingCallsByTab.delete(message.id);
-      }, 30000);
+      }, 120000);  // 延长到120秒
     }
     
     socket.send(JSON.stringify(message));
@@ -311,7 +318,13 @@ function sendCrossTabMessage(fromAgentId, toAgentId, message) {
     };
   }
   
-  const targetTabId = agentTabs.get(toAgentId);
+  let targetTabId = agentTabs.get(toAgentId);
+  
+  // 支持 tab_xxx 格式直接路由到对应 tabId
+  if (!targetTabId && toAgentId.startsWith('tab_')) {
+    targetTabId = parseInt(toAgentId.replace('tab_', ''), 10);
+    console.log('[BG] 使用 tabId 直接路由:', targetTabId);
+  }
   
   if (!targetTabId) {
     console.log('[BG] 目标 Agent 未注册:', toAgentId);
@@ -397,6 +410,112 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       break;
     
+    case 'LIST_TABS':
+      chrome.tabs.query({}, (tabs) => {
+        const tabList = tabs.map(t => ({ id: t.id, title: t.title, url: t.url, active: t.active, windowId: t.windowId }));
+        chrome.tabs.sendMessage(sender.tab.id, { type: 'LIST_TABS_RESULT', callId: message.callId, success: true, result: JSON.stringify(tabList, null, 2) });
+      });
+      sendResponse({ success: true });
+      break;
+
+    case 'EVAL_JS':
+      if (sender.tab?.id) {
+        const senderTabId = sender.tab.id;
+        const targetTab = message.targetTabId || senderTabId;
+        const codeToRun = message.code || '';
+        
+        // 先尝试 MAIN world（能访问页面全局变量），CSP 失败则 fallback 到 ISOLATED world
+        const tryExecute = async (world) => {
+          return chrome.scripting.executeScript({
+            target: { tabId: targetTab },
+            world: world,
+            func: async (code) => {
+              try {
+                const fn = new Function(code);
+                let result = fn();
+                if (result && typeof result.then === 'function') {
+                  result = await result;
+                }
+                const serialized = (typeof result === 'object')
+                  ? JSON.stringify(result, null, 2)
+                  : String(result === undefined ? '(undefined)' : result);
+                return { success: true, result: serialized };
+              } catch (e) {
+                return { success: false, error: e.message, isCSP: e.message && e.message.includes('unsafe-eval') };
+              }
+            },
+            args: [codeToRun]
+          });
+        };
+        
+        tryExecute('MAIN').then(results => {
+          const res = results?.[0]?.result || { success: false, error: 'No result' };
+          if (res.isCSP) {
+            // MAIN world CSP 拦截，fallback: 用页面 nonce 注入 script 标签
+            console.log('[BG] MAIN world CSP blocked, trying nonce script injection...');
+            const resultKey = '__agent_eval_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            
+            // 第一步：注入带 nonce 的 script 标签
+            chrome.scripting.executeScript({
+              target: { tabId: targetTab },
+              world: 'MAIN',
+              func: (code, rKey) => {
+                const existingScript = document.querySelector('script[nonce]');
+                const nonce = existingScript ? existingScript.nonce || existingScript.getAttribute('nonce') : '';
+                window[rKey] = undefined;
+                const wrappedCode = `(async()=>{try{const r=await(async()=>{${code}})();const s=(typeof r==='object')?JSON.stringify(r,null,2):String(r===undefined?'(undefined)':r);window['${rKey}']={success:true,result:s}}catch(e){window['${rKey}']={success:false,error:e.message}}})()`;
+                const script = document.createElement('script');
+                if (nonce) script.setAttribute('nonce', nonce);
+                script.textContent = wrappedCode;
+                document.documentElement.appendChild(script);
+                script.remove();
+                return { injected: true, nonce: !!nonce };
+              },
+              args: [codeToRun, resultKey]
+            }).then(injectResults => {
+              console.log('[BG] Nonce script injected:', injectResults?.[0]?.result);
+              // 第二步：在 background 层轮询读取结果
+              let attempts = 0;
+              const poll = () => {
+                chrome.scripting.executeScript({
+                  target: { tabId: targetTab },
+                  world: 'MAIN',
+                  func: (rKey) => window[rKey],
+                  args: [resultKey]
+                }).then(pollResults => {
+                  const val = pollResults?.[0]?.result;
+                  if (val !== undefined && val !== null) {
+                    // 清理
+                    chrome.scripting.executeScript({ target: { tabId: targetTab }, world: 'MAIN', func: (rKey) => { delete window[rKey]; }, args: [resultKey] });
+                    chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...val });
+                  } else if (attempts++ < 100) {
+                    setTimeout(poll, 50);
+                  } else {
+                    chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Nonce injection timeout (5s)' });
+                  }
+                }).catch(err => {
+                  chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Poll error: ' + err.message });
+                });
+              };
+              setTimeout(poll, 30); // 给注入的脚本一点执行时间
+            }).catch(err => {
+              console.error('[BG] Nonce injection failed:', err);
+              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Nonce injection failed: ' + err.message });
+            });
+          } else {
+            // 正常结果，直接发回
+            delete res.isCSP;
+            chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });
+          }
+        }).catch(err => {
+          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });
+        });
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: 'No tab id' });
+      }
+      break;
+
     case 'RELOAD_TOOLS':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'reload_tools' }));
@@ -589,7 +708,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     case 'CROSS_TAB_SEND':
       if (message.to && message.message) {
-        const fromAgent = tabAgents.get(sender.tab?.id) || 'unknown';
+        const fromAgent = tabAgents.get(sender.tab?.id) || 'tab_' + sender.tab.id;
         const result = sendCrossTabMessage(fromAgent, message.to, message.message);
         sendResponse(result);
       } else {
@@ -597,6 +716,51 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
     
+    case 'EVAL_IN_TAB':
+      // Execute code in a tab matching the given URL pattern
+      (async () => {
+        try {
+          const tabUrl = message.tabUrl || '';
+          const code = message.code || '';
+          
+          // Find tab matching URL
+          const tabs = await chrome.tabs.query({});
+          const targetTab = tabs.find(t => t.url && t.url.includes(tabUrl));
+          
+          if (!targetTab) {
+            sendResponse({ success: false, error: 'No tab found matching: ' + tabUrl });
+            return;
+          }
+          
+          // Execute script in the target tab (supports async code)
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: targetTab.id },
+            func: async (codeStr) => {
+              try {
+                const fn = new Function(codeStr);
+                const result = fn();
+                // If result is a Promise, await it
+                if (result && typeof result.then === 'function') {
+                  return await result;
+                }
+                return result;
+              } catch(e) {
+                return { error: e.message };
+              }
+            },
+            args: [code],
+            world: 'MAIN'
+          });
+          
+          const result = results && results[0] ? results[0].result : null;
+          sendResponse({ success: true, result });
+        } catch(e) {
+          console.error('[BG] EVAL_IN_TAB error:', e);
+          sendResponse({ success: false, error: e.message });
+        }
+      })();
+      break;
+
     case 'SWITCH_SERVER':
       const target = message.server || 'local';
       if (SERVERS[target]) {
@@ -644,7 +808,7 @@ setInterval(() => {
       connectWebSocket();
     }
   }
-}, 30000);
+}, 120000);  // 延长到120秒
 
 // 清理关闭的 Tab
 chrome.tabs.onRemoved.addListener((tabId) => {
