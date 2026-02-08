@@ -451,16 +451,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         tryExecute('MAIN').then(results => {
           const res = results?.[0]?.result || { success: false, error: 'No result' };
           if (res.isCSP) {
-            // MAIN world CSP 拦截，fallback 到 ISOLATED world
-            console.log('[BG] MAIN world CSP blocked, trying ISOLATED world...');
-            tryExecute('ISOLATED').then(results2 => {
-              const res2 = results2?.[0]?.result || { success: false, error: 'No result from ISOLATED' };
-              delete res2.isCSP;
-              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res2 });
+            // MAIN world CSP 拦截，fallback: 用页面 nonce 注入 script 标签
+            console.log('[BG] MAIN world CSP blocked, trying nonce script injection...');
+            const resultKey = '__agent_eval_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            
+            // 第一步：注入带 nonce 的 script 标签
+            chrome.scripting.executeScript({
+              target: { tabId: targetTab },
+              world: 'MAIN',
+              func: (code, rKey) => {
+                const existingScript = document.querySelector('script[nonce]');
+                const nonce = existingScript ? existingScript.nonce || existingScript.getAttribute('nonce') : '';
+                window[rKey] = undefined;
+                const wrappedCode = `(async()=>{try{const r=await(async()=>{${code}})();const s=(typeof r==='object')?JSON.stringify(r,null,2):String(r===undefined?'(undefined)':r);window['${rKey}']={success:true,result:s}}catch(e){window['${rKey}']={success:false,error:e.message}}})()`;
+                const script = document.createElement('script');
+                if (nonce) script.setAttribute('nonce', nonce);
+                script.textContent = wrappedCode;
+                document.documentElement.appendChild(script);
+                script.remove();
+                return { injected: true, nonce: !!nonce };
+              },
+              args: [codeToRun, resultKey]
+            }).then(injectResults => {
+              console.log('[BG] Nonce script injected:', injectResults?.[0]?.result);
+              // 第二步：在 background 层轮询读取结果
+              let attempts = 0;
+              const poll = () => {
+                chrome.scripting.executeScript({
+                  target: { tabId: targetTab },
+                  world: 'MAIN',
+                  func: (rKey) => window[rKey],
+                  args: [resultKey]
+                }).then(pollResults => {
+                  const val = pollResults?.[0]?.result;
+                  if (val !== undefined && val !== null) {
+                    // 清理
+                    chrome.scripting.executeScript({ target: { tabId: targetTab }, world: 'MAIN', func: (rKey) => { delete window[rKey]; }, args: [resultKey] });
+                    chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...val });
+                  } else if (attempts++ < 100) {
+                    setTimeout(poll, 50);
+                  } else {
+                    chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Nonce injection timeout (5s)' });
+                  }
+                }).catch(err => {
+                  chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Poll error: ' + err.message });
+                });
+              };
+              setTimeout(poll, 30); // 给注入的脚本一点执行时间
             }).catch(err => {
-              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'ISOLATED fallback failed: ' + err.message });
+              console.error('[BG] Nonce injection failed:', err);
+              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'Nonce injection failed: ' + err.message });
             });
           } else {
+            // 正常结果，直接发回
             delete res.isCSP;
             chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });
           }
