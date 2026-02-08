@@ -4747,7 +4747,85 @@
       "success": true,
       "resultPreview": "syntax ok\n",
       "error": null
+    },
+    {
+      "id": 7869,
+      "timestamp": "2026-02-08T01:31:01.639Z",
+      "tool": "run_command",
+      "params": {
+        "command": "cd /Users/yay/workspace/genspark-agent && git add -A && git commit -m 'feat: CSP fallback for eval_js - script tag injection bypasses unsafe-eval'"
+      },
+      "success": true,
+      "resultPreview": "[main e99920e] feat: CSP fallback for eval_js - script tag injection bypasses unsafe-eval\n 3 files changed, 116 insertions(+), 1185 deletions(-)\n",
+      "error": null
+    },
+    {
+      "id": 7870,
+      "timestamp": "2026-02-08T01:32:49.415Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '425,430p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "        const codeToRun = message.code || '';\n        chrome.scripting.executeScript({\n          target: { tabId: targetTab },\n          world: 'MAIN',\n          func: async (code) => {\n            // 优先用 new Function（性能好），CSP 拦截时 fallback 到 script 标签注入\n",
+      "error": null
+    },
+    {
+      "id": 7871,
+      "timestamp": "2026-02-08T01:33:22.205Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "    case 'EVAL_JS':\n      if (sender.tab?.id) {\n        const senderTabId = sender.tab.id;\n        const targetTab = message.targetTabId || senderTabId;\n        const codeToRun = message.code || '';\n        chrome.scripting.executeScript({\n          target: { tabId: targetTab },\n          world: 'MAIN',\n          func: async (code) => {\n            // 优先用 new Function（性能好），CSP 拦截时 fallback 到 script 标签注入\n            try {\n              const fn = new Function(code);\n              let result = fn();\n              if (result && typeof result.then === 'function') {\n                result = await result;\n              }\n              const serialized = (typeof result === 'object')\n                ? JSON.stringify(result, null, 2)\n                : String(result === undefined ? '(undefined)' : result);\n              return { success: true, result: serialized };\n            } catch (e) {\n              if (e.message && e.message.includes('unsafe-eval')) {\n                // CSP 拦截，fallback: 用 script 标签注入\n                return new Promise((resolve) => {\n                  const resultKey = '__agent_eval_' + Date.now() + '_' + Math.random().toString(36).slice(2);\n                  window[resultKey] = undefined;\n                  const wrappedCode = `\n                    (async () => {\n                      try {\n                        const __fn = async () => { ${code} };\n                        let __r = await __fn();\n                        const __s = (typeof __r === 'object') ? JSON.stringify(__r, null, 2) : String(__r === undefined ? '(undefined)' : __r);\n                        window['${resultKey}'] = { success: true, result: __s };\n                      } catch(e) {\n                        window['${resultKey}'] = { success: false, error: e.message };\n                      }\n                    })();\n                  `;\n                  const script = document.createElement('script');\n                  script.textContent = wrappedCode;\n                  document.documentElement.appendChild(script);\n                  script.remove();\n                  // 轮询等待结果\n                  let attempts = 0;\n                  const poll = setInterval(() => {\n                    attempts++;\n                    if (window[resultKey] !== undefined || attempts > 100) {\n                      clearInterval(poll);\n                      const res = window[resultKey] || { success: false, error: 'Script injection timeout' };\n                      delete window[resultKey];\n                      resolve(res);\n                    }\n                  }, 50);\n                });\n              }\n              return { success: false, error: e.message };\n            }\n          },\n          args: [codeToRun]",
+            "newText": "    case 'EVAL_JS':\n      if (sender.tab?.id) {\n        const senderTabId = sender.tab.id;\n        const targetTab = message.targetTabId || senderTabId;\n        const codeToRun = message.code || '';\n        \n        // 先尝试 MAIN world（能访问页面全局变量），CSP 失败则 fallback 到 ISOLATED world\n        const tryExecute = async (world) => {\n          return chrome.scripting.executeScript({\n            target: { tabId: targetTab },\n            world: world,\n            func: async (code) => {\n              try {\n                const fn = new Function(code);\n                let result = fn();\n                if (result && typeof result.then === 'function') {\n                  result = await result;\n                }\n                const serialized = (typeof result === 'object')\n                  ? JSON.stringify(result, null, 2)\n                  : String(result === undefined ? '(undefined)' : result);\n                return { success: true, result: serialized };\n              } catch (e) {\n                return { success: false, error: e.message, isCSP: e.message && e.message.includes('unsafe-eval') };\n              }\n            },\n            args: [codeToRun]\n          });\n        };\n        \n        tryExecute('MAIN').then(results => {\n          const res = results?.[0]?.result || { success: false, error: 'No result' };\n          if (res.isCSP) {\n            // MAIN world CSP 拦截，fallback 到 ISOLATED world\n            console.log('[BG] MAIN world CSP blocked, trying ISOLATED world...');\n            tryExecute('ISOLATED').then(results2 => {\n              const res2 = results2?.[0]?.result || { success: false, error: 'No result from ISOLATED' };\n              delete res2.isCSP;\n              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res2 });\n            }).catch(err => {\n              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'ISOLATED fallback failed: ' + err.message });\n            });\n          } else {\n            delete res.isCSP;\n            chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });\n          }\n        }).catch(err => {\n          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });\n        });"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -422,62 +422,52 @@\n       if (sender.tab?.id) {\n         const senderTabId = sender.tab.id;\n         const targetTab = message.targetTabId || senderTabId;\n         const codeToRun = message.code || '';\n-     ",
+      "error": null
+    },
+    {
+      "id": 7872,
+      "timestamp": "2026-02-08T01:33:43.038Z",
+      "tool": "run_command",
+      "params": {
+        "command": "sed -n '470,490p' /Users/yay/workspace/genspark-agent/extension/background.js"
+      },
+      "success": true,
+      "resultPreview": "        }).then(results => {\n          const res = results?.[0]?.result || { success: false, error: 'No result' };\n          // 始终把结果发回发起请求的 tab（而非目标 tab）\n          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });\n        }).catch(err => {\n          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });\n        });\n        sendResponse({ success: true });\n      } else {\n       ",
+      "error": null
+    },
+    {
+      "id": 7873,
+      "timestamp": "2026-02-08T01:33:57.416Z",
+      "tool": "edit_file",
+      "params": {
+        "path": "/Users/yay/workspace/genspark-agent/extension/background.js",
+        "edits": [
+          {
+            "oldText": "        }).then(results => {\n          const res = results?.[0]?.result || { success: false, error: 'No result' };\n          // 始终把结果发回发起请求的 tab（而非目标 tab）\n          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });\n        }).catch(err => {\n          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });\n        });\n        sendResponse({ success: true });",
+            "newText": "        sendResponse({ success: true });"
+          }
+        ]
+      },
+      "success": true,
+      "resultPreview": "```diff\nIndex: /Users/yay/workspace/genspark-agent/extension/background.js\n===================================================================\n--- /Users/yay/workspace/genspark-agent/extension/background.js\toriginal\n+++ /Users/yay/workspace/genspark-agent/extension/background.js\tmodified\n@@ -466,15 +466,8 @@\n           }\n         }).catch(err => {\n           chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });\n         });\n",
+      "error": null
+    },
+    {
+      "id": 7874,
+      "timestamp": "2026-02-08T01:34:09.453Z",
+      "tool": "run_command",
+      "params": {
+        "command": "node -c /Users/yay/workspace/genspark-agent/extension/background.js && echo 'syntax ok'"
+      },
+      "success": true,
+      "resultPreview": "syntax ok\n",
+      "error": null
     }
   ],
-  "nextId": 7869
+  "nextId": 7875
 }

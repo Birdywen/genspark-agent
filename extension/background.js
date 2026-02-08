@@ -423,64 +423,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const senderTabId = sender.tab.id;
         const targetTab = message.targetTabId || senderTabId;
         const codeToRun = message.code || '';
-        chrome.scripting.executeScript({
-          target: { tabId: targetTab },
-          world: 'MAIN',
-          func: async (code) => {
-            // 优先用 new Function（性能好），CSP 拦截时 fallback 到 script 标签注入
-            try {
-              const fn = new Function(code);
-              let result = fn();
-              if (result && typeof result.then === 'function') {
-                result = await result;
+        
+        // 先尝试 MAIN world（能访问页面全局变量），CSP 失败则 fallback 到 ISOLATED world
+        const tryExecute = async (world) => {
+          return chrome.scripting.executeScript({
+            target: { tabId: targetTab },
+            world: world,
+            func: async (code) => {
+              try {
+                const fn = new Function(code);
+                let result = fn();
+                if (result && typeof result.then === 'function') {
+                  result = await result;
+                }
+                const serialized = (typeof result === 'object')
+                  ? JSON.stringify(result, null, 2)
+                  : String(result === undefined ? '(undefined)' : result);
+                return { success: true, result: serialized };
+              } catch (e) {
+                return { success: false, error: e.message, isCSP: e.message && e.message.includes('unsafe-eval') };
               }
-              const serialized = (typeof result === 'object')
-                ? JSON.stringify(result, null, 2)
-                : String(result === undefined ? '(undefined)' : result);
-              return { success: true, result: serialized };
-            } catch (e) {
-              if (e.message && e.message.includes('unsafe-eval')) {
-                // CSP 拦截，fallback: 用 script 标签注入
-                return new Promise((resolve) => {
-                  const resultKey = '__agent_eval_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-                  window[resultKey] = undefined;
-                  const wrappedCode = `
-                    (async () => {
-                      try {
-                        const __fn = async () => { ${code} };
-                        let __r = await __fn();
-                        const __s = (typeof __r === 'object') ? JSON.stringify(__r, null, 2) : String(__r === undefined ? '(undefined)' : __r);
-                        window['${resultKey}'] = { success: true, result: __s };
-                      } catch(e) {
-                        window['${resultKey}'] = { success: false, error: e.message };
-                      }
-                    })();
-                  `;
-                  const script = document.createElement('script');
-                  script.textContent = wrappedCode;
-                  document.documentElement.appendChild(script);
-                  script.remove();
-                  // 轮询等待结果
-                  let attempts = 0;
-                  const poll = setInterval(() => {
-                    attempts++;
-                    if (window[resultKey] !== undefined || attempts > 100) {
-                      clearInterval(poll);
-                      const res = window[resultKey] || { success: false, error: 'Script injection timeout' };
-                      delete window[resultKey];
-                      resolve(res);
-                    }
-                  }, 50);
-                });
-              }
-              return { success: false, error: e.message };
-            }
-          },
-          args: [codeToRun]
-        }).then(results => {
+            },
+            args: [codeToRun]
+          });
+        };
+        
+        tryExecute('MAIN').then(results => {
           const res = results?.[0]?.result || { success: false, error: 'No result' };
-          // 始终把结果发回发起请求的 tab（而非目标 tab）
-          chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });
+          if (res.isCSP) {
+            // MAIN world CSP 拦截，fallback 到 ISOLATED world
+            console.log('[BG] MAIN world CSP blocked, trying ISOLATED world...');
+            tryExecute('ISOLATED').then(results2 => {
+              const res2 = results2?.[0]?.result || { success: false, error: 'No result from ISOLATED' };
+              delete res2.isCSP;
+              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res2 });
+            }).catch(err => {
+              chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: 'ISOLATED fallback failed: ' + err.message });
+            });
+          } else {
+            delete res.isCSP;
+            chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, ...res });
+          }
         }).catch(err => {
           chrome.tabs.sendMessage(senderTabId, { type: 'EVAL_JS_RESULT', callId: message.callId, success: false, error: err.message });
         });
