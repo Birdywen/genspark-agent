@@ -912,7 +912,7 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - genspark-agent / ezmusicstore / oracle-cloud
 
 \`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest 项目名"}}ΩSTOP
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/context_loader.js 项目名"}}ΩSTOP
 \`\`\`
 
 ### TODO 机制
