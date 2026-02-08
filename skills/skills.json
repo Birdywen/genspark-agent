@@ -9,7 +9,7 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "list_tabs", "eval_js", "js_flow"
+        "list_tabs", "eval_js", "js_flow", "async_task"
       ]
     },
     {

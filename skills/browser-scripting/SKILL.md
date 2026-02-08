@@ -212,6 +212,50 @@ ctx = [
 
 ---
 
+## async_task — 后台异步任务监控器
+
+非阻塞异步任务：在指定 tab 中定期执行代码，条件满足时自动回报结果。支持持久化（扩展刷新后自动恢复）。
+
+### 参数
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| code | string | ✅ | - | 要执行的 JS 代码（必须 return） |
+| condition | string | ✅ | 'true' | 完成条件表达式 |
+| tabId | number | ❌ | null | 目标标签页 ID |
+| interval | number | ❌ | 15000 | 轮询间隔（ms） |
+| timeout | number | ❌ | 600000 | 超时时间（ms） |
+| label | string | ❌ | 'async_task' | 任务标签（用于日志） |
+
+### condition 语法（CSP 安全，不使用 eval）
+
+```
+result.hasVideo === true          // 属性等于值
+result.stage === 'FINISHED'       // 字符串比较
+result.count > 10                 // 数值比较
+result.ok                         // 真值检查
+!result.error                     // 否定
+result.a === true && result.b     // AND 组合
+result.x || result.y              // OR 组合
+```
+
+### 示例：监控 Opus 视频生成
+
+```
+Ω{"tool":"async_task","params":{"label":"视频监控","tabId":TAB_ID,"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); ... return JSON.stringify({stage, hasVideo}); })()","condition":"result.hasVideo === true","interval":20000,"timeout":600000}}ΩSTOP
+```
+
+启动后立即返回确认，AI 可继续其他工作。任务完成/超时后自动往聊天框发送结果通知。
+
+### 特性
+
+- **非阻塞**: 立即返回，不占用对话回合
+- **持久化**: 存入 localStorage，扩展刷新后自动恢复
+- **CSP 安全**: condition 使用自写解析器，不依赖 eval/new Function
+- **并发**: 可同时运行多个异步任务
+
+---
+
 ## 注意事项
 
 1. **用 return 返回结果** — eval_js 内部会用 `new Function(code)` 包裹代码，必须用 `return` 才能拿到返回值
