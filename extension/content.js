@@ -1778,6 +1778,104 @@ ${toolSummary}
   }
 
 
+  // === async_task 持久化与执行引擎 ===
+    function _saveAsyncTask(taskDef) {
+      try {
+        const tasks = JSON.parse(localStorage.getItem('__async_tasks') || '[]');
+        tasks.push(taskDef);
+        localStorage.setItem('__async_tasks', JSON.stringify(tasks));
+      } catch(e) { addLog('⚠️ async_task 保存失败: ' + e.message, 'error'); }
+    }
+
+    function _removeAsyncTask(taskId) {
+      try {
+        let tasks = JSON.parse(localStorage.getItem('__async_tasks') || '[]');
+        tasks = tasks.filter(t => t.id !== taskId);
+        localStorage.setItem('__async_tasks', JSON.stringify(tasks));
+      } catch(e) {}
+    }
+
+    function _runAsyncTask(task) {
+      const { id, code, condition, interval, timeout, tabId, label, startTime } = task;
+      let pollCount = 0;
+      addLog(`🔄 async_task 运行中 [${label}] (ID: ${id})`, 'info');
+
+      const doPoll = () => {
+        if (Date.now() - startTime > timeout) {
+          addLog(`⏰ async_task [${label}] 超时`, 'error');
+          _removeAsyncTask(id);
+          sendMessageSafe(`**[async_task]** ⏰ 任务超时: ${label} (已轮询 ${pollCount} 次, ${Math.round((Date.now()-startTime)/1000)}s)`);
+          return;
+        }
+
+        pollCount++;
+        const callId = 'at_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+        const resultHandler = (msg) => {
+          if (msg.type === 'EVAL_JS_RESULT' && msg.callId === callId) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTO);
+
+            if (!msg.success) {
+              addLog(`⚠️ async_task [${label}] 执行错误: ${msg.error}`, 'error');
+              setTimeout(doPoll, interval);
+              return;
+            }
+
+            let result = msg.result;
+            try { result = JSON.parse(result); } catch(e) {}
+
+            let conditionMet = false;
+            try {
+              conditionMet = new Function('result', 'return ' + condition)(result);
+            } catch(e) {
+              addLog(`⚠️ async_task 条件检查错误: ${e.message}`, 'error');
+            }
+
+            if (conditionMet) {
+              addLog(`✅ async_task [${label}] 完成! (${pollCount} 次, ${Math.round((Date.now()-startTime)/1000)}s)`, 'success');
+              _removeAsyncTask(id);
+              const resultStr = typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result);
+              sendMessageSafe(`**[async_task]** ✅ 任务完成: ${label}\n轮询次数: ${pollCount} | 耗时: ${Math.round((Date.now()-startTime)/1000)}s\n\n**结果:**\n\`\`\`\n${resultStr.substring(0, 3000)}\n\`\`\``);
+            } else {
+              const preview = typeof result === 'object' ? JSON.stringify(result) : String(result);
+              addLog(`🔄 async_task [${label}] #${pollCount}: ${preview.substring(0, 80)}`, 'info');
+              setTimeout(doPoll, interval);
+            }
+          }
+        };
+        chrome.runtime.onMessage.addListener(resultHandler);
+
+        const evalTO = setTimeout(() => {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          addLog(`⚠️ async_task [${label}] eval 超时，重试`, 'error');
+          setTimeout(doPoll, interval);
+        }, 15000);
+
+        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: tabId });
+      };
+
+      setTimeout(doPoll, 3000); // 首次 3 秒后开始
+    }
+
+    function _restoreAsyncTasks() {
+      try {
+        const tasks = JSON.parse(localStorage.getItem('__async_tasks') || '[]');
+        if (tasks.length === 0) return;
+        addLog(`🔄 恢复 ${tasks.length} 个异步任务`, 'info');
+        tasks.forEach(task => {
+          if (Date.now() - task.startTime > task.timeout) {
+            addLog(`⏰ 任务已过期，跳过: ${task.label}`, 'info');
+            _removeAsyncTask(task.id);
+          } else {
+            addLog(`🔄 恢复任务: ${task.label} (剩余 ${Math.round((task.timeout - (Date.now() - task.startTime))/1000)}s)`, 'info');
+            _runAsyncTask(task);
+          }
+        });
+      } catch(e) { addLog('⚠️ 异步任务恢复失败: ' + e.message, 'error'); }
+    }
+  // === END async_task 引擎 ===
+
   function executeToolCall(tool, callHash) {
     clearToolCallDetection();
     
@@ -1891,89 +1989,30 @@ ${toolSummary}
     }
     // === END eval_js 拦截 ===
 
-    // === 本地拦截: async_task 异步任务监控器 ===
+    // === 本地拦截: async_task 异步任务监控器（支持持久化恢复） ===
     if (tool.name === 'async_task') {
       addExecutedCall(callHash);
-      const taskId = 'async_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-      const code = tool.params.code || '';
-      const condition = tool.params.condition || 'true';
-      const interval = tool.params.interval || 15000;
-      const timeout = tool.params.timeout || 600000;
-      const tabId = tool.params.tabId || null;
-      const label = tool.params.label || 'async_task';
+      const taskDef = {
+        id: 'async_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        code: tool.params.code || '',
+        condition: tool.params.condition || 'true',
+        interval: tool.params.interval || 15000,
+        timeout: tool.params.timeout || 600000,
+        tabId: tool.params.tabId || null,
+        label: tool.params.label || 'async_task',
+        startTime: Date.now()
+      };
       
-      addLog(`🔄 async_task [${label}]: interval=${interval/1000}s, timeout=${timeout/1000}s, tab=${tabId || 'current'}`, 'tool');
+      addLog(`🔄 async_task [${taskDef.label}]: interval=${taskDef.interval/1000}s, timeout=${taskDef.timeout/1000}s, tab=${taskDef.tabId || 'current'}`, 'tool');
       
       // 不阻塞 AI — 立即返回确认
       state.agentRunning = false;
       updateStatus();
-      sendMessageSafe(`**[async_task]** ✅ 任务已启动: ${label} (ID: ${taskId})\n轮询间隔: ${interval/1000}s | 超时: ${timeout/1000}s\n后台监控中，完成后自动通知...`);
+      sendMessageSafe(`**[async_task]** ✅ 任务已启动: ${taskDef.label} (ID: ${taskDef.id})\n轮询间隔: ${taskDef.interval/1000}s | 超时: ${taskDef.timeout/1000}s\n后台监控中，完成后自动通知...`);
       
-      const startTime = Date.now();
-      let pollCount = 0;
-      
-      const doPoll = () => {
-        if (Date.now() - startTime > timeout) {
-          addLog(`⏰ async_task [${label}] 超时`, 'error');
-          sendMessageSafe(`**[async_task]** ⏰ 任务超时: ${label} (已轮询 ${pollCount} 次, ${Math.round((Date.now()-startTime)/1000)}s)`);
-          return;
-        }
-        
-        pollCount++;
-        const callId = 'at_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-        
-        const resultHandler = (msg) => {
-          if (msg.type === 'EVAL_JS_RESULT' && msg.callId === callId) {
-            chrome.runtime.onMessage.removeListener(resultHandler);
-            clearTimeout(evalTO);
-            
-            if (!msg.success) {
-              addLog(`⚠️ async_task [${label}] 执行错误: ${msg.error}`, 'error');
-              setTimeout(doPoll, interval);
-              return;
-            }
-            
-            // 解析结果并检查条件
-            let result = msg.result;
-            try {
-              // 尝试 JSON 解析
-              const parsed = JSON.parse(result);
-              result = parsed;
-            } catch(e) {}
-            
-            // 检查完成条件
-            let conditionMet = false;
-            try {
-              conditionMet = new Function('result', 'return ' + condition)(result);
-            } catch(e) {
-              addLog(`⚠️ async_task 条件检查错误: ${e.message}`, 'error');
-            }
-            
-            if (conditionMet) {
-              addLog(`✅ async_task [${label}] 完成! (${pollCount} 次轮询, ${Math.round((Date.now()-startTime)/1000)}s)`, 'success');
-              const resultStr = typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result);
-              sendMessageSafe(`**[async_task]** ✅ 任务完成: ${label}\n轮询次数: ${pollCount} | 耗时: ${Math.round((Date.now()-startTime)/1000)}s\n\n**结果:**\n\`\`\`\n${resultStr.substring(0, 3000)}\n\`\`\``);
-            } else {
-              // 条件未满足，继续轮询
-              const preview = typeof result === 'object' ? JSON.stringify(result) : String(result);
-              addLog(`🔄 async_task [${label}] #${pollCount}: ${preview.substring(0, 80)}`, 'info');
-              setTimeout(doPoll, interval);
-            }
-          }
-        };
-        chrome.runtime.onMessage.addListener(resultHandler);
-        
-        const evalTO = setTimeout(() => {
-          chrome.runtime.onMessage.removeListener(resultHandler);
-          addLog(`⚠️ async_task [${label}] eval 超时，重试`, 'error');
-          setTimeout(doPoll, interval);
-        }, 15000);
-        
-        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: tabId });
-      };
-      
-      // 首次执行延迟一个 interval
-      setTimeout(doPoll, interval);
+      // 持久化存储，扩展刷新后可恢复
+      _saveAsyncTask(taskDef);
+      _runAsyncTask(taskDef);
       return;
     }
     // === END async_task 拦截 ===
@@ -4092,6 +4131,9 @@ ${tip}
     // 加载面板增强模块
     loadPanelEnhancer();
     loadVideoGenerator();
+
+    // 恢复扩展刷新前未完成的异步任务
+    _restoreAsyncTasks();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 
