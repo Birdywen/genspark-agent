@@ -207,21 +207,36 @@
         },
       
         // ===== YouTube 元数据 =====
-        buildYouTubeMetadata(topic, category) {
+        // 从 Opus 项目结果中提取（视频完成后调用）
+        buildYouTubeMetadataFromProject(project, category) {
           const cat = this.getCategoryConfig(category);
           
-          // 标题: 最多 100 字符，推荐 60
+          // 标题: 使用 Opus 生成的 name（已经是高质量标题）
+          let title = (project.name || 'Untitled').substring(0, 90);
+          if (!title.includes('#Shorts')) title += ' #Shorts';
+          if (title.length > 100) title = title.substring(0, 97) + '...';
+      
+          // 描述: 用 script 前 2-3 句做摘要
+          const scriptSummary = project.script ? project.script.split('.').slice(0, 3).join('.') + '.' : '';
+          const hashtags = ['#Shorts', ...cat.hashtags].slice(0, 5).join(' ');
+          const description = `${scriptSummary}\n\n${hashtags}\n\nThis video was created with AI assistance. All facts have been verified.`;
+      
+          // Tags: 从标题和类别提取
+          const titleWords = title.replace(/#\w+/g, '').split(/\s+/).filter(w => w.length > 3).slice(0, 5);
+          const tags = ['Shorts', ...cat.tags_base || [], ...titleWords].slice(0, 10);
+      
+          return { title, description, tags: tags.join(', ') };
+        },
+
+        // 兼容旧接口：创建时的简单 metadata（fallback）
+        buildYouTubeMetadata(topic, category) {
+          const cat = this.getCategoryConfig(category);
           let title = topic.length > 55 ? topic.substring(0, 52) + '...' : topic;
           title += ' #Shorts';
           if (title.length > 100) title = title.substring(0, 97) + '...';
-      
-          // 描述
           const hashtags = ['#Shorts', ...cat.hashtags].slice(0, 5).join(' ');
           const description = `${topic}\n\n${hashtags}\n\nThis video was created with AI assistance. All facts have been verified.`;
-      
-          // Tags
           const tags = ['Shorts', category, ...cat.hashtags.map(h => h.replace('#', ''))];
-      
           return { title, description, tags };
         },
       
@@ -467,12 +482,9 @@
               
               if (project.stage === 'EDITOR' && project.resultVideo) {
                 log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');
-                // Enhance metadata with actual project data
-                if (project.name) item.metadata.title = (project.name + ' #Shorts').substring(0, 100);
-                if (project.script) {
-                  const scriptPreview = project.script.substring(0, 200) + '...';
-                  item.metadata.description = project.name + '\n\n' + scriptPreview + '\n\n' + (item.metadata.description || '');
-                }
+                // 用 Opus 项目数据构建高质量 YouTube metadata
+                const enhancedMeta = this.buildYouTubeMetadataFromProject(project, item.category);
+                item.metadata = enhancedMeta;
                 log('📤 上传到 YouTube... 标题: ' + item.metadata.title);
                 const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);
                 log('✅ YouTube 上传成功! 标题: ' + item.metadata.title);
