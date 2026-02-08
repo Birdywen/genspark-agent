@@ -1891,6 +1891,93 @@ ${toolSummary}
     }
     // === END eval_js 拦截 ===
 
+    // === 本地拦截: async_task 异步任务监控器 ===
+    if (tool.name === 'async_task') {
+      addExecutedCall(callHash);
+      const taskId = 'async_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const code = tool.params.code || '';
+      const condition = tool.params.condition || 'true';
+      const interval = tool.params.interval || 15000;
+      const timeout = tool.params.timeout || 600000;
+      const tabId = tool.params.tabId || null;
+      const label = tool.params.label || 'async_task';
+      
+      addLog(`🔄 async_task [${label}]: interval=${interval/1000}s, timeout=${timeout/1000}s, tab=${tabId || 'current'}`, 'tool');
+      
+      // 不阻塞 AI — 立即返回确认
+      state.agentRunning = false;
+      updateStatus();
+      sendMessageSafe(`**[async_task]** ✅ 任务已启动: ${label} (ID: ${taskId})\n轮询间隔: ${interval/1000}s | 超时: ${timeout/1000}s\n后台监控中，完成后自动通知...`);
+      
+      const startTime = Date.now();
+      let pollCount = 0;
+      
+      const doPoll = () => {
+        if (Date.now() - startTime > timeout) {
+          addLog(`⏰ async_task [${label}] 超时`, 'error');
+          sendMessageSafe(`**[async_task]** ⏰ 任务超时: ${label} (已轮询 ${pollCount} 次, ${Math.round((Date.now()-startTime)/1000)}s)`);
+          return;
+        }
+        
+        pollCount++;
+        const callId = 'at_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        
+        const resultHandler = (msg) => {
+          if (msg.type === 'EVAL_JS_RESULT' && msg.callId === callId) {
+            chrome.runtime.onMessage.removeListener(resultHandler);
+            clearTimeout(evalTO);
+            
+            if (!msg.success) {
+              addLog(`⚠️ async_task [${label}] 执行错误: ${msg.error}`, 'error');
+              setTimeout(doPoll, interval);
+              return;
+            }
+            
+            // 解析结果并检查条件
+            let result = msg.result;
+            try {
+              // 尝试 JSON 解析
+              const parsed = JSON.parse(result);
+              result = parsed;
+            } catch(e) {}
+            
+            // 检查完成条件
+            let conditionMet = false;
+            try {
+              conditionMet = new Function('result', 'return ' + condition)(result);
+            } catch(e) {
+              addLog(`⚠️ async_task 条件检查错误: ${e.message}`, 'error');
+            }
+            
+            if (conditionMet) {
+              addLog(`✅ async_task [${label}] 完成! (${pollCount} 次轮询, ${Math.round((Date.now()-startTime)/1000)}s)`, 'success');
+              const resultStr = typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result);
+              sendMessageSafe(`**[async_task]** ✅ 任务完成: ${label}\n轮询次数: ${pollCount} | 耗时: ${Math.round((Date.now()-startTime)/1000)}s\n\n**结果:**\n\`\`\`\n${resultStr.substring(0, 3000)}\n\`\`\``);
+            } else {
+              // 条件未满足，继续轮询
+              const preview = typeof result === 'object' ? JSON.stringify(result) : String(result);
+              addLog(`🔄 async_task [${label}] #${pollCount}: ${preview.substring(0, 80)}`, 'info');
+              setTimeout(doPoll, interval);
+            }
+          }
+        };
+        chrome.runtime.onMessage.addListener(resultHandler);
+        
+        const evalTO = setTimeout(() => {
+          chrome.runtime.onMessage.removeListener(resultHandler);
+          addLog(`⚠️ async_task [${label}] eval 超时，重试`, 'error');
+          setTimeout(doPoll, interval);
+        }, 15000);
+        
+        chrome.runtime.sendMessage({ type: 'EVAL_JS', code: code, callId: callId, targetTabId: tabId });
+      };
+      
+      // 首次执行延迟一个 interval
+      setTimeout(doPoll, interval);
+      return;
+    }
+    // === END async_task 拦截 ===
+
     // === 本地拦截: js_flow 浏览器 JS 微型工作流 ===
     if (tool.name === 'js_flow') {
       addExecutedCall(callHash);
