@@ -20,6 +20,8 @@
     "https://*.x.com/*",
     "https://*.reddit.com/*",
     "https://*.openai.com/*",
+    "https://chatgpt.com/*",
+    "https://*.chatgpt.com/*",
     "https://*.anthropic.com/*",
     "https://*.cloudflare.com/*",
     "https://*.vercel.app/*",
