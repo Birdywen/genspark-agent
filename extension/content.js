@@ -1823,7 +1823,9 @@ ${toolSummary}
             }
 
             let result = msg.result;
+            addLog(`🔍 async_task [${label}] raw type=${typeof msg.result}, val=${String(msg.result).substring(0,120)}`, 'info');
             try { result = JSON.parse(result); } catch(e) {}
+            addLog(`🔍 async_task [${label}] parsed type=${typeof result}, keys=${typeof result === 'object' && result ? Object.keys(result).join(',') : 'N/A'}`, 'info');
 
             let conditionMet = false;
             try {
