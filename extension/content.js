@@ -1779,6 +1779,68 @@ ${toolSummary}
 
 
   // === async_task 持久化与执行引擎 ===
+    // CSP 安全的条件评估器（不使用 eval / new Function）
+    // 支持: "result.key === value", "result.a.b == value", "result.key", "!result.key"
+    // 多条件: "result.a === true && result.b", "result.a || result.b"
+    function _evalConditionSafe(result, condStr) {
+      // 解析单个比较表达式
+      function evalSingle(expr) {
+        expr = expr.trim();
+        // 否定: !result.key
+        if (expr.startsWith('!')) {
+          return !evalSingle(expr.slice(1));
+        }
+        // 比较: left === right 或 left == right 或 left !== right 或 left != right
+        const cmpMatch = expr.match(/^(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)$/);
+        if (cmpMatch) {
+          const left = resolveValue(cmpMatch[1].trim(), result);
+          const op = cmpMatch[2];
+          const right = resolveValue(cmpMatch[3].trim(), result);
+          switch(op) {
+            case '===': return left === right;
+            case '!==': return left !== right;
+            case '==': return left == right;
+            case '!=': return left != right;
+            case '>': return left > right;
+            case '<': return left < right;
+            case '>=': return left >= right;
+            case '<=': return left <= right;
+          }
+        }
+        // 真值检查: result.key
+        return !!resolveValue(expr, result);
+      }
+
+      // 解析值：支持 result.a.b.c 路径、字面量 true/false/null/数字/字符串
+      function resolveValue(token, ctx) {
+        token = token.trim();
+        if (token === 'true') return true;
+        if (token === 'false') return false;
+        if (token === 'null') return null;
+        if (token === 'undefined') return undefined;
+        if (/^-?\d+(\.\d+)?$/.test(token)) return Number(token);
+        if ((token.startsWith("'") && token.endsWith("'")) || (token.startsWith('"') && token.endsWith('"'))) return token.slice(1, -1);
+        // result.a.b.c 路径
+        const path = token.replace(/^result\.?/, '').split('.');
+        let val = ctx;
+        for (const p of path) {
+          if (p === '' || val == null) break;
+          val = val[p];
+        }
+        return val;
+      }
+
+      // 处理 && 和 || 组合（简单左到右，&& 优先于 ||）
+      // 先按 || 拆，再按 && 拆
+      const orParts = condStr.split('||').map(s => s.trim());
+      for (const orPart of orParts) {
+        const andParts = orPart.split('&&').map(s => s.trim());
+        const allTrue = andParts.every(p => evalSingle(p));
+        if (allTrue) return true;
+      }
+      return false;
+    }
+
     function _saveAsyncTask(taskDef) {
       try {
         const tasks = JSON.parse(localStorage.getItem('__async_tasks') || '[]');
@@ -1829,7 +1891,10 @@ ${toolSummary}
 
             let conditionMet = false;
             try {
-              conditionMet = new Function('result', 'return ' + condition)(result);
+              // CSP 禁止 new Function，改用安全的条件解析器
+              // 支持格式: "key === value", "key == value", "key", "!key"
+              // 嵌套: "a.b.c === value"
+              conditionMet = _evalConditionSafe(result, condition);
             } catch(e) {
               addLog(`⚠️ async_task 条件检查错误: ${e.message}`, 'error');
             }
