@@ -70,9 +70,70 @@ ffprobe -v quiet -print_format json -show_format -show_streams input.mp4
 for f in *.mov; do ffmpeg -i "$f" "${f%.mov}.mp4"; done
 ```
 
+## 自动字幕流程（Whisper + ffmpeg）
+
+完整管线：下载视频 → 提取音频 → Whisper API 生成 SRT → ffmpeg 烧录硬字幕
+
+### 步骤 1：提取音频
+```bash
+ffmpeg -nostdin -i input.mp4 -vn -acodec pcm_s16le -ar 16000 -ac 1 output_audio.wav -y
+```
+
+### 步骤 2：Whisper API 生成字幕
+```bash
+curl -s https://api.openai.com/v1/audio/transcriptions \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F file="@output_audio.wav" \
+  -F model="whisper-1" \
+  -F response_format="srt" \
+  -F language="en" \
+  -o output.srt
+```
+
+### 步骤 3：烧录硬字幕
+```bash
+ffmpeg -nostdin -i input.mp4 \
+  -vf "subtitles=output.srt:force_style='FontSize=32,FontName=Arial,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=3,Shadow=1,MarginV=30'" \
+  -c:a copy output_subtitled.mp4 -y
+```
+
+> **注意**：ffmpeg 必须编译了 libass（`brew install homebrew-ffmpeg/ffmpeg/ffmpeg --build-from-source`）。用 `ffmpeg -filters | grep subtitles` 验证。
+> **注意**：烧录时必须加 `-nostdin` 和 `</dev/null` 防止后台运行时 tty 挂起。
+
+### 视频风格与字幕样式推荐
+
+| 视频风格 | FontSize | FontName | PrimaryColour | OutlineColour | Outline | Shadow | MarginV | 说明 |
+|----------|----------|----------|---------------|---------------|---------|--------|---------|------|
+| **Pen&Ink / Halftone** | 32 | Arial | &H00FFFFFF (白) | &H00000000 (黑) | 3 | 1 | 30 | 经典白字黑边，适合深浅交替的手绘画面 |
+| **2D Line / Animation** | 34 | Trebuchet MS | &H00FFFFFF (白) | &H00222222 (深灰) | 2 | 2 | 25 | 稍大字号，轻描边，活泼感 |
+| **Watercolor** | 30 | Georgia | &H00F0F0F0 (米白) | &H00333333 (深灰) | 2 | 1 | 35 | 柔和色调配衬水彩风 |
+| **Collage** | 36 | Impact | &H0000FFFF (黄) | &H00000000 (黑) | 3 | 2 | 20 | 大号醒目黄字，拼贴风格需要高对比 |
+| **Claymation** | 34 | Comic Sans MS | &H00FFFFFF (白) | &H00003366 (深蓝) | 3 | 2 | 28 | 圆润字体配深色描边，童趣感 |
+| **Blue Vox / Economic** | 30 | Helvetica | &H00FFFFFF (白) | &H00333333 (深灰) | 2 | 1 | 30 | 干净简约，新闻/数据风格 |
+| **Cinematic / Dark** | 32 | Arial | &H0000CCFF (浅蓝) | &H00000000 (黑) | 3 | 2 | 25 | 浅蓝字配黑边，电影感暗色调 |
+| **YouTube Shorts (竖屏)** | 40 | Arial Black | &H00FFFFFF (白) | &H00000000 (黑) | 4 | 2 | 50 | 超大字号+粗描边，手机竖屏必须醒目 |
+
+### force_style 快速模板
+
+```
+# 通用（大多数风格适用）
+force_style='FontSize=32,FontName=Arial,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=3,Shadow=1,MarginV=30'
+
+# Shorts 竖屏
+force_style='FontSize=40,FontName=Arial Black,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=4,Shadow=2,MarginV=50'
+
+# 电影感
+force_style='FontSize=32,FontName=Arial,PrimaryColour=&H0000CCFF,OutlineColour=&H00000000,Outline=3,Shadow=2,MarginV=25'
+
+# 活泼动画
+force_style='FontSize=34,FontName=Trebuchet MS,PrimaryColour=&H00FFFFFF,OutlineColour=&H00222222,Outline=2,Shadow=2,MarginV=25'
+```
+
+---
+
 ## 注意事项
 
-1. 大文件处理耗时长，建议用 `nohup` 后台运行
+1. 大文件处理耗时长，建议用 `nohup` 后台运行，脚本中加 `-nostdin` 和 `</dev/null`
 2. 使用 `-y` 参数可自动覆盖输出文件
 3. 转码时 `-c copy` 可以无损快速复制流
 4. CRF 值：18 接近无损，23 默认，28 较高压缩
