@@ -26,6 +26,8 @@ export default class AsyncExecutor {
       /^cargo\s+build/i,                // rust build
       /^make\b/i,                       // make
       /^gradle|mvn/i,                   // java build
+      /^ffmpeg\b/i,                     // video processing
+      /^ffprobe\b/i,                    // video analysis
     ];
     
     // 确保日志目录存在
@@ -48,7 +50,7 @@ export default class AsyncExecutor {
     const { 
       forceAsync = false, 
       forceSync = false,
-      timeout = 120000,
+      timeout = 300000,
       onOutput = null 
     } = options;
 
@@ -64,7 +66,7 @@ export default class AsyncExecutor {
   /**
    * 同步执行（带超时）
    */
-  executeSync(command, timeout = 120000) {
+  executeSync(command, timeout = 300000) {
     return new Promise((resolve) => {
       const startTime = Date.now();
       
@@ -108,7 +110,7 @@ export default class AsyncExecutor {
    * 异步执行（后台运行 + 日志监控）
    */
   async executeAsync(command, options = {}) {
-    const { timeout = 120000, onOutput = null } = options;
+    const { timeout = 300000, onOutput = null } = options;
     const processId = `async-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const logFile = path.join(this.logDir, `${processId}.log`);
     const pidFile = path.join(this.logDir, `${processId}.pid`);
