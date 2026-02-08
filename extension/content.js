@@ -1,4 +1,4 @@
-// content.js v35 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+// content.js v1.0.53 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
 (function() { console.log('=== GENSPARK AGENT v35 LOADED ===');
   'use strict';
 
