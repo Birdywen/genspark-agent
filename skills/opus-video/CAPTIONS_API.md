@@ -1010,3 +1010,27 @@ minimal motion with precise timing, quiet authoritative pacing
 - [ ] 逆向更多 voiceId（Story Mode 可能有独立的 voice 列表）
 - [ ] 确认 customStyle=true 时 styleText 的作用
 - [ ] 补充预设样式对应的 styleText
+
+## Video Compression API（验证 2026-02-09）
+
+### 调用
+```
+POST /api/generative-jobs
+{ "jobType": "video-compression", "sourceUri": "<视频URL>" }
+```
+
+### 轮询
+```
+GET /api/generative-jobs/{jobId}
+→ status: CONCLUDED, result.compressedVideoUri
+```
+
+### 测试结果
+- 输入: 160MB (162s, Story Mode landscape)
+- 输出: 69MB (压缩 57%)
+- 耗时: ~7 分钟 (424s)
+- jobId: video-compression-30209DtVjYxKRNK
+
+### 在流水线中的位置
+字幕完成 → **压缩** → webhook 上传 YouTube
+

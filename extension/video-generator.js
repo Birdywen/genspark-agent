@@ -223,6 +223,12 @@ class VideoGenerator {
     return data.data.jobId;
   }
 
+  // === Video Compression ===
+  async compressVideo(videoUrl) {
+    const data = await this.clipApiCall('POST', '/generative-jobs', { jobType: 'video-compression', sourceUri: videoUrl });
+    return data.data.jobId;
+  }
+
   // === YouTube Metadata (hashtag + title + description) ===
   async generateMetadata(description) {
     const jobs = {};
@@ -373,6 +379,15 @@ class VideoGenerator {
         const exp = await this.getExportUrl(tasks.captionProjectId);
         results.videoUrl = exp.videoUrl;
         log('  Captions done!');
+        // Compress the captioned video for faster YouTube upload
+        log('  Compressing video...');
+        const compressJobId = await this.compressVideo(results.videoUrl);
+        const compressResult = await this.pollGenerativeJob(compressJobId);
+        if (compressResult.compressedVideoUri) {
+          results.originalVideoUrl = results.videoUrl;
+          results.videoUrl = compressResult.compressedVideoUri;
+          log('  Compressed! (was ' + (results.originalVideoUrl.length > 10 ? 'original' : '') + ')');
+        }
       } else {
         results.videoUrl = videoUrl;
       }
