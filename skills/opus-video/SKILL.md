@@ -1,142 +1,229 @@
 ---
 name: opus-video
-description: Agent Opus (opus.pro) AI 视频生成 + YouTube 自动上传，支持分类 prompt 模板、自动 metadata 提取
+description: AI 视频全自动生产线 - opus.pro 视频生成 + OpusClip 字幕/缩略图/元数据 + viaSocket → YouTube，全程零成本
 ---
 
-# Agent Opus Video Skill
+# Video Generator v3 - 全自动 YouTube 视频生产线
 
-通过 Agent Opus API 实现自动化视频生成并上传 YouTube。
-
-## 核心流程（一键）
+## 架构概览
 
 ```
-话题 → 分类 prompt 模板 → Opus 创建项目 → AI 自动生成脚本/分镜/视频
-→ 从项目结果提取 name/script → 构建 YouTube metadata → viaSocket webhook → YouTube
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    VideoGenerator v3 流水线                                  │
+│                                                                              │
+│  idea ──→ video-script ──→ Story Video ──→ 字幕+缩略图+元数据 ──→ YouTube   │
+│                                    (并行处理)                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+详细流程:
+
+  ① OpusClip guest token (免费, 7天有效)
+       POST /auth/grant-free-tool-credential
+                    ↓
+  ② opus.pro Story Video 生成 (或 Agent Video)
+       POST /long-take-videos  →  CDN HEAD 轮询等 200
+                    ↓
+  ③ 并行启动三组任务:
+       ├── 字幕: source-videos → clip-projects → 轮询 → exportable-clips → compress
+       ├── 缩略图: generative-jobs {jobType: thumbnail}
+       └── 元数据: generative-jobs × 3 (title + description + hashtag)
+                    ↓
+  ④ viaSocket webhook → YouTube
+       Upload Video → Update Thumbnail → Add to Playlist
 ```
 
-**关键点**: 只需要提供话题和类别，其他全自动。Opus 生成的 `name` 就是最好的 YouTube 标题，`script` 前几句就是最好的描述。
+**零成本**: 无服务器、无 API 费用、无 Oracle/ffmpeg/Whisper 依赖。
+
+## 三种运行模式
+
+| 模式 | 入口方法 | 说明 |
+|------|----------|------|
+| **Story** (推荐) | `run(topic, {videoMode:'story', script})` | 你写 transcript → opus.pro 配画面 → 全流程 |
+| **Idea** | `fromIdea(idea)` | 从一个 idea 自动生成 script → 再走 Story 流程 |
+| **Process** | `processExistingVideo(url, topic)` | 已有视频 URL → 只走字幕+缩略图+元数据+上传 |
+| **Agent** (legacy) | `run(topic, {videoMode:'agent'})` | opus.pro Agent Video，仅 9:16，自带字幕 |
 
 ## 前置条件
 
-1. 浏览器中已打开并登录 `https://agent.opus.pro/`
-2. manifest.json 中已添加 `opus.pro` 的 host_permissions
-3. 用 `list_tabs` 找到 opus.pro 的 tabId
+1. 浏览器已登录 `https://agent.opus.pro/`（Story/Agent 模式需要 opus.pro token）
+2. Chrome 扩展已加载 video-generator.js
+3. 无需其他服务器或 API key
 
-## 两种模式
+## 核心 API 端点
 
-### 模式 A: Story Video（故事版，推荐）
+### opus.pro - 视频生成
 
-新 API，支持 16:9，直接给 transcript，Opus 生成画面。
+| 端点 | 用途 |
+|------|------|
+| `POST /long-take-videos` | Story Video 创建（transcript + 画面风格） |
+| `HEAD s2v-ext.cdn.opus.pro/agent/workspace/{id}/final_video.mp4` | CDN 轮询，200=完成 |
+| `POST /project` | Agent Video 创建（legacy） |
 
-**端点**: `POST /api/long-take-videos`
+### OpusClip - 字幕 & 后处理
 
-**参数**:
-- `prompt`: transcript 全文（最长约 450 words）
-- `ratio`: `"16:9"` 或 `"9:16"`（Shorts）
-- `customStyle`: `false`（用预设风格）或 `true`
-- `styleText`: 风格描述文本
-- `voiceId`: 配音 ID
+| 端点 | 用途 |
+|------|------|
+| `POST /auth/grant-free-tool-credential` | 获取 guest token（无需登录，7天有效） |
+| `GET /fancy-template-presets` | 22 种字幕样式列表 |
+| `POST /source-videos` | 视频预检（语言检测、时长） |
+| `POST /clip-projects` | 创建字幕项目 |
+| `GET /clip-projects/{id}` | 轮询项目状态（stage=COMPLETE） |
+| `GET /exportable-clips?projectId={id}` | 获取高清无水印视频 URL |
 
-**可用 Style**:
-| Style | 适合题材 |
-|-------|----------|
-| 2D Line | 轻松、教育 |
-| Animation | 通用 |
-| Collage | 趣味、文化 |
-| Blue Vox | 科技、未来 |
-| Claire | 优雅、人物 |
-| Claymation | 趣味、儿童 |
-| Economic | 商业、数据 |
-| Halftone | 新闻、纪实 |
-| Marcinelle | 漫画风 |
-| Pen&Ink | 严肃、历史 |
-| Schematic | 科学、技术 |
-| Watercolor | 艺术、文化 |
-| Vox | 新闻解说 |
+### OpusClip - AI 生成服务 (generative-jobs)
 
-**Style 对应的 styleText**:
-```
-2D Line: "Clean 2D line art animation with minimal color palette"
-Pen&Ink: "Stylize the image with whimsical corporate line art, hand-drawn doodle fidelity, a stark black-and-white palette with spot-color accents, and loose ink contours with stipple-dot shading."
-Halftone: "Halftone print style with bold dots, newspaper aesthetic, dramatic contrast"
-Watercolor: "Soft watercolor painting style with flowing colors and gentle brushstrokes"
-```
+| jobType | 输入参数 | 输出 |
+|---------|----------|------|
+| `thumbnail` | `{sourceUri}` | 2张 1280×720 PNG |
+| `video-script` | `{idea, platform, videoType, audience, tone, duration}` | Markdown 脚本 |
+| `youtube-title` | `{text}` | 5 个标题候选 |
+| `youtube-description` | `{text}` | 3 个描述候选 |
+| `youtube-hashtag` | `{description}` | 20 个 hashtag |
+| `compress` | `{sourceUri}` | 压缩后视频 URL |
+| `ai-video-summarizer` | `{sourceUri}` | 视频摘要（待测试） |
+| `transcript` | `{sourceUri}` | 转录文本（待测试） |
 
-**示例**:
-```
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/long-take-videos', {method: 'POST', headers: h, body: JSON.stringify({prompt: 'YOUR_TRANSCRIPT', ratio: '16:9', customStyle: false, styleText: 'YOUR_STYLE', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'})}); return await r.json(); })()","tabId":OPUS_TAB_ID}}ΩSTOP
-```
+所有 generative-jobs 通过 `POST /generative-jobs` 创建，`GET /generative-jobs/{jobId}` 轮询，`status=CONCLUDED` 表示完成。
 
-### 模式 B: AI Agent Video（传统模式）
+### viaSocket - YouTube 上传
 
-旧 API，给 topic，Opus AI 自动研究、写脚本、生成视频。适合新闻类。
+| 端点 | Webhook payload |
+|------|----------------|
+| `POST https://flow.sokt.io/func/scri42hM0QuZ` | `{video_url, thumbnail_url, youtube_title, youtube_description, playlist_id, category_id}` |
 
-## 快速使用
+Workflow 三步: Upload Video → Update Thumbnail → Add to Playlist
 
-### 1. 创建视频（AI 自动处理一切）
+## 通用认证 Headers
 
 ```
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json', 'Content-Type': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project', {method: 'POST', headers: h, body: JSON.stringify({initialText: 'YOUR_PROMPT_HERE', voice: {labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'], name: 'Lily', provider: 'minimax', type: 'voice-over', voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'}, enableCaption: true})}); const p = await r.json(); return JSON.stringify({id: p.id, stage: p.stage, name: p.name}); })()","tabId":OPUS_TAB_ID}}ΩSTOP
+Authorization: Bearer <token>
+X-OPUS-ORG-ID: <orgId>
+X-OPUS-USER-ID: <userId>
+Content-Type: application/json
+Origin: https://clip.opus.pro
+Referer: https://clip.opus.pro/captions
 ```
 
-### 2. 查询项目状态
+Token 通过 `grant-free-tool-credential` 获取，无需登录，每次生成新 guest 身份。
 
-```
-Ω{"tool":"eval_js","params":{"code":"return (async () => { const token = JSON.parse(localStorage.getItem('atom:user:access-token')); const orgId = JSON.parse(localStorage.getItem('atom:user:org-id')); const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id')); const h = {'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'X-OPUS-SHARED-ID': '', 'Accept': 'application/json'}; const r = await fetch('https://api.opus.pro/api/project/PROJECT_ID', {headers: h}); const p = await r.json(); return JSON.stringify({stage: p.stage, name: p.name, script: p.script?.substring(0,300), resultVideo: p.resultVideo, previewThumbnail: p.previewThumbnail}); })()","tabId":OPUS_TAB_ID}}ΩSTOP
-```
+## 字幕配置
 
-### 3. 视频完成后上传 YouTube（via viaSocket webhook）
+### 输出比例
 
-Webhook URL: `https://flow.sokt.io/func/scri42hM0QuZ`
+| layoutAspectRatio | 分辨率 | 场景 |
+|-------------------|--------|------|
+| `landscape` | 16:9 | YouTube 常规视频 |
+| `portrait` | 9:16 | YouTube Shorts |
+| `square` | 1:1 | Instagram |
+| `four_five` | 4:5 | Facebook |
 
-需要的字段（全部从 Opus 项目数据提取）:
-- `video_url`: project.resultVideo
-- `youtube_title`: project.name + " #Shorts" (最多 100 字符)
-- `youtube_description`: script 前 2-3 句 + hashtags + AI disclosure
-- `youtube_tags`: 从标题和类别提取
+### 字幕样式 (22种)
 
-## Prompt 模板（按类别）
+Karaoke, Gameplay, Beasty (MrBeast), Deep Diver, Youshaei, Pod P, Mozi, Netflix, Hormozi, AJ, Boldy, Minimal, Poppy, Sleek, Ali A, Spotlight, Wired, Baseline, Iman, TedX, Beast, The Standard
 
-| 类别 | 星期 | 时长 | 风格 |
-|------|------|------|------|
-| tech | Mon/Thu | 45s | 快节奏、数据驱动 |
-| people | Tue | 50s | 电影叙事、戏剧弧线 |
-| society | Wed | 45s | 调查式、多角度 |
-| science | (轮换) | 50s | 视觉隐喻、层层揭示 |
-| business | Fri | 45s | 案例分析、可操作洞察 |
-| culture | Sat | 50s | 机智观察、流行文化 |
-| wildcard | Sun | 45s | 热门话题、病毒传播 |
+通过 `brandTemplateId: "preset-fancy-{Name}"` 指定。
 
-每个模板自动包含:
-- Thumbnail instruction（首帧必须是醒目标题卡）
-- Hook requirement（前 3 秒抓住观众）
-- AI disclosure statement
-- Source citation requirement
+### 必须参数
 
-## 配额
-
-- 免费账户: 每 12 小时 2 次视频生成
-- 检查配额: GET `/api/quotas` → `s2v.daily.available`
-
-## 声音选项
-
-| 名称 | voiceId | 特点 |
-|------|---------|------|
-| Lily | moss_audio_c12a59b9-7115-11f0-a447-9613c873494c | English (US), Female, Engaging（默认）|
-| Emma | English_captivating_female1 | English (US), Female, Captivating |
-| Tennis | MM0375rv1dy8 | 克隆声音 |
-
-## 视频阶段
-
-```
-INITIALIZING → SCRIPT → STORYBOARD → RENDERING → EDITOR (COMPLETE)
+```json
+{
+  "videoUrl": "https://...",
+  "brandTemplateId": "preset-fancy-Karaoke",
+  "productTier": "FREE.CAPTIONS",
+  "curationPref": { "skipSlicing": true },
+  "renderPref": {
+    "layoutAspectRatio": "landscape",
+    "enableCaption": true,
+    "enableHighlight": true
+  }
+}
 ```
 
-通常需要 3-10 分钟完成。`stage === 'EDITOR' && resultVideo` 表示视频已就绪。
+## 分类与 Playlist 映射
 
-## 注意事项
+| 内部分类 | YouTube categoryId | Playlist ID |
+|----------|-------------------|-------------|
+| tech | 28 (Science & Tech) | PLYtnUtZt0ZnFNjguN43KAb3aYFwCMTYZW |
+| people | 22 (People & Blogs) | PLYtnUtZt0ZnGnjjJ3L60TIK7kBT93yRo3 |
+| society | 24 (Entertainment) | PLYtnUtZt0ZnFssUY9G1cLpXO-D6JKPHH5 |
+| science | 27 (Education) | PLYtnUtZt0ZnFn-PNqSLN-_wPkIFGGCSlw |
+| business | 24 (Entertainment) | PLYtnUtZt0ZnE0_9LXZTFOlgFxFB-oh8sK |
+| culture | 24 (Entertainment) | PLYtnUtZt0ZnHIwG9vhWqSr6t1vGRr0AQR |
+| wildcard | 24 (Entertainment) | PLYtnUtZt0ZnF-oneo7UEDTO_OGJQ12ovZ |
 
-1. JWT token 有效期短，刷新 opus.pro 页面可更新
-2. 所有 API 调用必须在 opus.pro tab 中通过 eval_js 执行（同源策略）
-3. YouTube 上传后默认 Private，需手动审核后改为 Public
-4. 遵守 YouTube 2025 AI 内容政策：每个视频必须有独特叙事，不批量模板化
+每天自动轮换分类 (周日=wildcard, 周一=tech, ...)。
+
+## 视觉风格预设 (Story Mode)
+
+9 种风格: economic (默认), claymation, watercolor, halftone, collage, penink, schematic, line2d, animation。
+
+通过 `options.style` 或 `options.styleText` 自定义。
+
+## UI 入口
+
+在 opus.pro 页面通过扩展面板触发 `VideoGenerator.showTopicDialog()`，弹出对话框选择模式、分类、比例、样式，输入 topic/script 后一键启动。实时日志显示在对话框底部。
+
+## 文件结构
+
+```
+extension/
+  video-generator.js    (707行) VideoGenerator class + UI dialog
+  content.js            (3653行) 扩展主体，加载 video-generator.js
+skills/opus-video/
+  SKILL.md              本文档
+  CAPTIONS_API.md       OpusClip Captions API 详细文档
+```
+
+## 端到端流程示例
+
+### 从 idea 到 YouTube（全自动）
+
+```javascript
+const vg = new VideoGenerator();
+const result = await vg.fromIdea('How quantum computing will change cryptography', {
+  category: 'tech',
+  aspectRatio: 'landscape',
+  style: 'economic',
+});
+// result: { success, video_url, thumbnail_url, youtube_title, youtube_description, playlist_id, ... }
+```
+
+执行过程:
+1. `getClipCredential()` → guest token
+2. `generative-jobs {jobType: video-script}` → 生成 2 分钟脚本
+3. `long-take-videos` → opus.pro 生成 Story Video → CDN 轮询
+4. 并行: `addCaptions()` + `generateThumbnail()` + `generateMetadata()`
+5. `pollCaptionProject()` → `getExportUrl()` → `compressVideo()`
+6. `uploadToYouTube()` → viaSocket webhook
+7. YouTube: Upload → Thumbnail → Playlist，约 4 分钟完成
+
+### 处理已有视频
+
+```javascript
+const vg = new VideoGenerator();
+const result = await vg.processExistingVideo(
+  'https://cdn.opus.pro/.../final_video.mp4',
+  'Quantum cryptography explained',
+  { category: 'science', aspectRatio: 'landscape' }
+);
+```
+
+### 通过 UI 对话框
+
+在 opus.pro 页面，扩展面板点击按钮 → 弹出 Video Generator v3 对话框 → 选择模式/分类/比例/样式 → 输入 topic → Start。
+
+## 已淘汰
+
+以下旧流程已被 v3 完全替代，不再使用:
+
+- Oracle Cloud ffmpeg + Whisper 转录字幕
+- cPanel 视频托管 (ezmusicstore.com/videos/)
+- Genspark AI 生成 thumbnail
+- AI Drive 取回 thumbnail
+- 硬编码 metadata
+- scp 文件传输
+
+## 参考文档
+
+- OpusClip Captions API 详细文档: `skills/opus-video/CAPTIONS_API.md`
+- SQLite changelog/conventions: `.agent_memory/project_knowledge.db`

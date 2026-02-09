@@ -71,23 +71,7 @@
     document.head.appendChild(script);
   }
 
-  // === VideoGenerator 外部模块加载 ===
-  function loadVideoGenerator() {
-    try {
-      // 加载外部 video-generator.js
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('video-generator.js');
-      script.onload = () => {
-        console.log('[Agent] VideoGenerator v2 loaded (external)');
-      };
-      script.onerror = (e) => {
-        console.error('[Agent] VideoGenerator load failed:', e);
-      };
-      document.head.appendChild(script);
-    } catch(e) {
-      console.error('[Agent] loadVideoGenerator error:', e);
-    }
-  }
+  // VideoGenerator 通过 manifest.json content_scripts 在 content.js 之前加载，无需手动加载
 
 
   
@@ -192,13 +176,13 @@ function log(...args) {
       - label (string, 可选): 任务标签，用于日志显示和识别
     - **适用场景:** API 轮询等待完成、页面状态监控、长时间渲染任务跟踪、任何需要「等 X 完成后通知我」的场景
     - **示例 — 轮询 API 直到完成:**
-      ```
+      \`\`\`
       Ω{"tool":"async_task","params":{"code":"return fetch(\"https://api.example.com/job/123\").then(r=>r.json()).then(d=>({status:d.status,url:d.resultUrl}))","condition":"result.url","interval":30000,"timeout":1800000,"tabId":681789273,"label":"等待视频生成"}}ΩSTOP
-      ```
+      \`\`\`
     - **示例 — 监控页面元素出现:**
-      ```
+      \`\`\`
       Ω{"tool":"async_task","params":{"code":"var el=document.querySelector(\"#download-btn\"); return {ready: !!el, text: el?el.textContent:null}","condition":"result.ready === true","interval":5000,"timeout":120000,"label":"等待下载按钮"}}ΩSTOP
-      ```
+      \`\`\`
     - **注意:** code 中的 fetch 需要在目标 tab 的域下才能避免 CORS。condition 中引用的字段必须是 code return 的对象的 key
   - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
   - **操作网页前**: 先查 page_elements 表获取已知选择器 (SELECT selector,text_content FROM page_elements WHERE site='站点名')，没有记录才扫描
@@ -3525,7 +3509,7 @@ ${tip}
     
     // 加载面板增强模块
     loadPanelEnhancer();
-    loadVideoGenerator();
+    // VideoGenerator 已通过 manifest content_scripts 自动加载
 
     // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();

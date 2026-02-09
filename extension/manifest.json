@@ -42,7 +42,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.genspark.ai/agents*"],
-      "js": ["content.js"],
+      "js": ["video-generator.js", "content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }

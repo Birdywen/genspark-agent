@@ -14,12 +14,59 @@
     },
     {
       "name": "opus-video",
-      "description": "Agent Opus (opus.pro) AI 视频生成平台 API，支持创建视频项目、查询状态、获取结果",
+      "description": "Agent Opus (opus.pro) AI 视频生成 + YouTube 自动上传，支持分类 prompt 模板、Story Video API、自动 metadata 提取",
       "source": "local",
       "path": "./opus-video",
       "skillFile": "SKILL.md",
       "requiredMcp": [],
-      "tools": []
+      "tools": [
+        "opus-create-story-video", "opus-create-clip-video", "opus-check-status",
+        "opus-get-result", "opus-list-projects", "opus-upload-youtube"
+      ]
+    },
+    {
+      "name": "aidrive",
+      "description": "Genspark AI Drive 文件管理，通过 eval_js 同源调用 API，支持列目录、上传、下载、删除文件",
+      "source": "local",
+      "path": "./aidrive",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "aidrive-ls", "aidrive-mkdir", "aidrive-upload", "aidrive-download", "aidrive-delete", "aidrive-recent"
+      ]
+    },
+    {
+      "name": "auto-tutorial",
+      "description": "全自动教程视频生成器，AI 自动录制浏览器操作并配音，支持自定义教程脚本和多语言 TTS",
+      "source": "local",
+      "path": "./auto-tutorial",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "tutorial-generate", "tutorial-preview"
+      ]
+    },
+    {
+      "name": "newzik-omr",
+      "description": "Newzik OMR MusicXML 纠错工具，自动检测和修复光学乐谱识别的系统性错误（和弦符号、节奏、调号等）",
+      "source": "local",
+      "path": "./newzik-omr",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "omr-correct-musicxml", "omr-xml2abc", "omr-batch-convert", "omr-watch", "omr-auth"
+      ]
+    },
+    {
+      "name": "watchdog",
+      "description": "守护进程控制，监控和重启 genspark-agent 主服务器，支持 HTTP 和文件触发两种方式",
+      "source": "local",
+      "path": "./watchdog",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "watchdog-restart", "watchdog-status", "watchdog-health"
+      ]
     },
     {
       "name": "megacmd",
