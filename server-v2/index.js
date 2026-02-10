@@ -23,6 +23,7 @@ import ContextCompressor from './context-compressor.js';
 import TaskPlanner from './task-planner.js';
 import WorkflowTemplate from './workflow-template.js';
 import CheckpointManager from './checkpoint-manager.js';
+import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -332,8 +333,9 @@ class MCPConnection {
     }
   }
 
-  send(method, params = {}) {
+  send(method, params = {}, options = {}) {
     const id = ++this.requestId;
+    const timeout = options.timeout || this.requestTimeout;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       this.process.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
@@ -342,7 +344,7 @@ class MCPConnection {
           this.pending.delete(id);
           reject(new Error('timeout'));
         }
-      }, this.requestTimeout);
+      }, timeout);
     });
   }
 
@@ -367,10 +369,10 @@ class MCPConnection {
     }));
   }
 
-  call(name, args) {
+  call(name, args, options = {}) {
     // 如果工具名有前缀，提取原始名称发送给 MCP server
     const originalName = name.includes(':') ? name.split(':')[1] : name;
-    return this.send('tools/call', { name: originalName, arguments: args || {} });
+    return this.send('tools/call', { name: originalName, arguments: args || {} }, options);
   }
 
   stop() {
@@ -410,10 +412,10 @@ class MCPHub {
     return null;
   }
 
-  async call(tool, args) {
+  async call(tool, args, options = {}) {
     const c = this.findConn(tool);
     if (!c) throw new Error('工具未找到: ' + tool);
-    return c.call(tool, args);
+    return c.call(tool, args, options);
   }
 
   stop() {
@@ -469,9 +471,53 @@ let taskEngine = null;
 // 初始化录制器
 const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));
 
+// 初始化后台进程管理器
+const processManager = new ProcessManager();
+
 // ==================== 工具调用处理（含历史记录）====================
+// 工具别名映射
+const TOOL_ALIASES = {
+  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell' }) },
+  'bg_run': null,
+  'bg_status': null,
+  'bg_kill': null
+};
+
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
-  const { tool, params, id } = message;
+  let { tool, params, id } = message;
+  
+  // 后台进程管理器 - 直接处理，不走 MCP
+  if (tool === 'bg_run' || tool === 'bg_status' || tool === 'bg_kill') {
+    const historyId = addToHistory(tool, params, true, null, null);
+    let result;
+    if (tool === 'bg_run') {
+      result = processManager.run(params.command, { cwd: params.cwd, shell: params.shell });
+    } else if (tool === 'bg_status') {
+      result = processManager.status(params.slotId);
+    } else {
+      result = processManager.kill(params.slotId);
+    }
+    ws.send(JSON.stringify({
+      type: 'tool_result',
+      id,
+      historyId,
+      tool,
+      success: result.success,
+      result: JSON.stringify(result, null, 2),
+      error: result.success ? undefined : result.error
+    }));
+    return;
+  }
+
+  // 别名映射
+  if (TOOL_ALIASES[tool]) {
+    const alias = TOOL_ALIASES[tool];
+    if (alias) {
+      logger.info(`工具别名: ${tool} → ${alias.target}`);
+      params = alias.transform ? alias.transform(params) : params;
+      tool = alias.target;
+    }
+  }
   
   logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);
 
@@ -496,7 +542,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   try {
-    const r = await hub.call(tool, params);
+    // 支持灵活 timeout: 从原始 message 中提取
+    const callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
+    const callOptions = callTimeout ? { timeout: callTimeout } : {};
+    const r = await hub.call(tool, params, callOptions);
     let result = r;
     
     if (r && r.content && Array.isArray(r.content)) {

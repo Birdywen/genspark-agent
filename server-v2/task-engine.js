@@ -14,6 +14,19 @@ class TaskEngine {
 
   static BROWSER_TOOLS = ['list_tabs', 'eval_js', 'js_flow'];
 
+  // 工具别名映射（与 index.js TOOL_ALIASES 保持同步）
+  static TOOL_ALIASES = {
+    'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell' }) }
+  };
+
+  resolveAlias(tool, params) {
+    const alias = TaskEngine.TOOL_ALIASES[tool];
+    if (alias) {
+      return { tool: alias.target, params: alias.transform ? alias.transform(params) : params };
+    }
+    return { tool, params };
+  }
+
   setBrowserCallHandler(handler) {
     this.browserCallHandler = handler;
   }
@@ -94,7 +107,8 @@ class TaskEngine {
         this.logger.info(`[TaskEngine] 浏览器工具 ${step.tool}，委托浏览器执行`);
         result = await this.browserCallHandler(step.tool, resolvedParams);
       } else {
-        result = await this.hub.call(step.tool, resolvedParams);
+        const resolved = this.resolveAlias(step.tool, resolvedParams);
+        result = await this.hub.call(resolved.tool, resolved.params);
       }
       
       let resultStr = result;
@@ -241,7 +255,8 @@ class TaskEngine {
       const resolvedParams = this.stateManager.resolveTemplate(taskId, step.params);
       
       try {
-        const result = await this.hub.call(step.tool, resolvedParams);
+        const resolved = this.resolveAlias(step.tool, resolvedParams);
+        const result = await this.hub.call(resolved.tool, resolved.params);
         
         let resultStr = result;
         if (result && result.content && Array.isArray(result.content)) {

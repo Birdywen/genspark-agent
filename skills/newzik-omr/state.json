@@ -24,7 +24,11 @@
     "23-La_Donna_e_Mobile_Rigoletto_Verdi",
     "24-On_With_The_Motley_I_Pagliacci_Leoncavallo",
     "25-Flower_Song_Carmen_Bizet",
-    "13-Theme_Symphony_No3_2nd_Movement_Brahms"
+    "13-Theme_Symphony_No3_2nd_Movement_Brahms",
+    "Blue_Danube_Part1"
   ],
-  "processing": {}
+  "processing": {
+    "On_The_Beautiful_Blue_Danube_Strauss": "647E9CC9-4CE4-4694-AFDB-32F695EEA152",
+    "Secret_Garden_Adagio": "31B23106-A27C-4DE7-A273-5E17EB72DD6A"
+  }
 }
