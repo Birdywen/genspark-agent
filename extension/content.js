@@ -289,24 +289,24 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ### 长时间命令（防 timeout）
 
-**重要**: 预计超过 15 秒的命令（安装依赖、AI 模型推理、大文件处理等），必须用 bg_run 而非 run_command。
+**智能路由**: 系统会自动识别长时间命令（pip/npm/brew install、git clone、demucs、whisper 等），将 run_command 自动路由到 bg_run 后台执行。收到 bg_run (auto) 结果时，用 bg_status 查看进度和输出。
 
 - **bg_run** — 后台启动命令，立即返回 slotId + PID，不会 timeout
-- **bg_status** — 查看进程状态和输出（传 slotId 查单个，不传查全部）
+- **bg_status** — 查看进程状态和输出（传 slotId 查单个，不传查全部；lastN 控制输出行数，默认10）
 - **bg_kill** — 终止指定进程
 
 ```
-# 启动后台任务
-Ω{"tool":"bg_run","params":{"command":"pip install some-package"}}ΩSTOP
+# 手动启动后台任务
+Ω{"tool":"bg_run","params":{"command":"some-long-command"}}ΩSTOP
 
-# 检查状态（用返回的 slotId）
-Ω{"tool":"bg_status","params":{"slotId":"1"}}ΩSTOP
+# 检查状态（用返回的 slotId，lastN 控制输出行数）
+Ω{"tool":"bg_status","params":{"slotId":"1","lastN":"5"}}ΩSTOP
 
 # 终止任务
 Ω{"tool":"bg_kill","params":{"slotId":"1"}}ΩSTOP
 ```
 
-最多 5 个并发槽位，已完成的槽会自动回收。典型场景: pip/npm install、demucs 音频分离、模型下载、编译构建等。
+最多 5 个并发槽位，已完成的槽会自动回收。进程完成后 bg_status 会返回 status:exited 和完整输出。
 ---
 
 ## 工作流程
