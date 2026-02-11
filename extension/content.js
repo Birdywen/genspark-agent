@@ -186,25 +186,7 @@ function log(...args) {
     - **注意:** code 中的 fetch 需要在目标 tab 的域下才能避免 CORS。condition 中引用的字段必须是 code return 的对象的 key
   - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
   - **操作网页前**: 先查 page_elements 表获取已知选择器 (SELECT selector,text_content FROM page_elements WHERE site='站点名')，没有记录才扫描
-- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等
-
-**常用工具参数速查:**
-| 工具 | 必填参数 | 可选参数 |
-|------|----------|----------|
-| read_file | path | head, tail (取前/后N行) |
-| write_file | path, content | - |
-| edit_file | path, edits: [{oldText, newText}] | dryRun |
-| read_multiple_files | paths: string[] | - |
-| list_directory | path | - |
-| directory_tree | path | excludePatterns |
-| search_files | path, pattern | excludePatterns |
-| move_file | source, destination | - |
-| run_command | command | cwd, stdin, timeout_ms |
-| browser_navigate | url | - |
-| browser_snapshot | (无必填) | filename |
-| browser_click | ref | element, doubleClick, button, modifiers |
-| browser_type | ref, text | element, submit, slowly |
-| browser_evaluate | function | element, ref |`;
+- **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
     const prompt = `## 身份
 
@@ -286,7 +268,6 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 超过50行或含大量特殊字符时，用 run_command + stdin (python3/bash) 写入。
 
-
 ### 长时间命令（防 timeout）
 
 **智能路由**: 系统会自动识别长时间命令（pip/npm/brew install、git clone、demucs、whisper 等），将 run_command 自动路由到 bg_run 后台执行。收到 bg_run (auto) 结果时，用 bg_status 查看进度和输出。
@@ -295,18 +276,14 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - **bg_status** — 查看进程状态和输出（传 slotId 查单个，不传查全部；lastN 控制输出行数，默认10）
 - **bg_kill** — 终止指定进程
 
-```
-# 手动启动后台任务
+\`\`\`
 Ω{"tool":"bg_run","params":{"command":"some-long-command"}}ΩSTOP
-
-# 检查状态（用返回的 slotId，lastN 控制输出行数）
 Ω{"tool":"bg_status","params":{"slotId":"1","lastN":"5"}}ΩSTOP
-
-# 终止任务
 Ω{"tool":"bg_kill","params":{"slotId":"1"}}ΩSTOP
-```
+\`\`\`
 
 最多 5 个并发槽位，已完成的槽会自动回收。进程完成后 bg_status 会返回 status:exited 和完整输出。
+
 ---
 
 ## 工作流程
