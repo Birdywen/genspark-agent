@@ -36,10 +36,16 @@ class Safety {
     
     const cmd = command.toLowerCase().trim();
 
-    // 检查黑名单
+    // 检查黑名单 - 使用边界匹配避免误判
+    // 例: "rm -rf /" 不应匹配 "rm -rf /private/tmp/foo"
     if (this.config.blockedCommands) {
       for (const blocked of this.config.blockedCommands) {
-        if (cmd.includes(blocked.toLowerCase())) {
+        const b = blocked.toLowerCase();
+        // 转义正则特殊字符
+        const escaped = b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // blocked 内容后面必须是空格、分号、管道、&&、换行或结尾
+        const pattern = new RegExp('(?:^|[;&|\\s])' + escaped + '(?:[\\s;&|]|$)');
+        if (pattern.test(cmd)) {
           return { safe: false, reason: `命令被阻止: ${blocked}` };
         }
       }
