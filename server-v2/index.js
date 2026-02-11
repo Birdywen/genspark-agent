@@ -509,6 +509,43 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     return;
   }
 
+  // 智能路由: 识别长时间命令自动走 bg_run
+  if (tool === 'run_command' && params.command) {
+    const cmd = params.command.toLowerCase();
+    const longPatterns = [
+      /\bpip3?\s+install\b/,
+      /\bnpm\s+install\b/,
+      /\bnpm\s+ci\b/,
+      /\byarn\s+(install|add)\b/,
+      /\bpnpm\s+(install|add)\b/,
+      /\bbrew\s+install\b/,
+      /\bcargo\s+build\b/,
+      /\bmake\b(?!dir)/,
+      /\bcmake\s+--build\b/,
+      /\bgit\s+clone\b/,
+      /\bdocker\s+(build|pull)\b/,
+      /\bdemucs\b/,
+      /\bwhisper\b/,
+      /\bbasic[_-]pitch\b/,
+    ];
+    const isLong = longPatterns.some(p => p.test(cmd));
+    if (isLong && !params._noAutoRoute) {
+      logger.info(`[智能路由] run_command → bg_run (检测到长时间命令)`);
+      const historyId = addToHistory('bg_run', params, true, null, null);
+      const result = processManager.run(params.command, { cwd: params.cwd });
+      ws.send(JSON.stringify({
+        type: 'tool_result',
+        id,
+        historyId,
+        tool: 'bg_run (auto)',
+        success: result.success,
+        result: JSON.stringify(result, null, 2),
+        error: result.success ? undefined : result.error
+      }));
+      return;
+    }
+  }
+
   // 别名映射
   if (TOOL_ALIASES[tool]) {
     const alias = TOOL_ALIASES[tool];
