@@ -477,7 +477,7 @@ const processManager = new ProcessManager();
 // ==================== 工具调用处理（含历史记录）====================
 // 工具别名映射
 const TOOL_ALIASES = {
-  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell' }) },
+  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) },
   'bg_run': null,
   'bg_status': null,
   'bg_kill': null

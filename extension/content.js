@@ -270,6 +270,12 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - 不确定 → 先 read_file 查看再决定
 - 修改后必须验证语法: JS 用 node -c，Python 用 python3 -m py_compile
 
+**edit_file 参数格式** (必须严格遵守):
+\`\`\`
+Ω{"tool":"edit_file","params":{"path":"文件路径","edits":[{"oldText":"精确匹配的原文","newText":"替换后的内容"}]}}ΩSTOP
+\`\`\`
+注意: edits 是数组，每项用 oldText/newText（不是 old_string/new_string）。oldText 必须与文件内容完全一致（包括空格和换行）。匹配失败时改用 write_file 重写。
+
 ### 批量执行黄金法则
 
 适合批量: 查询操作、API调用、环境检查、简单命令
