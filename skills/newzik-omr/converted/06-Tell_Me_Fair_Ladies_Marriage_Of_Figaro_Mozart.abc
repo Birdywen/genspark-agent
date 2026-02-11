@@ -1,0 +1,36 @@
+X:1
+T:Tell me fair ladies From the opera “the marriage of figaro”. Music by wolfgang amadeus mozart
+C:Mozart
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=100
+M:2/4
+I:linebreak $
+K:Emin
+V:1 treble 
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+"^Moderato""G" !3!G2 DD |"D" (A2 D2) |"G" ([DB]2"C" !2!G/>A/B/>c/ |"D" !3!!2![FA]4) | %4
+"G" (!3!!1![GB]2 !4!c!3!^c |$ !4!d>B G2) |"D" !4!!1![DA]2 _B=B | c4 |"G" (!5!dBdB) |"Am" (AcAc) |$ %10
+"G" !1!G2"D" (!2!F/>!1!G/A/>B/) |"G" G4 |"D" !2!A2 AA |"G" (B/^c/d/B/)"D" A2 |"A" (E>F GA) |$ %15
+"D" (G F3) |"Bm" !3!B2"F#" ^cc |"Bm" (d>B F2) | !2!F>B"A" .A"E".^G |"A" A2 z/ A/A/A/ |$ %20
+"_cresc.""A7" (B/A/)A z/ A/A/A/ |"D" F2 z/ B/B/B/ |"B7" (c/B/)B BB/B/ | %23
+"Em""D/A" GG[I:staff +1] !1!A,G, |"D7"[I:staff -1] (c>d"G" B2) |$"C#dim" (!4!_B2 AG |"D7" D4) | %27
+"G" G2 DD |"D" (A2 D2) |"G" ([DB]2"C" G/>A/B/>c/ |$"D" [FA]4) |"G" ([GB]2 ^c x | d>B G2) | %33
+"D" ([DA]2 _B=B | c4) |$"G" (dBdB) |"Am" (AcAc) |"G" G2"D" DD |"G" B,4 | (dBdB) |$"Am" (AcAc) | %41
+"G" G2"D" (F/>G/A/>B/) |"G" G z"D7" [DA] z |"G" [DG] z"D7" [DA] z |"G" [DG] z z2 |] %45
+V:2
+ !1!!2![G,B,]!5!D,G,D, | !3!F, D, F, D, | G,D,!3!E,C, | D,A,F,D, | !2!G,D,!1!A,!2!^A, |$ %5
+ !1!B,D,B,D, | F,D,G,^G, | A,D,F,D, | [G,B,]2 [G,B,]2 | [C,E,]4 |$ D,B,A,D, | B,2 D, G, | %12
+ D,A,F,D, | G,2 F,D, | [A,^C]4 |$ D,2 A,D, | [B,D]2 [^A,F]2 | [B,F]4 | D,B,, E,2 | ^C3 z |$ G,4 | %21
+ D, A,, D, F, | A,4 | x2"Am"[I:staff -1] cc |[I:staff +1] F,D, G,2 |$ [C,^E,_B,]4 | D,C=B,A, | %27
+ !1!!2![G,B,]D,G,D, | F,D,F,D, | G,D,E,C, |$ D,A,F,D, | G,D,A,^A, | B,D,B,D, | F,D,G,^G, | %34
+ A,D,F,D, |$ [G,B,]2 [G,B,]2 | [C,E,]4 | D,G,A,!3!F, | !1!G,!2!D,!4!B,,!1!D, | G,,4 |$ [C,E,]4 | %41
+ D,B,A,D, | [G,B,] z [F,C] z | [G,B,] z [F,C] z | [G,B,] z z2 |] %45
+V:3
+ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | %19
+ A,/E,/ A,/ x/ |$ ^C, C, | x2 | ^D, D, | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | %34
+ x2 |$ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 |] %45
+

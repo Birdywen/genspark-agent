@@ -1,0 +1,39 @@
+X:1
+T:On wings of song Music by felix mendelssohn
+C:Mendelssohn
+%%score { 1 | 2 }
+L:1/8
+Q:3/8=90
+M:6/8
+I:linebreak $
+K:Emin
+V:1 treble 
+V:2 bass 
+V:1
+ (.!1!D | !5!B2 B Bcd | d3 F2) (!1!D | !3!A2 A ABc | B3) z3 |$ !3!B>BB Bcd |"Em" d3 E2 (E | %7
+"A7" AEF G2 G | F3) z2 d |$ dAA BAB | c3 e2 A | d2 A BAB | c3- c z (!3!c |$ c2 c edc | %14
+ B3{/dc} B2) (!3!B | B2 B dcB | A3- A) z !1!D |$"G" !5!B2 B Bc(d |"D" d6- | %19
+ d3"D7" [DF]) z"E" (!2!^G |"Am" A2 A"D7" c2 B |$ G3) z2 (D | B2 B Bcd | d3 F2) z | (AAA ABc |$ %25
+ B3) z2 (!4!d |"D" c2 c edc |"B""Em" B3{/d} B) z (!3!B |"Am""D7" A2 A !4!cBA |$"G""G7" d6 | %30
+"Edim" ^c3)"Cm6" (=c3 |"D" A3"G" B3 |"Am7" c3-"D7" c2 F |"G" G3) z3 |$ d6 | %35
+!>(!"Am""D" c3- c2 B!>)! | B6- | B2 z B2 z | [B,G]2 z z2 |] %39
+V:2
+ z | !5!G,,!2!D,!1!G, G,,D,G, | A,,D,F, D,F,A, | D,F,A, D,F,A, | G,,D,G, G,,D,G, |$ %5
+w: |||||
+ G,,D,G, G,,D,G, | G,,E,B, G,,E,B, | A,,E,G, A,,E,A, | D,F,A, D,F,A, |$ D,=F,A, D,F,A, | %10
+w: Dm * * * * *|Am * * * * *|Dm * * * * *|Am’? * * * * *|D? * * Am * *|
+ A,,E,A, A,,E,A, | D,=F,A, D,F,A, | A,,E,A, G,A,G, |$ F,A,F, E,A,E, | ^D,A,B, D,A,B, | %15
+w: B? * * * * *|Em * * G * *|Am * * D * *|||
+ E,G,B, =D,G,B, | C,E,G, D,F,A, |$ G,,D,G, G,,D,G, | A,,D,F, D,F,A, | D,F,A, C z B, | %20
+w: |||||
+ [A,C]3 [D,F,C]3 |$ G,B,(D [G,B,D]2) z | G,,D,G, G,,D,G, | A,,D,F, D,F,A, | D,F,A, D,F,A, |$ %25
+w: |||||
+ G,B,D G,B,D | E,G,C F,A,C | ^D,A,B, E,G,B, | C,E,A, D,F,A, |$ B,,D,G, !3!=F,G,B, | %30
+w: |||||
+ E,G,_B, _E,G,A, | D,F,A, G,,D,G, | A,,E,G, [D,F,]2 z | G,,D,!1!G, !2!B,!1!G,D, |$ %34
+w: ||||
+ G,D,B,, G,,B,,D, | A,,E,G, [D,F,]2 z | G,B,D !3!B,DB, | G,!1!B,!2!G, !4!D,!1!G,(D, | %38
+w: ||||
+ [G,,D,]2) z z2 |] %39
+w: |
+

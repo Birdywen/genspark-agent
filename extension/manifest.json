@@ -12,13 +12,10 @@
     "https://www.genspark.ai/*",
     "https://*.google.com/*",
     "https://*.github.com/*",
-    "https://*.stackoverflow.com/*",
     "https://*.youtube.com/*",
     "https://*.wikipedia.org/*",
-    "https://*.amazon.com/*",
     "https://*.twitter.com/*",
     "https://*.x.com/*",
-    "https://*.reddit.com/*",
     "https://*.openai.com/*",
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
@@ -34,7 +31,9 @@
     "https://agent.opus.pro/*",
     "https://*.opus.pro/*",
     "https://flow.viasocket.com/*",
-    "https://*.viasocket.com/*"
+    "https://*.viasocket.com/*",
+    "https://take-a-piano-sheet-music-break.com/*",
+    "https://*.newzik.com/*"
   ],
   "background": {
     "service_worker": "background.js"

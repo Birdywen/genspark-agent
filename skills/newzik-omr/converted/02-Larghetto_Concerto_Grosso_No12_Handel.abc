@@ -1,0 +1,29 @@
+X:1
+T:From concerto grosso no.12. Music by george frideric handel
+C:Haendel
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Cmin
+V:1 treble 
+V:2 bass 
+V:3 bass 
+V:1
+"^Moderato""Eb" !5!B2 !3!G |"Cm" !2!E3 |"Fm" !5!c"Bbsus4" !2!!1![EF]"Bb7" G/A/ |"Eb" G3 | !5!g3 | %5
+"Ab" c3 |$"Fm" [ca]2 [cf] |"Bb" [Bd]2"Cm" e |"Bb" f"Eb" g"Cm" e |"F" c =A"Gm" B | %10
+"Eb" e"Fsus4" c3/2 B/ |"Bb" B3 :|"Gm" b3 |$"Cm" e3 |"Fm" a2 !3!f |"Bb" !1!d3/2 !3!c/ !2!B | %16
+"Eb" g e c |"Fm" a"G" g"Fm" f |"Fm7" e/"Gsus4"d/ d3/2 c/ |"Cm" c3 |$"C" !4!B3 |"Fm" A"Gm" G"Fm" F | %22
+"Eb" G"Cm" e"F" =A |"Bb" B3 |"Ab" a2"Fm" !1!c |"Bb" !2!B2"Cm" e |"Ab" G/F/ F3/2 E/ | %27
+"Eb" !fermata!E3 |] %28
+V:2
+ !5!E, !3!G, !2!B, | !1!C !5!C, !1!G, | !2!!4![A,C] !3!B, [B,D] | E3 | E E, B, | C E, A, |$ %6
+ F, G, A, | B, B,, C, | D, E, [C,G,] | =A, F, G, | [E,G,] [F,B,] [F,=A,] | B, F, B,, :| %12
+ z !4!G, !2!B, |$ C C, E, | C3 | B, C D | E2 E, | [F,C] [G,=B,] [A,C] | [F,C] [G,C] [G,=B,] | C3 |$ %20
+ !2!G, !4!=E, !5!C, | F, B, A, | G, [C,G,] F, | F,3 | [C,E,] A, F,/E,/ | D, B,, C, | %26
+ [A,C] B, [B,,A,] | !fermata![E,G,]3 |] %28
+V:3
+ x3 | x3 | x3 | E, G, B, | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 :| x3 |$ x3 | F, G, A, | x3 | %16
+ x3 | x3 | x3 | C, E, C, |$ x3 | x3 | x3 | D, C, B,, | x3 | x3 | x3 | x3 |] %28
+

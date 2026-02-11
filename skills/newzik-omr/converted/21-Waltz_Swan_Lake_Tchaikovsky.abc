@@ -1,0 +1,31 @@
+X:1
+C:Tchaikovsky
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Bmin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:1
+"^Moderato" z2 (!3!F3 E | G4 F2) | z2 (F3 E | G4 F2) |"A" z2 (!3!E3 ^D | F4 E2) |$ z2 (^D2 E2 | %7
+ A6) | z2 (!3!F3 E | G4 F2) | z2 (F3 E | G4 F2) |$ z2 (!3!E3 F |"E" D2 F3 !3!E | !1!D2 !3!C3 ^B, | %15
+ C) z z !3!C!1!D!2!E | z2 (!3!f3 e | g4 f2) |$ z2 (f3 e | g4 f2) |"A7" z2 (e3 ^d | f4 e2) | %22
+ z2 (^d2 e2 | a6) |$ z2 (f3 e | g4 f2) | z2 (f3 e | g4 f2) |$"A" z2 e3 f |"E" d2 f3 e | %30
+"A" d2"B" c3 B | A2 z2 z2 |"A7" (B6- | B2 c3 A |$"F#m" A2) (c3 A | A2) (c3 A |"A7" A2) (c3 A | %37
+ A2) (!1!B3 x |"D" d2 e3 f | (c4 d2)) |$"Em" e2 f3 g | (^d4 e2) |"D" (^e2 !2!f2 b2) | %43
+"B7" (^e2 f2 b2) |$"Am7" (f2 g2 =c'2) |"A7" (f2 g2 ^c'2) |"D" d'2 !>!d3 !>!d | [FAd]6 |] %48
+V:2
+ !3!D, !1!!2![F,A,] [F,A,] | !5!A,, A, [F,A,] | D, [F,A,] [F,A,] | A,, A, [F,A,] | %4
+ C, [G,A,] [G,A,] | A,, [G,A,] [G,A,] |$ C, [G,A,] [G,A,] | A,, [G,A,] [G,A,] | D, [F,A,] [F,A,] | %9
+ A,, A, [F,A,] | D, [F,A,] [F,A,] | A,, A, [F,A,] |$ C, [E,A,] [E,A,] | B,, [E,^G,] [E,G,] | %14
+ A,, [E,A,] [E,A,] | !5!A,,/!1!A,/!2!B,/ z/ z | D, [F,A,] [F,A,] | A,, A, [F,A,] |$ %18
+ D, [F,A,] [F,A,] | A,, A, [F,A,] | C, [G,A,] [G,A,] | A,, [G,A,] [G,A,] | C, [G,A,] [G,A,] | %23
+ A,, [G,A,] [G,A,] |$ D, [F,A,] [F,A,] | A,, A, [F,A,] | D, [F,A,] [F,A,] | A,, A, [F,A,] |$ %28
+ C, [E,A,] [E,A,] | B,, [E,^G,] [E,G,] | A,, E, !1!A, | !2!C !1!A, E, | G, [CE] [CE] | %33
+ G, [CE] [CE] |$ F, [A,C] [A,C] | F, [A,C] [A,C] | E, [G,A,C] [G,A,C] | E, [G,A,C] [G,A,C] | %38
+ D, [F,A,] [F,A,] | D, [F,A,] [F,A,] |$ G, [B,E] [B,E] | G, [B,E] [B,E] | A, [DF]2 | A, [^DF]2 |$ %44
+ A, [EG]2 | A, [EG]2 | !tenuto![DF] !>![DF]3/2 !>![D,A,]/ | !>![D,A,]3 |] %48
+

@@ -1,0 +1,32 @@
+X:1
+T:Rondo in d minor From “abdelazer”. Music by henry purcell
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Dmin
+V:1 treble 
+L:1/16
+V:2 bass 
+V:1
+"^Moderato""Dm" !1!D4 !3!F4"A" !1!A4 |"Gm" !2!d2ef gf!3!e!1!d"A" !2!^c4 |"Dm" a2df afd2"Gm" b4 | %3
+"C" g2ce gec2"F" a4 |$"_L.""Bb" f2Bd fdB2"Gm6" g4 |"A" e2A^c ecA2"Dm" f4 | %6
+"Gm" !3!efed"A" ^c2f2 efed |"Dm" !1!A2!3!d2"A" ^cded"Dm" d4 ::$"F" !1!F4 !3!A4"C" !1!c4 | %9
+"Bb" !2!f2ga bagf"C" e2fg |"F" a2ba"C" g2ag"Dm" f2 !1!FG |"F" A2BA"C" G2AG"Dm" F2 !5!fe |$ %12
+"Bb" d2e"Dm7"d c2dc"Gm" B2gf |"C" e2fe"C7" d2ed"F" c2ag |"Dm" f2gf"C" e2fe"Gm" d2g2 | %15
+"F" c2f2"C" efgf"F" f4 :|$"Dm" !1!D4 F4"A" A4 |"Gm" d2ef gfed"A" ^c4 |"Dm" a2df afd2"Gm" b4 | %19
+"C" g2ce gec2"F" a4 |$!dacoda!"Bb" f2Bd fdB2"Gm6" g4 |"A" e2A^c ec"Dm"A2 f4 | %22
+"Gm" efed"A" ^c2f2"Gm6" efed |"Dm" A2d2"A" ^cded"Dm" d4 |$"Am" !2!=c2>d2 cde2 fedc | %25
+"E" =B2>c2 Bcd2 edcB |"Am" c2>d2 cde2"Dm" fedc |"E" =B2 c4 B2"Am" A4 |$"A" !1!e2>f2 efg2 agfe | %29
+"Dm" f2>g2 fga2"Gm" bagf |"Gm" efed"A" ^c2f2"Gm6" efed |"Dm" f2>g2"Gm" g3f/g/"A" a4 ||$ %32
+!D.C.!"A" e2A^c ecA2"Dm" f4 |"Gm6" efed"A" ^c2f2"Gm" efed |"Dm" A2d2"A" ^cded"Dm" d4 |] %35
+V:2
+ !3!!5![D,F,]2 !1!C | !2!B, !4!G, !3!A, | !1!!5![F,D]2 !1!!4![G,D] | !2!!5![E,C]2 !1!!4![F,C] |$ %4
+ [D,B,]2 [E,B,] | [^C,A,]2 [D,A,] | G, A, B, | A, [A,,G,] [D,F,] ::$ !1!!2![F,A,]2 E, | %9
+ D,2 [C,G,]/ z/ | [F,C] [E,C] [D,A,]/ z/ | [F,C] [E,C] [D,A,]/ z/ |$ [B,D] [A,D] [G,F]/ z/ | %13
+ [CE] [B,E] [A,F]/ z/ | F C B, | C C, [F,A,] :|$ [D,F,]2 C | B, G, A, | [F,D]2 [G,D] | %19
+ [E,C]2 [F,C] |$ [D,B,]2 [E,B,] | [^C,A,]2 [D,A,] | G, A, B, | A, [A,,G,] [D,F,] |$ A,2 A, | %25
+ ^G,2 E, | A,2 D, | [E,^G,]2 A, |$ [A,,E,]2 ^C, | D,2 G, | G, A, B, | %31
+ D,/=C,/ B,,/D,/ [A,,^C,E,] ||$ [^C,A,]2 [D,A,] | G, A, B, | A, [A,,G,] [D,F,] |] %35
+

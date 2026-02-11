@@ -1,0 +1,62 @@
+X:1
+T:The wild horseman From album for the young, op. 68. Music by robert schumann
+C:Schumann
+%%score { 1 | 2 }
+L:1/8
+Q:3/8=90
+M:6/8
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 treble 
+V:1
+ .!1!E |"Am" !3!A.EA c.!1!A.!2!c | (!4!ec)"^Dm Am".!5!f .e.cA | (!4!B^G)"^Am E".c BGE | %4
+w: ||||
+"Am" AEc B z E |$"Am" A.E.A .cA.c | (ec)"Dm".f"Am" .e.cA |"E" (B^G)"Am"c"E" B.GE | %8
+w: ||||
+"Am" A.E"E"^G"Am" A z E |$ .AE.A .cA.c |"D/A" (ec)"Dm".f"Am" .e.c.A |"E""D/A" (B^G)"Am".c"E" BG.E | %12
+w: ||||
+"Am" .A.E.c"E" B z E |$"Am" A.EA .cA.c | (ec)"Dm".f"Am" .e.cA |"E" (!4!B^G)"Am"c"E" B.G.E | %16
+w: ||||
+"Am" A.E"E".^G"Am" A z"_SP" z |$"F" .[FA] z z .[FA] z z | [FA]2 [FA] [FA] z z | %19
+w: ||sf * *|
+"C" [Ec]2 [Ec] [Ec] z z |"F" .[FA] z .F"C" [EG] z z |$ .[FA] z z .[FA] z z | [FA]2 [FA] [FA] z z | %23
+w: UA * *||||
+ [Ec]2 [Ec] [Ec] z z | .[FA] z G F z .E |$ .A.E.A .c.A.c | (ec).f .e.cA | (B^G)c B.G.E | %28
+w: |||||
+ A.Ec .B z E |$"Am" A.EA .cA.c | (ec)"Dm".f"Am" .e.c.A |"E" (B^G)"Am"c"E" BGE | %32
+w: ||||
+"Am" A.E"E"^G"Am" .A z |] %33
+w: |
+V:2
+ z | !3!!5![A,C] z z [A,C] z z | [A,C]2 D [A,C] z z |[K:bass] [E,^G,]2 A, [E,G,] z z | %4
+w: ||||
+w: ||||
+ A, z .A, .[E,^G,] z z |$[K:treble] .[A,C] z z .[A,C] z z | [A,C]2 D A, z z | %7
+w: |||
+w: |||
+[K:bass] [E,^G,]2 A, [E,G,] z z | C z .B, .[A,C] z z |$[K:treble] .[A,C] z z .[A,C] z z | %10
+w: |||
+w: |||
+ [A,C]2 D [A,C] z z |[K:bass] [E,^G,]2 A, [E,G,] z z | A, z A, .[E,^G,] z z |$ %13
+w: |||
+w: |||
+[K:treble] .[A,C] z z .[A,C] z z | [A,C]2 D [A,C] z z |[K:bass] [E,^G,]2 A, [E,G,] z z | %16
+w: |||
+w: |||
+ C z B, .[A,C] z .!5!C, |$ .!2!F,C,F, .!1!A,!4!F,.A, | (!1!C!4!A,).D C.!3!A,.F, | %19
+w: |F * * * * *||
+w: |||
+ (!2!G,E,).A, G,E,C, | F,C,A, .[C,G,] z .C, |$ .F,C,F, .A,F,.A, | (CA,).D .CA,F, | %23
+w: |F * C F *|||
+w: ||Am * * * * *|* Dm * Am * *|
+ (G,E,).A, G,E,.C, | F,C,E, F, z z |$[K:treble] .[A,C] z z .[A,C]"_Th" z z | [A,C]2 D [A,C] z z | %27
+w: ||||
+w: E * Am E * *|Am * * *|||
+[K:bass] [E,^G,]2 A, [E,G,] z z | A, z .A, .[E,^G,] z z |$[K:treble] .[A,C] z z .[A,C] z z | %30
+w: |||
+w: |||
+ [A,C]2 D [A,C] z z |[K:bass] [E,^G,]2 A, [E,G,] z z | C z .B, .[A,C] z |] %33
+w: |||
+w: |||
+

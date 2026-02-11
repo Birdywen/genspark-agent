@@ -1,0 +1,23 @@
+X:1
+T:On with the motley From the opera “i pagliacci”. Music by ruggiero leoncavallo
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=90
+M:2/4
+I:linebreak $
+K:Dmin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+"^Slowly""Dm" !5!d2 (^c>F) | !3!A2 AA/A/ |"Bb" !4!A2"Bb7" (_A>D) |"Dm" F2 F2 |$ z (!2!E F>G | %5
+ A2 A)A |"F7" A"C"!2!ABc |"Bb" [FBd]4 |$"F" ([Fcf]2 e>e |"Eb" [B_e]3) !4!d |"D" ^cdA=c | %11
+"Gm" c2 B2 |$"B#m" (!3!B2 F>G |"F" A2 f>)(!2!c |"C7" !4!d>E EE |"F" F4) | %16
+V:2
+ z [F,A,] | z [F,A,] | !2!!4!!5![D,F,B,] [F,B,D]/ z/ | z [F,A,] |$"Gm"[I:staff -1] B,2 | %5
+"F#m7b5" E2 |[I:staff +1] [F,C_E]2 | !1!B, F,/B,,/ |$ A,, [A,C] | G,, [G,B,] | [^F,A,] [D,F,C] | %11
+ [G,D]2 |$ [_D,F,B,]2 | [C,F,A,]2 | [C,G,B,]2 | [F,A,] !2!C,/!3!A,,/ | %16
+V:3
+ !5!D,2 | D,2 | x2 | D,2 |$ G,, G, | [^F,C]2 | x2 | x2 |$ x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | %16
+

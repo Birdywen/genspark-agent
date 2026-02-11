@@ -1,0 +1,21 @@
+X:1
+T:Pızzıcato From the ballet “sylvia”. Music by léo delibes
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=90
+M:4/4
+I:linebreak $
+K:Amin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:1
+ .!3!E | G.D.F.C .!3!E.!1!G.Ac |"G7" .!1!B2 .d2 .g2"_simile" z A | !5!cGBF !3!A!1!Bdf |$ %4
+ e2 e2 g2 z E | GDFC EGAc |"B" B2 ^f2 b2 z !2!B |$"Em""B" !5!e!1!GA!5!c BE^FG | %8
+!<(!"Em" EG^F"^N.C."G!<)! E!>(!!5!G!4!=F!3!E!>)! | GDFC EGAc |$"G" B2 d2 g2 z A | cGBF ABdf | %12
+"^Cy" e2 g2 c'2 z !1!G | %13
+V:2
+ z/ | !3!C, .!1!G, .!5!G,, .G, | .D, .[F,G,] .[F,G,] z | D, [F,G,] G,, [F,G,] |$ %4
+ C, [E,G,] [G,C] z | C, G, G,, G, | ^D, [A,B,] [A,B,] z |$ E, [G,B,] B,, [A,B,] | E, [G,B,] z2 | %9
+ C, G, G,, G, |$ D, [F,G,] [F,G,] z | D, G, G,, G, | C, [E,G,] [E,G,] z | %13
+

@@ -1,0 +1,36 @@
+X:1
+T:Air on the ‘g’ string Music by johann sebastian bach
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=90
+M:4/4
+I:linebreak $
+K:Bmin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+|:"D" !1![DF]8- | [DF]8- |"G" [DF]2 (!5!B!3!G"E" !1!E!3!DC!4!D |"A" !3!C3 B, A,4) |"Am" [=CA]8- |$ %5
+"B7" [CA](!4!F=CB, !3!E^DAG) |"Em" !5!G8- |"A7" G(!4!EB,A, DCGF) |"D" [DF]6 (!3!^GA |$ %9
+"Bm" D2) (D/E/F)"E7" (FE)(ED) |"A" (!3!CB,)"D" (B,/C/D)"E7" (D2 CB, |"A" A,8) :|$ %12
+ ((!3!C4- CD/C/ B,/C/A,) | [=CA]6) (!2!C2"Am" | B,2 B2- BAGF | F2 G4) !1!B,2"Em" |$ %16
+"C#dim" !2!^A,!1!B, !3!C2-"Em" C!1!D !2!E2- |"A#dim" EF G4 (!3!F2 | %18
+"Bm" ED!3!CB,"Em6" CD/E/"F#" DC |"Bm" B,8) |$"Edim" (!1!D4- DFED | B6) (A^G | %22
+"A" FE"F#m"AA,"Bm""E" B,3 C/D/ |"A" C3 B,) A,4 |$"D" !1!D6 (FE) |"E" E6 (GF) |"F#" F6 (AG) | %27
+"Em" [EG]8 |$"A" (!1!A,4- A,!2!CEG |"D" G!1!E"D7" !2!F4) GA |"G" D4-"D7" D(!2!FA=c) | %31
+"G" (=c2 B4) !3!D2 |$"A7" (CE"G" G4) (B,2 |"A7" A,2) !3!EF/G/"D" G F2 (E | %34
+"A" D/C/B,)"G" (B,C)"A7" C3 D |"D" !fermata!D8 |] %36
+V:2
+|: !1!D, D, C, C, | B,, B,, A,, A,, | G,, G,, !3!^G,, G,, | A,, A,, =G,, G,, | F,, F, E, E, |$ %5
+ ^D, D, B,, B,, | E, E, D, D, | C, C, A,, A,, | D, D, C, C, |$ B,, A, ^G, E, | A, D, E, E, | %11
+ A,, !1!E, !3!C, !5!A,, :|$ !1!A, A, G, G, | F, F, E, E, | ^D, D, B,, B,, | E, E, =D, D, |$ %16
+ C, C, B,, B,, | ^A,, A,, C, C, | B,, D, E, F, | B,, F, D, B,, |$ ^G,, ^G, F, F, | ^G,4 | %22
+ C, F, D, E, | A,, E, C, A,, |$ F,, F,, G,, G,, | ^G,, G,, A,, A,, | ^A,, A,, B,, B,, | %27
+ E, E, D, D, |$ C, C, A,, A,, | D, D, =C, C, | B,, B,, A,, A,, | G,, D, G, F, |$ E, E, D, D, | %33
+ C, A,, D, G, | A, G, A, [A,,G,] | !fermata![D,F,]4 |] %36
+V:3
+|: x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 :|$ x4 | x4 | x4 | x4 |$ x4 | x4 | %18
+ x4 | x4 |$ x4 | E, E, D, D, | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | %35
+ x4 |] %36
+

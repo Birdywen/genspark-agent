@@ -1,0 +1,21 @@
+X:1
+T:Prelude Op. 28, no.7. Music by frédéric chopin
+C:Chopin
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Emin
+V:1 treble 
+V:2 bass 
+V:1
+"^Moderato" (!1!D | !4!!2![FB]/>c/ !3!!2![FA] [FA]"D" | [FA]2) (!5!e | %3
+ !3!!2![^A^c]/>!4!d/ !1![Bg] [Bg] |$ [Bg]2) (!4!B | !2!^G/>A/ [Ec] [Ec]"Am" | [Ec]2) (!3!F | %7
+ !3!!1![CF]/>G/ [B,B] [B,B] |$ [B,B]2) D | [FB]/>c/ [FA] [FA]"D" | [FA]2 (e | %11
+ [^A^c]/>!4!d/ !5!!1![db] [db] |$ !fermata![db]2) (!2!B"E" | B/>c/ [Ae] [Ge]"Am" | %14
+ [Fe]2) (!2!F"D" | !3!A/>!1!G/ [Bg] [Bg] | [Bg]2) |] %17
+V:2
+ z | D, C C | C2 z | G,, G, G, |$ [G,D]2 z | D, A, A, | [D,A,]2 z | G,, D, D, |$ [D,G,]2 z | %9
+ D, C C | C2 z | G,, G, G, |$ [E,^G,]2 z | A,, [A,C] [A,C] | [D,C]2 z | G,, [G,F] [G,F] | [G,D]2 |] %17
+

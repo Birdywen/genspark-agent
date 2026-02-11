@@ -1,0 +1,41 @@
+X:1
+T:Chorus of the hebrew slaves From the opera “nabucco”66. Music by giuseppe verdi
+C:Verdi
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=100
+M:4/4
+I:linebreak $
+K:Dmin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+"^Moderato" !4!A>G |"F" F2 C>c c2 A>!2!F |"C7" (3FEG B4 C>C |"F" C2 !3!F>A"Bb" A>GA>G | %4
+"C7" F2 E2 z2 !4!A>G |$"F" F2 C>c c2 A>F |"C7" (3FEG B4 C>C |"F" (3CFA"Bb" (3cBG"F" F2"C7" (3EAG | %8
+"F" F6 !3!A>A |$"^CS""G" G2 (3!4!=BAG F2 (3!4!AGF |"C/C" E>F G4 !2!A>=B | %11
+"G" c2 =B>A (3!4!AG^F (3AG=F |"C7" E>!2!D !1!C4 !4!A>G |$"F" F2 C>c c2 A>F |"C7" (3FEG B4 C>C | %15
+"F" (3CFA"Bb" (3cBG"F" F2"C7" (3EAG |"F" F6"_tS" !3!c>c |$"C" [ce]2 [ce]>[ce] [ce]2 (3edc | %18
+"G7" [G=B]2 (3!3!ABc"C" [EG]2 (3z [EG][EG] |"G7" [DF]2 F>[DF] [DF]2 [DF]>[DF] | %20
+"F" [FA]2"C" [EG]2 z2"_St" !1!G>G |$ !5!!3![ce]2 e3/2 z/ [ce]2 (3edc | %22
+"^G’""C/E" [G=B]2 (3!3!ABc [EG]2 (3z [EG][EG] |"^G’" [DF]2 [DF]>[DF] [DF]2 (3[DF]AG | [CE]6 C>C |$ %25
+"^Lo""C7" B2 B>B"Fm" _A2 A>A |"C" G4 C z C>C |"C7" B2 B>B"Fm" _A2 A>A |"C" G2 C4"C7" =A>G | %29
+"F" F2 C>c c2 A>F |$"C7" (3FEG B4 C>C |"F" (3CFA"Bb" (3cBG"F" F2"C7" (3EAG | %32
+"F" F z !2!A>!<(!A A2 A>!<)!A |"_St""Bb""Bdim" d4-"C7" (3dcB (3ABG |$"F" F z A>!<(!A A2 A>!<)!A | %35
+"Bb""Bdim" d4-"C7" (3dcB (3ABG |"F" F z A>A A2 A>A |!>(! [FA]8- | [FA]2!>)! z2 z4 |] %39
+V:2
+ !2!!5![C,B,] | !1!!3![F,A,]2 [F,A,]2 | [C,G,]2 [C,E,]2 | A, F, [B,,D,] G, | %4
+ !5![C,B,]2 C, [C,B,] |$ [F,A,]2 [F,A,]2 | [C,G,]2 [C,E,]2 | [A,,F,] [B,,D,] C, [C,B,] | %8
+ [F,A,] C, F, z |$ [E,C] [E,G,] [D,=B,] [D,F,] | [C,G,]2 F,2 | G, G,,2 [G,,F,] | %12
+ [C,E,]2 C, [C,B,] |$ [F,A,]2 [F,A,]2 | [C,G,]2 [C,E,]2 | [A,,F,] [B,,D,] C, [C,B,] | %16
+ [F,A,] C, F, z |$ [C,G,]2 [C,G,]2 | [G,,F,] [G,,F,] C, G, | [G,,F,]2 [G,,F,]2 | C,2 G, E, |$ %21
+ [C,G,]2 [C,G,]2 | [G,,F,] [G,,F,] C, G, | [G,,F,]2 [G,,F,]2 | C, G,, C, z |$ [C,E,]2 [C,F,]2 | %26
+ [C,E,G,] C, C, z | [C,E,]2 [C,F,]2 | [C,E,G,] C, C, [C,B,] | [F,A,]2 [F,A,]2 |$ %30
+"_PI" [C,G,]2 [C,E,]2 | [A,,F,] [B,,D,] C, [C,B,] | [F,A,] E, D, C, | F,3 z |$ [F,A,] E, D, C, | %35
+ F,3 z | [F,A,] F, C, A,, | [F,,C,]4 | .F,, z z2 |] %39
+V:3
+ x | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | %19
+ x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | B,, =B,, C, C, |$ x4 | %35
+ B,, =B,, C, C, | x4 | x4 | x4 |] %39
+

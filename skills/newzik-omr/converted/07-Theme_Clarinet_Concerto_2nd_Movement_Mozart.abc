@@ -1,0 +1,25 @@
+X:1
+C:Mozart
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:none
+V:1 treble transpose=-2 nm="From Clarinet Concerto (2nd Movement)"
+L:1/8
+V:2 bass transpose=-2 
+V:3 bass transpose=-2 
+V:1
+[K:Amin]"^Moderato slow""C" !2!!1![EG]2"G" !4!!1![Ec]3 e |"G7" ed c4 | %2
+"C" (!2!!1![EG]3 !1!c!3!e!5!g) |"G7" gf"C" e4 |$"G" !2!d3 g"C" eg |"G" d3 g"Am" Ae | %6
+"G" G4"D7" B>A |"G" G6 ::$"C" ([Ge]3 !5!d cB |"F" [FA]6) |"Dm" ([Af]3 !5!e dc |"G" [GB]6) |$ %12
+"Em" ([Bg]3 f ed |"F" cf"G7" f3 e) |"F" (!4!e/d/f/d/"C" c2"G" B2 |1"C" c6) :|2"C" [Ec]6 |] %17
+V:2
+[K:Amin] z/ G,/C/G,/ C |[I:staff -1] F"C" E2 |[I:staff +1] z/ G,/C/G,/ C | [G,B,] C !5!C,/!3!E,/ |$ %4
+ !1!B, !3!G, !1!C | B, G, [C,A,] | B, G, [D,^F,] | [G,B,]2 G,, ::$ !5!C, D, E, | F, A, F, | %10
+ D, E, F, | G, B, G, |$ E, F, G, | A, B, C | [F,A,] G, G, |1 C E, G, :|2 C [C,G,]2 |] %17
+V:3
+[K:Amin] !5!C,3 | [G,B,] C G,/E,/ | C,3 | x3 |$ x3 | x3 | x3 | x3 ::$ x3 | x3 | x3 | x3 |$ x3 | %13
+ x3 | x3 |1 x3 :|2 x3 |] %17
+

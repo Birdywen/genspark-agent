@@ -1,0 +1,19 @@
+X:1
+T:Für Elise Music by Ludwig van Beethoven
+C:Beethoven
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 bass 
+V:1
+"^Moderato""^N.C." (!5!e^d | e ^d e !2!B =d c | A2) z (!1!C!2!EA"Am" | B2) z (E^GB |$ %4
+ c2) z Ee^d"Am" | e^deB=dc | A2 z (CEA |$ B2) z (EcB | A4) (e^d"Am" | e^deB=dc |$ A2) z (CEA | %11
+ B2) z (E^GB | c2) z Ee^d"Am" | e^deB=dc | %14
+V:2
+ z2 | z6 | (!5!A,,!2!E,!1!A,) z z2 | (E,^G,B,) z z2 |$ (A,,E,A,) z z2 | z6 | (A,,E,A,) z z2 |$ %7
+ (E,^G,B,) z z2 | (A,,E,A,) z z2 | z6 |$ (A,,E,A,) z z2 | (E,^G,B,) z z2 | (A,,E,A,) z z2 | z6 | %14
+

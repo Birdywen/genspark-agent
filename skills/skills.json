@@ -9,7 +9,10 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "list_tabs", "eval_js", "js_flow", "async_task"
+        "list_tabs",
+        "eval_js",
+        "js_flow",
+        "async_task"
       ]
     },
     {
@@ -20,8 +23,12 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "opus-create-story-video", "opus-create-clip-video", "opus-check-status",
-        "opus-get-result", "opus-list-projects", "opus-upload-youtube"
+        "opus-create-story-video",
+        "opus-create-clip-video",
+        "opus-check-status",
+        "opus-get-result",
+        "opus-list-projects",
+        "opus-upload-youtube"
       ]
     },
     {
@@ -32,7 +39,12 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "aidrive-ls", "aidrive-mkdir", "aidrive-upload", "aidrive-download", "aidrive-delete", "aidrive-recent"
+        "aidrive-ls",
+        "aidrive-mkdir",
+        "aidrive-upload",
+        "aidrive-download",
+        "aidrive-delete",
+        "aidrive-recent"
       ]
     },
     {
@@ -43,7 +55,8 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "tutorial-generate", "tutorial-preview"
+        "tutorial-generate",
+        "tutorial-preview"
       ]
     },
     {
@@ -54,7 +67,11 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "omr-correct-musicxml", "omr-xml2abc", "omr-batch-convert", "omr-watch", "omr-auth"
+        "omr-correct-musicxml",
+        "omr-xml2abc",
+        "omr-batch-convert",
+        "omr-watch",
+        "omr-auth"
       ]
     },
     {
@@ -65,7 +82,9 @@
       "skillFile": "SKILL.md",
       "requiredMcp": [],
       "tools": [
-        "watchdog-restart", "watchdog-status", "watchdog-health"
+        "watchdog-restart",
+        "watchdog-status",
+        "watchdog-health"
       ]
     },
     {
@@ -75,13 +94,33 @@
       "path": "./megacmd",
       "skillFile": "SKILL.md",
       "references": "references/",
-      "requiredMcp": ["shell"],
+      "requiredMcp": [
+        "shell"
+      ],
       "tools": [
-        "mega-login", "mega-logout", "mega-whoami", "mega-df",
-        "mega-ls", "mega-cd", "mega-pwd", "mega-tree", "mega-find", "mega-du",
-        "mega-get", "mega-put", "mega-mkdir", "mega-cp", "mega-mv", "mega-rm",
-        "mega-export", "mega-import", "mega-share",
-        "mega-sync", "mega-backup", "mega-transfers", "mega-speedlimit"
+        "mega-login",
+        "mega-logout",
+        "mega-whoami",
+        "mega-df",
+        "mega-ls",
+        "mega-cd",
+        "mega-pwd",
+        "mega-tree",
+        "mega-find",
+        "mega-du",
+        "mega-get",
+        "mega-put",
+        "mega-mkdir",
+        "mega-cp",
+        "mega-mv",
+        "mega-rm",
+        "mega-export",
+        "mega-import",
+        "mega-share",
+        "mega-sync",
+        "mega-backup",
+        "mega-transfers",
+        "mega-speedlimit"
       ]
     },
     {
@@ -91,17 +130,37 @@
       "path": "./chart-visualization",
       "skillFile": "SKILL.md",
       "references": "references/",
-      "requiredMcp": ["shell", "filesystem"],
+      "requiredMcp": [
+        "shell",
+        "filesystem"
+      ],
       "tools": [
-        "generate_line_chart", "generate_area_chart", "generate_bar_chart",
-        "generate_column_chart", "generate_pie_chart", "generate_treemap_chart",
-        "generate_scatter_chart", "generate_histogram_chart", "generate_boxplot_chart",
-        "generate_violin_chart", "generate_radar_chart", "generate_funnel_chart",
-        "generate_sankey_chart", "generate_venn_chart", "generate_word_cloud_chart",
-        "generate_liquid_chart", "generate_dual_axes_chart", "generate_network_graph",
-        "generate_organization_chart", "generate_mind_map", "generate_fishbone_diagram",
-        "generate_flow_diagram", "generate_district_map", "generate_pin_map",
-        "generate_path_map", "generate_spreadsheet"
+        "generate_line_chart",
+        "generate_area_chart",
+        "generate_bar_chart",
+        "generate_column_chart",
+        "generate_pie_chart",
+        "generate_treemap_chart",
+        "generate_scatter_chart",
+        "generate_histogram_chart",
+        "generate_boxplot_chart",
+        "generate_violin_chart",
+        "generate_radar_chart",
+        "generate_funnel_chart",
+        "generate_sankey_chart",
+        "generate_venn_chart",
+        "generate_word_cloud_chart",
+        "generate_liquid_chart",
+        "generate_dual_axes_chart",
+        "generate_network_graph",
+        "generate_organization_chart",
+        "generate_mind_map",
+        "generate_fishbone_diagram",
+        "generate_flow_diagram",
+        "generate_district_map",
+        "generate_pin_map",
+        "generate_path_map",
+        "generate_spreadsheet"
       ]
     },
     {
@@ -111,11 +170,22 @@
       "path": "./ffmpeg-media",
       "skillFile": "SKILL.md",
       "references": "references/",
-      "requiredMcp": ["shell", "filesystem"],
+      "requiredMcp": [
+        "shell",
+        "filesystem"
+      ],
       "tools": [
-        "ffmpeg-convert", "ffmpeg-extract-audio", "ffmpeg-cut", "ffmpeg-compress",
-        "ffmpeg-resize", "ffmpeg-concat", "ffmpeg-gif", "ffmpeg-watermark",
-        "ffmpeg-screenshot", "ffmpeg-audio-adjust", "ffprobe-info"
+        "ffmpeg-convert",
+        "ffmpeg-extract-audio",
+        "ffmpeg-cut",
+        "ffmpeg-compress",
+        "ffmpeg-resize",
+        "ffmpeg-concat",
+        "ffmpeg-gif",
+        "ffmpeg-watermark",
+        "ffmpeg-screenshot",
+        "ffmpeg-audio-adjust",
+        "ffprobe-info"
       ]
     },
     {
@@ -125,10 +195,19 @@
       "path": "./sqlite-data",
       "skillFile": "SKILL.md",
       "references": "references/",
-      "requiredMcp": ["shell", "filesystem"],
+      "requiredMcp": [
+        "shell",
+        "filesystem"
+      ],
       "tools": [
-        "sqlite-query", "sqlite-create-table", "sqlite-import-csv", "sqlite-export-csv",
-        "sqlite-export-json", "sqlite-dump", "sqlite-restore", "sqlite-analyze"
+        "sqlite-query",
+        "sqlite-create-table",
+        "sqlite-import-csv",
+        "sqlite-export-csv",
+        "sqlite-export-json",
+        "sqlite-dump",
+        "sqlite-restore",
+        "sqlite-analyze"
       ]
     },
     {
@@ -138,11 +217,36 @@
       "path": "./pandoc-docs",
       "skillFile": "SKILL.md",
       "references": "references/",
-      "requiredMcp": ["shell", "filesystem"],
+      "requiredMcp": [
+        "shell",
+        "filesystem"
+      ],
       "tools": [
-        "pandoc-md-to-html", "pandoc-md-to-pdf", "pandoc-md-to-docx", "pandoc-md-to-epub",
-        "pandoc-md-to-pptx", "pandoc-html-to-md", "pandoc-docx-to-md", "pandoc-merge",
-        "pandoc-slides", "pandoc-ebook"
+        "pandoc-md-to-html",
+        "pandoc-md-to-pdf",
+        "pandoc-md-to-docx",
+        "pandoc-md-to-epub",
+        "pandoc-md-to-pptx",
+        "pandoc-html-to-md",
+        "pandoc-docx-to-md",
+        "pandoc-merge",
+        "pandoc-slides",
+        "pandoc-ebook"
+      ]
+    },
+    {
+      "name": "demucs-vocal",
+      "description": "AI 音频分离工具，基于 Meta Demucs (Hybrid Transformer)，支持人声/伴奏分离、多音轨分离，附带人声转乐器音色方案",
+      "source": "local",
+      "path": "./demucs-vocal",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [
+        "shell"
+      ],
+      "tools": [
+        "demucs-separate-vocals",
+        "demucs-separate-all",
+        "demucs-to-midi"
       ]
     }
   ]

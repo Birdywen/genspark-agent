@@ -1,0 +1,41 @@
+X:1
+C:Haendel
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/2=90
+M:2/2
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 bass 
+V:3 bass 
+V:1
+ (!2!C/>!3!D/ |:"C" !1!E2"G" !2!!1![DG]2 |"Am" [Ec]3)"G" (!1!D |"C" E/>F/G/>A/ G"F" F/E/) | %4
+"G" D3"C" !2!G |$"Am" (A/>B/ c B"F" A |"C" G2"Dm""G" F2) |"C" (!3!E/>D/"F"C/>F/"C" E"G7" D |1 %8
+"C" C3) (!2!C/>D/ :|2$"Am" C3) !5!e ||"G" [Gd] [Gc] ([GB]/c/ d) |"C" !1!G2"Dm""G7" !3!F2 | %12
+"C" !2!E (!4!F/E/)"G" D"D7" C |"G" G3 !5!d |$ A/>G/A/>B/ A A |[I:staff +1] D, E, ^F, G, | %16
+"C"[I:staff -1] c (B/A/)"G" B"D" A |"G" G3 !4!F |$"C" E/>D/E/>F/ E"G" D |"F" [CF]2"C" [CE]2 | %20
+"F" ([CA] G"G7" [B,F]"C" [CE] |"G" [B,D]3)"C" !2!G |"Am" A/>B/ c B"F" A |$"C" [CG]2"Dm7" F2 | %24
+"C" [CE]/>D/"F"C/>F/"C" E"G7" D |"C" C3 !5!e |"G" d c (B/c/ d) |"C" G2"Dm7""G7" F2 |$ %28
+"C" E (F/E/)"G" D"D7" C |"G" G3 d | A/>G/A/>B/ A A |"D" ^F E D"G" B |$"C" c (B/A/)"G" B"D" A | %33
+"G" G3 !4!F |"C" E/>D/E/>F/ E"G" D |"F" [CF]2"C" [CE]2 |"F" ([CA] G"G7" [B,F]"C" [CE] |$ %37
+"G" [B,D]3)"C" G |"Am" A/>B/ c B"F" A |"C" [CG]2"Dm7" F2 | %40
+"_rall.""C" [CE]/>D/"F"C/>!<(!F/"C" E"G7" D!<)! |"C" !fermata!C4 |] %42
+V:2
+ z |: !3!C,2 B,,2 | A,, E, A, !2!G, | !5!C, D, E, !2!!4![F,A,] | !1!!3![G,B,] D, G, [E,C] |$ %5
+ [A,C]2 [G,C] [F,C] | [E,C] C, [D,A,] [G,B,] | [C,G,] F, G, [G,,F,] |1 E,3 z :|2$ %9
+ E,3/2 C,[I:staff -1] z/[I:staff +1] !1!C || !2!B, !3!A, !1!G, !3!F, | %11
+ !1!!4![E,C] C, [D,A,] [G,B,] | !1!!3![C,G,]2 [B,,G,] [A,,^F,] | G,3 z |$"Am"[I:staff -1] E D E C | %15
+"D" ^F E D"G" !4!B |[I:staff +1] E, C, [D,G,] [D,^F,] | G, A, B, z |$ [C,G,]2 [C,G,] [B,,G,] | %19
+ A,, A, G, C, | F, E, D, C, | G, D, G,, z | C A, G, F, |$ E, C, D, G,, | C, F, G, [G,,F,] | E,3 C | %26
+ B, A, G, F, | [E,C] C, [D,A,] [G,B,] |$ [C,G,]2 [B,,G,] [A,,^F,] | G,3 z | %30
+"Am"[I:staff -1] E D E C |[I:staff +1] D, E, ^F, G, |$ E, C, [D,G,] [D,^F,] | G, A, B, z | %34
+ [C,G,]2 [C,G,] [B,,G,] | A,, A, G, C, | F, E, D, C, |$ G, D, G,, z | C A, G, F, | E, C, D, G,, | %40
+ C, F, G, [G,,F,] | !fermata![C,E,]4 |] %42
+V:3
+ x |: x4 | x4 | x4 | x4 |$ x4 | x4 | x4 |1 C,3/2 G,, C, x/ :|2$ %9
+ C, G,,[I:staff -1] z[I:staff +1] C || x4 | x4 | x4 | B,, A,, B,, G,, |$ C, B,, C, A,, | %15
+[I:staff -1] A2 x2 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x2 C"G7" B, | x4 | %25
+[I:staff +1] C,3/2 G,, C, C/ | x4 | x4 |$ x4 | B,, A,, B,, G,, | C, B,, C, A,, | %31
+ x3[I:staff -1] z |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x2 C"G7" B, | x4 | x4 |] %42
+

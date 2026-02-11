@@ -212,6 +212,142 @@ const result = await vg.processExistingVideo(
 
 在 opus.pro 页面，扩展面板点击按钮 → 弹出 Video Generator v3 对话框 → 选择模式/分类/比例/样式 → 输入 topic → Start。
 
+## 实战操作指南（Agent 手动执行）
+
+### 重要经验
+
+1. **Story Video credit 有限，12小时刷新**：绝对不要用测试内容创建项目，确认脚本和所有参数无误后再调用 `POST /long-take-videos`。每次创建都消耗 credit。
+2. **opus.pro token 极短命（5分钟）**：只有 `POST /long-take-videos` 创建视频那一瞬间需要。创建成功拿到 projectId 后，后续所有操作都不需要这个 token。
+3. **只有 Step 1 必须在 opus.pro tab 执行**（读 localStorage token）。Step 2-6 全部可以用 curl 或任意 tab 的 eval_js，不依赖浏览器页面。
+4. **CDN 轮询不需要任何认证**：`HEAD https://s2v-ext.cdn.opus.pro/agent/workspace/{id}/final_video.mp4` 纯公开 URL，404=生成中，200=完成。
+5. **OpusClip guest token（7天有效）** 用于字幕、缩略图、元数据等后续步骤，与 opus.pro 登录态完全独立。
+6. **任意 guest token 可查任意任务**：token 丢了（如 tab 关闭）重新 `grant-free-tool-credential` 获取一个新的即可继续查询所有 job。
+7. **async_task 的 code 里不能用 await**，必须用 `.then()` Promise 链返回结果。
+8. **generative-jobs 的压缩 jobType 是 `video-compression`**，不是 `compress`。
+
+### Step 1: 在 opus.pro tab 创建 Story Video
+
+必须在 opus.pro 的 tab 上用 eval_js 执行（需要该域的 localStorage token）：
+
+```
+Ω{"tool":"eval_js","params":{"code":"return (async () => { var token = localStorage.getItem('atom:user:access-token').replace(/^\"|\"$/g, ''); var orgId = localStorage.getItem('atom:user:org-id').replace(/^\"|\"$/g, ''); var userId = localStorage.getItem('atom:user:org-user-id').replace(/^\"|\"$/g, ''); var resp = await fetch('https://api.opus.pro/api/long-take-videos', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'X-OPUS-ORG-ID': orgId, 'X-OPUS-USER-ID': userId, 'Origin': 'https://agent.opus.pro', 'Referer': 'https://agent.opus.pro/' }, body: JSON.stringify({ prompt: SCRIPT_TEXT, ratio: '16:9', customStyle: false, styleText: 'STYLE_TEXT', voiceId: 'MM0375rv1dy8' }) }); var text = await resp.text(); return { status: resp.status, body: text.substring(0, 500) }; })();","tabId":OPUS_TAB_ID}}ΩSTOP
+```
+
+**返回格式**: `{"projectId":"02101512-8up","workflowId":"long-take:02101512-8up","videoId":"02101512-8up"}`
+注意：字段是 `projectId`，不是 `data.id`。
+
+### Step 2: async_task 轮询 CDN 等 200
+
+创建成功后立即启动后台轮询，不需要任何 token：
+
+```
+Ω{"tool":"async_task","params":{"code":"return fetch('https://s2v-ext.cdn.opus.pro/agent/workspace/PROJECT_ID/final_video.mp4', {method:'HEAD'}).then(function(r) { return {status: r.status, ready: r.status === 200}; });","condition":"result.ready === true","interval":30000,"timeout":1800000,"tabId":ANY_TAB_ID,"label":"轮询 Story Video PROJECT_ID"}}ΩSTOP
+```
+
+**注意**: 不能用 await，用 `.then()`。一般 10-20 分钟完成。tabId 可以是任意 tab（CDN 无 CORS 限制）。
+
+### Step 3: 获取 guest token
+
+视频完成后，后续全部用 curl 操作，不需要浏览器：
+
+```bash
+curl -s -X POST 'https://api.opus.pro/api/auth/grant-free-tool-credential' \
+  -H 'Content-Type: application/json' -H 'Origin: https://clip.opus.pro' | jq .
+```
+
+返回 `{data: {token, orgId, userId}}`。后续所有请求带以下 headers：
+```
+Authorization: Bearer TOKEN
+X-OPUS-ORG-ID: ORGID
+X-OPUS-USER-ID: ORGID
+Origin: https://clip.opus.pro
+```
+
+### Step 4: 并行启动字幕 + 缩略图 + 元数据
+
+**4a. 视频预检 + 创建字幕项目：**
+```bash
+# 预检（获取 durationMs）
+curl -s -X POST 'https://api.opus.pro/api/source-videos' \
+  -H 'Authorization: Bearer TOKEN' -H 'X-OPUS-ORG-ID: ORGID' -H 'X-OPUS-USER-ID: ORGID' \
+  -H 'Content-Type: application/json' -H 'Origin: https://clip.opus.pro' \
+  -d '{"videoUrl":"VIDEO_URL"}' | jq '{durationMs: .data.durationMs}'
+
+# 创建字幕项目
+curl -s -X POST 'https://api.opus.pro/api/clip-projects' \
+  -H 'Authorization: Bearer TOKEN' -H 'X-OPUS-ORG-ID: ORGID' -H 'X-OPUS-USER-ID: ORGID' \
+  -H 'Content-Type: application/json' -H 'Origin: https://clip.opus.pro' \
+  -d '{"videoUrl":"VIDEO_URL","brandTemplateId":"karaoke","importPref":{"sourceLang":"auto","targetLang":null},"curationPref":{"clipDurations":[],"topicKeywords":[],"skipSlicing":true},"uploadedVideoAttr":{"title":"video","durationMs":DURATION},"renderPref":{"enableCaption":true,"enableHighlight":true,"enableEmoji":false,"layoutAspectRatio":"landscape"},"productTier":"FREE.CAPTIONS"}'
+```
+返回 `{id: "PROJECT_ID"}` 或 `{projectId: "PROJECT_ID"}`。
+
+**4b. 启动缩略图 + 元数据（可与字幕同时启动）：**
+```bash
+# 缩略图
+curl -s -X POST 'https://api.opus.pro/api/generative-jobs' \
+  -H 'Authorization: Bearer TOKEN' ... \
+  -d '{"jobType":"thumbnail","sourceUri":"VIDEO_URL"}'
+
+# YouTube hashtag
+curl -s -X POST 'https://api.opus.pro/api/generative-jobs' ... \
+  -d '{"jobType":"youtube-hashtag","description":"TOPIC"}'
+
+# YouTube title
+curl -s -X POST 'https://api.opus.pro/api/generative-jobs' ... \
+  -d '{"jobType":"youtube-title","text":"TOPIC"}'
+
+# YouTube description
+curl -s -X POST 'https://api.opus.pro/api/generative-jobs' ... \
+  -d '{"jobType":"youtube-description","text":"TOPIC"}'
+```
+每个返回 `{data: {jobId: "..."}}`。
+
+### Step 5: 轮询等待完成
+
+**字幕项目**：`GET /clip-projects/{id}`，等 `stage === 'COMPLETE'`（2-5分钟）
+**generative-jobs**：`GET /generative-jobs/{jobId}`，等 `data.progress.status === 'CONCLUDED'`（~30秒）
+
+推荐用 async_task 并行轮询：
+```
+Ω{"tool":"async_task","params":{"code":"var headers = {Authorization:'Bearer TOKEN','X-OPUS-ORG-ID':'ORGID','X-OPUS-USER-ID':'ORGID',Origin:'https://clip.opus.pro'}; return Promise.all([fetch('https://api.opus.pro/api/clip-projects/CAPTION_ID',{headers:headers}).then(function(r){return r.json()}), fetch('https://api.opus.pro/api/generative-jobs/THUMB_JOB_ID',{headers:headers}).then(function(r){return r.json()})]).then(function(res){ return {captionStage:res[0].stage, thumbStatus:res[1].data&&res[1].data.progress&&res[1].data.progress.status, thumbUrls:res[1].data&&res[1].data.result&&res[1].data.result.generatedThumbnailUris, allDone:res[0].stage==='COMPLETE'&&res[1].data&&res[1].data.progress&&res[1].data.progress.status==='CONCLUDED'}; });","condition":"result.allDone === true","interval":15000,"timeout":600000,"label":"等待字幕+缩略图"}}ΩSTOP
+```
+
+元数据（title/desc/hashtag）通常 30 秒内完成，可先用 curl 单独查：
+```bash
+curl -s 'https://api.opus.pro/api/generative-jobs/JOB_ID' -H 'Authorization: Bearer TOKEN' ... | jq '.data.result'
+```
+
+**字幕完成后获取高清视频 URL：**
+```bash
+curl -s 'https://api.opus.pro/api/exportable-clips?projectId=CAPTION_ID' \
+  -H 'Authorization: Bearer TOKEN' ... | jq '.data[0] | {video: .uriForExport, thumbnail: .uriForThumbnail}'
+```
+返回字段：`uriForExport`（高清）、`uriForPreview`（预览）、`uriForThumbnail`（缩略图）。
+
+**压缩带字幕的视频：**
+```bash
+curl -s -X POST 'https://api.opus.pro/api/generative-jobs' ... \
+  -d '{"jobType":"video-compression","sourceUri":"EXPORT_VIDEO_URL"}'
+```
+注意 jobType 是 `video-compression`，不是 `compress`。轮询同上，完成后取 `result.compressedVideoUri`。
+
+### Step 6: viaSocket webhook 上传 YouTube
+
+```bash
+curl -s -X POST 'https://flow.sokt.io/func/scri42hM0QuZ' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "video_url": "压缩后的视频URL",
+    "thumbnail_url": "AI生成的缩略图URL",
+    "youtube_title": "标题 #Hashtag1 #Hashtag2 #Hashtag3",
+    "youtube_description": "描述文本\n\n#Hashtag1 #Hashtag2 ...",
+    "playlist_id": "PLYtnUtZt0Zn...",
+    "category_id": "28"
+  }'
+```
+
+返回 `{data: {success: true}, message: "Flow Queued"}`。YouTube 上传约 1-3 分钟完成。
+
 ## 已淘汰
 
 以下旧流程已被 v3 完全替代，不再使用:

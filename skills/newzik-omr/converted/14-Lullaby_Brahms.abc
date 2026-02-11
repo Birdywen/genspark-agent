@@ -1,0 +1,22 @@
+X:1
+T:Lullaby Music by johannes brahms
+C:Brahms
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Amin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:1
+"^Moderato slow" !1!EE | !3!G4 EE | G4 (EG | [Ec]2 B2 A2 |$"G" ([FA]2 G2)) (!1!DE | F2 D2) DE | %6
+[I:staff +1] (G,,2 D,2 G,2) |[I:staff -1] B!3!A G2 [FB]2 |$"C" [Ec]4!<(! CC!<)! |"F" [Ac]4 (AF | %10
+"C" !4!G4) (!2!EC |"F" F2 G2 A2 |$"C" EG- G2) CC |"F" [Ac]4 (AF |"C" G4) (EC | %15
+"F" FG/F/"C" E2"G7" D2 |"C" C4) z2 |] %17
+V:2
+ z | (!5!C, !2!G, !1!C) | (C, G, C) | (C, G, C) |$ (D, G,) z | (G,, D, G,) | x2[I:staff -1] D/F/ | %7
+[I:staff +1] (G,, D, G,) |$ (C, C,,) z | (F,,/C,/ F,) z | (E, C,) z | (G,, D, F,) |$ [C,E,G,]2 z | %13
+ (F,,/C,/ F,) z | (E, C,) z |!>(! (!2!A, !1!G, [G,,F,])!>)! | [C,E,]2 z |] %17
+

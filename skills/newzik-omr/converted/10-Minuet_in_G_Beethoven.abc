@@ -1,0 +1,31 @@
+X:1
+T:Minuet in g Music by ludwig van beethoven
+C:Beethoven
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:Emin
+V:1 treble 
+L:1/8
+V:2 bass 
+V:1
+"^Moderato""B" (!3!!1![GB]>!4!!2![Ac]) |:S"G" ([Bd]>"A"!2![^A^c]"G" !1![Bd]>[Ac] [Bd]>[Ac]) | %2
+ [Bd]4 (e>B) |"D7" [Ac]4 (d>A) |$"G" [GB]4 (!2!G>!3!A) | %5
+"G" (!4!!1![GB]>!3!!2![F^A]"A" !4!!1![GB]>[FA]"G+" [GB]>[FA]) |"Em" [GB]4 (!3!=A!1!G) | %7
+"D" (!3!GF)(FA)"A7"(GE) |1$"D" D2 z2 ([GB]>[Ac]) :|2"D" D2 z2 (!1!d"A"!4!g) |:"G" g2"D" f2"G" g2 | %11
+"D" a4 g/f/e/d/ |"G" !3!c2 B2"C" e>c |$"G" (B2"D" A) z (!2!G>!3!A) | %14
+"G" (!4!!1![GB]>[F^A] [GB]>[FA] [GB]>[FA]) | [GB]4"E7" (c>^G) |"Am""Cm6" A4"D7" (B>F) |1$ %17
+ [B,G]2 z2 (dg) :|2!fine! [B,G]2 z |: (!5!d^cd) | (!3!Bd)(!2!GB)(!1!DB) |"D" (Ac)(FA)(DF) |$ %22
+"^Lb" (!3!G !2!F!1!G)(AB c) | (d ^c d) (e d =c) | (!1!B!3!^A!4!B)(cB=A) |"Em" (GB)(AG)(FA) |$ %26
+"^Lb""Em" (EFG)(E^CA,) | D2 z x :: (!4!d^cd |"^D’" e=cA) (!4!BAB |"D" cAF) (!4!d^cd |$ %31
+"D7" e=cA)"G" (BAB |"D7" cAF) (!5!d^cd) |"G" (Bd)(GB)(Dg) |$"C" (eg)(ce)"Am"(A!5!c) | %35
+"D7" (!2!FA)(DE=F^F) |1"Am/G" (A2"G" G) :|2"Am/G" (A2"G" G) z"D""D""Cm" ([GB]>"A7"[Ac]) || %38
+V:2
+ z |: !5!G,, B,, D, | G, G,, z | D D, z |$ G, G,, z | G,, B,, !2!^D, | !1!E, !3!F, G, | %7
+ A, z A,, |1$ D, D,, z :|2 D, D,, z |: B, A, G, | F, D, !2!F, | G,2 [C,E,] |$ %13
+ (([D,G,] [D,F,]/)) z/ z | G,, B,, D, | !1!G, !2!=F, !1!E,- | E, _E, D, |1$ G,, G, z :|2 G,, G,/ |: %19
+ z/ z | [G,B,]3 | [D,C]3 |$ B,,3 | [F,A,]3 | G,2 ^D, | E, ^C, =D, |$ G, z A,, | D, z :: z x/ | %29
+ D,3 | D,3 |$ D,3 | D,3 | [G,B,]3 |$ C3 | [D,C]3 |1 (([G,C] [G,B,]/)) :|2 (([G,C] [G,B,]/)) z/ z || %38
+

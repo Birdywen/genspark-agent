@@ -38,3 +38,13 @@ server-v2/main_pid.txt
 server-v2/watchdog_pid.txt
 server-v2/*.db
 server-v2/--help
+
+# Trash
+.trash/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Large converted files
+skills/newzik-omr/converted/*.musicxml
