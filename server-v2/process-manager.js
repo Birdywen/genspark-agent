@@ -6,7 +6,7 @@ import { spawn } from 'child_process';
  * 
  * 工具:
  *   bg_run    - 后台启动命令，立即返回 slotId + PID
- *   bg_status - 查看所有槽的状态/输出
+ *   bg_status - 查看所有槽的状态/输出 (支持 lastN 控制输出行数)
  *   bg_kill   - 终止指定槽的进程
  */
 
@@ -101,17 +101,19 @@ class ProcessManager {
     }
   }
 
-  status(slotId) {
+  status(slotId, options = {}) {
+    const lastN = parseInt(options.lastN) || 10;
+
     if (slotId) {
       const slot = this.slots.get(parseInt(slotId));
       if (!slot) return { success: false, error: `Slot #${slotId} 不存在` };
-      return { success: true, slot: this._formatSlot(parseInt(slotId), slot) };
+      return { success: true, slot: this._formatSlot(parseInt(slotId), slot, lastN) };
     }
 
     // 返回所有槽
     const slots = [];
     for (const [id, slot] of this.slots) {
-      slots.push(this._formatSlot(id, slot));
+      slots.push(this._formatSlot(id, slot, lastN));
     }
     return { success: true, slots, total: slots.length, maxSlots: MAX_SLOTS };
   }
@@ -141,14 +143,14 @@ class ProcessManager {
     }
   }
 
-  _formatSlot(id, slot) {
+  _formatSlot(id, slot, lastN = 10) {
     const elapsed = slot.endTime
       ? ((slot.endTime - slot.startTime) / 1000).toFixed(1) + 's'
       : ((Date.now() - slot.startTime) / 1000).toFixed(1) + 's';
 
-    const lastOutput = slot.output.length > 0
-      ? slot.output.slice(-10).map(o => o.text).join('\n')
-      : '(无输出)';
+    const outputLines = slot.output.slice(-lastN).map(o => o.text);
+    const lastOutput = outputLines.length > 0 ? outputLines.join('\n') : '(无输出)';
+    const totalLines = slot.output.length;
 
     return {
       slotId: id,
@@ -157,6 +159,7 @@ class ProcessManager {
       status: slot.status,
       exitCode: slot.exitCode,
       elapsed,
+      totalLines,
       lastOutput
     };
   }

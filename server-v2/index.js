@@ -493,7 +493,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     if (tool === 'bg_run') {
       result = processManager.run(params.command, { cwd: params.cwd, shell: params.shell });
     } else if (tool === 'bg_status') {
-      result = processManager.status(params.slotId);
+      result = processManager.status(params.slotId, { lastN: params.lastN });
     } else {
       result = processManager.kill(params.slotId);
     }
