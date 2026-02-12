@@ -3550,8 +3550,8 @@ ${tip}
       sseState.connected = true;
       sseState.currentText = '';
       sseState.messageId = null;
-      addLog('📡 SSE 通道已连接', 'info');
-      log('SSE connected:', e.detail?.url);
+      sseState.processedCommands.clear();
+      log('SSE connected:', e.detail?.transport);
     });
 
     // 监听每个 SSE delta
