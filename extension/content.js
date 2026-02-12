@@ -1843,6 +1843,13 @@ ${toolSummary}
         continue;
       }
       
+      // SSE 去重：如果已被 SSE 通道处理过，跳过 DOM 扫描的执行
+      if (sseState.enabled && isSSEProcessed(tool.name, tool.params)) {
+        log('跳过 DOM 扫描（已被 SSE 处理）:', tool.name);
+        addExecutedCall(callHash);  // 标记为已执行，防止反复检查
+        continue;
+      }
+      
       log('检测到工具调用:', tool.name, tool.params);
       
       // 判断是否为批量调用
@@ -3524,8 +3531,145 @@ ${tip}
     return false;
   }
 
+  // ============== SSE 原始数据拦截 ==============
+  // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 SSE delta
+  // 拼接后直接解析 Ω 命令，避免 DOM 渲染导致的转义问题
+  
+  const sseState = {
+    currentText: '',          // 当前 SSE stream 拼接的完整文本
+    connected: false,
+    processedCommands: new Set(),  // 已从 SSE 处理过的命令签名
+    lastDeltaTime: 0,
+    messageId: null,
+    enabled: true              // SSE 通道开关
+  };
+
+  function initSSEListener() {
+    // 监听 SSE 连接建立
+    document.addEventListener('__sse_connected__', (e) => {
+      sseState.connected = true;
+      sseState.currentText = '';
+      sseState.messageId = null;
+      addLog('📡 SSE 通道已连接', 'info');
+      log('SSE connected:', e.detail?.url);
+    });
+
+    // 监听每个 SSE delta
+    document.addEventListener('__sse_data__', (e) => {
+      if (!sseState.enabled) return;
+      const raw = e.detail?.data;
+      if (!raw) return;
+
+      try {
+        const parsed = JSON.parse(raw);
+        
+        // 只处理 content delta
+        if (parsed.type === 'message_field_delta' && parsed.field_name === 'content' && parsed.delta) {
+          sseState.currentText += parsed.delta;
+          sseState.lastDeltaTime = Date.now();
+          sseState.messageId = parsed.message_id || sseState.messageId;
+          
+          // 实时检测完整的 Ω 命令
+          tryParseSSECommands();
+        }
+      } catch (err) {
+        // 非 JSON 数据，忽略
+      }
+    });
+
+    // 监听 SSE 连接关闭
+    document.addEventListener('__sse_closed__', (e) => {
+      sseState.connected = false;
+      // 最后一次扫描，确保不遗漏
+      if (sseState.currentText) {
+        tryParseSSECommands();
+      }
+      log('SSE closed, total text length:', sseState.currentText.length);
+    });
+
+    log('SSE listener initialized');
+  }
+
+  function tryParseSSECommands() {
+    const text = sseState.currentText;
+    if (!text) return;
+
+    // 检测 ΩBATCH...ΩEND
+    const batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
+    if (batchMatch) {
+      const sig = 'sse:batch:' + batchMatch[1].substring(0, 100);
+      if (!sseState.processedCommands.has(sig)) {
+        sseState.processedCommands.add(sig);
+        try {
+          const batch = JSON.parse(batchMatch[1]);
+          if (batch.steps && Array.isArray(batch.steps)) {
+            addLog('⚡ SSE 直接解析 ΩBATCH', 'tool');
+            log('SSE parsed BATCH (raw, no DOM):', batch);
+            const callHash = `sse:${sseState.messageId}:__BATCH__:${JSON.stringify(batch)}`;
+            addExecutedCall(callHash);
+            executeBatchCall(batch, callHash);
+          }
+        } catch (e) {
+          log('SSE BATCH parse error:', e.message);
+        }
+      }
+    }
+
+    // 检测 Ω{...}ΩSTOP (可能有多个)
+    const singleRe = /Ω(\{[\s\S]*?\})ΩSTOP/g;
+    let m;
+    while ((m = singleRe.exec(text)) !== null) {
+      const jsonStr = m[1];
+      const sig = 'sse:single:' + jsonStr.substring(0, 100);
+      if (sseState.processedCommands.has(sig)) continue;
+      sseState.processedCommands.add(sig);
+      
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.tool) {
+          addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
+          log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
+          const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
+          addExecutedCall(callHash);
+          executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
+        }
+      } catch (e) {
+        log('SSE single parse error:', e.message);
+      }
+    }
+
+    // 检测 ΩPLAN / ΩFLOW / ΩRESUME
+    const planMatch = text.match(/ΩPLAN(\{[\s\S]*?\})/);
+    if (planMatch) {
+      const sig = 'sse:plan:' + planMatch[1].substring(0, 100);
+      if (!sseState.processedCommands.has(sig)) {
+        sseState.processedCommands.add(sig);
+        try {
+          const plan = JSON.parse(planMatch[1]);
+          addLog('⚡ SSE 直接解析 ΩPLAN', 'tool');
+          const callHash = `sse:${sseState.messageId}:__PLAN__:${JSON.stringify(plan)}`;
+          addExecutedCall(callHash);
+          chrome.runtime.sendMessage({
+            type: 'SEND_TO_SERVER',
+            payload: { type: 'task_plan', params: plan, id: Date.now() }
+          });
+        } catch (e) {}
+      }
+    }
+  }
+
+  // 检查一个命令是否已被 SSE 通道处理过（供 scanForToolCalls 判断）
+  function isSSEProcessed(toolName, params) {
+    const sig1 = 'sse:single:' + JSON.stringify({tool: toolName, params}).substring(0, 100);
+    const sig2 = 'sse:batch:' + JSON.stringify(params).substring(0, 100);
+    return sseState.processedCommands.has(sig1) || sseState.processedCommands.has(sig2);
+  }
+
   function init() {
     log('初始化 Agent v34 (Genspark)');
+
+    // 启动 SSE 原始数据监听（优先通道）
+    initSSEListener();
     
     createPanel();
     

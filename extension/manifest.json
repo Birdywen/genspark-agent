@@ -40,9 +40,26 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.genspark.ai/agents*"],
-      "js": ["video-generator.js", "content.js"],
-      "css": ["styles.css"],
+      "matches": [
+        "https://www.genspark.ai/agents*"
+      ],
+      "js": [
+        "sse-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.genspark.ai/agents*"
+      ],
+      "js": [
+        "video-generator.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -53,8 +70,14 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["panel-enhancer.js", "video-generator.js"],
-      "matches": ["https://www.genspark.ai/*"]
+      "resources": [
+        "panel-enhancer.js",
+        "video-generator.js",
+        "sse-hook.js"
+      ],
+      "matches": [
+        "https://www.genspark.ai/*"
+      ]
     }
   ]
 }
