@@ -320,7 +320,8 @@
       "abc2midi",
       "xml2abc",
       "lilypond",
-      "ssh"
+      "ssh",
+      "oci"
     ],
     "dangerousOperations": [
       "write_file",

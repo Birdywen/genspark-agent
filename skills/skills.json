@@ -248,6 +248,21 @@
         "demucs-separate-all",
         "demucs-to-midi"
       ]
+    },
+    {
+      "name": "ntfy-notify",
+      "description": "手机推送通知工具，基于 ntfy.sh 免费服务，支持任务完成通知、服务器监控告警、定时提醒，一行 curl 推送到手机",
+      "source": "local",
+      "path": "./ntfy-notify",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [
+        "shell"
+      ],
+      "tools": [
+        "ntfy-send",
+        "ntfy-subscribe",
+        "ntfy-test"
+      ]
     }
   ]
 }
