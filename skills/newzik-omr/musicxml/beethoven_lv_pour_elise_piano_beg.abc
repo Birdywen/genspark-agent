@@ -1,0 +1,139 @@
+X:1
+T:Pour elise Sheet music supplied by www.
+C:L van Beethoven
+%%score { ( 1 4 ) | ( 2 3 ) }
+L:1/16
+Q:1/8=54
+M:3/8
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M14: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M62: placeholder (x) detected - possible missing note
+%! CHECK: M83: placeholder (x) detected - possible missing note
+%! CHECK: M6: placeholder (x) detected - possible missing note
+%! CHECK: M20: placeholder (x) detected - possible missing note
+%! CHECK: M24: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M42: placeholder (x) detected - possible missing note
+%! CHECK: M46: placeholder (x) detected - possible missing note
+%! CHECK: M57: placeholder (x) detected - possible missing note
+%! CHECK: M61: placeholder (x) detected - possible missing note
+%! CHECK: M66: placeholder (x) detected - possible missing note
+%! CHECK: M72: placeholder (x) detected - possible missing note
+%! CHECK: M82: placeholder (x) detected - possible missing note
+%! CHECK: M87: placeholder (x) detected - possible missing note
+%! CHECK: M90: placeholder (x) detected - possible missing note
+%! CHECK: M93: placeholder (x) detected - possible missing note
+%! CHECK: M100: placeholder (x) detected - possible missing note
+%! CHECK: M104: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M45: placeholder (x) detected - possible missing note
+%! CHECK: M60: placeholder (x) detected - possible missing note
+%! CHECK: M75: placeholder (x) detected - possible missing note
+%! CHECK: M86: placeholder (x) detected - possible missing note
+%! CHECK: M101: placeholder (x) detected - possible missing note
+%! CHECK: M106: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M55: placeholder (x) detected - possible missing note
+%! CHECK: M74: placeholder (x) detected - possible missing note
+%! CHECK: M90: placeholder (x) detected - possible missing note
+%! CHECK: M106: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:4 treble 
+V:1
+"^Poco Moto" (!4!e^d | e^d!5!e!2!B=dc | A2) z !1!C!2!E!4!A | B2 z !1!E!2!^G!4!B | c2 z (Ee^d |$ %5
+ e^deB=dc | A2) z CEA | B2 z (!1!E!5!c!4!B ||1"^1." !1!!3![CA]2) z2 :|2 !1!!3![CA]2 z (!2!Bcd ||$ %10
+ e3) (Gfe | !3!!4!d3) (Fed | !3!c3) Edc |[I:staff +1] !5!E,,(!2!E,!1!E3/2) x5/2 | %14
+[I:staff -1] z (ee')"_dim.e rit." z z !3!^d |$ !4!e z z"^a tempo" (!3!^ded | %16
+!<(! !4!e ^d !5!e!<)!!>(! !2!B =d c!>)! | A2) z CEA |[I:staff +1] (E,,E,^G,) z z2 | %19
+[I:staff -1] c2 z (Ee^d |$ e^deB=dc | A2) z CEA | B2 z EcB |1 !1!!3![CA]2 z (!2!B(cd :|2 %24
+ !1!!3![CA]2)) z ([Ec].[Fc].[EGc]) ||${/!1!F!2!A}"^dolce" !3!!4!!1!c4!<(! !3!f>!2!e!<)! | %26
+!>(! (!2!e2!1!d2)!>)! (!4!_b>!3!a) | (!2!ag!3!fe!1!d!3!c | %28
+!>(! !2!_B2A2)!>)!{/!3!B} (!2!A/!1!G/A/B/ |"_cresc." !4!c4) !2!d^d |$ !tenuto!!4!e3 efA | %31
+[I:staff +1] G,EG,EG,F |[I:staff -1] (c/g/!1!B/g/ !1!A/g/!2!B/g/ !1!c/g/!2!d/g/ | %33
+!<(! e/!2!g/!5!c'/b/!<)! a/g/f/!3!e/ !2!d/g/f/d/) |$ (!1!c/g/B/g/ !1!A/g/!2!B/g/ !1!c/g/!2!d/g/) | %35
+!<(! (e/g/c'/b/!<)! a/g/f/!3!e/ d/g/f/d/) | (e/f/e/^d/ e/B/e/d/ e/B/e/d/ | !tenuto!e3) Be^d |$ %38
+[I:staff +1] z4 z[I:staff -1] z x |[I:staff +1] !2!e z z (^de) z2 | %40
+!<(![I:staff -1] e^d!5!e!<)!!>(!!2!B=dc!>)! | A2 z (CEA | (B2) z !1!E!2!^G!4!B | c2) z !1!Ee^d |$ %44
+!<(! e!3!^d!>(!!4!e!1!B!3!=dc | A2 z (CEA | B2) z (EcB | [CA]2) z (!1!Bcd | e3) (Gfe | d3) (Fed |$ %50
+ !3!c3) Edc |[I:staff +1] !5!E,,(!5!E,!1!E) z z E |[I:staff -1] z (ee') z z (^d | e) z z (^ded | %54
+ e^d!5!e!2!B=dc | A2) z (CEA) |$ B2 z[I:staff +1] z z2 |[I:staff -1] c2 z!<(! (Ee^d | %58
+ e^d!<)!e!>(!B=dc!>)! | A2) z (CEA | B2) z (DcB |"^meno mosso" [CA]2) z x3 |$ %62
+"_cresc."[I:staff +1] (A,,A,,A,,A,,A,,A,, |!>(! (A,,) A,,A,,A,,A,,A,,)!>)! | %64
+!>(! (A,,A,,A,,A,,A,,A,,)!>)! |!>(! (A,, A,,3/2[A,,A,,]3/2A,,A,,)!>)! | %66
+[I:staff -1] [Fd]4 !1![Ec][DB] |[I:staff +1] ([^D,,A,,][D,,A,,][D,,A,,][D,,A,,][D,,A,,][D,,A,,]) | %68
+[I:staff -1] [CA]2!1!!5![Ec]2[DB]2 |$[I:staff +1] [A,,,A,,](!2!A,,!1!A,,!3!A,,A,,A,,) | %70
+[I:staff -1] !>![EG_B^c]6 |[I:staff +1] (A,,A,,A,,A,,A,,A,,) |!>(! (A,,A,,A,,A,,A,,A,,)!>)! | %73
+[I:staff -1] [df]6 | [G_e]4 !1!!5![Fd][_Ec] |!>(![I:staff +1] (_B,,B,,B,,B,,B,,B,,)!>)! |$ %76
+[I:staff -1] !3![DF^G]4 ([DFG]2 | [C=EA]4) z2 | [EB]2 z2 z2 | %79
+ (3A,!2!C!3!E (3!1!A!3!c!5!e (3!4!dcB | (3(Ac!3!e (3!1!ac'!5!e' (3d'c'"^Qua"!1!b) | %81
+[I:staff +1] .[A,CE]2 z2 x2 |$"^Sve"[I:staff -1] (3!2!_b!1!a!3!^g (3!1!=g^f=f (3!1!e'!3!^d'!1!=d' | %83
+ (3!3!^c'=c'b (3!3!_b!1!a^g (3=g^f=f |!<(! e!3!^d!4!e!<)!!>(!!1!B=dc!>)! |"^Tempo I" A2 z (CEA | %86
+ B2) z E^GB |$[I:staff +1] (A,,!2!E,!1!A,) z z2 |[I:staff -1] e!3!^de!>(!!1!B=dc!>)! | (A2 z CEA | %90
+ B2) z[I:staff +1] z z2 |[I:staff -1] [CA]2 z!<(! (Bcd!<)! | e3) (Gfe |$ !tenuto!!3!!4!d3) (Fed | %94
+ c3) Edc |[I:staff +1] E,,!5!E,E z z E |[I:staff -1] z (ee') z z (^d | e) z z (!3!^ded | %98
+ e^d!5!e!2![BB]=dc |$ A2) z (CEA | (B2) z[I:staff +1] z z2 |[I:staff -1] c2) z!<(! (E!5!e^d | %102
+ e!3!^d!>(!e!1!B!3!=dc | A2)!>)!"_mancando" z (CEA | B2) z (EcB | [CA]4) |] %106
+V:2
+ z2 | x6 | (!5!A,,!2!E,)!1!A, z z2 | (!5!E,,!1!E,!2!^G,) z z2 | (A,,E,A,) z z2 |$ z6 | %6
+ (A,,E,A,) z z2 | (E,,E,^G,) z z2 ||1 (A,,E,A,) z :|2 (A,,E,A,) z z2 ||$ (C,G,C) z z2 | %11
+ (!5!G,,!1!G,!2!B,) z z2 | (A,,E,A,) z z2 | %13
+[I:staff -1] B2 z (!1!E!5!e)[I:staff +1][K:treble] (!5!E | !1!e) z z (!3!^d!2!e) z |$ %15
+ z (^de) z z2 | x6 |[K:bass] (A,,E,A,) z z2 |[I:staff -1] B2 z E^GB |[I:staff +1] (A,,E,A,) z z2 |$ %20
+ x6 | (A,,E,A,) z z2 | (E,,E,^G,) z z2 |1 (A,,E,)A, z z2 :|2 %24
+ (A,,E,A,) (.!2![_B,C].!3![A,C].!4![G,C]) ||$ (F,"^con espressione"A,CA,CA,) | (F,_B,DB,DB,) | %27
+ (F,E[F,G,B,]E[F,G,B,]E) | (F,A,CA,CA,) | (F,A,CA,CA,) |$ (E,A,CA,[D,D]A,) | %31
+[I:staff -1] c4{/!4!dcBc} !4!d>B |[I:staff +1][K:treble] !tenuto![CE]2 z (.[FG].[EG].[DFG]) | %33
+ !5![CEG]2[K:bass] !5!!3![F,A,]2!4!!2![G,B,]2 |$[K:treble] !tenuto!!1!C2 z (.!2![FG].[EG].[DFG]) | %35
+ !5![CEG]2[K:bass]!>(! (!5!!3![F,A,]2!4!!2![G,B,]2!>)! | !tenuto!!3![^G,B,]2) z2 z2 | x6 |$ %38
+[I:staff -1] !tenuto!e4 (!1!B!>(!e)[I:staff +1][K:treble] !3!^d | %39
+[I:staff -1] z (!3!^de)!>)! z z d x | x6 |[I:staff +1][K:bass] (A,,E,A,) z z2 | %42
+ (E,,!1!E,!2!^G,)"_www.theperfectscores.com" z z2 | (A,,E,A,) z z2 |$ x6 | (A,,E,A,) z z2 | %46
+ (E,,!1!E,!2!^G,) z z2 | (A,,E,A,) z z2 | (C,G,C) z z2 | G,,(!1!G,!2!B,) z z2 |$ %50
+"_dimin." (A,,E,A,) z z2 |[I:staff -1] B2 z (Ee)[K:treble] z |[I:staff +1] e z z (!3!^de) z | %53
+ z (^de) z z2 | x6 |[K:bass] (A,,E,A,) z z2 |$ (E,,/E,^G,)[I:staff -1] E^GB x/ | %57
+[I:staff +1] (A,,E,A,) z z2 | x6 | (A,,E,)A, z z2 | (E,,E,^G,)"_www.theperfectscores.com" z z2 | %61
+!>(! (A,,!2!A,,!1!A,,!3!A,,A,,A,,)!>)! |$[I:staff -1] !>!!4![EG^Bc]6 | %63
+!>(! [FAd]4!>)! (!4!!2![^ce][df]) |"^St" [^Gdf]4 ([Gdf]2 | [A=ce]3) x3 | %66
+"_dimin."[I:staff +1] ([D,,A,,]!5!!1![D,,A,,][D,,A,,][D,,A,,][D,,A,,][D,,A,,]) | %67
+[I:staff -1] !3!!2!!1![C^FA]4 [CA]2 | %68
+[I:staff +1] (.!3![E,,A,,][E,,A,,].[E,,A,,].[E,,A,,] [E,,^G,,].[E,,G,,]) |$ %69
+[I:staff -1] !3!!1![CA]6 |"_cresc."[I:staff +1] !3!A,,- x5 |[I:staff -1] [FAd]4 (!4!!2![^ce][df]) | %72
+ [df]4 !1![df]2 |!>(![I:staff +1] (_B,,B,,B,,B,,B,,B,,)!>)! |!>(! (_B,,B,,B,,B,,B,,B,,)!>)! | %75
+[I:staff -1] !4![DF_B]4 !4![DFA]2 |$!>(![I:staff +1] (=B,, B,,B,,B,,B,,B,,)!>)! | C,4 z2 | %78
+ !2![E,^G,]2 z2 z2 | A,,,2 z2 .[A,CE]2 | .[A,CE]2 z2 .[A,CE]2 |[I:staff -1] A!2!c!3!e !1!a x2 |$ %82
+[I:staff +1] [A,CE]2 z2 z2 | x6 | x6 | (A,,E,A,) z z2 | (E,,!1!E,!2!^G,) z z2 |$ %87
+[I:staff -1] .c2 z!<(! Ee^d | x3!<)! x3 |[I:staff +1] (A,,E,A,) z z2 | %90
+ (E,,E,/^G,)[I:staff -1] EcB x/ |[I:staff +1] (A,,E,A,) z z2 | (C,G,C) z z2 |$ %93
+ (G,,!2!G,!1!B,) z z2 | (A,,E,A,) z z2 |[I:staff -1] B2 z (Ee)[K:treble] z | %96
+[I:staff +1] e z z (!3!^de) z | z (^de) z z2 | x6 |$[K:bass] ((A,,E,A,)) z z2 | %100
+ (E,,/E,^G,)[I:staff -1] E^GB x/ |[I:staff +1] (A,,E,A,) z z2 | x6 | (A,,E,A,) z z2 | %104
+"_www.theperfectscores.com" (E,,E,^G,) z z2 | [A,,,A,,]4 |] %106
+V:3
+ x2 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 ||1 x4 :|2 x6 ||$ x6 | x6 | x6 | %13
+ x2 z z2[K:treble][I:staff -1] z | x6 |$ x6 | x6 |[I:staff +1][K:bass] x6 | x6 | x6 |$ x6 | x6 | %22
+ x6 |1 x6 :|2 x6 ||$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 |[K:treble] x6 | x2[K:bass] x4 |$ %34
+[K:treble] x6 | x2[K:bass] x4 | x6 | x6 |$ x6[K:treble] x | x7 | x6 |[K:bass] x6 | x6 | x6 |$ x6 | %45
+ x6 | x6 | x6 | x6 | x6 |$ x6 | x5[K:treble] x | x6 | x6 | x6 |[K:bass] x6 |$ x6 | x6 | x6 | x6 | %60
+ x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | (2:3:2A,,!1!A,,A,,A,,A,, | x6 | x6 | x6 | x6 | %75
+ x6 |$ x6 | x6 | x6 | x6 | x6 | x2[I:staff -1] c'[I:staff +1] .[A,CE] x2 |$ x6 | x6 | x6 | x6 | %86
+ x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x5[K:treble] x | x6 | x6 | x6 |$[K:bass] x6 | x6 | %101
+ x6 | x6 | x6 | x6 | x4 |] %106
+V:4
+ x2 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 ||1 x4 :|2 x6 ||$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | %18
+ x6 | x6 |$ x6 | x6 | x6 |1 x6 :|2 x6 ||$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | %36
+ x6 | x6 |$ x7 | x7 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | %55
+ x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | %74
+ x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x2 !5!e' d'c'!1!b |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | %90
+ x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 | x4 |] %106
+

@@ -1,0 +1,79 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Waltz in e flat. 0p.39
+C:P Tschaikowski
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=150
+M:3/4
+I:linebreak $
+K:Cmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M43: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+%! CHECK: M66: placeholder (x) detected - possible missing note
+%! CHECK: M84: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M41: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M62: placeholder (x) detected - possible missing note
+%! CHECK: M79: placeholder (x) detected - possible missing note
+%! CHECK: M85: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+"^Allegro moderato" z6 | z2 (!>!!1!G3 A | !3!B) z (!1!c3 d | !4!f) z (!3!e3 !1!c | !2!B6) | %5
+ z2 (!4!c3 !1!G | !3!B4 !2!A2) |$ z2 (!4!B3 !1!F | !3!A4 !2!G2) | z2 (!>!!1!G3 A | B) z (c3 d | %11
+ f) z (e3 c | B6) | z2 (=A3 G) | (d4 ^F2) |$ z2 (!>!!2!=E3 !3!^F) | (^F4 G2) | z2 (!1!B3 !4!g | %18
+ !5!a) z (!2!c3 d | e) z"_leggiero" !1!G!4!cGc | d z AdAd | !3!B z (!1!B3 g |$ a) z (c3 d | %23
+ e) z !5!edcB | =A z !5!fedc | B z (B3 !4!g | _a) z (!2!c3 d | e) z GcGc | d z AdAd |$ %29
+ !2!B z (!1!B3 g | a) z (c3 d | e) z (GAB=B | c) z (!1!=Bc^cd | e) z !3!edef | %34
+"^JS"[I:staff +1] [C,G,]2 [C,G,]3 [C,G,] |[I:staff -1] ([=BB]4 !5!d2) |$ (!4!=B2 !3!F2 A2 | %37
+ [EG]) z (edef | g) z (!>!!3!c2 e2) |[I:staff +1] [C,G,]2 [C,G,]2 [C,G,]2 | %40
+[I:staff -1] =B2 (!>!!4!B4 | c) z (edef | g) z (c2 e2) |$ (=B2 d2) !>!A2 | %44
+[I:staff +1] [C,G,]2 [C,G,]2 [C,G,]2 |[I:staff -1] [EG] z (edef | g) z (!>!c2 e2) | %47
+ (=B2 d2)!>(! A2!>)! |[I:staff +1] [C,G,]2 [C,G,]2 [C,G,]2 |[I:staff -1] c z !1!G!2!^F!1!G=B |$ %50
+ c z (G^FG=B | c) z (G^FG=B | c) z (!>!G3 A | B) z (c3 d | f) z (e3 c | B6) | z2 c3 G |$ B4 A2 | %58
+ z2 (B3 F | A4 G2) | z2 (!>!G3 A | _B) z (c3 d | f) z (e3 c | B6) | z2 =A3 G |$ %65
+ d2[I:staff +1] [=A,CD]2 [A,CD]2 |[I:staff -1] z2 (!>!=E3 ^F) | (^F4 G2) | z2 (B3 g | a) z (c3 d | %70
+ e) z"_leggiero" GcGc | d z AdAd |$ B z (B3 g | a) z (c3 d | e) z edcB | =A z fedc | B z (B3 g | %77
+ a) z (c3 d | e) z GcGc |$ d z AdAd | B z (B3 g | a) z (c3 d | e) z (GAB=B | c) z (=Bc^cd | %84
+ e) z z2 z2 |] %85
+V:2
+ E, !4![G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | E, [^F,=A,E] [F,A,E] | %4
+ E, [G,B,E] [G,B,E] | C, [G,C] [G,CE] | F, [A,CF] [A,CF] |$ B,, [F,B,D] [F,B,D] | %8
+ E, [G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | E, [^F,=A,E] [F,A,E] | %12
+ E, [G,B,E] [G,B,E] | E, [G,^C] [G,B,C] | D, [=A,=CD] [A,CD] |$ D, [=A,CD] [A,CD] | %16
+ G, [B,D] [B,D] | [B,D] z z | z [A,B,] [A,B,] | z [G,B,] [G,B,] | z [A,B,] [A,B,] | %21
+ z [G,B,] [G,B,] |$ z [A,B,] [A,B,] | [E,G,B,]/ z/ z z | [F,CE]/ z/ z z | [B,D]/ z/ z z | %26
+ z [A,B,] [A,B,] | z [G,B,] [G,B,] | z [A,B,] [A,B,] |$ z [G,B,] [G,B,] | z [A,B,] [A,B,] | %31
+ [E,G,B,]/ z/ z z | [A,,C,F,]/ z/ z [_B,,F,A,]/ z/ | [E,G,B,]/ z/ [C,G,] [C,G,] | %34
+[I:staff -1] g/ z/ !3!c/ (c e/) | =B x2 |$[I:staff +1] [C,G,] [C,G,] [C,G,] | %37
+ [C,G,] [C,G,] [C,G,] | [C,G,] [C,G,] [C,G,] |[I:staff -1] (=B !5!d) A | %40
+[I:staff +1] [C,G,] [C,G,] [C,G,] |[I:staff -1] E/ x5/2 |[I:staff +1] [C,G,] [C,G,] [C,G,] |$ %43
+ [C,G,] [C,G,] [C,G,] |[I:staff -1] =B/ A/ F A |[I:staff +1] [C,G,] [C,G,] [C,G,] | %46
+ [C,G,] [C,G,] [C,G,] | [C,G,] [C,G,] [C,G,] | x[I:staff -1] !>!B x | E/ x5/2 |$ %50
+[I:staff +1] [CE]/ z/ z ([G,D] | [CE]/) z/ z ([G,D] | [CE]/) z/ z z | E, [G,B,E] [G,B,E] | %54
+ E, [^F,=A,E] [F,A,E] | E, [G,B,E] [G,B,E] | C, [G,C=E] [G,CE] |$ F, [A,CF] [A,CF] | %58
+ B,, [F,B,D] [F,B,D] | E, [G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | E, [G,B,E] [G,B,E] | %62
+ E, [^F,=A,E] [F,A,E] | E, [G,B,E] [G,B,E] | E, [G,B,^C] [G,B,C] |$ x2[I:staff -1] ^F | %66
+[I:staff +1] D, [=A,CD] [A,CD] | G, [B,D] [B,D] | [B,D] z z | z [A,B,] [A,B,] | z [G,B,] [G,B,] | %71
+ z [A,B,] [A,B,] |$ z [G,B,] [G,B,] | z [A,B,] [A,B,] | [E,G,B,]/ z/ z z |!<(! [F,CE]/!<)! z/ z z | %76
+"^nf" [B,D]/ z/ z z | z [A,B,] [A,B,] | z [G,B,] [G,B,] |$ z [A,B,] [A,B,] | z [G,B,] [G,B,] | %81
+ z [A,B,] [A,B,] | [E,G,B,] z z | [A,,C,F,]/ z/ z"_www.theperlectscores.com" [_B,,F,]/ x/ | %84
+ [E,G,B,]/ z/ z z |] %85
+V:3
+ x3 | x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | F,3 | %19
+ E,3 | B,,3 | E,3 |$ F,3 | x3 | x3 | x3 | F,3 | E,3 | B,,3 |$ E,3 | F,3 | x3 | x3 | x3 | x3 | %35
+ [C,G,] [C,G,] [C,G,] |$ x3 | x3 | x3 | x3 | x[I:staff -1] !2!G3/2 F/ | %41
+[I:staff +1] [C,G,] [C,G,] [C,G,] | x3 |$ x3 | x3 | x3 | x3 | x3 | x[I:staff -1] G3/2 F/ | %49
+[I:staff +1] [C,G,]/ z/ z [G,D] |$ x3 | x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | %62
+ x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | F,3 | E,3 | B,,3 |$ E,3 | F,3 | x3 | x3 | x3 | F,3 | E,3 |$ %79
+ B,,3 | E,3 | F,3 | x3 | x3 | x3 |] %85
+

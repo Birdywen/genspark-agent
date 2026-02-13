@@ -1,0 +1,37 @@
+X:1
+T:Silent night, holy night Sheet music supplied by www.theperfectscores.ct
+%%score { 1 | ( 2 3 4 ) }
+L:1/8
+Q:3/8=60
+M:6/8
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 1"
+V:2 bass 
+V:3 bass 
+V:4 bass 
+V:1
+"^Moderato""^religious." (!2![EG]>[FA][EG] [CE]3) | ([EG]>[FA][EG] [CE]3) | (!5!d2 d B3) | %3
+ (c2 c G3) |$ !1![CFA]2 [CFA] !1![FA]3 | (!4![EG]>[FA][EG] !2!E3) | [CFA]2 [CFA] [FA]3 | %7
+ ([EG]>[FA][EG] E3) |$ d2 d!>(! (f>dB!>)! | c3) e3 |!fine! (cGE G"_rit."FD |1 %11
+"_octave up" C3) [DFG]3 :|2[I:staff +1] [C,,G,,]3-[I:staff -1][K:bass] !fermata![C,,G,,]2 z |] %13
+V:2
+ [C,G,]2 [C,G,] [C,G,]3 | [C,G,]2 [C,G,] [C,G,]3 |[I:staff -1] F3 F3 | E3 [CE]3 |$ %4
+[I:staff +1] (!5!F,,!2!C,!1!F,) (!2!A,!1!G,!2!F,) |[I:staff -1] !1!C2 C !1!C3 | %6
+[I:staff +1] (F,C,F,) (A,G,F,) |[I:staff -1] C2 C C3 |$ F3 B2 B | (EBA"_ten." G3) | E2 E B,3 |1 %11
+"_octave up"[I:staff +1] [C,E,]3 [B,,G,]3 :|2[I:staff -1] [E,C]3- !fermata![E,C]2 z |] %13
+V:3
+ x6 | x6 | [B,,G,]3 G,,A,,B,, | [C,G,]3 [C,G,]3 |$ x3[I:staff -1] (!5!c>BA) | %5
+[I:staff +1] (E,F,E,) (C,D,E,) | x3[I:staff -1] (c>BA) |[I:staff +1] (E,F,E,) (C,D,E,) |$ %8
+ (G,A,G,) (D,E,F,) | [C,G,]3- [C,G,]3 | [C,G,]3 [G,,F,]3 |1 x6 :|2 x6 |] %13
+V:4
+ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ B,,3 G,,3 | x6 | x6 |1 x6 :|2 x6 |] %13
+

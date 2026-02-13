@@ -1,0 +1,108 @@
+X:1
+T:Londonderry air Sheet music supplied by www.
+%%score { ( 1 2 ) | ( 3 4 ) }
+L:1/8
+Q:1/4=108
+M:4/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M4: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M4: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M30: placeholder (x) detected - possible missing note
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M14: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M33: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M10: placeholder (x) detected - possible missing note
+%! CHECK: M23: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 treble 
+V:3 bass 
+V:4 bass 
+V:1
+"^Moderato" !2!EFG | !5!A3 G !2!A!5!d!4!cA | GF D2- CD x2 | !5!c3 d !5!c!3!A!1!FA |$ %4
+w: ||||
+ !3!G4- (G!<(! !1!!2![CE]!1!!3![_DF][EG]!<)! | A3 G AdcA | GF (2:3:2D2-) _D2 |$ %7
+w: |||
+ !3!A!5!c- cB!>(! !5![CA]!4![B,G]!3![A,F][B,G]!>)! | F4- F !2!cde | !5!f3 !4!e !5!e!4!d !3!cd |$ %10
+w: |||
+ !4!c!3!A !2!F2- F(c!3!de | f3 !4!e !5!edcA | G4- G) !tenuto!!3![Bc][Ac][Gc] |$ %13
+w: |||
+ (!5![Afa]3 !4!g) (!5!gfdf | cA !4!F2-) F(!2!EFG | AdcA !5!GFDE |$ !fermata![A,CF]4) || %17
+w: S * * * * *||* * rit. * * * * *||
+[I:staff +1] z4 x4 |[I:staff -1] !3!!5![FA]3 !1!!2![EG] !1!!3![FA]!3!!5![Ad]!1!!4![Fc]!4!!4![FA] |$ %19
+w: ||
+ !3!G!2!F !1!D2- D!2!F !4!A!3!B | !4!c3 d !4!c!2!A F!4!A | G!3!E!1!DC D x3 | %22
+w: |||
+ [FA]3 [EG] [FA][Bd][Ac][FA] |$ GF D2 (DEFG) | !5!A3 B!>(! [CA][B,G][A,F][B,G]!>)! | %25
+w: |||
+[I:staff +1] !2!C,2 !1!D,!2!_D, !1!C, x3 |[I:staff -1] (!5!f3 !4!e) (!5!ed !3!c!5!d |$ %27
+w: ||
+ cA F2) ([CAc]2 [DBd][EBe] | f3 e !5!e!4!dcA | !5!G4- G [EBc][EAc][EGc]) | %30
+w: |||
+ ([Afa]3 g) (!1!!2!!5![Bdg]!1!!2!!4![Bdf] !1!!2!!4![FBd]!2!!4!!5![Bdf] |$ %31
+w: |
+"_dimin." [FAc][CFA] F2-) (FEFG |"_dimin." [CFA][FAd][FAc]"_rit."[CFA] [B,DG][B,DF][F,B,D][G,B,E] | %33
+w: ||
+ [A,CF]4) !fermata![FAcdf] x |] %34
+w: |
+V:2
+"_ra"[I:staff +1] z z2 |[I:staff -1] [CF]4 !1!F2 x2 | D3!<(! D(2:3:2FAB!<)! |"_gd" F4 F2 F2 |$ %4
+w: ||||
+ !1!CE!1!D!2!_D C x3 | [CF]4 F2 x2 | D3 DEFG x |$ !2!!1![CF]2 x6 | B,!1!G, !2!A,2- A, x3 | %9
+w: |||||
+ A4 [FB]2 [FA]2 |$ !1!F2 !1!C2- C2 [FB]2 | A4 [FB]4 | CE!1!D!2!_D C x3 |$ %13
+w: ||||
+[I:staff +1] F,,C, A,2 B,,F, B,2 |[I:staff -1] F2 !1!B,2 !1!=B,4 | [CF]4 [_B,D]3 [B,C] |$ %16
+w: ||dim * *|
+[I:staff +1] !fermata![F,,C,]4 || x4[I:staff -1] z !2!!1![CE]!<(!!1![DF]!4!!2![EG]!<)! | %18
+w: ||
+[I:staff +1] F,,C,A,C, F,,C,A,!4!C, |$ B,,F,!1!B,!2!A,!<(! !1!G,F,!1!E,!2!D,!<)! | %20
+w: ||
+[I:staff -1] !1!F4 !1!F2 !1!F2 | G4- G E[DF][EG] |[I:staff +1] C!5!C,D,E, F,!1!G,!3!A,!1!C |$ %23
+w: |||
+[I:staff -1] D2 D2- D2 _D2 | !1!CE !1!D2 x4 |[I:staff +1] !5!F,,4- F,,!<(! A,B,[G,C]!<)! | %26
+w: |||
+[I:staff -1] [Ac]4 [FB]2 !2!!1![FA]2 |$ [DF]2 [CD]3 x3 | [FA]4 [FB]2 F2 | !1!CED_D C x3 | %30
+w: ||||
+[I:staff +1] [F,,C,][C,F,A,] [F,A,C]2 [B,,,B,,][D,F,B,] [F,B,D]2 |$ %31
+w: |
+ [F,,C,][C,F,A,] ([_A,,F,]2 [G,,F,]4) | [F,,C,]4 [C,,C,]4 | %33
+w: ||
+"_www.theperfectscores.com" [F,,,F,,]4[I:staff -1] z[I:staff +1] !fermata![FAcd] |] %34
+w: |
+V:3
+ x3 | [F,,C,]4 [F,C]4 | [F,B,]6 F,2 | F,4 !1!A,!2!F,!1!A,F, |$ [A,,G,]4- [A,,G,] !2!B,!1!A,!2!G, | %5
+ [F,,C,F,]4 [F,C]4 | [F,B,]6 !3!!1![B,,G,]2 |$ !5!!2![F,,C,]4 !1!C,2 !5!C,,2 | %8
+ D,!2!_D, !wedge!!1!C,2- C, z z2 | !5!!1![F,C]4 B,2 A,2 |$ [D,A,]2 !1!F,2- F,2!<(! D,C, | %11
+ !5!F,,!2!C, !1!A,2!<)! !2!B,2 !1!A,2 | %12
+ [B,,G,]4- [B,,G,]!<(! !tenuto![DE]!tenuto![CE]!tenuto![B,E]!<)! |$ x4[I:staff -1] !2!!1![Bd]4 | %14
+[I:staff +1] [A,,F,]2 (!4!!1![_A,,F,]2 !5![G,,F,]4) | [F,,C,]4 C,3 C, |$ x4 || x8 | x8 |$ %19
+ x6[I:staff -1] !1!C!1!D |[I:staff +1] !5!A,,C,F,A, C,F,A,C | !5!B,,!1!G,F,!3!E, !2!F,!1!G,A,B, | %22
+ x8 |$ !2!B,3 !3!A,!<(! (!1!G,2 !4![B,,G,]2)!<)! | F,4- F,4 |[I:staff -1] A,2 B,G, A, x3 | %26
+[I:staff +1] F,,C, A,2 [B,,B,]2 [A,,A,]2 |$ [D,A,]2 F,3 z z2 | F,,C, A,2 [B,,B,]2 [A,,A,]2 | %29
+ [B,,G,]4- [B,,G,] !tenuto![B,D]!tenuto![A,C]!tenuto![G,B,] | x8 |$ x2[I:staff -1] B,2 =B,4 | x8 | %33
+ x5[I:staff +1][K:treble] x |] %34
+V:4
+ x3 | x8 | x6 !3!C,!4!B,, | A,,2 F,,2 !5!C,4 |$ x8 | x8 | x8 |$ x8 | !5!F,,4- F,, x3 | x4 F,4 |$ %10
+ x2 !5!A,,!4!B,, !3!C,2 D,C, | x8 | x8 |$ x8 | x8 | x8 |$ x4 || x8 | x8 |$ x8 | x8 | x8 | x8 |$ %23
+ x8 | !5!A,,2 B,,2 !3!C,2 !2!C,2 |[I:staff -1] F4- F !3![Fc]!4![FBd]!5![GBe] | x8 |$ %27
+ x2[I:staff +1] A,,B,,C,D,E,G, | x8 | x8 | x8 |$ x8 | x8 | x5[K:treble] x |] %34
+

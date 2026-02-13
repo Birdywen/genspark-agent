@@ -1,0 +1,55 @@
+X:1
+T:Album leaf Sheet music supplied by www.theperfectscores.com
+C:EDVARD Grieg
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=118
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M3: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M32: placeholder (x) detected - possible missing note
+%! CHECK: M6: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+"^Allegretto" !1!B |: !2!e>fgf | !2!f[I:staff +1] [B,G](E,[B,G]) x | %3
+[I:staff -1] !3!e[I:staff +1] !2!!4![^B,DA](E,[B,DA]) |[I:staff -1]{/!2!B} ee !>!E.B |$ %5
+{/B} (!2!e>!3!f{/!2!f} !4!a/!3!^g/!1!=g/!2!f/) |{/!2!f} b b !>!e2 |{/!2!e} !3!f(fBb) |1 %8
+ (!1!e2 .e') B :|2$ (!1!e2 .e') z |: z [B,G]z[B,G] | z!<(! [B,G]z[DG]!<)! | %12
+ z!>(! !1!!2![CF]!>!d[CF]!>)! |$ z [CF]!>!d[CF] | z [B,G]z[B,G] | z!<(! [B,G]z[DG]!<)! | %16
+ z!<(! [EF]z[EF]!<)! |$ z"_poco dim." ([^DF][=DF])[CF] | z [B,G]z[B,G] | z!<(! [B,G]z[DG]!<)! | %20
+ z !1!!2![CF]!>!d[CF] |$ z !1!!2![A,^D]!>!B[A,D] | z [G,E]z[G,E] | z!<(! [G,E]z[B,E]!<)! | %24
+ z!>(! !>!!1!A,2!>)! x |$ z !1!!3![F,B,]2 !1!B |"^a tempo" (e3/2 f/ g f) |{/f} .!5!bb !>!e2 | %28
+[I:staff +1] (E,[B,^DA])(E,[B,DA]) |$[I:staff -1]{/!2!B} ee !>!EB | %30
+{/B} (!2!e>!3!f{/f} !4!a/!3!^g/!1!=g/f/) | !2!f[I:staff +1] [B,G](E,[B,G]) x | %32
+ (E,"^e rit."[^B,DA])(E,[B,DA]) |[I:staff -1] (e2 .e') z :| %34
+V:2
+ z |: (E,!3![B,G])(E,!1![C^DA]) | E,[I:staff -1] !5!bb !>!e2 | %3
+[I:staff +1] E,[I:staff -1] !4!!1!ff x |[I:staff +1] (E,[B,G])(E,[B,G]) |$ (E,[B,G])(E,[C^DA]) | %6
+ (E,[B,G])(E,[B,G]) | (E,[B,^DA])(E,[B,DA]) |1 (E,[B,G]) E,, z :|2$ (E,[B,G]) E,, z |: %10
+ !2!D,>"^il"!3!^C,"^basso"!2!D,!1!E, | !2!F,"^“marcato"G,A,B, | !>!!1!B,(!2!A, !5![D,A,]2) |$ %13
+ B,(A, [D,A,]2) | !2!D,>^C,D,E, | !3!F,G,!1!A,!2!B, | !2!B,^A,!1!D=C |$ %17
+!>(! (C2 !1!B,)!5!!2![D,=A,]!>)! | D,>!3!^C,!2!D,!1!E, | !2!F,G,!2!A,B, | %20
+ !>!!1!B,!>(!(!2!A, !5![D,A,]2)!>)! |$ !>!!1!G,!>(!(!2!F, !5![B,,F,]2)!>)! | B,,>!2!^A,,B,,!3!^C, | %23
+ !2!^D,!1!E,!2!F,G, | (!1!G,"^rit."F,)(!2!F,E,) |$ (!>!E,2 !2!^D,) z | (E, [B,G]) (E, [C^DA]) | %27
+ (E,[B,G])(E,[B,G]) |[I:staff -1] !4!ff B2 |$[I:staff +1] (E,[B,G])(E,[B,G]) | %30
+ (E,[B,G])(E,[C^DA]) | E,[I:staff -1] !5!bb (!>!e2 |!>(! !3!f)fBb!>)! | %33
+[I:staff +1] (E,[B,G])"_:C[scores.com" .E,, z :| %34
+V:3
+ x/ |: x2 | x5/2 | x2 | x2 |$ x2 | x2 | x2 |1 x2 :|2$ x2 |: !5!G,,2- | G,, z | x[I:staff -1] d |$ %13
+ x d |[I:staff +1] !5!G,,2- | G,, z | x2 |$ x2 | G,,2- | G,, z | x[I:staff -1] d |$ x B | %22
+[I:staff +1] !5!E,,2- | E,, z | !5!C,[I:staff -1] !2!^A,/ x/ |$[I:staff +1] !1!!4!B,,2 | x2 | x2 | %28
+ x2 |$ x2 | x2 | x5/2 | x2 | x2 :| %34
+

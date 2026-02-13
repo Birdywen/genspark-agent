@@ -1,0 +1,63 @@
+X:1
+T:Volga boat song Sheet musicsupplied by www.theperfectscores.com
+%%score { ( 1 2 ) | 3 }
+L:1/4
+Q:1/4=104
+M:4/4
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M4: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M10: placeholder (x) detected - possible missing note
+%! CHECK: M15: placeholder (x) detected - possible missing note
+%! CHECK: M23: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+L:1/8
+V:2 treble 
+V:3 bass 
+V:1
+"^Andante espressivo" (!4!c!2!A d2) A2 z (B | cA) dd A2 z B | cA z2 A2 F2 |$ (!4!cA d2) A4 | %4
+ (cA .d2) A2 z B | (cA d)d A2 z (B |$ cA f2 ef/e/ d2) | (cA .dd) A4 | (c3 c c_BAG) |$ %9
+ [A,CF]2 !5![Ec]2 !4![CFA]4 | c3 (c c_BAG | [A,CF]2) [Ec]2 [CFA]4 |$ !5![FAd]2 dd !>!!4!A2 AA | %13
+ ([Af]2 !5!e!4!d !>![EAc]2 !4![CEA]2) | ([Fd]2 [Af]2 !4!ef/e/ !3!d2) |$ (!4!cA dd A2) z B | %16
+ (cA d2) A2 z (B | cA dd A2) z B |$ cA f2 ef/e/ d2 | (cA .d2) A4 | c3 c c_BAG |$ %21
+ [A,CF]2 [Ec]2 [CFA]4 | c3 (c c_BAG) | [A,CF]2 [Ec]2 [CFA]4 |$ !>!d2 dd !>!A2 AA | %25
+ (!>!f2 ed !>![EAc]2) [CEA]2 | ([Fd]2 [Af]2 ef/e/ d2) |$ (cA dd) [CEA]2 z B | (cA .d2) A2 z B | %29
+ (cA .dd) A2 z B |"_cresc." cA z2 A2 F2 |$ (cA .d2) A4 | (cA d2) A2 z (B | cA d)d A2 z B |$ %34
+ cA f2 ef/e/ d2 | (cA .d)d [CEA]4 | (cA .d)d x4 | [ca]6 z2 |] %38
+V:2
+ (3!1!E F [CE] B/ x3/2 | E F [CE] z/ B/ | E [Af] e/f/4e/4 d |$"_dimin." E F [CE]2 | %4
+ E F [CE] z/ B/ | E F [CE] z/ B/ |$"_cresc." E A A F |"_dimin." E F [CE]2 | [EG] [EG] E E |$ %9
+[I:staff +1] [F,,C,] [C,G,_B,] F,, [C,F,A,] |[I:staff -1] [EG] [EG] E E | %11
+[I:staff +1] [F,,C,] [C,G,_B,] F,, [C,F,A,] |$ D,, [D,A,] A,,, [E,A,] | D,, [D,A,] A,,, [E,A,] | %14
+ D,, [D,A,] [C,A,] [B,,A,] |$[I:staff -1] E F [CE] z/ B/ | E F [CE] z/ B/ | E F [CE] z/ B/ |$ %18
+ E A A F | E F [CE]2 | [EG] [EG] E E |$[I:staff +1] [F,,C,] [C,G,_B,] F,, [C,F,A,] | %22
+[I:staff -1] [EG] [EG] E E |[I:staff +1] [F,,C,] [C,G,_B,] F,, [C,F,A,] |$ %24
+[I:staff -1] [FA] [FA] [CE] [CE] | A [FA] x2 |[I:staff +1] D,, [D,A,] [C,A,] [B,,A,] |$ %27
+[I:staff -1] E F z z/ B/ | E F [CE] z/ B/ | E F [CE] z/ B/ | E [Af] e/f/4e/4 d |$ %31
+!>(! E F [CE]2!>)! | E F [CE] z/ B/ | E"_rit." F [CE] B |$ E A A F | E F x2 | %36
+"_“morendo" E F [ca]2- |[I:staff +1] !fermata!A,,,3 z |] %38
+V:3
+ [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | %2
+"_cresc." [A,,E,] [D,A,] [C,A,] [B,,A,] |$ [A,,E,] [D,A,] [A,,E,] A,,, | %4
+ [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ |$ %6
+ [A,,E,] [D,A,] [C,A,] [B,,A,] | [A,,E,] [D,A,] [A,,E,] A,,, | C,, [C,E,_B,] C,, [C,E,B,] |$ x4 | %10
+ C,, [C,E,_B,] C,, [C,E,B,] | x4 |$ x[I:staff -1] [FA] [CE] [CE] | x [FA] x2 | x2 A F |$ %15
+[I:staff +1] [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | %17
+ [A,,E,] [D,A,] [A,,E,]"_com" .A,,,/ z/ |$ [A,,E,] [D,A,] [C,A,] [B,,A,] | %19
+ [A,,E,] [D,A,] [A,,E,] A,,, | C,, [C,E,_B,] C,, [C,E,B,] |$ x4 | C,, [C,E,_B,] C,, [C,E,B,] | %23
+ x4 |$ D,, [D,A,] A,,, [E,A,] | D,, [D,A,] A,,, [E,A,] | x2[I:staff -1] A F |$ %27
+[I:staff +1] [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | %29
+ [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | [A,,E,] [D,A,] [C,A,] [B,,A,] |$ %31
+"_dimin." [A,,E,] [D,A,] [A,,E,] A,,, | [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ | %33
+ [A,,E,] [D,A,] [A,,E,] .A,,,/ z/ |$ [A,,E,] [D,A,] [C,A,] [B,,A,] | [A,,E,] [D,A,] [A,,E,] A,,, | %36
+ [A,,E,] [D,A,] [A,E]2 | x4 |] %38
+

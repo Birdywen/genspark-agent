@@ -1,0 +1,94 @@
+X:1
+T:Song of india Sheet music supplied by www.theperfectscores.com
+C:N A RIMSKY Rimski-Korsakov
+%%score { ( 1 2 ) | ( 3 4 ) }
+L:1/8
+Q:1/4=98
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M3: placeholder (x) detected - possible missing note
+%! CHECK: M4: placeholder (x) detected - possible missing note
+%! CHECK: M7: placeholder (x) detected - possible missing note
+%! CHECK: M20: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M46: placeholder (x) detected - possible missing note
+%! CHECK: M52: placeholder (x) detected - possible missing note
+%! CHECK: M57: placeholder (x) detected - possible missing note
+%! CHECK: M63: placeholder (x) detected - possible missing note
+%! CHECK: M69: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M46: placeholder (x) detected - possible missing note
+%! CHECK: M64: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 treble 
+V:3 bass 
+V:4 bass 
+L:1/4
+V:1
+"^Andante" !1!!2!!5![CEA]6- | [CEA]3 !1!A!3!c!4!d |[I:staff +1] !4!=F,3[I:staff -1] _A3/2 x3/2 | %3
+ !3!c2 z EGA |"^poco rit,"[I:staff +1] (G,4 C,4[I:staff -1] z2[I:staff +1] ^F,G,) |$ %5
+ (!5!G,,!5!D,B,D,B,D,) |[I:staff -1] z2"_Pp Semplice" z (!3!B!5!dB | !3!B!2!A!3!A!2!G!3!G!1!E | %8
+ G2) z (!3!G!5!BG |$ G!1!E!3!E!2!DD!3!E | !2!E2) z (!1!EGA | E3 !3!GAG |!<(! B2- B)!<)! z z2 |$ %13
+ z2 z (BdB) | (BA)(!4!AG)(!3!GE) | G2- G (GBG) | (GE)(!3!E!2!D)(!1!DE) |$ z2 c !1!E!2!GA | %18
+[I:staff +1] (G,,E,CE,C_E,) |!>(![I:staff -1] B2 B4!>)! | z2 [DGB]4 |$ (d4- d/!4!^c/=c/B/) | %22
+ (d4- d/!4!c/=B/_B/) | (d4- d^c/=c/ | B2- B) z z2 |$ (!4!B4- B/!4!A/_A/G/) | (_B4- B/!4!A/_A/G/) | %27
+ (=B4- B!3!A/_A/ | G4) z2 |$ (!5!d'4-"_cresc." d'/!4!^c'/=c'/b/) | (d'4- d'/!4!c'/=b/_b/) | %31
+[I:staff +1] (G,,D,=B,D,B,D,) |$[I:staff -1] b4 z2 | (!5!b4- b/!4!a/_a/g/) | %34
+ (!4!_b4- b/!3!a/_a/g/) |$ (!4!=b4- b=a/_a/ |!>(! g4) z2!>)! | F2- F/^G/A/B/ c/d/e/d/ | %38
+ e2- e/ !4!d/c/B/ A/B/c/d/ |$ z2 z/ !4!d'/c'/b/ a/b/c'/d'/ |[I:staff +1] (G,,D,CD,CD,) | %41
+[I:staff -1] F2- F/G/!1!A/B/ c/d/!5!_e/d/ | _e2- e/!4!d/c/B/ A/B/c/d/ |$ %43
+ z2 z/ !4!d'/c'/b/ a/b/c'/d'/ |[I:staff +1] (G,,D,CD,CD,) |[I:staff -1] ([bg']4 g'/)f'/=f'/e'/ | %46
+ ([bg']4!<(! g'/)!4!=f'/=e'/_e'/!<)! |$ [bg']6 |!>(! [gd']2- [gd']/(!4!=f/e/_e/ d)!>)! z | %49
+ [ge']4 e'/!4!d'/^c'/=c'/ | [g_e']4 e'/!4!d'/^c'/=c'/ |$ !1!!4![bd']6 | %52
+ !1!!5![db]2-!>(! [db](^c/=c/ B)!>)! z | (d4- d/!4!^c/=c/B/) | (!5!d4- d/!4!c/B/^A/ |$ !5!d6 | %56
+ !4!B6) | d4- d/!4!c/B/_B/ | !5!c4- c/!4!=B/_B/A/ |$ !4!=B6 | G2 z (!3!BdB) | %61
+ (B!2!A!3!A!>(!!2!G!3!GE!>)! | G2) z!<(! (!3!G!5!BG!<)! |$ G!1!E!3!E!>(!!2!DDE!>)! | %64
+ E2) z"_poco rit." (!1!EGA | E4) G2 | !4!A4 !5!B2 |$[I:staff +1] (!5!G,,!5!D,B,D,B,D,) | %68
+[I:staff -1] g6 |[I:staff +1] !fermata![Gd]6 !fermata!G,,,4 |] %70
+V:2
+[I:staff +1] !5!!1![A,,E,]6- | [A,,E,]3 z z2 | C3!>(![I:staff -1] !4!d3/2!5!e3/2!>)! | !1!G2 x4 | %4
+[I:staff +1] z2[I:staff -1] E3 (!3!G!4!A(G _E2 x2 |$ !5!B2)) [DGB]4 |[I:staff +1] (G,,D,B,D,B,D,) | %7
+ (G,,D,B,^D,B,E,) | (G,,E,B,E,B,^D,) |$ (G,, E,(B,=F,B,) F,) | (G,,E,CE,CE,) | (G,,E,CE,C_E,) | %12
+ (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) |[I:staff -1] D2 !1!^D2 !1!E2 | z2 E4 | %16
+[I:staff +1] (G,,E,B,=F,B,F,) |$[I:staff -1] E2 [EG] x3 | E3 x3 | z2 [DG]4 | %20
+[I:staff +1] (G,, D,B,D,B, D,) |$[I:staff -1] z2 [DG]4 | z2 [DG]4 | z2 [DG]4 | z2 D4 |$ z2 [DG]4 | %26
+ z2 [DG]4 | z2 [DG]4 | z2 !1!D4 |$ z2 [GBd]4 | z2 [G_Bd]4 | =d'4- d'^c'/=c'/ |$ z2 [GBd]4 | %33
+ z2 [GBd]4 | z2 [G_Bd]4 |$ z2 [GBd]4 | z2 [GBd]4 | C6 | F6 |$ !5!!3!!1![Fce]6 | [fc'e']6 | C6 | %42
+ F6 |$ [Fc_e]6 | [fc'_e']6 | z2 [EGB]4 | z2 [_EGB]4 |$ z2 [DGB]4 | %48
+[I:staff +1] (G,, D, B, D, B, D,) |[I:staff -1] z2 [=EGc]4 | z2 [_EGc]4 |$ z2 [DGB]4 | %52
+[I:staff +1] (G,, D,B,D,B, D,) |[I:staff -1] z2 [GB]4 | z2 !2!!1![FA]4 |$ z2 [GB]4 | z2 [DG]4 | %57
+ z2 [DG]4 | z2 [DF]4 |$ z2 [DG]4 | z2 D4 |[I:staff +1] (G,,D,B,^D,B,E,) |[I:staff -1] z2 !1!E4 |$ %63
+[I:staff +1] (G,,E,B,=F,B, F,) | (G,,E,CE,CE,) | (G,, E,CE,C E,) |[I:staff -1] z2 _E4 |$ !3!G6 | %68
+ z2 d4 |"_www.theperlectscores.com"[I:staff +1] z2"^Sva"[I:staff -1] !fermata![Bg]6 x2 |] %70
+V:3
+ x6 | x6 |!<(![I:staff -1] A2 !3!c!<)![I:staff +1] B,3/2 x3/2 | C2 z2 x2 | x12 |$ x6 | x6 | x6 | %8
+ x6 |$ x6 | x6 | x6 | x6 |$ x6 | (G,,D,B,^D,B,E,) | (G,,E,B,E,B,E,) | x6 |$ (G,, E,CE,C E,) | %18
+ x3!<(![I:staff -1] GAG!<)! |[I:staff +1] (G,,D,B,D,B,D,) | x6 |$ (G,,D,B,D,B,D,) | %22
+ (G,,D,_B,D,B,D,) | (G,,D,=B,D,B,D,) | (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) | (G,,D,_B,D,B,D,) | %27
+ (G,,D,=B,D,B,D,) | (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) | (G,,D,_B,D,B,D,) | %31
+[I:staff -1] z2 [G=Bd]4 |$"_dimin."[I:staff +1] (G,,D,B,D,B,D,) | (G,,D,B,"_cresc."D,B,D,) | %34
+ (G,,D,_B,D,B,D,) |$ (G,,D,=B,D,B,D,) | (G,,D,B,D,B,D,) | (G,,D,CD,CD,) | (G,,D,CD,CD,) |$ %39
+ (G,,D,CD,CD,) | x6 | (G,,D,CD,CD,) | (G,,D,CD,CD,) |$ (G,,D,CD,CD,) | x6 | (G,,=E,B,E,B,E,) | %46
+ (G,,_E,B,E,B,E,) |$ (G,,D,B,D,B,D,) | x6 | (G,,=E,CE,CE,) | (G,,_E,CE,CE,) |$ (G,,D,B,D,B,D,) | %52
+ x6 | (G,, D,B,D,B, D,) | (G,, D,CD,C D,) |$ (G,, D,B,D,B, D,) | (G,,D,B,D,B, D,) | %57
+ (G,,D,_B,D,B,D,) | (G,,D,CD,CD,) |$ (G,,D,B,D,B,D,) | (G,,D,B,D,B,D,) | x6 | (G,,E,B,E,B,^D,) |$ %63
+ x6 | x6 | x6 | (G,,F,CF,CF,) |$[I:staff -1] z2 !1!D4 |[I:staff +1][K:treble] (!5!G,!5!DBDBD) | %69
+ x6[K:bass] x4 |] %70
+V:4
+ x3 | x3 | x3 | !5!E,[I:staff -1] z[I:staff +1] z | x6 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ %13
+ x3 | x3 | x3 | x3 |$ x3 | x2[I:staff -1] _E/ x/ | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | %28
+ x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | %46
+ x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | %64
+ x3 | x3 | x3 |$ x3 |[I:staff +1][K:treble] x3 | x3[K:bass] x2 |] %70
+

@@ -1,0 +1,29 @@
+X:1
+T:Gavotte Sheet music supplied by www.theperfectscores.com
+C:J S Bach
+%%score 1 2
+L:1/8
+Q:1/4=100
+M:4/4
+I:linebreak $
+K:Bmin
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 treble nm="Piano Collection for Beginners - Grade 3"
+V:1
+"^Moderato" .!4!f2 .!3!f2 |"^(a)""^tr." (f3 e/f/ g2 f2 | e4) (.!4!e2 .!3!e2) | %3
+"^(b)""^tr." (e3 d/e/ fdec |$ !3!d2 A2) (.!4!f2 !3!f2) |"^tr." (f3 e/f/ g2 f2 | %6
+ e2) (!3!ba g!3!fed | cB!<(!AB cdec!<)! |1!>(! d4-)!>)! :|2 d4 |:$ (.a2 .!3!a2) | %11
+!<(! (Ta3 g/!<)!a/!>(! bagf!>)! | g2 d2) (!2!g2 a2 | b=c'ba !1!g!3!fed | g4) (.!2!e2 .!1!e2) |$ %15
+[K:Bmin] (!2!e3 f gagf | ed!2!c!1!d !2!efgb | agfe f/a/f/a/ f/a/f/a/ | e4) (.!4!f2 .!3!f2) |$ %19
+!<(! (Tf3 e/!<)!f/!>(! g2 f2!>)! | e4) (.!4!e2 .!3!e2) |!<(! (e3 d/e/!<)!!>(! fd!4!ec!>)! | %22
+ d)(A"_cresc."!2!de .f2 .!3!f2) |$ (Tf3 e/!3!f/ !4!gfed | ba^gf gabg | afe)d !3!cBcA |1 d4 :|2 %27
+ d4 |]$"^(a)" f/g/f/g/ f/!3!g/f/ e/f/ |"^(b)" e/f/e/f/ e/f/e/ d/e/ |"^(c)" a/b/a/b/ a/b/a/ g/a/ | %31
+V:2
+"_ra" (!2!ADFA) |!<(! (dD=cD!<)! !1!B!>(!DAD)!>)! | (GDFD GDEG) | %3
+!<(! (cD!1!BD!<)!!>(! !1!AD!2!GD)!>)! |$ (FDFG ADF!2!A) |!<(! (dD=cD!<)!!>(! !1!BDAD)!>)! | %6
+ (!2!GDFD EDFD) | (GDFD EDGD) |1 (FDFG/) :|2 (FDED) |:$ (!3!FDF!2!A) | (dAFD !2!GD!1!AD) | %12
+ (BD=cD!<(! BDAD)!<)! | (!2!G!>(!D!1!AD B!>)!D=cD) | (BDAD !2!GDFD) |$[K:Bmin] (GDAD BDAD) | %16
+"_cresc." (!2!GD!1!BD AD!2!GD) | (FDGD ADBD) | (cD(((G!1!c !1!d!2!A)))DA) |$ (dD=cD !1!BDAD) | %20
+ (!2!GDFD GDEG) | (cDBD AD!2!GD) | (FDFG ADF!2!A) |$ (dDAD BDFD) | (!2!^GDAD BDdD) | %25
+ (cDBD AD!2!=GD) |1 (FDED/) :|2 [DF]4 |]$ z9/2 | z8 | z8 | %31
+

@@ -33,7 +33,9 @@
     "https://flow.viasocket.com/*",
     "https://*.viasocket.com/*",
     "https://take-a-piano-sheet-music-break.com/*",
-    "https://*.newzik.com/*"
+    "https://*.newzik.com/*",
+    "https://app.getodin.ai/*",
+    "https://*.getodin.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

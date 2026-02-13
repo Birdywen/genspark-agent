@@ -1,0 +1,223 @@
+X:1
+T:Tarantella Sheet music supplied by www.theperfectscores.com
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:3/8=127
+M:6/8
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M87: placeholder (x) detected - possible missing note
+%! CHECK: M91: placeholder (x) detected - possible missing note
+%! CHECK: M93: placeholder (x) detected - possible missing note
+%! CHECK: M95: placeholder (x) detected - possible missing note
+%! CHECK: M99: placeholder (x) detected - possible missing note
+%! CHECK: M101: placeholder (x) detected - possible missing note
+%! CHECK: M102: placeholder (x) detected - possible missing note
+%! CHECK: M104: placeholder (x) detected - possible missing note
+%! CHECK: M106: placeholder (x) detected - possible missing note
+%! CHECK: M108: placeholder (x) detected - possible missing note
+%! CHECK: M110: placeholder (x) detected - possible missing note
+%! CHECK: M112: placeholder (x) detected - possible missing note
+%! CHECK: M115: placeholder (x) detected - possible missing note
+%! CHECK: M118: placeholder (x) detected - possible missing note
+%! CHECK: M119: placeholder (x) detected - possible missing note
+%! CHECK: M120: placeholder (x) detected - possible missing note
+%! CHECK: M122: placeholder (x) detected - possible missing note
+%! CHECK: M214: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M84: placeholder (x) detected - possible missing note
+%! CHECK: M105: placeholder (x) detected - possible missing note
+%! CHECK: M120: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M57: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+%! CHECK: M77: placeholder (x) detected - possible missing note
+%! CHECK: M88: placeholder (x) detected - possible missing note
+%! CHECK: M92: placeholder (x) detected - possible missing note
+%! CHECK: M97: placeholder (x) detected - possible missing note
+%! CHECK: M107: placeholder (x) detected - possible missing note
+%! CHECK: M133: placeholder (x) detected - possible missing note
+%! CHECK: M152: placeholder (x) detected - possible missing note
+%! CHECK: M171: placeholder (x) detected - possible missing note
+%! CHECK: M190: placeholder (x) detected - possible missing note
+%! CHECK: M209: placeholder (x) detected - possible missing note
+%! CHECK: M214: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+V:2 bass 
+V:3 bass 
+V:1
+"^Presto"!>(!"^R.H."[I:staff +1] (F,!>)!!3!A,B, CB,A,) | (!>!E,A,B, CB,A,) | (D,A,B, CB,A,) | %3
+w: |||
+ (E,A,B, CB,A,) |$ (!>!F,!2!A,B, CED) | ([A,C]6 | [^G,B,]6) |[I:staff -1] x6 | x6 | %9
+w: ||||||
+"_risoluto" z (!1!AB cBA | e2) (e A2) (A |$ f2) (f A2)!<(! (A!<)! |"^ten," !5!e6) | z (!2!Bc dcB | %14
+w: |||||
+ c2) (!3!c A2) (!2!A | B2) (!4!B F2) (!2!F |$ !5!B2) (B E3) |"_SE" z (!1!AB cBA | %18
+w: |||* sempre * CTesc., *|
+ e2) !4!e !3!e2 !2!e | !1!e2 !4!e !3!e2 (!2!e | !>!a6) |$ z (!2!ab c'ba | %22
+w: ||al||
+ g"^Tarantella (Pieczonka)"g'f' e'd'c' | !4!bag f!3!ed | c3) z2 z |$"^brillante" E3 (!2!f=gf | %26
+w: ||||
+ ee'e !2!ded | cc'c !2!BcB | AaA (!2!f)gf | ee'e !2!f=gf |$ ee'e !2!ded | cc'c !2!BcB | %32
+w: ||||||
+ AaA) (!2!ABA | G3) (!8!!2!aba | gg'g !2!fgf |$ ee'e !2!ded | cc'c) (!2!BcB | AaA BcB | AaA BcB | %39
+w: |||||||
+ Aa)A BcB |$ Aa!1!A (!3!BcB) | E3 (F=GF | E3) z2 z | z2 z (FGF | E3) (FGF | E3) z2 z |$ %46
+w: |||||||
+ z2 z"_St" (!2!FGF | EeE) (FGF | EeE) FGF |"_JSS" EeE !2!DED | CcC !2!B,CB, |$ %51
+w: |||||
+ z!<(! (!1!AB cBA!<)! | e2) (e!<(! A2) (A!<)! | f2) (f!<(! A2) (A!<)! |"^ten." !5!e6) | %55
+w: ||||
+ z (!2!Bc dcB | c2) (!3!c A2) !fermata!!2!A |$"^SE" B2 (!4!B F2) (!2!F | B2) (B E3) | %59
+w: ||||
+[I:staff +1] (!4!A,3 [CE]3) |[I:staff -1] e2 !4!e !3!e2 !2!e | !1!e2 !4!e !3!e2 (!2!e | a6) |$ %63
+w: ||||
+[I:staff +1] (!5!=F,3 !1!!3![A,D]3) |[I:staff -1] e'2 d' c'ba | ^gfe d!3!cB | A3 (!4!EFE | %67
+w: ||||
+ A,3) z2 z ||$[K:F#min]"_dolce e cantabile" z2 z ecE |[I:staff +1] !1!^B,3 !2!C3 | %70
+w: |||
+[I:staff -1] cA!<(!E c=GE!<)! | d^GE !3!^AGE |$ BG!<(!E !4!c=GE!<)! | %73
+w: |||
+ [^Gd]3"^espressivo" (!3!!5![df]3 | [ce]3 !1![Bd]3) | cAE dAE | ^dAE eAE |$ !4!^dAE eAE | %78
+w: |||||
+ cAE!<(! c=GE | d^GE!<)! !3!^AGE | BGE!<(! !4!c=GE!<)! |$ d^GE !5!^dGE | eGE !4!GED | %83
+w: |||||
+ A3/2E!2!C x5/2 | z2 z =c>E=C ||$[K:Amin] !5!B"_doloroso"FD !4!AFD | GEC (!4!^GEC | %87
+w: ||||
+ A)!3!EA, (5:4:2G3/2EA, | (5:4:3F3/2DA, z/8 (5:4:2F3/2CA, | %89
+w: ||
+ (5:4:3E3/2CA, z/8 (5:4:3!3!^D3/2CA, x11/40 |$ (5:4:3!4!E3/2CA, z/8 (5:4:2F3/2CA, | %91
+w: ||
+ E3/2B,!2!^G,[I:staff +1] z x3/2 |[I:staff -1] E (!1!CE) (5:4:3c3/2EC x/5 | %93
+w: ||
+ (5:4:3B3/2FD z/8 (5:4:3!4!A3/2FD x11/40 | (5:4:3G3/2EC z/8 (5:4:3(!4!^G3/2EC x11/40 |$ %95
+w: ||
+ (5:4:3!5!A3/2)!3!EA, z/8 (5:4:2G3/2EA, | (5:4:3F3/2DA, z/8 (5:4:2F3/2CA, | %97
+w: ||
+ (5:4:3E3/2CA, z/8 (5:4:3!3!^D3/2CA, x11/40 | (5:4:3E3/2CA, z/8 (5:4:3F3/2CA, x11/40 | %99
+w: ||
+ E3/2CA,/ (5:4:3[AA]3/2^DB, x/5 |[I:staff +1] E,,3 ^C3 ||$ %101
+w: ||
+[K:F#min][I:staff -1] (5:4:3^d3/2AE z/8 (5:4:3e3/2AE x11/40 | %102
+w: |
+ (5:4:3c3/2AE z/8 (5:4:3!4!c3/2=GE x11/40 | (5:4:3d3/2^GE z/8 (5:4:3!3!^A3/2GE x11/40 | %104
+w: ||
+ (5:4:3B3/2G!<(!E z/8 (5:4:3c3/2=GE!<)! x11/40 | [^Gd]3!>(!"^espressivo" (!3!!5![df]3 | %106
+w: ||
+ [ce]3 [Bd]3)!>)! |$ (5:4:3!4!c3/2AE z/8 (5:4:3d3/2AE x11/40 | %108
+w: ||
+ (5:4:3^d3/2AE z/8 (5:4:3e3/2AE x11/40 | (5:4:3^d3/2AE z/8 (5:4:3e3/2AE x11/40 | %110
+w: ||
+ (5:4:3c3/2AE z/8 (5:4:3a3/2dA x11/40 | (5:4:3g3/2dA z/8 (5:4:3!4!f3/2dA x11/40 |$ %112
+w: ||
+ (5:4:3!5!e3/2AE z/8 (5:4:3!4!^d3/2AE x11/40 |[I:staff +1] =B,3 ^A,3 |[I:staff -1] d3 ^GE z | %115
+w: |||
+ (5:4:3d3/2GE z/8 (5:4:3c3/2=GE x11/40 | d3/2^GE z x3/2 | (5:4:3d3/2GE z/8 (5:4:3c3/2=GE x11/40 |$ %118
+w: |||
+ (5:4:3d3/2^GE z/8 (5:4:3c3/2=GE x11/40 | %119
+w: |
+!<(!"^un poco riten." (5:4:3d3/2^GE z/8 (5:4:3^d3/2G!<)!E x11/40 | %120
+w: |
+ (5:4:3e3/2GE z/8 (5:4:3!4!G3/2ED x11/40 ||[K:Amin]"^a tempo""_Jz" z!<(! (AB cBA!<)! | %122
+w: ||
+ e2) (e A2) A |$ f2 (f A2) (A | e6) | z (!2!Bc dcB | c2) (c A2) (!2!A | B2) (!4!B F2) (!2!F | %128
+w: ||||||
+ B2) (B E3) |$"_sempre più" z (AB cBA | e2) !4!e !3!e2 !2!e | !1!e2 !4!e!<(! !3!e2 (!2!e!<)! | %132
+w: ||||
+ a6) |"_al" z (!2!ab c'ba | gg'f' e'd'c' |$ !4!bag f!3!ed | c3) z2"^con forza" z | E3 !8!!2!f=gf | %138
+w: ||||||
+ ee'e !2!ded | cc'c BcB |$ (AaA (!2!f)gf | ee'e f=gf | ee'e ded | cc')c BcB | AaA !2!ABA |$ %145
+w: |||||||
+"_SE" G3 (!2!aba | gg'g fgf | ee'e ded | cc'c B)cB | AaA BcB |$ A(aA BcB | AaA BcB | AaA (!3!B)cB | %153
+w: ||||||||
+ E3) (!2!F=GF | E3) z2 z |$ z2 z"_cresc." (FGF | E3) (FGF | E3) z2 z | z2 z (FGF | EeE) (FGF | %160
+w: |||||||
+ EeE) (FGF |$ EeE DED | CcC B,CB,) |"_Jz p" z (AB cBA | e2) (e A2) (A | f2) (f A2) (A | e6) |$ %167
+w: |||||||
+ z (Bc dcB | c2) (c A2) (A | B2) (B F2) (F | B2) (B E3) | z (AB cBA) | e2 !4!e !3!e2 e |$ %173
+w: ||||||
+ e2 !4!e !3!e2 (e | a6) | z (!1!ab c'ba | e'2 d' c'ba |[I:staff +1] E,3 [^G,D]3 | %178
+w: |||||
+[I:staff -1] A2) z!<(! AEC!<)! |$ (AEC) (AEC) | (AEC) (AEC) | (AEC) (AEC) | (AEC) (AEC) |$ %183
+w: |||||
+"_scherzando" (!3!fag fed) | (ced cBA) | (^GB!>(!A G^FE | A3) (a!>)!ec) |$ (aec) (aec) | %188
+w: ||||* * cresc. * molto *|
+ (ae"^Tarantella (Pieczonka)"c) (aec) | (aec) (aec) | (aec) (aec) |$ (!3!fag fed) | (!3!ced cBA) | %193
+w: * * * * al *|SF * * * * *||||
+ (!3!^GBA G^FE) | (!3!ced cBA) |"_accellerando" (fag fed) |$ (ced cBA) | (^GBA G^FE | (c)ed cBA) | %199
+w: ||||||
+ (!3!f'a'g' f'e'd') | (f'a'g' f'e'd') |$ (f'a'g' f'e'd') | (f'a'g' f'e'"_WAAL"d') | (e'2 d' c'ba | %204
+w: |||||
+ !4!^gfe d!3!cB |"_sempre ‚ff" ae'd' c'ba | ^g)fe dcB |$ Aed cBA | ^GFE DCB, | A,ED CB,A, | %210
+w: ||||||
+"^R.H"[I:staff +1] !4!^G,F,E, D,!3!C,B,, | A,,6 |"_SPE"[I:staff -1] [^GBe]6 |"_JS:" [cea]4 x2 |] %214
+w: ||||
+V:2
+"_L.H." !1!A,,6 | !2!G,,6 | !3!F,,6 | !4!E,,6 |$ !5!D,,6 | !4!E,,6- | E,,6 | x6 | x6 | %9
+"^JE" !>!A,,3!<(! !3!!1![CE]3!<)! | (A,3 [CE]3) |$ (A,3 [DF]3) | (A,3 [CE]3) | %13
+!>(! (!5!^G,3!>)! [B,E]3) |!>(! (!4!A,3!>)! [CE]3) | (!5!D,3 [A,B,]3) |$ (!>!!5!E,3 [^G,B,]3) | %17
+ (!4!A,3 [CE]3) | (!5!^G,3 [B,E]3) |!>(! (!5!=G,3!>)! [_B,E]3) |!>(! (!5!^F,3!>)! [A,D]3) |$ %21
+ (!5!=F,3 !3!!1![A,D]3) |"^SE" (!5!G,3 [CE]3-) | [CE]3 (([G,B,F]3 | [CE]3)) z2 z |$ %25
+"^Se" ^G,,3 [E,G,D]3- | [E,G,D]3 [E,^G,D]3 | A,,3 [E,A,C]3 | [E,A,C]3 [E,A,C]3 | B,,3 [E,^G,D]3- |$ %30
+ !8![E,G,D]3 [E,^G,D]3 | A,,3 [E,A,C]3- | [E,A,C]3 [E,A,C]3 | B,,3 [G,B,F]3- | [G,B,F]3 [G,B,F]3 |$ %35
+ E,3 [G,CE]3- | [G,CE]3 [E,A,C]3 | F,,3 !5!!3!!1![F,A,C]3- | [F,A,C]3!<(! !5!!3!!1![F,A,^C]3- | %39
+ [F,A,C]3 !5!!3!!1![F,A,D]3!<)! |$ [F,A,D]3 (((!5!!3!!1![F,A,^D]3 | !4!!2!!1![^G,B,E]3))) (F,,3 | %42
+ E,,3) z2 z | z2 z (F,,3 |!>(! !>!E,,3)!>)! (F,,3 |!>(! !>!E,,3)!>)! z2 z |$ z2 z (!2!F,,3 | %47
+!>(! !>!!3!E,,3)!>)! (F,,3 |!>(! !>!E,,3)!>)! (!2!F,,3 |!>(! !>!!1!E,,3)!>)! (D,,3 | C,,3 B,,,3 |$ %51
+ A,,,3) !3!!1![CE]3 | (A,3 [CE]3) | (A,3 [DF]3) | (A,3 [CE]3) | (!5!^G,3 [B,E]3) | %56
+!>(! (!4!A,3!>)! [CE]3) |$ (!5!D,3 [A,B,]3) | (!4!E,3 [^G,B,]3) | %59
+"_cresc."[I:staff -1] (2:3:2!1!AB cBA |!>(![I:staff +1] (!5!^G,3!>)! [B,E]3) | (!5!=G,3 [_B,E]3) | %62
+ (!5!^F,3 [A,D]3) |$!<(![I:staff -1] (2:3:2!1!ab c'b!<)!a |[I:staff +1] (E,3 [A,C]3-) | %65
+ [A,C]3 (([E,^G,D]3 | [A,C]3)) (E,,3 | A,,,3) z2 z ||$[K:F#min] z2 z !2!C3 |[I:staff -1] ^dAE eAE | %70
+ c3 !4!c3 | d3 ^A3 |$ B3 ^c3 |[I:staff +1] B,3 (!5!!3![E,G,]3 | !4![F,=A,]3 !3!!1![G,B,]3) | %75
+[I:staff -1] c3 d3 | ^d3 e3 |$ ^d3 e3 | ^c3 (c3 | d3 ^A3 | B3 ^c3) |$ d3 ^d3 | e3 G3 | A3 x3 | %84
+[I:staff +1] A,,6 ||$[K:Amin][I:staff -1] B3 A3 | G3 ^G3 | A3 =G3 | F3 F3 | E3 ^D3 |$ E3 F3 | %91
+ E3 E,^G,B, |!<(![I:staff +1] !5!A,,6!<)! |[I:staff -1] B3 A3 | G3 ^G3 |$ A3 =G3 | F3 F3 | E3 ^D3 | %98
+ E3 (F3 | E3 x3 | ^G3/2[B,E]) e3/2AE ||$[K:F#min] ^d3 e3 | c3 (c3 | d3 ^A3 | B3 c3) | %105
+[I:staff +1] B,3 (!5!!2![E,G,]3 | [F,=A,]3 [G,B,]3) |$[I:staff -1] (c3 d3 | ^d3 e3) | ^d3 e3 | %110
+ c3 (a3 | g3 f3 |$ e3 ^d3) | dGE !4!c=GE | d3 z2 x | d3 c3 | d3 z2 x | d3 c3 |$ d3 c3 | d3 ^d3 | %120
+ e3 G3 ||[K:Amin][I:staff +1] !>!A,,3 [CE]3 | (A,3 [CE]3) |$ (A,3 [DF]3) | (A,3 [CE]3) | %125
+ (^G,3 [B,E]3) |!>(! (!>!A,3!>)! [CE]3) |!>(! (D,3!>)! [A,B,]3) | (E,3 [^G,B,]3) |$ (A,3 [CE]3) | %130
+ (^G,3 [CE]3) | (=G,3 [_B,E]3) | (^F,3 [A,D]3) | (F,3 [A,D]3) | (G,3 [CE]3-) |$ [CE]3 (([G,B,F]3 | %136
+ [CE]3)) z2 z | ^G,,3 [E,G,D]3- | [E,G,D]3 [E,^G,D]3 | A,,3 [E,A,C]3- |$ [E,A,C]3 [E,A,C]3 | %141
+ B,,3 [E,^G,D]3- | [E,G,D]3 [E,^G,D]3 | A,,3 [E,A,C]3- | [E,A,C]3 [E,A,C]3 |$ B,,3 [G,B,F]3- | %146
+ [G,B,F]3 [G,B,F]3 | C,3 [G,CE]3- | [G,CE]3 [G,CE]3 | F,,3 !5!!2!!1![F,A,C]3- |$ %150
+ [F,A,C]3 [F,A,^C]3- | [F,A,C]3 [F,A,D]3- | [F,A,D]3 ((([F,A,^D]3 | [^G,B,E]3))) (F,,3 | %154
+!>(! !>!E,,3)!>)! z2 z |$ z2 z (F,,3 |!>(! E,,3)!>)! (F,,3 |!>(! !>!E,,3)!>)! z2 z | %158
+ z2 z (!2!F,,3 | !3!E,,3) (F,,3 | E,,3) (!2!F,,3 |$ E,,3) (D,,3 | C,,3 B,,,3 | A,,,3) [A,E]3 | %164
+ [B,E]3 [CE]3 | (A,3 [DF]3) | (A,3 [CE]3) |$ (^G,3 [B,E]3) | (A,3 [CE]3) | (D,3 [A,B,]3) | %170
+ (!4!E,3 [^G,B,]3) | (!5!A,3 [CE]3) | (!5!^G,3 [B,E]3) |$!>(! (!5!=G,3!>)! [_B,E]3) | %174
+ (!4!^F,3 [A,D]3) | (!5!=F,3 !3![A,D]3) | (E,3 [A,C]3) |[I:staff -1] ^gfe d!3!cB | %178
+[I:staff +1] .[A,C]2 z !5!A,,,3 |$ B,,,3 C,,3 | D,,3 !1!E,,3 | !2!F,,3 !1!E,,3 | D,,3 C,,3 |$ %183
+ (D,3 [F,B,]3) | (E,3 [A,C]3) | (E,3 [B,D]3 | .[A,C]3)!<(! !5!A,,3!<)! |$ B,,3 C,3 | D,3 !1!E,3 | %189
+ !2!F,3 !1!E,3 | D,3 C,3 |$ (D,3 [F,B,]3) | (E,3 [A,C]3) | (E,3 [B,D]3) | (E,3 [A,C]3) | %195
+ (D,3 [F,B,]3) |$ (E,3 [A,C]3) | (E,3 [B,D]3) | (E,3 [A,C]3) | [D,F,A,]6 | !5!!3!!1![D,F,_B,]6 |$ %201
+ !1![D,F,A,]6 | !1![D,F,=B,]6 | [E,A,C]6 | ([E,^G,B,]6 | [A,CE]6) | ([B,DE]6 |$ [A,CE]6) | %208
+ ([E,,B,,]6 | [A,,C,E,]6) |"_L.H." E,,6 |"_www.theperlectscores.com" A,,,6 | E,,6 | A,,,6 |] %214
+V:3
+ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | %19
+ x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | %38
+ x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ %57
+ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 ||$[K:F#min] x3[I:staff -1] e3 | ^d3 e3 | %70
+[I:staff +1] !4!A,3 !3!^A,3 | !1!B,6 |$ !5!E,3 ^A,3 | x6 | x6 | (!3!A,3 B,3 | !1!^B,3) !2!C3 |$ %77
+ !1!^B,3 !2!C3 | !4!A,3 !3!^A,3 | !1!B,6 |"_www.theperiectscores.com" E,3 !2!^A,3 |$ B,6 | E,6 | %83
+ !1!=A,3 !2!E,A,E, | x3[I:staff -1] =c3 ||$[K:Amin][I:staff +1] (!4!B,,6 | C,6 |!<(! ^C,6!<)! | %88
+ !1!D,3) !2!^D,3 | !1!E,3 !2!=F,3 |$ !1!E,3 ^D,3 | E,3 z2 x | %92
+ x3"^con molto passione"[I:staff -1] c3 |[I:staff +1] B,,6 | C,6 |$!<(! (^C,6!<)! | D,3) (!2!^D,3 | %97
+ !1!E,3 !2!=F,3 | !1!E,3) ^D,,3 | E,,3"_WWW." =F,,3 |[I:staff -1] ^G3 e3 ||$ %101
+[K:F#min][I:staff +1] (!1!^B,3 !2!C3 | !4!A,3 !3!^A,3 | !1!B,6 | E,3) !2!^A,3 | x6 | x6 |$ %107
+ (!3!A,3 !2!B,3 | !1!^B,3) (!2!C3 | !1!^B,3 !2!C3 | !5!A,3) (!2!F3 | !1!E3 D3 |$ C3) ^B,3 | %113
+[I:staff -1] =d3 ^c3 |[I:staff +1] B,3 E,3 | (!1!B,3"_Risoluto" ^A,3 | B,3 E,3) | (B,3 ^A,3 |$ %118
+ B,3 ^A,3 | B,6 | E,6) ||[K:Amin] x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | %133
+ x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | %152
+ x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | %171
+ x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | %190
+ x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | %209
+ x6 | x6 | x6 | x6 | x6 |] %214
+

@@ -1,0 +1,21 @@
+X:1
+T:America Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=108
+M:3/4
+I:linebreak $
+K:Emin
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:1
+"^Moderato" [B,DG] [B,EG] [CEA] | ([CDF]3/2 [DEG]/ [DFA]) | [DGB] [EGB] [EAc] |$ %3
+ ([DGB]3/2 [CFA]/ [B,EG]) | ([CEA] [B,DG] [CDF]) | [B,DG]3 | [GBd] [GBd] [GBd] |$ %7
+ ([GBd]3/2 [Ac]/ [DGB]) | [DFc] [DFc] [DFc] | ([DFc]3/2 [DBd]/ [DFA]) |$ %10
+ ([DGB] [EGc]/[DGB]/ [CFA]/[B,DG]/ | [DGB]3/2 [DFc]/ [DGd]) | ([EGe]/[EAc]/ [DGB] [CFA] | %13
+ [B,DG]3) :| %14
+V:2
+ !1!G, !3!E, !5!C, | D, E, F, | G, E, C, |$ !4!D, !3!^D, !2!E, | !5!C, =D, D, | %5
+ !1!G, !2!D, !5!G,, | G,, !4!B,, !2!D, |$ G, G,, !1!G, | !5!D, !4!F, !2!A, | !1!C !5!D, !4!D, |$ %10
+ (!1!G,/!2!F,/ !3!E,/!1!D,/ C,/B,,/) | !5!G,,"^JS" A,,"_com" B,, | !2!C, !1!D, !5!D,, | G,,3 :| %14
+

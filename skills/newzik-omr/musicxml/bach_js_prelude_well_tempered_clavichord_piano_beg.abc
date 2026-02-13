@@ -1,0 +1,63 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Prelude. (n.1, from well-tempered clavichord)
+C:J S Bach
+%%score { 1 | ( 2 3 ) }
+L:1/16
+Q:1/4=112
+M:4/4
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M36: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade"
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+"^Allegro" z2 !1!G!2!c !1!!4!e!2!!1!Gce z2 !1!G!2!c eGce | z2 !1!A!3!d !5!fAdf z2 Ad fAdf |$ %2
+ z2 !1!G!3!d !5!fGdf z2 !1!G!3!d !5!fGdf | z2 !1!G!2!c !4!eGce z2 Gc eGce |$ %4
+ z2 !1!A!3!e aAea z2 Ae aAea | z2 !1!^F!2!A !5!dFAd z2 FA dFAd |$ %6
+[Q:1/4=113]"^Prelude n 1 from well tempered clavichord bach" z2 !1!G!3!d !5!gGdg z2 Gd gGdg | %7
+ z2 !1!E!2!G !5!cEGc z2 EG cEGc |$ z2 EG cEGc z2 EG cEGc | z2 !1!D!2!^F !5!cDFc z2 DF cDFc |$ %10
+ z2 !1!D!2!G !4!BDGB z2 DG"_cresc." BDGB | z2 !1!E!2!G ^cEGc z2 EG cEGc |$ %12
+ z2 !1!D!3!A dDAd z2 DA dDAd | z2 !1!D!2!F !5!BDFB z2 DF BDFB |$ %14
+[Q:1/4=113]"^Prelude n 1 from well tempered clavichord bach" z2 !1!C!3!G !5!cCGc z2 CG cCGc | %15
+ z2 !1!A,!2!C !5!FA,CF z2 A,C FA,CF |$ z2 A,C FA,CF z2 A,C FA,CF | %17
+ z2 !1!G,!2!B, FG,B,F z2 G,B, FG,B,F |$ z2 !1!G,!3!C !5!EG,CE z2 G,C EG,CE | %19
+ z2 !2!_B,!3!C !5!EB,CE z2 B,C EB,CE |$ z2 !1!A,!3!C EA,CE z2 A,C EA,CE | %21
+ z2 !1!A,!2!C !4!_EA,CE z2 A,C EA,CE |$ %22
+[Q:1/4=113]"^Prelude n 1 from well tempered clavichord bach" z2 !1!B,C !4!_EB,CE z2 B,C EB,CE | %23
+ z2 !1!B,!2!C !3!DB,CD z2 B,C DB,CD |$ z2 !1!G,!2!B, !4!DG,B,D z2 G,B, DG,B,D | %25
+ z2 !1!G,!3!C !5!EG,CE z2 G,C EG,CE |$ z2 !1!G,!2!C !5!FG,CF z2 G,C FG,CF | %27
+ z2 !1!G,!2!B, !5!FG,B,F z2 G,B, FG,B,F |$ z2 !1!A,!2!C !5!^FA,CF z2 A,C FA,CF | %29
+ z2 !1!G,!2!C !5!GG,CG z2 G,C GG,CG |$ %30
+[Q:1/4=113]"^Prelude n 1 from well tempered" z2 !1!G,!2!C !5!FG,CF z2 !1!G,!2!C !5!FG,CF | %31
+ z2 !1!G,!2!B, !5!FG,B,F z2 G,B, FG,B,F |$ z2 !1!G,!2!_B, !5!EG,B,E z2 G,B, EG,B,E | %33
+"^ca" z2[I:staff +1] !1!F,!2!A,[I:staff -1] !3!CF!3!C!2!A,[I:staff +1] C,8 |$ %34
+[I:staff -1] z2!<(! !1!G!2!B !4!df!4!d!<)!!2!B!>(! !5!d!3!B!2!G!>)!!4!B !1!D!3!FED | %35
+ !fermata![EGc]16 |] %36
+V:2
+"_LH."[I:staff -1] z E3- E4 z E3- E4 | z !2!D3- D4 z D3- D4 |$ z !2!D3- D4 z D3- D4 | %3
+ z !1!E3- E4 z E3- E4 |$ z E3- E4 z E3- E4 | z !1!D3- D4 z D3- D4 |$ z !1!D3- D4 z D3- D4 | %7
+[I:staff +1] z C3- C4 z C3- C4 |$ z !1!C3- C4 z !1!C3- C4 | z !2!A,3- A,4 z A,3- A,4 |$ %10
+ z !1!B,3- B,4 z B,3- B,4 | z !1!_B,3- B,4 z B,3- B,4 |$ z !1!A,3- A,4 z A,3- A,4 | %13
+ z !1!_A,3- A,4 z A,3- A,4 |$ z !1!G,3- G,4 z G,3- G,4 | z !1!F,3- F,4 z F,3- F,4 |$ %16
+ z !1!F,3- F,4 z !1!F,3- F,4 | z !2!D,3- D,4 z D,3- D,4 |$ z !1!E,3- E,4 z E,3- E,4 | %19
+ z !1!G,3- G,4 z G,3- G,4 |$ z F,3- F,4 z F,3- F,4 | z !1!C,3- C,4 z C,3- C,4 |$ %22
+ z !2!_E,3- E,4 z E,3- E,4 | z F,3- F,4 z F,3- F,4 |$ z F,3- F,4 z F,3- F,4 | %25
+ z !2!E,3- E,4 z E,3- E,4 |$ z D,3- D,4 z D,3- D,4 | z !1!D,3- D,4 z D,3- D,4 |$ %28
+ z !2!_E,3- E,4 z E,3- E,4 | z =E,3- E,4 z E,3- E,4 |$ z D,3- D,4 z D,3- D,4 | %31
+ z D,3- D,4 z D,3- D,4 |$ z C,3- C,4 z C,3- C,4 | z !1!C,3- C,4- !4!C!2!A,!1!F,!4!A, !2!F,D,F,D, |$ %34
+ z B,,3- B,,4- B,,8 | !fermata![C,,C,]16 |] %36
+V:3
+"^P legato" !3!C2 C2 | !3!C2 C2 |$ !4!B,2 B,2 | !3!C2 C2 |$ C2 C2 | !2!C2 C2 |$ !3!B,2 B,2 | %7
+ B,2 B,2 |$ !2!A,2 !2!A,2 | !5!D,2 D,2 |$ !3!G,2 G,2 | !2!G,2 G,2 |$ !3!F,2 F,2 | !2!F,2 F,2 |$ %14
+ !3!E,2 E,2 | !2!E,2 E,2 |$ !3!D,2 !2!D,2 | !5!G,,2 G,,2 |$ !3!C,2"_cresc." C,2 | C,2 C,2 |$ %20
+ F,,2 F,,2 | !4!^F,,2"_www.theperfectscores.com" F,,2 |$ !5!G,,2 G,,2 | !4!_A,,2 A,,2 |$ %24
+ G,,2 G,,2 | !5!G,,2 G,,2 |$ G,,2"_dimin." G,,2 | !5!G,,2 G,,2 |$ !5!G,,2 G,,2 | %29
+ G,,2"_dimin.""_www.theperlectiscores.com" G,,2 |$ G,,2 G,,2 | G,,2 G,,2 |$ C,,2 C,,2 | !5!C,,4 |$ %34
+ C,,4 | x4 |] %36
+

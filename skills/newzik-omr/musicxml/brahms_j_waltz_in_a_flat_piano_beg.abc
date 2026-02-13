@@ -1,0 +1,92 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Waltz in a flat. (op.39, n.15)
+C:J Brahms
+%%score { ( 1 4 ) | ( 2 3 ) }
+L:1/4
+Q:1/4=116
+M:3/4
+I:linebreak $
+K:Fmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M39: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M41: placeholder (x) detected - possible missing note
+%! CHECK: M44: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M16: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M39: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M41: placeholder (x) detected - possible missing note
+%! CHECK: M42: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M44: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+L:1/8
+V:2 bass 
+V:3 bass 
+V:4 treble 
+L:1/8
+V:1
+"^Teneramente e Grazioso" (!2!!5![Ec]3 !1!!4![CA])([CA][Ec]) | %1
+ (!2!!5![Ec]3!<(! !1!!4![CA])([CA][Ec])!<)! |!>(! (!4!d!5!e/!4!d/!>)! !3!c2 !4![AB]2) | %3
+ (!5![EAc]3 !2!A)!<(!(!1!A!2!!4![ce])!<)! |!>(! (!5![Acf]3!>)! !2![Ac])!<(!([Ac]!4!e)!<)! |$ %5
+ ([Acf]3 [Ac])([Ac]e) | (!5!g!4!f !3!e2 .!5!=d2) | (!5![Gce]3 !1!!2![EG])([EG]c) | %8
+ (!2!!5![Ec]3 [CA])([CA][Ec]) | ([Ec]3!<(! [CA])([CA][Ec])!<)! |$ (!4!de/d/ c2 !4!B2) | %11
+ (!5![EAc]3 !2!A)(!1!A!2!!4![ce]) | (!5![Acf]3 [Ac])(!2![Ac]e) | ([Acf]3 [Ac])([Ac]e) | %14
+ (!5!g!4!f .!3!e2 !4!d2) |$ (!1!!3!!5![Gce]3 !1!!2!!4![EGc])(!4![EGc]e) | %16
+ ([EGBde]3 !2![EGB])([EGB][de]) | ([EAce]3 [Ac])(!2!!4![Ac]e) | %18
+[I:staff +1] A,,,2 !4![A,C_G]2 [A,C]2 | %19
+"^(poco largamente"[I:staff -1] ([Adfa]3 !4![Adf])(!4![Adf]a) |$ ([AB=dfb]3 !3![Bdf])(!3![Bdf]a) | %21
+ (a!5!g .!4!f2 e2) | ([Ec]3 !1!!4![CA])([CA][Ec]) | ([Ec]3!<(! [CA]-)([CA][Ec])!<)! | %24
+ (de/d/ !3!c2 B2) |$ (!5![EAc]3 !2!A)(!1!A[ce]) | ([Acf]3 [Ac])(!2![Ac]e) | %27
+ ([Acf]3"^(poco ritenuto." [Ac])(!2![Ac]e) | (ae .!2!d2 B2 | [CEA]2) z !4![EAc][EAc]e |$ %30
+ ([EGBde]3 [EGB])([EGB][de]) | ([EAce]3 [Ac])((!1!!2![Ac]e)) | ([Ace_ga]3 [Ace])([Ace][ga]) | %33
+"^poco largamente" ([Adfa]3 !4![Adf])(!4![Adf]a) | ([AB=dfb]3 !3![Bdf])"_dimin."([Bdf]a) |$ %35
+ (!5!a!5!g .!4!f2 !3!e2) | %36
+[I:staff +1] A,,,2"^dolce" [E,A,C]2[I:staff -1] !3!!5!!2![Ec][I:staff +1] [C,E,A,]2 | %37
+[I:staff -1] (3:2:7[ec']2 z (!1!!4![CA]!3![Ec]/ !1!!4![ca][ec'][ca]) x2 | d'e'/d'/ .!3!c'2 !4!b2 |$ %39
+[I:staff +1] A,,,2 [E,A,C]3/2!<(! [C,E,A,]3/2!<)! x | %40
+[I:staff -1] !2!!5![af']2 z z!>(! !4!a/!>)! !3![ec']([fc']- | %41
+ [fc']/8 !2!!5![af']2) !1!!4![CA]c/ z/4 z/8 a2 |!>(! !5!g'!3!e' d'2 .b2!>)! | a2 z2 z2 |] %44
+V:2
+ A,,"^dolce" !4![E,A,C] !5!!4!!2![C,E,A,] | A,,, !4![E,A,C] !2!!5![C,E,A,] | %2
+[I:staff -1] [FA] [FA] !3!!1!D |[I:staff +1] A,,, !4![E,A,] !2!!5![C,E,A,] | %4
+ F,, [F,A,CF] [A,,E,C] |$ F,,!>(! [F,A,CF]!>)!!<(! [A,,E,C]!<)! | %6
+[I:staff -1] [Gc]"_(poco slentando -" [Gc] [F=B] |[I:staff +1] C,, !4![E,G,C] !5![C,E,] | %8
+ A,, !4![E,A,C] !5![C,E,A,] | A,, !4![E,A,C] !5![C,E,A,] |$[I:staff -1] [FA] [FA] [DA] | %11
+[I:staff +1] A,,, !4![E,A,C]!<(! !5![C,E,A,]!<)! |!>(! F,, [F,A,CF]!>)!!<(! [A,,E,C]!<)! | %13
+!>(! F,, [F,A,CF]!>)!!<(! [A,,E,C]!<)! |"_(poco slentando)"[I:staff -1] [Gc] [Gc] [F=B] |$ %15
+[I:staff +1] C,, !4![E,G,C] !5![C,E,G,] |"_poco cresc." E,, !4![E,G,D] !4![E,G,] | %17
+ A,, !4![E,A,C] [E,A,] |[I:staff -1] ([Ace_ga]3/2 [Ace]/)([Ace]/[ga]/) | %19
+!<(![I:staff +1] D,, !4![A,DF] [A,D]!<)! |$ [B,,,B,,] [A,B,=DF] [F,B,D] | %21
+[I:staff -1] [B_d] [Ad] G |[I:staff +1] A,, !4![E,A,C] !5![C,E,A,] | A,, !4![E,A,C] !5![C,E,A,] | %24
+[I:staff -1] [FA] [FA] !1![DA] |$[I:staff +1] A,,, !4![E,A,C]!<(! [C,E,A,]!<)! | %26
+ F,,!>(! [F,A,CF]!>)!!<(! [A,,E,C]!<)! | F,,!>(! [F,A,CF]!>)!!<(! [A,,E,C]!<)! | %28
+[I:staff -1] A !1!G [DE] |[I:staff +1] A,, !4!!2![E,A,] [E,A,C] |$ E,, !4![E,G,D] [E,G,] | %31
+ A,, !4![E,A,C] [E,A,] | A,,, !4![A,C_G] [A,C] |!<(! D,, !4![A,DF] [A,D]!<)! | %34
+ [B,,,B,,] [A,B,=DF] [F,B,D] |$[I:staff -1] [B_d] [Ad] [Gd] | %36
+ [ec'] z/ !1![CA]/ !4!!1![ca]/!5!!2![ec']/[ca]/ | %37
+[I:staff +1] A,,, [E,A,C][I:staff -1] z/[I:staff +1] [C,E,A,] |[I:staff -1] [fa] [ea] [da] |$ %39
+ [eac'] z3/8 !1![CA]3/4 x7/8 | [fc'] (3!1![CA]/E/c/8 c x/ | %41
+!>(![I:staff +1] F,, [F,A,C]!>)!!<(! [A,,E,A,]!<)! |[I:staff -1] [ac'] [dg] [Bd] | [Ac] x2 |] %44
+V:3
+ x3 | x3 | A,, [D,F,D] !4!!2![F,A,] | x3 | x3 |$ x3 |!>(! E,,!>)! !4![E,G,C] [G,,F,=B,] | x3 | x3 | %9
+ x3 |$!>(! A,, [D,F,D]!>)! !4!!2![F,A,] | x3 | x3 | x3 |!>(! E,,!>)! !4![E,G,C] [G,,F,=B,] |$ x3 | %16
+ x3 | x3 | x3 | x3 |$ x3 | E,, [E,B,_D] [E,B,E] | x3 | x3 | A,, [D,F,D] !4!!2![F,A,] |$ x3 | x3 | %27
+ x3 |!>(! !5!C,,!>)!"_www.theperlectscores.com" !3!E,, !2![E,G,] | x3 |$ x3 | x3 | x3 | x3 | x3 |$ %35
+ E,, [E,B,_D] [E,B,E] | x7/2 | x7/2 | D,, !4!!1![D,A,] !2!!1![F,A,] |$ %39
+ x11/8[I:staff -1] !3!!5!!2![Ec]3/8!>(! !4!!1![ca]/>!>)![ec']/[fc']/4- | %40
+!>(![I:staff +1] (4:3:4F,, [F,A,C]!>)![I:staff -1] z/4!<(![I:staff +1] [A,,E,A,]!<)! x13/16 | %41
+ x[I:staff -1] z/ !4!!1!E/16!3![ec']/[ac']/- x7/16 | %42
+[I:staff +1] !5!C,,"_www,theperfectscores.com" !3!E,, !4![E,G,D] | A,,, !4![E,A,C] z |] %44
+V:4
+ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | %19
+ x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x7 | x7 | %38
+ x6 |$ x6 | x13/2 | x4"_(poco ritenuto" c2 | x6 | x6 |] %44
+

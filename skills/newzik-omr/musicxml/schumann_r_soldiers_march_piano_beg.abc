@@ -1,0 +1,34 @@
+X:1
+T:Soldiers' march Sheet music supplied by www.theperfectsco!
+C:R Schumann
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=120
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M23: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+"^Allegro deciso" !1!!2![GB]>[Gc] [Gd] z | [Ge] z [Gd] z | !2!!5![Fc] z !3!!5![GB] z | %3
+ !2!!4![FA] z G z |$"^St" !1!!2![GB]>[Gc] [Gd] z | [Ge] z [Gd] z | !2!!4![eg] z [df] z | %7
+[I:staff +1] [A,G] z !2!!4![DF] z |$[I:staff -1] !1!!2![GB]>[Gc] [Gd] z | [Ge] z [Gd] z | %10
+ [Fc] z [GB] z | [FA] z G z |$ [GB]>[Gc] [Gd] z | [Ge] z [Gd] z | [eg] z [df] z | %15
+[I:staff +1] [A,G] z [DF] z ::$"_JS"[I:staff -1] !1!D>E !tenuto!F2 | !tenuto!E2 !tenuto!D2 | %18
+ !1!!5![Fe] z !1!!4![Gd] z |$ !2!!4![Ac] z [GB] z | !1!!3!!5![DFA]>E !tenuto!F2 | !tenuto!E2 D2 |$ %22
+ !2!!4![Ac] z [GB] z | !2!!4![FA] z !3!!5![GB] z | !1!!2![GB]>[Gc] [Gd] z |$ [Ge] z [Gd] z | %26
+ [Fc] z [GB] z | [FA] z G z |$ !1!C>D E2 | D2 C2 | D2 !4![Adf] z | [Bdg] z z2 :| %32
+V:2
+ !4!G,>A, B, z | C z B, z | A, z G, z | [D,C] z !4!!2![G,B,] z |$ !4!G,>A, B, z | C z !3!B, z | %6
+ !2!^C z D z |[K:treble][I:staff -1] !4!!2![^ce] z d z |$[I:staff +1][K:bass] G,>A, B, z | %9
+ C z B, z | A, z G, z | [D,C] z [G,B,] z |$ G,>A, B, z | C z !3!B, z | !2!^C z D z | %15
+[K:treble][I:staff -1] [^ce] z d z ::$[I:staff +1][K:bass] !4!D,>E, !tenuto!F,2 | E,2 D,2 | %18
+ C z B, z |$ !4![F,D] z [G,D] z | !4!D,>E, !tenuto!F,2 | !tenuto!E,2 D,2 |$ !4![F,D] z [G,D] x | %23
+ [D,D] z [G,D] z | !4!G,>A, B, z |$ C z B, z | A, z G, z | [D,C] z [G,B,] z |$ !4!C,>D, E,2 | %29
+ D,2 C,2 | D,2 D z | !4!G, z z2 :| %32
+

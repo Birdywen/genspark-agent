@@ -1,0 +1,35 @@
+X:1
+T:German song Sheet music supplied by www.theperfectscores.com
+C:P I Tschaikowski
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=110
+M:3/4
+I:linebreak $
+K:Cmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M5: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+L:1/8
+V:2 bass 
+V:1
+"^Tranquillo" z2 z3/2 !3!B/ !2!B!3!B | !1!G!3!B G>!3!B !2!B!3!B | !2!A!3!B A>!3!B !2!B!1!B |$ %3
+ !5!aBaB z B | gB g>!1!B !2!B!3!B | !1!G!3!B !1!G>!3!B !2!B!3!B |$ !2!A!3!B A>!3!B !2!B!1!B | %7
+ !5!aBaB z !4!d | !5!e3 !3!B!2!G!1!F |:$ !2!E2 !1!G!2!B!3!e!5!g | %10
+ !>!!3!!5![gb]!>![gb] !>![gb]>!2!!4![fa] !1!!3![eg]2 | !>![gb]!>![gb] !>![gb]>[fa] [eg]2 |$ %12
+ !>!!3!!5![fa]!>![fa] !>![fa]>!2!!4![eg] !1!!3![Bf]2 | !2!E2 !1!GB eg | %14
+ !>!!3!!5![gb]!>![gb] !>![gb]>[fa] [eg]2 |$ !>!!3!!5![fa]!>![fa] !>![fa]>[eg] [Bf]2 |1 %16
+ [Ge]3 BGF :|2 [Ge]2 z3/2 !3!B/ !2!B!3!B ||$ !1!G!3!B G>!3!B !2!B!3!B | !2!A!3!B A>!3!B !2!B!1!B |$ %20
+ !5!aBaB z B | gB g>!1!B !2!B!3!B | GB"_poco" G>B"_allarg." BB |$ AB A>B B>B | aBaB z d | %25
+ !fermata!e6 |] %26
+V:2
+ x3 | E, [B,E] [B,EG] | F, [B,D] [B,DA] |$ B,, [B,DF] [B,DF] | E, [B,EG] [B,EG] | %5
+ E, [B,E] [B,EG] |$ F, [B,D] [B,DA] | B,, [B,DF] [B,DF] | E, [B,EG] z |:$ E, [B,E] [B,EG] | %10
+ E, [B,EG] [B,EG] | E, [B,EG] [B,EG] |$ B,, [B,DF] [B,DF] | E, [B,E] [B,EG] | E, [B,EG] [B,EG] |$ %15
+ B,, [B,DF] [B,DF] |1 E, [G,B,E] z :|2 E, [G,B,E] z ||$ E, [B,E] [B,EG] | F, [B,DF] [B,DA] |$ %20
+ B,, [B,DF] [B,DF] | E, [B,EG] [B,EG] | E, [B,E] [B,EG] |$ F, [B,D] [B,DF] | B,, [B,DF] [B,DF] | %25
+ E, !fermata![G,B,E] z |] %26
+

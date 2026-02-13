@@ -1,0 +1,53 @@
+X:1
+T:The swan Sheet music supplied by www.theperfectscores.co:
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=96
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M50: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:1
+"^Andante" z6 | z6 | !5!g2 f2 !1!B2 |$ !5!e2 d2 !1!G2 | !2!A4- AB | c4 z2 |$ !1!E4 F!3!G | %7
+w: |||||||
+ !1!AB!3!c!1!def | b6- | b2 z2 z2 |$ (!5!g2 f2 B2 | e2 d2 G2 | ^A4- A)B |$ %13
+w: ||||||
+!>(![I:staff +1] (F,,!2!^C,E,C,F,C,) |[I:staff -1] F3!>)! ^G!4!^A!1!B | ^cd!1!ef^g^a | d'6- |$ %17
+w: ||||
+[I:staff +1] (B,,F,B,F,B,F,) |[I:staff -1] (!5!d'2 b2 g2 | e2 f2 g2 | d4- d)e |$ %21
+w: ||||
+[I:staff +1] (A,,D,F,D,=C,D,) |[I:staff -1] (c'2 !3!a2 !1!=f2 | d2 e2 =f2 |$ c4- cd | e4) z2 | %26
+w: |||||
+ (e2 !1!A2 B2 | c4 de |$ ^f6 | e4) z2 | e2 A2 B2 | ^c4 !1!de |$[I:staff +1] (D,,A,,D,=F,D,A,,) | %33
+w: |||||||
+ (C,,A,,=C,^F,C,A,,) |[I:staff -1] g2 f2 B2 | e2 d2 G2 |$ (A4- AB | c4) z2 | (E4 FG | %39
+w: ||||||
+ AB!3!c!1!def |$ b6 | b2) z2 z2 | (!5!b2 a2 e2) | (!4!g2 f2 c2) |$ (!4!e2 d2 G2) | (A2 B2 G2) | %46
+w: |||||dim. * *||
+[I:staff +1]{/D,,} (D,G,B,G,DB,) |[I:staff -1] c2 d2 B2 |$[Q:1/4=60]"^Lento" e6 | e2 f2 x2 | %50
+w: |rit. * *|||
+ [Bg]6 |$ [Bg]6 | [bg']6 |[I:staff +1] (G,DBDBD) |[I:staff -1] [B,G]2 z2 z2 |] %55
+w: |||||
+V:2
+ (!5!G,,D,B,D,B,D,) | (G,,D,B,D,B,D,) | (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) | (G,,E,A,E,A,E,) | %5
+ (G,,E,A,E,A,E,) |$!<(! (G,,E,A,E,A,E,) | (G,,D,F,D,F,D,)!<)! | (G,,D,B,D,B,D,) | %9
+ (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) | (G,,D,B,(D,B,D,) | (!5!G,,!2!^C,E,C,E,C,)) |$ %13
+[I:staff -1] ^c4 z2 |[I:staff +1] (F,,B,,D,B,,F,B,,) | (F,,^C,E,C,F,C,) | (B,, F,B,F,B,F,) |$ %17
+[I:staff -1] d'2 z2 z2 |[I:staff +1] (!5!B,,!5!D,G,B,G,D,) | (!5!_B,,!4!^C,!2!E,!1!G,E,C,) | %20
+ (A,,D,F,A,F,D,) |$[I:staff -1] f4 z2 |[I:staff +1] (A,,C,=F,A,F,C,) | (_A,,B,,D,=F,D,B,,) |$ %24
+ (G,,C,E,G,E,C,) | (G,,C,E,G,_B,C) | (=F,,A,,D,=F,D,A,,) |!>(! (E,,A,,C,E,C,A,,)!>)! |$ %28
+ (!5!D,,!2!A,,!1!D,!3!^F,!2!A,!1!D) | (E,,A,,C,E,A,C) |"_poco cresc." (=F,,B,,D,=F,D,B,,) | %31
+ (E,,A,,^C,E,C,A,,) |$[I:staff -1] !3!=f6 | ^f4 z2 |[I:staff +1] (G,,D,B,D,B,D,) | %35
+ (G,,D,B,D,B,D,) |$ (G,,E,A,E,A,E,) | (G,,E,A,E,A,E,) | (G,,E,A,E,A,E,) | (G,,D,F,D,F,D,) |$ %40
+ (G,,D,B,D,B,D,) | (G,,D,B,D,B,D,) | (A,,E,CE,CE,) | (A,,D,F,CF,D,) |$ (B,, D,G,B,G,D,) | %45
+ [E,,E,]6 |[I:staff -1] B4 z2 |[I:staff +1] z6 |$ (D,G,B,G,EB,) |[I:staff -1] c3 d2 x | %50
+[I:staff +1] (G,,D,B,D,B,D,) |$ (G,,D,B,D,B,D,) |[K:treble] (G,DBDBD) |[I:staff -1] [bg']6 | %54
+[I:staff +1][K:bass] [G,,D,]2 z2 z2 |] %55
+

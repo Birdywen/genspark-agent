@@ -1,0 +1,22 @@
+X:1
+T:In may Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=120
+M:3/4
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 treble 
+V:1
+"^Allegro giusto" !5!g !3!e !1!c | !2!d3 | g e c | d3 | !1!c d !3!e | !4!f e d | !3!e d !1!c |$ %7
+ d3 | !5!g !3!e !1!c | !2!d3 | g e c | d3 | !1!c d e | f !5!g f | e2 d |$ c3 | !2!d d d | %17
+ d e !4!f | !3!e !5!g e | !1!c3 | !2!d d d | d e !4!f | !3!e !5!g e |$ !1!c3 | !5!g !3!e c | d3 | %26
+ g e c | d3 | !1!c d e | f !5!g f | e2 d | c3 |] %32
+V:2
+ !5!C !3!E !1!G | !5!B, !2!F !1!G | C E G | B, F G | C E G | B, F G | !5!C !3!E !1!G |$ %7
+ !5!B, !2!F !1!G | C E G | B, F G | C E G | B, F G | !5!C !2!F !1!G | !5!C !2!F !1!A | %14
+ !5!B, !2!F !1!G |$ !5!C !3!E !1!G | B, F G | B, F G | C E G | C E G | B, F G | B, F G | C E G |$ %23
+ C E G | C E G | B, F G | C E G | B, F"_com" G | !5!C !2!F !1!G | !5!C !2!F !1!A | %30
+ !5!B, !2!F !1!G | !5!!3![CE]3 |] %32
+

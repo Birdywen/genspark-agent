@@ -1,0 +1,41 @@
+X:1
+T:Theme from the "unfinished symphony" Sheet music supplied by www.theperfectscores.com
+C:F Schubert
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=120
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M6: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+"^Allegro moderato" (!4!G2 !1!D3 G | !3!F>G A3) (G | F>G ADEF) | (G2 D4) |$ (!3!G2 !1!D3 !3!G | %5
+ !3!^G>A B3) (A | ^G>A BEFG) | (A2 !1!E3) (!4!^G |$ !5!A2 !1!D2 EF) | %9
+ z .[B,DG] z .[B,DG] z .[B,DG] | z .[CDF] z .[CDF] z .[CDF] | z .[CDF] z .[CDF] z .[CDF] |$ %12
+ z .[B,DG] z .[B,DG] z .[B,DG] | z .[B,DG] z .[B,DG] z .[B,DG] | z .[DE^G] z .[DEG] z .[DEG] | %15
+ z .[DE^G] z .[DEG] z .[DEG] |$ z [CEA] z [CEA] z [CEA] | z [CDF] z [CDF] z [CDF] | (=G2 D3 G | %19
+ F>G A3) (G | F>G ADEF) |$ (G2 D4) | %22
+[I:staff +1] G,, [D,G,B,] [D,G,B,] [D,G,B,] [D,G,B,] .[D,G,B,] |[I:staff -1] F>G A3 (G | F>G ADEF | %25
+ !fermata![B,DG]6) |] %26
+V:2
+ G,,3/2!5!!2!!1![D,G,B,][D,G,B,]/[D,G,B,][D,G,B,][D,G,B,] | %1
+ A,,3/2[D,F,C][D,F,C]/[D,F,C][D,F,C][D,F,C] | D,,3/2[D,F,C][D,F,C][D,F,C][D,F,C][D,F,C]/ | %3
+ G,,3/2[D,G,B,][D,G,B,]/[D,G,B,][D,G,B,].[D,G,B,] |$ %4
+ G,,3/2[D,G,B,][D,G,B,][D,G,B,]/"^poco  cresc,"[D,G,B,].[D,G,B,] | %5
+ (6:4:6E,,/[E,^G,D]/[E,G,D]/[E,G,D]/[E,G,D]/[E,G,D]/ x4 | %6
+ E,,3/2[E,^G,D][E,G,D][E,G,D][E,G,D][E,G,D]/ | %7
+ A,,3/2[E,A,C][E,A,C][E,A,C]"^poco".[E,A,C].[E,A,C]/ |$ %8
+"_dimin." D,,3/2 [D,F,C][D,F,C][D,F,C]/[D,F,C] [D,F,C] | (!2!G,2 D,3 G, | !3!F,>G, A,3) (G, | %11
+ F,>G, A,D,E,F,) |$ (G,2 D,4) | (G,2 D,3"^poco" !1!G, | !3!^G,>A, B,3) (A, | ^G,>A, B,E,F,G,) |$ %16
+"^poco dim." (A,2 !5!E,3) (!2!^G, | A,2 D,2 E,F,) | %18
+ G,,3/2[D,G,B,][D,G,B,][D,G,B,]/.[D,G,B,].[D,G,B,] | A,,3/2[D,F,C][D,F,C][D,F,C].[D,F,C].[D,F,C]/ | %20
+ D,,3/2[D,F,C][D,F,C][D,F,C][D,F,C][D,F,C]/ |$ G,,3/2[D,G,B,][D,G,B,]/[D,G,B,][D,G,B,].[D,G,B,] | %22
+[I:staff -1] G2 D3 G |"_dimin."[I:staff +1] A,,3/2[D,F,C][D,F,C]/[D,F,C][D,F,C].[D,F,C] | %24
+ D,,3/2[D,F,C][D,F,C][D,F,C]/[D,F,C][D,F,C] | !fermata!!5!!1![G,,D,]6 |] %26
+

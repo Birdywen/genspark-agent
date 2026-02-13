@@ -1,0 +1,19 @@
+X:1
+T:Au clair de la lune Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=115
+M:4/4
+I:linebreak $
+K:Emin
+V:1 treble 
+V:2 bass 
+V:1
+"^Allegretto" !3!G !2!G !1!G !1!!2!A | B2 A2 | G B A A | G3 z |$ !3!G !2!G !1!G !2!A | B2 A2 | %6
+ G B A A | G3 z |$ !3!A !2!A !4!A !5!A | E2 E2 | !5!A G F E | D3 z |$ !3!G !2!G !1!G !2!A | B2 A2 | %14
+ G B A A | G3 z :| %16
+V:2
+ !5!G, !wedge!!1!D B, D | G, D C D | B, D C D | B, !1!D !3!B, !4!A, |$ G, D B, D | G, D C D | %6
+ B, D C D | B, D G, z |$ !2!C D C B, | !4!A, B, C A, | !2!^C !1!B, !2!A, G, | !4!F, C B, A, |$ %12
+ G, D B, D | G, D C D | B, D C D | B, D !5!!3![G,B,] z :| %16
+

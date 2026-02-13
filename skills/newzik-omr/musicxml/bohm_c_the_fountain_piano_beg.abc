@@ -1,0 +1,110 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. The fountain. (op.221)
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=120
+M:3/6
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M62: placeholder (x) detected - possible missing note
+%! CHECK: M69: placeholder (x) detected - possible missing note
+%! CHECK: M111: placeholder (x) detected - possible missing note
+%! CHECK: M54: placeholder (x) detected - possible missing note
+%! CHECK: M64: placeholder (x) detected - possible missing note
+%! CHECK: M72: placeholder (x) detected - possible missing note
+%! CHECK: M16: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M60: placeholder (x) detected - possible missing note
+%! CHECK: M64: placeholder (x) detected - possible missing note
+%! CHECK: M81: placeholder (x) detected - possible missing note
+%! CHECK: M99: placeholder (x) detected - possible missing note
+%! CHECK: M115: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+L:1/16
+V:2 bass map=perc 
+K:none
+I:percmap =d' d' 86 normal
+V:3 bass 
+V:1
+"^Allegretto"!<(! (!1!bc'^c'!<)! |:[M:2/4] !1!d'b'!2!f'a' .g')(!1!bc'^c' | %2
+ !1!d'!4!f'e'c' a)(!4!gfe | dc'!1!d!2!^d !1!ec'fc') |${/g} (c'b!>(!g!1!d !2!B)(!1!b!>)!c'^c' | %5
+ !1!d'b'!2!f'a') .g'(!1!bc'^c' | !1!d'!4!f'e'c' .a)!4!gfe |[I:staff +1] D,,2((D2 [CF]2)) z2 |1$ %8
+[I:staff -1] g4 z (!1!bc'^c') :|2 g4 z !5!b(gf || !1!e!2!^d!3!eg B=d^ce | %11
+{/!4!e} d^c!1!df a)(!2!fad') |${/!2!a} !4!^c'2.c'2b2b2{/!1!g} |{/f} !tenuto!!4!a4 z !5!bgf | %14
+ e!2!^d!3!eg B=d^ce |$[I:staff +1] D,,2(A,2[DF]2A,2) |[I:staff -1] a^g!1!ab ^c'2.!1!g2 | %17
+ .^c'2f2.!5!e'2.b2 | .^c'2!1!a2a'2.a2 |$!<(! a'2.b2a'2.^b2!<)! | a'2 !2!^c'6- | %21
+ c'4"_St" z (!5!bgf | e!2!^d!3!eg B=d^ce) |${/!4!e} d^c!1!df a(!2!fad' |{/a} .^c'2.c'2.b2b2{/g} | %25
+{/f} !tenuto!a4) z !5!bgf |$ (!1!e!2!^d!3!eg B=d^ce |{/e} d^c!1!de f!1!ga)(d' | !4!^c'bge !5!bage | %29
+ d4) z (!1!b=c'^c') |$ d'b'[I:staff +1]((D2 [B,G]2)) z2 |[I:staff -1] !1!d'!4!f'e'c' a!4!gfe | %32
+ dc'd^d !1!ec'fc' |${/g} c'b[I:staff +1]((D2 [B,G]2)) z2 | %34
+[I:staff -1] !1!d'b'!2!f'a' g'(!1!bc'^c' |[I:staff +1] .!1!C,2[I:staff -1]e'c' .a)(!4!gfe |$ %36
+ dc'd^d !1!efba | g4) z2 !4!g.g ||"_canto marcato" G2.[Gg]2.[Ag]2.[Bg]2 | %39
+ .[cg]2.[Bg]2[cg]2.!2![^cg]2 |$ .!1![dg]2.!2![^cg]2.!1![dg]2.!2![^dg]2 | [eg]6 !2!!4![eg].[eg] | %42
+ .[fa]2.[ea]2 .[da]2[^da][da] | .[eg]2.[=dg]2 [cg]2.[cg].[cg] |$ .[Bg]2.[fg]2.[eg]2.[dg]2 | %45
+ [eg]6 .!2!!4![eg].[eg] | .[fa]2.[ea]2.[da]2.[^da]2 | .[eg]2.[dg]2 .[cg]2.!2!!5![cg].[cg] |$ %48
+ .[Bg]2.[fg]2.[eg]2.[dg]2 | [cg]6 (!2!^de | fe)(!2!^d!1!e be)(!2!de | %51
+ !tenuto!c'!>(!e!tenuto!be .a2) (!2!^c!>)!d |$ ed)(!2!^c!1!d ad)(!2!cd | %53
+ !tenuto!bd!tenuto!ad g2) (!2!^fg | ag^f!1!g .g'2) (!2!^FG | %55
+ AG^F!1!G .g2)"^R.H."[I:staff +1] !2!^F,G, |$ A,G,^F,!1!G,[I:staff -1] !5!G2 (!1!G2 | %57
+ .g2)(!1!g2 g'2) (^FG | AG^FG AGFG | AG^F!1!G) .g2 .!2!GG |$ g2 Gg AgBg | (4:3:4cgBg cg^cg x | %62
+ dg^cg dg^dg | e6 !2!eg |$ (4:3:4faea da^da x | egdg cgcg | Bgfg egdg | e6 eg |$ faea da^da | %69
+ egdg cgcg | Bgfg egdg | c4 z ||$[K:Emin] (!1!bc'^c' | d' !5!b' !2!f' a' .g')b(c'^c' | %74
+ !1!d'!4!f'e'c' a)!4!gfe |$ dc'!1!d!2!^d !1!ec'^fc' |{/g}[I:staff +1] .G,,2((D2 [B,G]2)) z2 | %77
+[I:staff -1] d'b'f'a' .g'bc'^c' |$ d'f'e'c' .a(!4!gfe | dc'd^d efba | g4)"_JS" z (!5!bgf |$ %81
+ !1!e!2!^d!3!eg B=d^c(e | d)^c!1!df) af!2!ad' |{/a} .^c'2c'2.b2.b2{/g} |$ [fa]4 z (bgf | %85
+ e!2!^d!3!eg B=d^ce |{/e} d^c!1!de f)!1!^efg |$ a^g!1!ab ^c'2.!1!g2 | .^c'2.f2!5!e'2.!2!b2 | %89
+ .^c'2.a2a'2.a2 |!<(! a'2.b2a'2.^b2!<)! |$ .a'2 !^!^c'6- | c'4 z (bgf | e^deg B=d^ce | %94
+{/e} d^cdf afad') |${/a} .^c'2c'2b2b2 |{/f} a4 z (bgf | e^deg B=d^ce |{/e} d^cde fga)d' |$ %99
+ ^c'bge bage | d4 z (b=c'^c' |[I:staff +1] .G,,2[I:staff -1]f'a' g')(bc'^c' | d'f'e'c' .a)gfe |$ %103
+ (dc'd^d ec'fc'- | c'bgd B) (bc'^c' | d'b'f'a' .g')(bc'^c' | d'f'e'c' .a)(gfe |$ dc'd^d efba | %108
+ g4) z2 (3!2!bc'^c' |[I:staff +1] D,,2((D2 [CF]2)) z2 x2 |[I:staff -1] g4 z2 (3!2!Bc^c |$ %111
+ d4- (3d(!1!D!2!^C (3!1!DBA | G2) z2"_cresc." [^CGA]2 z2 | [DGB]2 z2 !^![FAcd]2 z2 | %114
+ [GBdg]2 z2 z |] %115
+V:2
+ z/ z |:[M:2/4] G,,((!2!D !4!!1![B,G])) z |!>(! C,((!4!C [EA]))!>)! z | %3
+ D,,!<(!((!2![D,D] !3!!1![CF]))!<)! z |$ .G,,((D [B,G])) z | G,,((D [B,G])) z | C,((C [EA])) z | %7
+[I:staff -1] d/c'/d/^d/ !1!e/f/b/a/ |1$[I:staff +1] G,,((D [B,G])) z :|2 %9
+ .!4!!1![B,G].!2!D, .G,, z || .!5!A,,(!5!A,[EG]A,) | .D,(A,[DF]A,) |$ .E,(A,[^CG]A,) | %13
+ .D,(A, [DF]) z | .A,,(A,[EG]A,) |$[I:staff -1] d/^c/!1!d/e/ f/!1!^e/f/^g/ | %16
+[I:staff +1] ^C,[A,^CF]C,.[B,C^E] | F,[A,^CF]E,[^G,DE] | A,[^CE] z [A,C=G] |$ z [A,DG] z [A,^DG] | %20
+ z [A,EG]3- | [A,EG]3 z |"_www.theperiectscores.com" A,,(A,[EG]A,) |$ .D,(A,[DF]A,) | %24
+ .E,(A,[^CG]A,) | .D,(A, [DF]) z |$ .A,,(A,[EG]A,) | .D,(A,[F,D]A,) | G,[B,E]A,[^CG] | %29
+ .[DF].!2!A, .D, z |$ .!1!G,,[I:staff -1]f'/a'/ g'/!1!b/c'/^c'/ |[I:staff +1] .C,((C [EA])) z | %32
+"_www.theperfectscores.com" D,,((D [CF])) z |$ .G,,[I:staff -1]g/!1!d/ !2!B/!1!b/c'/^c'/ | %34
+[I:staff +1] G,,((D [B,G])) z |[I:staff -1] d'/f'/[I:staff +1]((C [EA])) z |$ D,(D[CF] D) | %37
+ [B,G].D, .G,, z ||[K:perc] E.e[a=d'][bd'] | .A((e [ac'])) z |$[K:bass] G,,((G, [B,F])) z | %41
+ .C,((G, [CE])) z | .F,,(F, [A,D]) z |"_www.theperfectscores.com" G,,((G, [CE])) z |$ %44
+ .G,,(G,[B,F]G,) | .C,((G, [CE])) z | F,,((F, [A,D])) z | .G,,((G, [CE])) z |$ .G,,(G,[B,F]G,) | %49
+ .C,((G, [CE])) x | (!5![^G,D]EE,E) | (!5![A,C]EE,E) |$ ([^F,C]DD,D) | ([G,B,]D D,) z | %54
+[K:treble] [GBf] z z2 |"^WWW." [G,B,F] z[K:bass] z2 |$ [G,,B,,=F,] z z2 | z4 | [G,B,D]2 [G,C_E]2 | %59
+ !^![G,=C=E]2 !^![G,D=F] z |$ .G,,.G,[=CF][DF] |[I:staff -1] c/B c^c x/ | d^c d^d | e3 e |$ %64
+ f/e d^d x/ | e=d cc | Bf ed | e3 !2!e |$ fe d^d | e=d cc | Bf ed | c2 x/ ||$ %72
+[K:Emin][I:staff +1] z/ z | .G,,((D [B,G])) z | C,((C [EA])) z |$ .D,((D [CF])) z | %76
+[I:staff -1] c'/b/g/!1!d/ .G/ !1!b/c'/^c'/ |[I:staff +1] .G,,((D [B,G])) z |$ .C,((C [EA])) z | %79
+ .F,((D [CF])) z | .G,,((D [B,G])) z |$ .A,,A,[EG]A, | .D,A,[DF]A, | .E,(A,[^CG]A,) |$ %84
+ .F,((A, [DF])) z | .A,,(A,[EG]A,) | D,,(A,[DF]A,) |$!<(! ^C,[A,^CF]C,[B,C^E] | %88
+ F,[A,^CF]E,[^G,DE]!<)! | A,[^CE] z [A,C=G] | z [A,DG] z [A,^DG] |$ z [A,EG]3- | [A,EG]2 z2 | %93
+ .A,,(A,[EG]A,) | .D,(A,[DF]A,) |$ .E,(A,[^CG]A,) | .D,(A, [DF]) z | .A,,(A,[EG]A,) | %98
+"_www.theperfectscores.com" .D,(A,[F,D]A,) |$ G,[B,E]A,[^CG] | .[DF].A, .D, z | %101
+[I:staff -1] d'/b'/[I:staff +1]((D [B,G])) z | C,((C [EA])) z |$ D,,((D [CF])) z | %104
+ .G,,((D [B,G])) z | .G,,((D [B,G])) z | C,((C [EA])) z |$ .D,(D[CF]D) | G,,((D [B,G])) z | %109
+[I:staff -1] d'2- d'/!1!d/!<(!!2!^c/!<)!!<(! !1!d/!<)!b/a/ |[I:staff +1] G,,((D [B,G])) z |$ %111
+ D,,((D, [F,C])) z | [G,B,] z !^![_E,G,] z | [D,G,] z"^www.theperfectscores.com" [D,,D,]2 | %114
+ [G,,,G,,] z z/ |] %115
+V:3
+ x3/2 |:[M:2/4] x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |1$ x4 :|2 x4 || x4 | x4 |$ x4 | x4 | x4 |$ x4 | %16
+ x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 |$ x4 | %34
+ x4 | x4 |$ x4 | x4 ||[K:perc] x4 | x4 |$[K:bass] x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | %49
+ x4 | x4 | x4 |$ x4 | x4 |[K:treble] x4 | x2[K:bass] x2 |$ x4 | x4 | x4 | x4 |$ %60
+ x[I:staff -1] G AB |[I:staff +1] .C,((G, [CE])) z | .G,,((G, [B,F])) z | .C,((.G, [CE])) z |$ %64
+ .F,,((F, [A,D])) z | .G,,((G, [CE])) z | .G,,((G, [B,F])) z | %67
+"_WWW.""_eperfectscores.com" .C,((G, [CE])) z |$ .F,,((F, [A,D])) z | G,,((G, [CE])) z | %70
+ G,,((G,[B,F]))G, | .[CE].G, .C,/ ||$[K:Emin] x3/2 | x4 | x4 |$ x4 | x4 | x4 |$ x4 | x4 | x4 |$ %81
+ x4 | x4 | x4 |$ x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ %99
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x5 | x4 |$ x4 | x4 | x4 | x5/2 |] %115
+

@@ -1,0 +1,54 @@
+X:1
+T:Trumpeter's serenade Sheet music supplied by www.
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=149
+M:4/4
+I:linebreak $
+K:Amin
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+"^Vivo" G/G/ | G!1!!4!!2!E!9!CE !4!G.ECE | G z .[Ec] z [EG]3 G/G/ | G.!1!D.!2!G.A G.D.GA |$ %4
+w: ||||
+ .G z .[Fd] z !>![FG]3 !3!G/G/ | G.!4!c.Gc !2!A.!5!dA.d | G!3!d.g.d (!>!e2 c)!3!G/G/ |$ %7
+w: |||
+ .!1!G!4!cGc !2!A!5!dA.d | G.gde !>!c3 !3!e/e/ || e z z e/e/ e z z"^8 2" E/E/ |$ %10
+w: |||
+ .!1!E!2!D!1!C!2!B, A,2 z d/d/ | d z z d/d/ d z z D/D/ | D!2!C!1!B,!2!A, G,2 z G/G/ | %13
+w: |||
+ GcGc !2!A.dAd |$ .G!3!d.gd (e2 c)"_JS"!3!G/G/ | GcGc !2!AdAd | G.gd.e z !>!c3 || %17
+w: ||||
+[K:Amin] !3!C/C/ |$ !1!C z D z C z !4!F z | C z D z C z !3!G z | C z D z C z !3!A z | %21
+w: ||||
+ c.[EB].[EG].[EA] F3 !3!C/C/ |$ !1!C z D z C z F z | C z D z C z G z | C z!<(! D z C z !5!A!<)! z | %25
+w: ||||
+[I:staff +1] z (!1!G,/^F,/ G,/F,/G,/F,/ G,)(G,/F,/ G,/F,/G,/F,/) ||$ %26
+w: |
+[I:staff -1] !5!G!3!E.CE G.E.CE | G z [Ec] z !>![EG]3 G/G/ | GDGA!<(! GDGA!<)! | %29
+w: |||
+!<(! G z [Fd] z !>![FG]3 G/G/!<)! |$ GcGc A.dAd | G!3!dgd (!>!e2!<(! c)G/G/!<)! | GcGc AdAd | %33
+w: |p * * * * * * *||Sf * * * * * * *|
+ Ggde c!3!G/!2!G/ !1!GG |$ !1!G4- G!3!G/!2!G/ !1!GG | G4- G2"^vivo" z !3!C/C/ | %36
+w: * * * * * molto * * rit.|||
+!>(! !>!C2!>)! z C/C/!>(! !>!!fermata!C3!>)! |] %37
+w: |
+V:2
+ z | z8 | z2 [C,G,] z !>![C,G,]3 z | z8 |$ z2 .!2!!1![G,B,] z !>![G,B,]3 z | %5
+ .!5![E,G,C] z .[E,G,C] z .!5![F,A,D] z .[F,A,D] z | [G,B,F] z [G,B,F] z !2!!1![CE]4 |$ %7
+ .[E,G,C] z .[E,G,C] z .[F,A,D] z .[F,A,D] z | [G,B,F] z [G,B,F] z !>![CE]4 || %9
+ z .[E,^G,B,][E,G,B,] z z !2!!1![A,C][A,C] z |$ !1![E,,E,][D,,D,][C,,C,][B,,,B,,] [A,,,A,,]2 z2 | %11
+ z .[D,^F,][D,F,A,] z z !2!!1![G,B,][G,B,] z | [D,,D,][C,,C,][B,,,B,,][A,,,A,,] [G,,,G,,]2 z2 | %13
+ [E,G,C] z [E,G,C] z .[F,A,D] z .[F,A,D] z |$ [G,B,F] z [G,B,F] z !>![CE]4 | %15
+ [E,G,C] z .[E,G,C] z .[F,A,D] z .[F,A,D] z | [G,B,F]2 z [G,B,F] z !>![CE]3 ||[K:Amin] z |$ %18
+ z .!4!!2![F,A,] z .[F,A,] z .[F,A,] z .[F,A,] | %19
+ z .!5!!3!!2![E,G,B,] z .[E,G,B,] z .[E,G,B,] z .[E,G,B,] | %20
+ z .[F,A,] z .[F,A,] z .[F,A,] z .[F,A,] |!<(! !5![C,B,].[C,B,] [C,B,]2 !>!!2!!1![F,A,]4!<)! |$ %22
+ z !4!!2![F,A,] z [F,A,] z [F,A,] z .[F,A,] | z [E,G,B,] z [E,G,B,] z [E,G,B,] z .[E,G,B,] | %24
+ z .[F,A,] z .[F,A,] z [F,A,] z [F,A,] |!<(![I:staff -1] [=B,DFG]4!<)!!<(! !>![B,DFG]4!<)! ||$ %26
+[I:staff +1] .!1!G,.!3!E,C,E, .G,E,C,E, | G, z [C,G,] z [C,G,]4 | !2!G,D,.G,A, G,D,.G,A, | %29
+ G, z!>(! [G,B,]!>)! z !>![G,B,]4 |$ .[E,G,C] z .[E,G,C] z [F,A,D] z [F,A,D] z | %31
+ [G,B,F] z [G,B,F] z !>![CE]4 | [E,G,C] z .[E,G,C] z [F,A,D] z [F,A,D] z | %33
+ [G,B,F] z [G,B,F] z [CE]2 z2 |$ z !1!F!5!!3!!1![G,B,D]!1!E !4!!3!!2![E,G,C]2 z2 | %35
+ z F.[G,B,D]E [E,G,C]2 z2 | [C,E,G,]2 z2 !fermata![C,E,G,]3 |] %37
+

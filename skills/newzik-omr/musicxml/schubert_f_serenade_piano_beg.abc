@@ -1,0 +1,73 @@
+X:1
+T:Serenade Sheet music supplied by www.perrectscores.com
+C:F Schubert
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=66
+M:3/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M30: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M15: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:1
+"^Moderato" z !1!!3![A,D]!3!!5![DF][A,D].[DF][A,D] | z .!1!!2![B,D].!2!!4![DF][B,D].[DF].[B,D] | %2
+w: ||
+ z .!4![B,D].!4!!5![DE].[B,D].[DE][B,D] | z"_rit." !1!!3![A,^C]!3!!5![CE][A,C].[CE][A,C] |$ %4
+w: ||
+ (3!1!ABA !4!d3 (!2!A | (3!1!GAG d3 G) | (!3!A3 !2!G) (3(!3!GFE | F6) |$ %8
+w: ||||
+ ((!1!!5![^ca]3 !2!!4![eg]))!<(! (3(!3!!5![eg]!<)![df][ce] | [df]6) | (3(!1!ABA f3 !2!A) | %11
+w: |||
+ (3!1!GAG !5!e3 !4!d |$ !3!c3 !2!B (3(!3!BAG | A4) z [Fd] | (([Ec]3 !2!!4![GB])) (3[GB][FA][EG] | %15
+w: ||||
+ [FA]6 |$ (!1!A>!2!^c !5!f3 e) | (d>!1!A !2!F3 D) |{/c} (3(BAB d3 B | A6) |$ %20
+w: |||||
+ (3(!1!!4![Bg]!3![A^f][Bg] [db]3 [Bg] | [A=f]6) |"^a tempo""^Ped. simile" (!1!A>^c f3 e) | %23
+w: |||
+ (d>A ^F3 D) |$({/!4!^c} (3=B^AB d3 B | A6) | (3([Geg][^F^d^f][Geg] [=Bg=b]3 [G^cg] | %27
+w: ||||
+[I:staff +1] z[I:staff -1] [^F^df]6) x5 |$ ([G_B]4 [Bd]>[GB] | [^FA]3) ([FA][FA][FA]) | %30
+w: |||
+ [GA]3 ([^CA][EA][GA]) | [^FA]6 |$ (!1!!3![G=B]4 !3!!5![Bd]>!3![GB] | %33
+w: ||p * *|
+ !2![^FA]3) (!2!!4![FA][FA][FA]) | [GA]3 ([^CA][EA][GA]) |$ [^FA]6 | [^FA]6 | !fermata![A,D^F]6 |] %38
+w: |Tit, * * *|PP|dim.|PPP|
+V:2
+ [D,,D,]4 z2 | [B,,,B,,]4 z2 | [G,,,G,,]4 z2 | [A,,,A,,]4 z2 |$ %4
+ z (.!2![A,D]!2!!1![DF][A,D][DF][A,D]) | z (.!2![G,D]!2!!1![DE][G,D].[DE][G,D]) | %6
+ z (!5!!2![G,^C][CE][G,C][CE][G,C]) | z (!4!!2![F,A,][A,D][F,A,].[A,D][F,A,]) |$ %8
+ z (!3!!5![A,^CE].!2![CEG][A,CE].[CEG]!3![A,CE]) | z ([A,D][DF][A,D][DF][A,D]) | %10
+ z ([A,D][DF][A,D][DF][A,D]) | z ([G,D][DE].[G,D][DE][G,D]) |$ %12
+ z (.[G,B,C].[B,CE].[G,B,C][B,CE].[G,B,C]) | z (!5!!4!!2![F,A,C].!4!!2!!1![A,CF][F,A,C][A,CF]) z | %14
+ z (!2![C,G,]!1![G,B,][C,G,][G,B,].[C,G,]) | z (.[C,F,][F,A,].[C,F,][F,A,].[C,F,]) |$ %16
+ z (.[G,A,][^A,C][G,A,][A,C].[G,A,]) | z ([F,A,].[A,D][F,A,].[A,D][F,A,]) | %18
+ z ([B,D][DF][B,D][DF][B,D]) | z ([A,C].[CF][A,C][CF][A,C]) |$ z ([B,C][CE].[B,C][CE][B,C]) | %21
+ z ([A,C][CF].[A,C][CF][A,C]) | z ([G,A,][A,^C].[G,A,][A,C].[G,A,]) | %23
+ z ([^F,A,][A,D][F,A,][A,D][F,A,]) |$ z ([G,=B,][B,D].[G,B,][B,D][G,B,]) | %25
+ z ([^F,A,][A,D][F,A,][A,D][F,A,]) | z ([E,A,][A,^C][E,A,][A,C][E,A,]) | %27
+ [D,,D,][I:staff -1] z4 z2[I:staff +1] ([^F,A,][A,D][F,A,][A,D][F,A,]) |$ %28
+ z ([G,_B,][B,D][G,B,][B,D][G,B,]) | z ([^F,A,][A,D][F,A,][A,D][F,A,]) | %30
+ z ([E,A,][A,^C].[E,A,][A,C].[E,A,]) | z ([^F,A,][A,D][F,A,][A,D][F,A,]) |$ %32
+ z ([G,=B,][B,D][G,B,][B,D][G,B,]) | z ([^F,A,] [A,D] [F,A,] [A,D] [F,A,]) | %34
+ z (.[E,A,] [A,^C] .[E,A,] [A,C] .[E,A,]) |$ z ([^F,A,].[A,D][F,A,][A,D][F,A,]) | %36
+ z ([^F,A,][A,D][F,A,][A,D][F,A,]) | [D,,D,]6 |] %38
+V:3
+ x6 | x6 | x6 | x6 |$ [D,,D,] x5 | [B,,,B,,] x5 | [A,,,A,,] x5 | [D,,D,] x5 |$ [A,,,A,,] x5 | %9
+ [D,,D,] x5 | [D,,D,] x5 | [B,,,B,,] x5 |$ [C,,C,] x5 | [F,,F,] x5 |"_Ped. simile" [C,,C,] x5 | %15
+ [F,,F,] x5 |$ [A,,,A,,] x5 | [D,,D,] x5 | [B,,,B,,] x5 | [F,,F,] x5 |$ [C,,C,] x5 | [F,,F,] x5 | %22
+ [A,,,A,,] x5 |"^www.theperlectscores.com" [D,,D,] x5 |$ [G,,,G,,] x5 | [D,,D,] x5 | [A,,,A,,] x5 | %27
+ x12 |$ [D,,D,] x5 | [D,,D,] x5 | [A,,,A,,] x5 | [D,,D,] x5 |$ [D,,D,] x5 | [D,,D,] x5 | %34
+ [A,,,A,,] x5 |$ [D,,D,] x5 | [D,,D,] x5 | x6 |] %38
+

@@ -1,0 +1,26 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Theme from andante. "surprise" symphony
+C:RANZ JOSEPH Haydn
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=106
+M:2/4
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 bass 
+V:1
+"^Andante" !2!C!1!C!3!E!2!E | !1!!4!G!6!!3!G !>!!1!E2 | !4!F!3!F!1!D!4!D | !2!B,!3!B, !>!!1!G,2 | %4
+ !2!C!1!C!3!E!2!E | !4!G!3!G !>!!1!E2 |$ c!5!c!2!^F.!3!F | !>!!4!G3 z | !2!C!1!C!3!E!2!E | %9
+ !4!G!3!G !>!!1!E2 | !4!F!3!F!1!D!4!D | !2!B,!3!B, !1!G,2 |$ !2!C!1!C!3!E!2!E | %13
+ !4!G!3!G!>(! !>!!1!E2!>)! | !4!c!5!c!2!^F!3!F | !>!!4!G3 z || !3!F2 !2!E2 | !1!DD (D/E/F/G/) |$ %18
+!>(! !3!!5![FA]!2!!4![EG]!1!!3![DF]!2!!4![CE]!>)! | !1!!3![B,D][B,D] [B,D] z | !2!E!1!E.!3!G!2!G | %21
+ !4!c!3!c !>!!5!e2 | !5![Ad][Ad] (c/B/A/B/) | [Ec][Ec][Ec] z :| %24
+V:2
+ .!5!C,, z z2 | !1!C, z z2 | !2!F,, z z2 | !1!G,, z z2 | [C,,C,] z z2 | [C,C] z z2 |$ %6
+ [A,,E,A,] z [D,^F,A,C] z | .[G,B,D] z !5!G,, z | [C,E,G,] z z2 | [C,E,G,] z z2 | .[D,F,A,] z z2 | %11
+ [G,,D,F,] z z2 |$ .[C,E,] z z2 | [C,E,] z z2 | !5!A,, z !2!D, z | !1!G, z G,, z || %16
+ (!1!DG,)(!2!CG,) | [G,B,][G,B,]!<(! [G,B,]2!<)! |$ [G,,G,]4 | [G,,D,][G,,D,] .[G,,D,] z | %20
+ !2!C!<(!!1!C"_.theperfectscores.com"!3!G,!2!G, | !4!E,!3!E, !>!!5!C,2!<)! | !2!F,F, G,2 | %23
+ [C,G,][C,G,][C,G,] z :| %24
+

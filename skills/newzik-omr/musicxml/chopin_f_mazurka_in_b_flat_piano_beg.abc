@@ -1,0 +1,83 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Mazurka in b flat. Op.7, n.1
+C:F Chopin
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=60
+M:3/4
+I:linebreak $
+K:Gmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M10: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M33: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M10: placeholder (x) detected - possible missing note
+%! CHECK: M23: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M29: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M56: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+L:1/4
+V:3 bass 
+V:1
+"^Vivace" Fz/(F/ G2 A2 |"_cresc." B)z/(c/ !2!d2 !3!e!1!f | g)z/(a/ !3!!5!b2!>(! !2!a!1!g!>)! | %3
+ !2!f b)z/!>(!(b/ !1!d3)!>)! |${/!2!e} !4!g!>(!(!5!g/ z/ A4)!>)! | %5
+[I:staff +1] .B,,3/2 [F,B,D]3/2 [F,B,D]3 |[I:staff -1] Fz/!<(!(A/ c_e !5!g>)!<)!!4!f | %7
+{/!1!f} .!5!d'!>(!(!4!!2!!3!c'/ z/ b!2!g!>)! !1!f2) |[I:staff +1] B,,4 [F,CE]2 |$ %9
+[I:staff -1]{/!2!B!3!d} !5!f!>(!f/4 z/[I:staff +1] [F,B,D]2 [F,B,D]2 x/4!>)! | %10
+[I:staff -1] Fz/A/ (cePdc |1 d)z/(F/4[I:staff +1] [F,B,D]2[I:staff -1] z/4[I:staff +1] z2 :|2 %12
+[I:staff -1] d)z/(F/ !3!B2) |: (!1!AB) |"_P legato" (c>d !1!c2)!<(! !2!=ef!<)! |$ %15
+ g3/2a/4[I:staff +1] [D,B,]2[I:staff -1] z/4[I:staff +1] [D,B,]2 | %16
+[I:staff -1] cd !1!c2!<(!"^Mazurka in B Flat (Chopin)" =ez/f/!<)! | (3(gag!>(! f3 d)!>)! | %18
+"^stretto" (cd !1!c2) (!2!=ef | g!5!a Tg2 !3!fd |$ !2!cd!<(! !1!c2) (=ef!<)! | %21
+"_poco rall." (3gag f>)"^a tempo"((G (3(!5!f))_Gf) |[I:staff +1] F,,3[I:staff -1] !1!F/ (G2 A2 | %23
+ B)z/(c/ d2 ef |$ g)a/ z/ Tb2 ag |[I:staff +1] B,,2 [F,B,D]2 [F,B,D]2 x3/2 | %26
+[I:staff -1] (e g)z!>(!(g/ A4)!>)! | (B d)z!>(!(d/ =E4)!>)! | Fz/!<(!(A/ c!<)!_e!>(! g>)f!>)! |$ %29
+{/f} d'z/!>(!(c'/ bg!>)! f2) |{/g} bz/!>(!(b/ A4)!>)! |{/Bd} f x5 | Fz/!<(!(A/ c_ePdc!<)! | %33
+ !wedge!d)z/!>(!(F/ z2 B2)!>)! ::$ z2 |"^sotto voce" f(!5!f/ z/ !4!=e2 _dc | %36
+ B)z/"^Mazurka in B Flat (Chopin)"(_d/ c2!<(! B)(=E/!<)! z/ | .f)(!5!f/ z/ !4!=e2 _dc) | %38
+ (3(B!>(!c(B) =E4!>)! | f)"_rubato"z/f/ !4!=e2 _dc |$ Bz/(_d/ c2 B)z/(=E/ | f)z/(f/ =e2 _d>c | %42
+ B!4!!3!cB!>(![I:staff +1] !>!C,3!>)! |[I:staff -1] F)z/(F/ G2 A2 | %44
+ B)z/(c/4[I:staff +1] [F,B,D]2[I:staff -1] z/4[I:staff +1] B,,2 |$ %45
+[I:staff -1] g)z/a/4[I:staff +1] [B,EG]2[I:staff -1] z/4[I:staff +1] z2 | %46
+ B,,2 [F,B,D]2 [F,B,D]2 x | F,,2 [F,CE]2 [F,CE]2 x |[I:staff -1] (B d)z/!>(!(d/ (=E4)!>)! | %49
+ F)z/!<(!(A/ c_e!<)!!>(! !5!g>)f!>)! |${/!1!f} d'z/!>(!c'/ (!4!!2!b!3!g .f2)!>)! | %51
+[I:staff +1] B,,2 [F,CE]2 [F,CE]2 |[I:staff -1]{/B!3!d} fz/!>(!(f/ (=E4)!>)! | %53
+ F)z/(A/!<(! c_e d>c)!<)! |1 dz/F/ B2 :|2 (d"_I SE"F) !fermata![Bb]4 |] %56
+V:2
+ F,, [F,CE] [F,CE] | B,, [F,B,D] B,, | E,,"^SE" [B,EG] z | B,,3/2 x3/2 |$ F,, [F,CE] [F,CE] | %5
+[I:staff -1] (B3/8 d3/8) z/4!>(!{/d} =E2!>)! |"_Ped. simile"[I:staff +1] F,, [F,_E] [F,A,E] | %7
+ B,, [F,B,D] [F,B,D] |[I:staff -1] g/ b/4 z/4[I:staff +1] [F,CE] x |$ .B,,[I:staff -1] !1!=E2 | %10
+[I:staff +1] F,, [F,_E] [F,A,E] |1 B,,[I:staff -1] !3!B !2!A/!1!G/ :|2[I:staff +1] B,, [F,B,D] |: %13
+ z | F,, [C,A,] [C,A,] |$ F,,[I:staff -1] g !3!f/d/ |[I:staff +1] F,, [C,A,] [C,A,] | %17
+ F,, [D,B,] F,, | [C,A,] F,, .[C,A,] | F,, .[D,B,] .F,, |$ .[C,A,] F,, (!5![C,A,] | %21
+!>(! (([C,=E,B,])!>)! !3!!1![F,A,])) z |[I:staff -1] f/ F/ z/4[I:staff +1] [F,CE] [F,CE] x/ | %23
+ B,, [F,B,D] B,, |$ E,, [B,EG] x |[I:staff -1] f/ b/z/!>(!(b/4 d2)!>)! | %26
+[I:staff +1] F,, [F,CE] [F,CE] x3/4 | B,, [F,B,D] [F,B,D] x3/4 | F,, [F,_E] [F,A,E] |$ %29
+ B,, [F,B,D] [F,B,D] | B,, [F,CE] [F,CE] | B,,3/2[I:staff -1] z/4!>(! (f/4 =E)!>)! | %32
+[I:staff +1] F,, [F,_E] [F,A,E] | B,, [F,B,D] x ::$ B,, | ([_G,,_D,] .[G,,D,] .[G,,D,]) | %36
+"^Ped. ten." [_G,,_D,] [G,,D,] [G,,D,] | [_G,,_D,] [G,,D,] [G,,D,] | [_G,,_D,] [G,,D,] [G,,D,] | %39
+ [_G,,_D,] [G,,D,] [G,,D,] |$ [_G,,_D,] [G,,D,] [G,,D,] | [_G,,_D,] [G,,D,] [G,,D,] | %42
+"^poco all." _D,!>(![I:staff -1] !2!A3/2"^a tempo" G/!>)! | %43
+"_Ped come sopra"[I:staff +1] F,, [F,CE] [F,CE] | B,,"_cresc."[I:staff -1] d !3!e/f/ |$ %45
+[I:staff +1] E,,[I:staff -1] Tb !2!a/!1!g/ | (f/ b/)z/4!>(!(b/4 d2)!>)! | %47
+ (e/ g/)z/4!>(!(g/4 A2)!>)! |[I:staff +1] B,, [F,B,D] [F,B,D] x/ | F,, [F,_E] [F,A,E] |$ %50
+ B,, [F,B,D] [F,B,D] |[I:staff -1] (g/ b/)z/!>(!(((b/ A)))!>)! |[I:staff +1] B,, [F,B,D] [F,B,D] | %53
+ F,, [F,_E] [F,A,E] |1"_www.theperlectscores.com" B,, [F,B,D] :|2 (B,, !fermata![B,,F,D]2) |] %56
+V:3
+ x6 | x6 | x6 | x5/2 [F,B,D]3/2 [F,B,D]2 |$ x6 | x6 | x6 | x6 | x2!>(![I:staff -1]{/b} A4!>)! |$ %9
+ x6 | x6 |1 x6 :|2 x4 |: x2 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x15/2 | x6 |$ x6 | x15/2 | %26
+ x15/2 | x15/2 | x6 |$ x6 | x6 | x3[I:staff +1] [F,B,D] [F,B,D]2 | x6 | x6 ::$ x2 | x6 | x6 | x6 | %38
+ x6 | x6 |$ x6 | x6 | F,,6 | x6 | x6 |$ x6 | x7 | x7 | x7 | x6 |$ x6 | x6 | x6 | x6 |1 x4 :|2 x6 |] %56
+

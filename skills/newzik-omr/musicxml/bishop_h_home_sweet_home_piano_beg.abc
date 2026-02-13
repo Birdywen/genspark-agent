@@ -1,0 +1,52 @@
+X:1
+T:Home sweet home Sheet music supplied by www.theperfectscores.com
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=104
+M:4/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M17: placeholder (x) detected - possible missing note
+%! CHECK: M11: placeholder (x) detected - possible missing note
+%! CHECK: M21: placeholder (x) detected - possible missing note
+%! CHECK: M25: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:3 bass 
+V:1
+"^Andante" (!1!F>G) | ([FA]3 B)!<(! (!0!!4![EB]3 c)!<)! |!>(! (!3![Ac]3 A [FA]2!>)! [Ac]2) | %3
+w: |||
+ ([EB]3 A [EB]2 [EG]2) | A6 (F>G) |$ ([FA]3 B) ([EB]3 c) | ([Ac]4 [FA]2) [Ac]2 | %7
+w: ||||
+ (B3 A [GB]2 [EG]2) | [A,CF]4 z2 c2 |$[I:staff +1] (F,,C,[F,A,]C,) (B,,F,[B,D]F,) | %10
+w: |||
+[I:staff -1] ([Ac]4 [FA]2 [Ac]2) | ((B3 A) [GB]2 [EG]2) | [A,CF]6 c2 |$ (([Af]3 [ce])) [Bd]3 [Ac] | %14
+w: ||||
+ ([Ac]4 [FA]2 [Ac]2) | (B3 A"_dimin." [GB]2 [EG]2 | [A,CF]6) z2 |$ [FAc]8 | ([DGB]4 [DG]4) | %19
+w: |||p||
+ [CF]4 [CG]4 | [CFA]4 z2 !2!c2 |$ (([Af]3 [ce]) [Bd]3 [Ac]) | ([Ac]4 [FA]2 [Ac]2) | %23
+w: |mf *|||
+ (([EB]3 A) [EB]2 [B,EG]2) | [A,CF]6 :| %25
+w: ||
+V:2
+ z2 | (F,,!2!C,!1!F,!2!C,) (G,,C,G,C,) | (F,,C,F,C,) (F,,C,F,C,) | (G,,C,G,C,) (G,,C,G,C,) | %4
+ (F,,C,F,C,) (F,,C,F,C,) |$ (F,,C,F,C,) (G,,C,G,C,) | (F,,C,F,C,) (F,,C,F,C,) |[I:staff -1] E4 x4 | %8
+[I:staff +1] (F,C,A,,C, F,,2) z2 |$[I:staff -1] (!5!!1![Af]3 !4!!3![ce] !3!!1![Bd]2 !4!!2![Ac]2) | %10
+[I:staff +1] (F,,C,[F,A,]C,) (F,,C,[F,A,]C,) |[I:staff -1] E4 x4 | %12
+[I:staff +1] (F,,!2!C,!1!F,!2!C,) !3!=B,,!2!C,_B,,G,, |$ (F,,C,[F,A,]C,) (B,,F,[B,D]F,) | %14
+ (F,,C,[F,A,]C,) (F,,C,[F,A,]C,) |[I:staff -1] E4 x4 |[I:staff +1] (F,C,A,,C, F,,2) z2 |$ %17
+ z (!5!C,!3!F,!2!A, !1!C!2!A,!3!F,C,) | z (!5!B,,!4!D,!2!G, !1!B,!2!G,!4!D,B,,) | %19
+!<(! ([C,F,A,]2 C,,2 [C,E,B,]2 C,,2!<)! | [F,,F,]4) z4 |$ (F,,C,[F,A,]C,) (B,,F,[B,D]F,) | %22
+ (F,,C,[F,A,]C,) (F,,C,[F,A,]C,) | (C,,C,"^dim. e puco rit."[E,B,]C,) (C,,C,G,C,) | %24
+ (F,C,A,,C, F,,2) :| %25
+V:3
+ x2 | x8 | x8 | x8 | x8 |$ x8 | x8 | (G,,C,G,C,) (C,,C,B,C,) | x8 |$ x8 | x8 | %11
+ (F,,C,G,C,) (G,,C,B,C,) | x8 |$ x8 | x8 | (F,,C,G,C,) (C,,C,B,C,) | x8 |$ x8 | x8 | x8 | x8 |$ %21
+ x8 | x8 | x8 | x6 :| %25
+

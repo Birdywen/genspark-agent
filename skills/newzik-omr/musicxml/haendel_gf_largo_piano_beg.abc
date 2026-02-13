@@ -1,0 +1,82 @@
+X:1
+C:G F Haendel
+%%score { ( 1 2 ) | ( 3 4 ) }
+L:1/4
+Q:1/4=70
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M32: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M43: placeholder (x) detected - possible missing note
+%! CHECK: M47: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M29: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M45: placeholder (x) detected - possible missing note
+%! CHECK: M47: placeholder (x) detected - possible missing note
+%! CHECK: M17: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M39: placeholder (x) detected - possible missing note
+%! CHECK: M47: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+L:1/8
+V:2 treble 
+V:3 bass 
+V:4 bass 
+V:1
+"^Largo" !5!G6 |[Q:1/4=50]"^Largo" G2 F2 E>D | D6 | E2 F2 (3GAB | [DA]6 | e4 e>d |$ d6 | c4 c>B | %8
+ !4!B2 x4 |"_cresc." [Bg]2 ([cg]2 [df]2) | G4 ed/ d x3/2 | !>!d^c c2 c2 |$ !4!d3 e d2 | %13
+ !5![A=c][GB] ([DGA]2 A)G | z2 !5!d4- | d6- | d2 B2 A>G | (!4!G3 x3 |$ [DG]2) !1!!3![DF]2 !4!E>D | %19
+ [B,D]6 | !2!E2 F2 (3GAB | [DA]6 | [Ge]2 !3![Ge]2 [Af]2 | g3 d d2 |$ z!>(! e (c3 B)!>)! | %25
+ [DB]4 ([B,G]2 |[Q:1/4=50]"^Largo haendel" [CG]2) [CF]2 E>D | D6 | [Gc]2 [Dc]2 [GB]2 | A3 G G2 |$ %30
+"^JS" [cf]2 [cf]2 [Be]2 | ^de/d/^c/ de [Ge]2 | z A !>!F2 x4 | [G,E]2 !>!!5!c4- | c2 BA [DGB]2 |$ %35
+ !4!A>G A2 [Fe]2- | [Fe]2 [Gd]2 c>B | B4 [Fcd]2 | [dg]2 ([dg]2 [df]2) | [cf]2 ed/ x5/2 | %40
+ d^c [GAc]2 [GAc]2 |$ d3 e [Gd]2 | [Ac][GB] A3 f | g6- | g4"_P  allargando" G2 | ABc z A>G | %46
+ [B,DG]4 z2 |] %47
+V:2
+ B, B, B, | C C C |[I:staff +1] [D,G,] [D,G,] x |!<(! !3![C,G,] !4![A,,D,] [G,,D,]!<)! | F,3 | %5
+[I:staff -1] ([EG] [EG] [EG]) |$ ([DG] [DG] [DG]) | ([DF] [DF] [DF]) | ([DG] [DG] [DG]) | %9
+[I:staff +1] (!4![G,D] [A,D] [B,D]) |[I:staff -1] f x3 | G2 G |$ A2 G | %13
+ E[I:staff +1] (D, [D,,D,]) |[I:staff -1] [B,G] z z | (G G G) | !2!F [DF] [DF] | !2!E E E |$ %18
+[I:staff +1] !2!G, G, G, | G,, G, G, |[I:staff -1] C z B, | %21
+"_com"[I:staff +1] !4!!2![D,F,] [D,F,] [D,F,] |!<(! [C,G,] [CE] [CD] |[I:staff -1] B B G!<)! |$ %24
+ E G F |[I:staff +1] G, G, [G,,D,] | [A,,D,] [A,,D,] [D,F,] | [B,,G,] [B,,G,] [B,,G,] | %28
+ [E,G,] [F,A,] [G,B,] |[I:staff -1] E F G |$[I:staff +1] [A,C] [A,C] [G,E] | F, B,, C, x/4 | %32
+[I:staff -1] [CE] [B,E] [A,^D] E/ x/ |[I:staff +1] C, z [A,E] |[I:staff -1] A G x |$ [DF] [DF] x | %36
+[I:staff +1] [C,A,] [B,,G,]!>(! [A,,D,]!>)! |[I:staff -1] [DG]"_cresc." [DG] x | %38
+[I:staff +1] [B,D] [B,G] [B,G] | [CG] [C,G,] [D,G,] |[I:staff -1] [GA] x2 |$ F2 x | E [FA]2 | %43
+"_JS" B z z | x3 | E [DGB] [CF] |[I:staff +1] [G,,,G,,]2 z |] %47
+V:3
+"^P (religious)" !5![G,,D,] [G,,D,] [G,,D,] | [A,,D,] [A,,D,] [D,F,] | B,,2 [D,G,] | %3
+ x2[I:staff -1] B, |[I:staff +1] D, D, D, | C, C C |$ B,, B, B, |"_dimin." A,, A, A, | G,, G, G, | %9
+ x3 | C2 C C,/ [D,B,]/ | [E,A,]2 [E,A,] |$ A, D [G,B,] | %13
+"^poco rit," [C,C] A,/B,/[I:staff -1] [CF] |"^mf a tempo  P"[I:staff +1] [G,,D,] z z | %15
+ ([G,B,] .[G,B,] .[G,B,]) | B,2 C | B,3 |$ B,,2 C, | x3 |!<(! [C,G,] [A,,D,] [G,,D,]!<)! | x3 | %22
+ x3 | [B,D] [B,D] [B,,G,] |$ G, A, A, | x3 | x2[I:staff -1] C | x3 | x3 | %29
+[I:staff +1] C [CD] [B,D] |$ x3 | B,2 C x/4 | A, B,2 B,, | x[I:staff -1] z G | %34
+[I:staff +1] [F,D] [G,D] G, |$ D, D, [C,A,]- | x2[I:staff -1] [DF] | %37
+[I:staff +1] [G,,D,] [G,B,] [A,D] |[K:treble] x3 | x[K:bass][I:staff -1] [Gc] [GBd] | %40
+[I:staff +1] [E,A,] [E,A,] [E,A,] |$ A,2 G, | A,2 [D,,D,] | [E,,B,,G,] z z | x3 | %45
+ [C,G,]"^www.theperlectscores.com" [D,,D,] [D,,D,] | x3 |] %47
+V:4
+ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x4 | x3 |$ x3 | x3 | x3 | x3 | D, D, D, | %17
+ E, E, E, |$ x2[I:staff -1] !2!C | x3 | x3 | x3 | x3 | x3 |$[I:staff +1] C,2 D, | x3 | x3 | x3 | %28
+ x3 | x3 |$ x3 |[I:staff -1] A x9/4 | x4 | x3 | x3 |$ x3 | x3 | x3 |[I:staff +1][K:treble] x3 | %39
+ x[K:bass] x2 | x3 |$ D, =C, B,, | C, D, x | x3 | x3 | x3 | x3 |] %47
+

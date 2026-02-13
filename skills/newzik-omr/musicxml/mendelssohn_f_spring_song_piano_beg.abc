@@ -1,0 +1,77 @@
+X:1
+T:Spring song Sheet music supplied by www.theperfectscores.co1
+C:F Mendelssohn
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=115
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M86: placeholder (x) detected - possible missing note
+%! CHECK: M52: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+V:2 bass 
+V:1
+"^Allegretto grazioso" (!2!B2-!<(! B/!1!c/^c/!<)!d/ |!>(! !5!g!3!d!2!=c!>)!!1!B) | (!2!A3 c | %3
+w: |||
+ e3 !3!c) | !1!A2- A/!<(!(!2!^G/!1!A/^A/!<)! |!>(! !3!B!5!dc!>)!B) |$ (AG!2!F!3!G | %7
+w: ||||
+ !5!B2 !4!A!1!D) | !4!B2- B/(!1!c/!2!^c/d/ |!>(! g!3!d!2!=c!1!B)!>)! | (!2!A3 c |$ !5!e3 c) | %12
+w: |||||
+ (^c=c!1!B!2!A | !1!G!2!F!5!B!4!A) | !3!A2 !2!G!1!D | !>!!5!d2- d/(^c/=c/B/ |$ %16
+w: ||||
+ !1!A)(!2!F!3!E!1!D) | !>!!5!d2- d/(^c/=c/B/ | !1!A)(!3!F!2!E!1!D) | (!2!F!1!GdG | !2!F3) !3!F |$ %21
+w: |||||
+ (!2!E!1!=FdF | !2!E3) (E |"_cresc." ^FEFG | A3) (!2!A | d=cBA) | (!1!A2 !2!^G)(!3!B |$ %27
+w: ||||||
+ !5!e^cB!1!A | !5!f!3!d!2!^c!1!B) | (!3!A!1!EFG | F3) (!1!A | e^cBA |$ !5!fd^c!1!B) | %33
+w: ||||||
+"_dimin." !3!A(!1!E!5!G!2!^C) | !1!D3 !2!^D | !1!E3 !2!F | !1!G3 !2!^G | !5!BA=G!2!E |$ %38
+w: |||||
+ (!1!D3 !2!^D |"_cresc." !1!E3 !2!F | !1!G3 !2!^G | !1!A3 !2!B) | !>!!3!c2- c/(B/A/d/ | %43
+w: |||||
+ !5!e2-) e/B/c/d/ |$ !>!e2-"_dimin." e/(!2!^G/A/B/ | !>!c2-) c/(!2!^G/A/B/ | %46
+w: |||
+"_dolce" (!5!c/)!2!^G/A/B/ !5!c/!2!G/!1!A/B/ | !3!c/!4!^c/!1!d/!>(!!2!^d/ !4!f/!3!e/!1!A/B/!>)! | %48
+w: ||
+"_dimin." !5!=d/!4!=c/!2!F/!1!G/ !5!B/!4!A/"_rit."!2!F/!1!D/) |$ %49
+w: |
+"^a tempo" !4!B2-!<(! B/(!1!c/!2!^c/!3!d/!<)! |!>(! !5!g!3!d=c!>)!!1!B) | (!2!A3 c | e3 c) | %53
+w: ||||
+ !1!A2-!<(! A/(!2!^G/!1!A/^A/!<)! | !3!B!5!dcB) |$ (AG!2!F!3!G | !5!B2 !4!A)!1!D | %57
+w: ||||
+ !4!B2- B/(!1!c/!2!^c/!3!d/ | !5!g!3!d!2!=c!1!B) |"_cresc." (!2!A3 c | !5!e3 A) |$ (!2!A3 ^c | %62
+w: |||||
+ !5!e3"_tS" A) | (!5!g!3!f!2!e!1!d | bgfe) |!>(! (!3!dABc!>)!{/d} | !2!B2) z !1!d |$ !4!gfed | %68
+w: ||||||
+ !5!bgf!1!e |"_dimin." !3!d(!1!A!5!=c!2!F) | (!1!G3 ^G | !3!A3 !1!B) | (!2!c3 !3!^c |$ %73
+w: |||||
+!>(! !5!e!4!d!3!=c!>)!!2!A) | (!1!G3 ^G | A3 !1!B) | (!2!c3 ^c |!>(! ed=c!>)!A) |$ %78
+w: |||||
+ (!1!G!2!B!3!d!5!g | !4!f!2!d!1!c!2!A) | (GBdg | fdcA) | !1!B2- B/c/!3!^c/!1!d/ |$ %83
+w: D * * *||||PP * * * *|
+[I:staff +1] (G,B,D) z x/ |[I:staff -1] !5!d2 z/ (!1!E/F/G/ | B2) z/ (!1!C/^C/!1!D/ | %86
+w: |||
+ !4!G)(!1!B,.!2!D.!4!G) | (!1!B.!2!d.!4!g!1!b | d') z [Bdg] z | [B,DG] z z2 |] %90
+w: ||||
+V:2
+ (G,B,D) z | (B,,D,G,) z | (C,E,A,) z | (A,CE) z | (F,CD) z | (G,B,D) z |$ (E,A,^C) z | %7
+ (D,G,F,) z | (G,B,!<(!D)!<)! z | (B,,D,G,) z | (C,E,A,) z |$ (^G,,B,,E,) z | (A,,C,E,) z | %13
+ (D,CF,) z | G,([CD][B,D]) z | (B,,D,G,) z |$ (C,D,F,) z | (B,,D,G,) z | (C,D,F,) z | (B,,D,G,) z | %20
+ (A,,D,F,) z |$ (A,D)F z | (^G,B,D) z | (=G,A,^C) z | (F,A,D) z | (=F,A,D) z | (E,B,D) z |$ %27
+ (^C,=G,A,) z | (D,F,A,) z | (A,,^C,G,)[I:staff -1]{/A}[I:staff +1] z | (D,F,A,) z | (^C,G,A,) z |$ %32
+ (D,F,D,^G,) | (^C,=G,E,A,) | (D,F,A,=C) | (D,G,B,C) | (D,G,B,=F,) | (^C,E,G,A,) |$ (D,F,A,=C) | %39
+ (G,B,C_E) | (G,B,D=F) |[K:treble] (CE=F"^JS"_A) | (EG"_www.theperfectscores.com"E) z | (CEG) z |$ %44
+[K:bass] (A,CE) z | (=G,C_E) z | (^F,CD) z | x4 | x4 |$ (G,B,D) z | (B,,D,G,) z | (C,E,A,) z | %52
+ (A,CE) z | (F,CD) z | (G,B,D) z |$ (E,A,^C) z | (D,G,F,) z | (G,B,D) z | (B,,D,G,) z | %59
+ (C,E,A,) z | (C,E,A,) z |$ (^C,E,G,) z | (A,,G,A,) z | (F,A,C) z | (F,G,B,) z | (D,F,C) z | %66
+ (G,,D,G,) z |$ (!5!D,!2!A,C!3!F,) | (!5!B,,!1!G,!4!^C,!1!_B,) | (F,A,F,C) | (G,B,D=F) | (G,CE=F) | %72
+ (G,CE_B,) |$ (D,F,A,C) | (G,B,D=F) | (C,E,=F,_A,) | (E,G,C_B,) | (D,F,A,C) |$ (G,DB,) z | %79
+ (D,C)F, z | (G,DB,) z | (D,C)F, z | (G,B,D) z |$[I:staff -1] !5!^g2 z/ !1!A/^A/B | %84
+[I:staff +1] (G,B,D) z | (G,B,D) z | (!5!G,,D,!1!G,(!4!B,) |[K:treble] !2!D!1!G!4!B!2!d | %88
+ g) z [eb] z | [E,E] z z2 |] %90
+

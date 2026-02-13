@@ -1,0 +1,72 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Barcarolle. (tales of hoffman)
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:3/8=99
+M:6/8
+I:linebreak $
+K:Bmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M24: placeholder (x) detected - possible missing note
+%! CHECK: M59: placeholder (x) detected - possible missing note
+%! CHECK: M60: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M21: placeholder (x) detected - possible missing note
+%! CHECK: M29: placeholder (x) detected - possible missing note
+%! CHECK: M42: placeholder (x) detected - possible missing note
+%! CHECK: M53: placeholder (x) detected - possible missing note
+%! CHECK: M60: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:1
+"^Moderato" [dfa]z[dfb] [dfb]z[dfa] |[I:staff +1] D,,2 z [A,DF]2"^molto cantabile" z | %2
+[I:staff -1] (!2!F2 G) (G2 F) | (FEG) (G2 F) |$!<(! (FEG)!<)!!>(! (G2 F)!>)! | %5
+ z2 [dfb] [dfb]2 [dfa] | (F2 G) (G2 F) | (FEG) (G2 F) | (FEG) (G2 F) |$ z2 [dfb] [dfb]2 [dfa] | %10
+ (!1!A2 B) (B2 !1!!3![Ac]) |!<(! ([Ac]2 !2!!4![Bd])!<)!!>(! ([Bd]2 !1!!3![Ac])!>)! | %12
+ (!2!!4![Ac]2 !1!!3![GB]) (!2!!4![GB]2 [FA]) | z2 [dfb] [dfb]2 [dfa] |$ %14
+ (!1!A2 B)!<(! (B2 [Ac])!<)! |!<(! ([Ac]2 [Bd])!<)! ([Bd]2 [Ac]) | %16
+!<(! ([Ac]2 !1!!3![GB])!<)!!>(! (!2!!4![GB]2 [FA])!>)! | z2 [dfb] [dfb]2 [dfa] | (A2 B) (B2 =c) |$ %19
+[I:staff +1] D,,zD, [A,=C]zD, x |[I:staff -1] A(AB =cBA) | B3- BzB | (B2 ^c) (c2 d) | e6 |$ %24
+ B(Bc dcB) | A2 z !1!A,!2!CE | A3- A^cB | A2 z A,CE | A3- A^cB |$ Az[ceb]!<(! [ceb]z[cea]!<)! | %30
+!>(! [cea]z[cgb]!>)! [cgb]z[cga] | (F2 G) (G2 F) |!<(! (FEG)!<)!!>(! (G2 F)!>)! | %33
+!<(! (FEG)!<)!!>(! (G2 F)!>)! |$ z2 [dfb] [dfb]2 [dfa] |!<(! (F2 G)!<)!!>(! (G2 F)!>)! | %36
+!<(! (FEG)!<)!!>(! (G2 F)!>)! |!<(! (FEG)!<)!!>(! (G2 F)!>)! |[I:staff +1] ^D,,^D,F, A,F,D, |$ %39
+[I:staff -1] [EG]!<(!(!1!EF GAB)!<)! | z2 [dfb] [dfb]2 [dfa] | [cga]!<(!(AB !1!!3![Gc]de)!<)! | %42
+ !>!!5!f6- | fed ^cdB |$ !5!A3- A2 B, | A,2 (G F2 E) | D2 z (!2!A !5!d2) | (A e2) (A, G2) | %48
+ (d f2) (A d2) |$ (A e2) (A, G2) |"^sempre più dolce" [DF]2 [dfb] [dfb]2 [dfa] | %51
+ [Adf]2 [Adg] [Adg]2 [Adf] |"^morendo" [FAd]2 [FAe] [FAe]2 [FAd] | [DFA]2 [DFB] [DFB]2 [DFA] |$ %54
+ [A,DF]2 [A,DG] [A,DG]2 [A,DF] |[K:bass] !5![F,A,D]3 !1!!3!!5![G,B,D]3 | %56
+ [F,A,D]3 !1!!2!!5![E,G,D]3 | [F,A,D]6 |[I:staff +1] (2:3:2D,,D, x3 | %59
+[I:staff -1] [F,A,D]2 z z2 !fermata!z |] %60
+V:2
+ D,,2 z !5!!2!!1![A,DF]2 z |[I:staff -1] [dfa]z[dfb] [dfb]z[dfa] |[I:staff +1] D,,zA,, [D,F,]zA,, | %3
+!<(! D,,zA,,!<)!!>(! [C,G,A,]zA,,!>)! |$ D,,zA,, [C,G,A,]zA,, |[I:staff -1] F3- F2 z | %6
+!<(!"_Ped. simile"[I:staff +1] D,,zA,,!<)!!>(! [D,F,]zA,,!>)! |!<(! D,,zA,,!>(! [C,G,A,]zA,, | %8
+!<(! D,,zA,,!<)!!>(! [C,G,A,]zA,,!>)! |$[I:staff -1] F3- F2 z | %10
+!<(![I:staff +1] D,,zA,, [D,F,]zA,,!<)! | A,,,zA,, [E,G,]zA,, | A,,,zA,, [E,G,]zA,, | %13
+[I:staff -1] [FA]3- [FA]2 z |$[I:staff +1] D,,zA,, [D,F,]zA,, | A,,,zA,, [E,G,]zA,, | %16
+ A,,,zA,, [C,G,]zA,, |[I:staff -1] [FA]3- [FA]2 z |[I:staff +1] D,,zD, [F,A,]zD, |$ %19
+[I:staff -1] !5!d6 A |[I:staff +1] D,,zD, [A,=C]zD, |[I:staff -1] G2 z z2 z | %22
+[I:staff +1] E,,zE, [^G,D]zE, |[I:staff -1] z2 A (A2 B) |$[I:staff +1] E,,zE, [^G,D]zE, | %25
+ A,,,zA,, E,zA,, | A,,,zA,, [^D,F,]zA,, | A,,,zA,, E,zA,, | A,,,zA,, [^D,F,]zA,, |$ %29
+ (!5!A,,!3!C,!2!E, !1!G,E,C,) | (A,,C,E, G,E,(C,) | D,,A,,D, F,D,(A,,) | D,,A,,C, E,C,(A,,) | %33
+ D,,A,,C, E,C,A,,) |$!>(![I:staff -1] F3-!>)! F2 z |[I:staff +1] D,,A,,D, F,D,(A,, | %36
+ D,,A,,C, E,C,(A,,) | D,,A,,C, E,C,A,,) |[I:staff -1] [^CDA]6 |$[I:staff +1] E,,B,,E, G,E,B,, | %40
+!>(![I:staff -1] A3-!>)! A2 z |[I:staff +1] (A,,C,E, A,E,C,) | %42
+[I:staff -1] =c!2!D!1!E !2!F!>!!1!GA | [GB] z z z2 z |$ !3!FED CDB, | %45
+[I:staff +1] (A,,A,,C, G,C,(A,,) | D,,A,,D, F,D,(A,,) | D,,A,,C, G,C,(A,,) | D,,A,,D, F,D,A,,) |$ %49
+ D,,A,,C, G,C,(A,, | D,,A,,D, F,D,(A,,) | D,,A,,D, F,D,(A,,) | D,,A,,D, F,D,(A,,) | %53
+ D,,A,,D, F,D,A,,) |$ (D,,A,,D,) z (D,A,,) | [D,,D,]3 [D,,D,]3 | [D,,D,]3 [D,,D,]3 | %57
+"_una corda" D,,3/8D,3/8 x21/4 |[I:staff -1] [F,A,D]6 |[I:staff +1] [D,,D,]2 z z2 !fermata!z |] %60
+V:3
+ x6 | x6 | x6 | x6 |$ x6 | D,,zA,, [D,F,]zA,, | x6 | x6 | x6 |$ D,,zA,, [D,F,]zA,, | x6 | x6 | x6 | %13
+ D,,zA,, [D,F,]zA,, |$ x6 | x6 | x6 | D,,zA,, [D,F,]zA,, | x6 |$[I:staff -1] z2 G G2 x2 | x6 | %21
+[I:staff +1] G,,z[D,G,=C] [D,G,C]z[D,G,B,] | x6 | E,,zE, [^G,D]zE, |$ x6 | x6 | x6 | x6 | x6 |$ %29
+ x6 | x6 | x6 | x6 | x6 |$ D,,A,,D, F,D,A,, | x6 | x6 | x6 | x6 |$ x6 | (A,,D,F, A,F,D,) | x6 | %42
+ ^D,,F,A, =CA,F, | (E,G,B, EB,G,) |$ (A,,D,F, A,F,D,) | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | %53
+ x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |] %60
+

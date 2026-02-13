@@ -1,0 +1,84 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Grandmother's minuet. Op.68, n.2
+C:EDVARD Grieg
+%%score { ( 1 4 ) | ( 2 3 ) }
+L:1/4
+Q:1/4=120
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M1: placeholder (x) detected - possible missing note
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M9: placeholder (x) detected - possible missing note
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M10: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M15: placeholder (x) detected - possible missing note
+%! CHECK: M31: placeholder (x) detected - possible missing note
+%! CHECK: M43: placeholder (x) detected - possible missing note
+%! CHECK: M52: placeholder (x) detected - possible missing note
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M52: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+L:1/8
+V:2 bass 
+V:3 bass 
+V:4 treble 
+L:1/8
+V:1
+"^Allegretto grazioso e leggierissimo"{/!3!GA} G.F z2 .!4!G2[I:staff +1] .!2!A,2[I:staff -1] !1!^C2 x2 | %1
+ .!4!!2![DFA]2 !tenuto![DFA]4 |{/GA} G.F .G2 x2 | [DFd]6 |${/!3!EF} ED .[CE]2 !2![DG]2 | %5
+{/EF} ED .[CE]2 !2![DG]2 |{/EF} ED .[CE]2 x2 | !2![B,G]6 |{/!3!ga} z2 x5 |$ %9
+[I:staff +1] .!1![DA]2 .!2!A,2 D,2 | %10
+[I:staff -1]{/ga} g.f[I:staff +1] z2[I:staff -1] ed z2 [gb]2 x2 |[I:staff +1] [DA]2 .A,2 .D,2 | %12
+[I:staff -1]{/ef} ed [ce]2 [dg]2 |{/ef} ed .[ce]2 [dg]2 |${/ef} ed e2 f2 | [Bg]6 |: %16
+[I:staff +1]{/B,-} B,A, B,2 B,2 |[I:staff -1] cd B2 B2 |{/Bc} BA B2 B2 |$ ed B2 B2 | %20
+ c A c e c !1!G | cEc!2!FcD | B!2!GBdBF |$ !5!BDB!2!EBC | A!2!FAcAE | A!1!^CA!2!^DAB, | %26
+ G!2!E FB, !>!B2 |$ !4!GE FB B,2 | G E !3!F B, B G | EFB,BGE | FB,"_Se"B!2!FBF |$ B F .B F .B F | %32
+"_un poco rit." !4!cd B2 !1!B2 | !5!g!3!e f2 .!2!f2 | !4!ad' .!3!b2 !2!b2 | !fermata!!1!b6 ||$ %36
+"^Tempo I"{/G-} GF[I:staff +1] z2[I:staff -1] E!1!D z2 .[GB]2 x2 | .!4!!2![DFA]2 !tenuto![DFA]4 | %38
+{/GA} GF G2 .[GB]2 | [DFd]6 |{/EF} ED [CE]2 .[DG]2 |${/E-} ED [CE]2 .[DG]2 |{/EF} ED [CE]2 !4!F2 | %43
+ !2![B,G]6 |{/!3!ef} ed .[ce]2 [dg]2 |{/ef} e.d [ce]2 [dg]2 |${/e^f} e"^fa,"d [ce]2 dc | %47
+[I:staff +1] z6 |[I:staff -1]{/e'-} e'd' [c'e']2 f'2 |[I:staff +1] z6 | %50
+[I:staff -1]{/E-} ED [CE]2 F2 | [B,G]6 :| %52
+V:2
+ z[I:staff -1] z[I:staff +1] z[I:staff -1] !2!E/!1!D/ z [GB] | %1
+[I:staff +1] .!5!!1![D,A,] !2!A,, D,, | z z/ .!2!A,/[I:staff -1] !1!^C | %3
+[I:staff +1] .!1![D,A,] !2!A,, D,, |$ z !4![C,G,] [B,,G,] | z [C,G,] [B,,G,] | %6
+ z !3!C,/4 !2!D,3/4[I:staff -1] !4!F3/4 C/4 |[I:staff +1] .!5!!1![G,,D,] !2!D,, G,,, | %8
+ x z3/4 z3/4[K:treble] x |$[I:staff -1] .[dfa][K:bass] !tenuto![dfa]2 | %10
+[I:staff +1] z[I:staff -1] z z g[I:staff +1][K:treble] A[I:staff -1] ^c | %11
+[I:staff -1] [dfd']3[I:staff +1][K:bass] |[I:staff +1] z[K:treble] .!4![CG] [B,G] | %13
+ z .[CG] [B,G] |$ z G !2!D | [G,D][K:bass] D, G,, |:"^con moto"[I:staff -1]{/Bc} B/A/ B B | %17
+[I:staff +1] C/D/ B, B, |{/B,-} B,/A,/ B, B, |$ E/D/ B, B, | !3!C/ A,/ C/ E/ !2!C/ G,/ | %21
+ !1!C/E,/C/F,/C/D,/ | !2!B,/!4!G,/!2!B,/D/B,/!4!F,/ |$ .B,/D,/B,/E,/B,/C,/ | %24
+ !1!A,/!4!F,/!2!A,/C/A,/E,/ | !1!A,/!5!^C,/A,/!4!^D,/A,/B,,/ | !1!G,/!3!E,/ F,/B,,/ !>!B, |$ %27
+ !2!G,/!4!E,/ F,/B,/ !>!B,, |"^un poco stretto" !2!G,/ E,/ F,/ D,/ .B,/ .!2!G,/ | %29
+!<(! !4!E,/F,/B,,/B,/!2!G,/E,/!<)! |!>(! F,/B,,/B,/!4!F,/B,/F,/!>)! |$"_tt" .B,/F,/.B,/F,/B,/F,/ | %32
+ !2!C/D/ B, .!5!B, |[K:treble] !1!G/E/ F !5!F | !2!c/d/ .!3!B .!2!B | !fermata!!1!B3 ||$ %36
+[K:bass] z[I:staff -1] z z G[I:staff +1] .!2!A,[I:staff -1] !1!^C | %37
+"_Ped. come sopra"[I:staff +1] !1![D,A,] !2!A,, D,, | z z .!2!A, | !1![D,A,] A,, D,, | %40
+ z !4![C,G,] [B,,G,] |$ z !4![C,G,] [B,,G,] | z G, !2!D, | [G,,D,] !2!D,, G,,, | %44
+ z[K:treble] !4![CG] [B,G] | z [CG] [B,G] |$ z G !2!D | x3 | z g[I:staff -1] d'/c'/ | x3 | %50
+"^ritard."[I:staff +1] z[K:bass] G, !2!D, | [G,,D,] !2!D,,"_com" G,,, :| %52
+V:3
+ x6 | x3 | x[I:staff -1] E/!1!D/ .[GB] | x3 |$ x3 | x3 | x[I:staff +1] .G, x | x3 | %8
+"^pp sempre" z[I:staff -1] g/.f/4 !2!e/[I:staff +1][K:treble] .!2!A3/4[I:staff -1] [gb]/ |$ %9
+ x[I:staff +1][K:bass] x2 | x4[K:treble] x2 | x[K:bass] x2 | x[K:treble] x2 | x3 |$ x !3!C/B,/ x | %15
+ x[K:bass] x2 |: x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ %31
+ x3 | x3 |[K:treble] x3 | x3 | x3 ||$[K:bass] x6 | x3 | x3 | x3 | x3 |$ x3 | x !3!C,/B,,/ !5!A,, | %43
+ x3 | x[K:treble] x2 | x3 |$ x !3!C/B,/ A, | x3 | x c/B/ x | x3 | x[K:bass] x !3!C,/B,,/ | x3 :| %52
+V:4
+ x12 | x6 | x6 | x6 |$ x6 | x6 | x2[I:staff +1] B,,/ !5!A,,3/2[I:staff -1] !2!D3/2 x/ | x6 | %8
+ x5/2 !4!g !1!d3/2 ^c x |$ x6 | x12 | x6 | x6 | x6 |$ x4"_poco rit." c2 | x6 |: x6 | x6 | x6 |$ %19
+ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 ||$ x12 | %37
+ x6 | x6 | x6 | x6 |$ x6 | x4 !2!DC | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | DC x4 | x6 :| %52
+

@@ -1,0 +1,39 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Little fairy waltz. Op.105, n.1
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=168
+M:3/4
+I:linebreak $
+K:Emin
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+ (!3!B2 !5!c | !4!d2 !1!G | !2!F3- | F) z z | (!3!c2 d | !5!e2 !2!A |$ !1!G3- | G) z z | %8
+ (!4!g2 !5!f | !4!a2) g | (!5!g3 | !4!f) z A |$[I:staff +1] D, [F,C] [F,C] | %13
+[I:staff -1] !1!A2 (!2!^A | !3!B3- | B) z z | !3!B2 c | d2 !1!G |$ !2!F3- | F z z | (c2 d | %21
+ e2 !2!A | G3- | G) z z | (g2 f |$ !5!a2 !4!g) | (!5!g3 | f) z (A | e2) (d | A2) (B | G3- | %31
+ G/) z/ (!2!^c !3!d |:$ e .!3!d) !2!d | z (!5!b !3!g | .f) .!4!f .!3!f | z (!2!^c d | %36
+ e .!3!d) .!2!d |$ z (!5!c' !3!a | .!2!g) !4!g .!3!g | z (!2!^c d | e .!3!d) .!2!d | z (!5!b g | %42
+ .f) .!4!f .!3!f |$ z (!2!^c d | !4!e .!3!d) .!1!d | (!5!c' .!3!f) !2!f | .g z [Bdg] |1 %47
+ [Bdg]/ z/ (!2!^c d :|2!fine! [Bdg]) z z |:$ .!1!!3![ce]"^JS" .[ce] z | .!2!!4![eg] .[eg] z | %51
+ !1!!5![ec'] z .!2!!4![gb] | !1!!3![fa]3 | !1!!2![Bd] .[Bd] z |$ .!1!!3![df] .[df] z | %55
+ .!3!!5![gb] z .!2!!4![fa] | !>!!1!!3![eg]3 | .[ce] .[ce] z | .[eg] .[eg] z | [ec'] z .[gb] |$ %60
+ !>![fa]3 | .!2!!3![fg] .[fg] z | .!1!!4![ea] .!1!!3![eg] z | %63
+ !1!!2!!4![fgb]/.[fgb]/ .[fgb] !>![fgb] |1 [egc'] z z :|2!D.C.! [egc'] z z |] %66
+V:2
+!<(! !5!G, [B,D] [B,D]!<)! | G, [B,D] [B,D] |!>(! !4!A, [CD] [CD]!>)! | A, [CD] [CD] | %4
+!<(! D, [CD] [CD] | D, [CD] [CD]!<)! |$!>(! G, [B,D] [B,D]!>)! | G, [B,D] [B,D] | %8
+ G,!<(! [B,D] [B,D] | G, [B,D] [B,D]!<)! | D, [A,C] [A,C] | D, [A,C] [A,C] |$[I:staff -1] !5!f2 e | %13
+[I:staff +1] D, [F,C] [F,C] |!>(! G, [B,D] [B,D] | G, [B,D] [B,D]!>)! | G,!<(! [B,D] [B,D] | %17
+ G, [B,D] [B,D]!<)! |$!>(!"_ti" A, [CD] [CD]!>)! | A, [CD] [CD] | D, [CD] [CD] | D, [CD] [CD] | %22
+!>(! G, [B,D] [B,D]!>)! | G, [B,D] [B,D] | G, [B,D] [B,D] |$!<(! G, [B,D] [B,D]!<)! | %26
+ D, [A,C] [A,C] | D, [A,C] [A,C] | D, [F,C] [F,C] |!>(! D, [F,C] [F,C] | G, [B,D] [B,D]!>)! | %31
+ G,/ z/ z z |:$ G, [B,D] [B,D] | G, [B,D] [B,D] | A, [CD] [CD] | A, [CD] [CD] | D, [F,C] [F,C] |$ %37
+ D, [F,C] [F,C] | G, [B,D] [B,D] | G, [B,D] [B,D] | G, [B,D] [B,D] | G, [B,D] [B,D] | %42
+ A, [CD] [CD] |$ A, [CD] [CD] | D, [F,C] [F,C] | D, [A,C] [A,C] | .[G,B,] z !>![G,B,] |1 %47
+ !>![G,B,]/ z/ z z :|2 !>![G,B,] z z |:$ C, [E,G,] [E,G,] | C, [E,G,] [E,G,] | C, [E,G,] [E,G,] | %52
+ G,, [F,G,] [F,G,] | G,, [F,G,] [F,G,] |$ G,, [F,G,] [F,G,] | G,, [F,G,] [F,G,] | %56
+ C, [E,G,] [E,G,] | C, [E,G,] [E,G,] | C, [E,G,] [E,G,] | C, [E,G,] [E,G,] |$ G,, [F,G,] [F,G,] | %61
+ G,, [F,G,] [F,G,] | C, [E,G,] [E,G,] | G,, G, !>!G, |1 !>!C, z z :|2 !>!C, z z |] %66
+

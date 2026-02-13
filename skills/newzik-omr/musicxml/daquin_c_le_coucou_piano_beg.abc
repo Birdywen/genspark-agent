@@ -1,0 +1,128 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Le coucou. Rondo
+%%score 1 ( 2 3 )
+L:1/8
+Q:1/4=125
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M25: placeholder (x) detected - possible missing note
+%! CHECK: M39: placeholder (x) detected - possible missing note
+%! CHECK: M51: placeholder (x) detected - possible missing note
+%! CHECK: M64: placeholder (x) detected - possible missing note
+%! CHECK: M81: placeholder (x) detected - possible missing note
+%! CHECK: M95: placeholder (x) detected - possible missing note
+%! CHECK: M109: placeholder (x) detected - possible missing note
+%! CHECK: M116: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 4"
+L:1/16
+V:2 bass nm="Piano Collection for Beginners - Grade 4"
+V:3 bass 
+V:1
+ z"^Vivo" BcB eBcB | gBcB eBcB | gBcB eBcB | g2(f2e2)^d2{/f} |$ eBcB gBcB | AABA fABA | GGAG eGAG | %7
+w: ||||cre * * * * * * scen|* * * * * do * *||
+w: |||||||
+ FFGF dFGF | EEFE cEFE |$!>(! ^D2E(F EF2)G |{/GFG} F8!>)! | z BcB eBcB | gBcB eBcB | gBcB eBcB |$ %14
+w: |||||||
+w: |||||||
+[K:Emin] g2f2e2^d2{/ef} | eBcB gBcB | AABA fABA | GGAG eGAG | FFGF dFGF |$ EEFE cEFE | ^DEDE FGAF | %21
+w: |* * * * * cre * *|* * * scen * * * *|* * * * * * * do||||
+w: |||||||
+"_dim. e rit" B2AG{/G}"^(a)" F2>E2 |"_a tempo" [G,B,E]8 |"_P legg." z ded gded |$ bded gded | %25
+w: ||||
+w: ||||
+ bded gded | b2a2g2f2({/ga)} | gded bded | ccdc acdc |$ BdcB gdcB |!>(! e2d2c2!>)!B2{/cd | %31
+w: ||||||
+w: ||||||
+BB} A4 z2 .a2 | !>!f4"_scen" z2 .a2 |"_do" !>!f4 z2 .a2 |$[K:Emin] !>!f4 z2 .a2 | !>!d4 z2 .d2 | %36
+w: |||||
+w: |||||
+ !>!B4 z2 .d2 | B4 z2 .d2 | !>!B4 z2 .d2 |$ EDEF GFGA | B2c2{/G}"^(b)" TF2>G2 |!>(! [G,DG]8!>)! | %42
+w: ||||||
+w: ||||||
+"_P legg." z BcB eBcB | bBcB eBcB |$ gBcB eBcB | g2f2e2^d2{/ef} | eBcB gBcB | AABA fABA | %48
+w: ||||* * * * * cre * *|* * * scen * * * *|
+w: ||||||
+ GGAG eGAG |$ FFGF dFGF | EEFE cEFE | ^D2"_dimin."E(F (3E2F2)G2 |{/GFG}!>(! F8!>)! | %53
+w: * * * do * * * *|||||
+w: |||||
+"_P legg." z BcB eBcB |$[K:Emin] gBcB eBcB | gBcB eBcB |"^(Daquin)" g2f2e2^d2{/ef} | eBcB gBcB | %58
+w: |||||
+w: |||||
+ AABA fABA |$ G!1!GAG eG!2!AG | F!1!FGF d!1!FGF | E!1!EFE cEFE | ^D!3!ED!1!E FGAF | %63
+w: |* scen * * * * * *|* * * * * do * *|||
+w: |||||
+ B2AG{/!4!G} TF2>E2 |$!>(! !5![G,B,E]8!>)! | z !3!BAB !1!^GBAB | eBAB !1!^GBAB | dBAB ^GBAB | %68
+w: |||* * poco * * a * *|* * poco * cre * * *|
+w: |||||
+ eB^cd edcB |$ !2!^c!3!cBc !1!^AcBc | f!3!^cBc ^AcBc | e^cBc ^AcBc | e!2!^cde fedc | %73
+w: * * scen * * * * *|||||
+w: |* * do * * * * *||||
+ d!4!d!3!^cd !1!B!3!dcd |$[K:Emin] fd^cd Bdcd | g!3!d^cd Bdcd | ^g!3!d^cd B!3!dcd | %77
+w: |* cre * * * * * *|* * scen * * * * *|* * do * * * * *|
+w: mf * e * sempre * * *||||
+ ^af!2!ef !1!^cf!3!ef | bfef !1!dfef/ |$ !4!gafg !2!efde | ^cdcd !4!edcB | %81
+w: |f * * * * * * *|||
+w: ||||
+{/^AB} =A2>B2{/^c} TB3^A/B/ |!>(! [F^A^c]8!>)! | z !1!FGF !4!BFGF |$ dFGF BFGF | dFGF BFGF | %86
+w: |||* * * * * cre * *|* * * scen * * * *|
+w: |||||
+ d2^c2B2^A2{/Bc} | BFGF dFGF | EEFE ^cEFE |$ DDED BDED | ^C2 B2 C2 B/ ^A/ ^G/ A/ | %91
+w: |||||
+w: |||||
+!>(! [^DFB]8!>)! |"_Pp legg." z BcB eBcB | gBcB eBcB |$[K:Emin] gBcB eBcB | %95
+w: ||||
+w: ||||
+ g2(f2"^Le Coucou"e2)^d2 | eBcB"^(Daquin)" gBcB | AABA fAB"_do"A | GGAG eGAG |$ FFGF dFGF | %100
+w: |||||
+w: |||||
+ EEFE cEFE | ^D2(E2 (3E2F2)G2 |!>(!{/GG} F8 |"_PP legg." z BcB eBcB |$ gBcB eBcB | gBcB eBcB | %106
+w: ||||||
+w: ||||||
+ g2f2e2^d2{/ef} | eBcB gBcB | AABA fABA |$ GGAG eGAG | FFGF dFGF | EEFE cEFE | ^DEDE FGAF | %113
+w: |||* * * * * do * *||||
+w: |||||||
+ B2AG{/G} F2>E2 | [G,B,E]8 |]$ G/F/G/F/G/ (FE) (B/A/B/A/B/) AG (^c/B/c/B/c/B/)"_com" (^A/B) | %116
+w: * dim. * rit. *|PP||
+w: |||
+V:2
+"^P leggiero" E,2 z[K:treble] .G | !>!E2 z .G |!>(! !>!E2!>)! z .G | EFGA |$ G2 z (!3!E | %5
+ F2) z (!3!^D | E2) z[K:bass] (!3!C | D2) z (!3!B, | C2) z !2!A, |$ B,G,F,E, | %10
+ B,/F,/G,/A,/ B,/A,/G,/F,/ |"^P legg." E,2 z[K:treble] .G |!>(! !>!E2!>)! z .G | %13
+!>(! !>!E2!>)! z .G |$[K:Emin] EFGA | G2 z (E | F2) z (^D | E2) z (C | D2) z[K:bass] B, |$ %19
+ C2 z (!2!A, | B,).B,,B,A, |!>(! G,A,B,B,, | E,/B,,/A,,/B,,/ G,,/B,,/A,,/B,,/!>)! | %23
+ .E,, z z[K:treble] .B |$ G2 z .B | !>!G2 z .B | GABc | B2 z (!3!G | A2) z !3!F |$ %29
+!>(! G2 z[K:bass] G,!>)! | CB,A,G, |{/C,} D,/D/C/D/ A,/D/C/D/ | D,/D/C/D/ A,/D/C/D/ | %33
+ D,/D/C/D/ A,/D/C/D/ |$[K:Emin] C,/A,/G,/A,/ F,/A,/G,/A,/ | B,,/G,/F,/G,/ D,/G,/F,/G,/ | %36
+ G,,/G,/F,/G,/ D,/G,/F,/G,/ | G,,/G,/F,/G,/ D,/G,/F,/G,/ | G,,/G,/F,/G,/ D,/G,/F,/G,/ |$ z G,3 | %40
+ B,,C,D,D,, | .G,, G,/A,/ B,/A,/G,/F,/ | E,2 z[K:treble] .G |!>(! !>!E2!>)! z .G |$ !>!E2 z .G | %45
+ EFGA | G2 z (E | F2) z (^D | E2) z[K:bass] (C |$ D2) z (B, | C2) z A, | B,G,F,E, | %52
+ B,/F,/G,/A,/ B,/A,/G,/F,/ | E,2 z[K:treble] .G |$[K:Emin] !>!E2 z .G | !>!E2 z .G | EFGA | %57
+ G2 z (E | F2) z !2!^D |$ E2 z (!2!C | D2) z[K:bass] (B, | C2) z (!2!A, | B,).B,,B,A, | %63
+ G,A,B,B,, |$ E,/!2!B,,/A,,/B,,/ G,,/B,,/A,,/B,,/ | E,, z z (E | ^G,2) z (E | B,2) z (E | %68
+ ^G,2) z (!2!E, |$ A,,2) z (F | ^A,2) z (F | ^C2) z (F | ^A,2) z (!2!F, | B,,2) z B, |$ %74
+[K:Emin] !5!D,2 z (B, | !4!E,2) z (B, | !4!^E,2)"_(c)" z (B, | !3!F,2) z (E, | D,2) z B, |$ %79
+ E,F,G,F, | E,2 z G, | F,2 B,,2 | F,,F,/E,/ F,/G,/F,/E,/ | D,2 z .D |$ !>!!4!B,2 z .D | %85
+ !>!B,2 z .D | !4!B,^CDE | D2 z (!3!B, | ^C2) z (!2!^A, |$ B,2) z .B,, | E,"^poco rit."G,F,F,, | %91
+ B,,"^a tempo"B,/=C/ B,/A,/G,/F,/ | E,2 z[K:treble] .G |!>(! !>!E2!>)! z .G |$ %94
+[K:Emin]!>(! !>!E2!>)! z .G | !4!E F{/f} G A | G2 z (!3!E |"^scen" F2) z (!3!^D | %98
+ E2) z[K:bass] (!3!C |$ D2) z (B, | C2) z !2!A, | B,G,F,E, | B,/F,/G,/A,/ B,/A,/G,/ | %103
+ E,2 z[K:treble] .G |$!>(! !>!E2!>)! z G | !>!E2 z .G | EFGA | G2"^poco" z E | %108
+ F2"^scen" z (!2!^D |$ E2) z[K:bass] (!2!C | D2) z (!2!B, | C2) z (!2!A, |!>(! B,).B,,B,A,!>)! | %113
+ G,A,B,B,, | E,4 |]$ z4 | %116
+V:3
+ x3[K:treble] x | x4 | x4 | x4 |$ x4 | x4 | x3[K:bass] x | x4 | x4 |$ x4 | x4 | x3[K:treble] x | %12
+ x4 | x4 |$[K:Emin] x4 | x4 | x4 | x4 | x3[K:bass] x |$ x4 | x4 | x4 | x4 | x3[K:treble] x |$ x4 | %25
+ x4 | x4 | x4 | x4 |$ x3[K:bass] x | x4 | x4 | x4 | x4 |$[K:Emin] x4 | x4 | x4 | x4 | x4 |$ %39
+ E,G,D,C, | x2 !1!D,2 | x4 | x3[K:treble] x | x4 |$ x4 | x4 | x4 | x4 | x3[K:bass] x |$ x4 | x4 | %51
+ x4 | x4 | x3[K:treble] x |$[K:Emin] x4 | x4 | x4 | x4 | x4 |$ x4 | x3[K:bass] x | x4 | x4 | x4 |$ %64
+ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$[K:Emin] x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | %81
+ x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x2 F,2 | x4 | x3[K:treble] x | x4 |$[K:Emin] x4 | %95
+ x4 | x4 | x4 | x3[K:bass] x |$ x4 | x4 | x4 | x7/2 | x3[K:treble] x |$ x4 | x4 | x4 | x4 | x4 |$ %109
+ x3[K:bass] x | x4 | x4 | x4 | x4 | x4 |]$ x4 | %116
+

@@ -1,0 +1,130 @@
+X:1
+T:Curious story Sheet music supplied by www.theperfectscores.com
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=184
+M:2/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M22: placeholder (x) detected - possible missing note
+%! CHECK: M84: placeholder (x) detected - possible missing note
+%! CHECK: M87: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M40: placeholder (x) detected - possible missing note
+%! CHECK: M53: placeholder (x) detected - possible missing note
+%! CHECK: M57: placeholder (x) detected - possible missing note
+%! CHECK: M60: placeholder (x) detected - possible missing note
+%! CHECK: M66: placeholder (x) detected - possible missing note
+%! CHECK: M77: placeholder (x) detected - possible missing note
+%! CHECK: M13: placeholder (x) detected - possible missing note
+%! CHECK: M27: placeholder (x) detected - possible missing note
+%! CHECK: M44: placeholder (x) detected - possible missing note
+%! CHECK: M53: placeholder (x) detected - possible missing note
+%! CHECK: M64: placeholder (x) detected - possible missing note
+%! CHECK: M77: placeholder (x) detected - possible missing note
+%! CHECK: M88: placeholder (x) detected - possible missing note
+%! CHECK: M91: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+ (3FzF f/!3!ed/ |[I:staff +1] z2 .!1!!2![DF] z |[I:staff -1] Az/A/ .[EG]z/(G/ | A2 C) z | %4
+w: ||||
+ (3fzf (3(f'!3!e'd' | .c')z/(c'/ b)z/b/ |$[I:staff +1] .!1!!3![cf][I:staff -1] z/ !4!a/ [eg]z/(g/ | %7
+w: |||
+ f4) | (3FzF (3f!3!ed |[I:staff +1] z2 .!1!!2![DF] z |[I:staff -1] Az/((A/ [EG]))z/(G/ | %11
+w: ||||
+ !^!F2 C) z | (3fzf (3(f'!3!e'd' |$ c')[I:staff +1] z .!1!!2![df] z | %14
+w: |||
+[I:staff -1] az/(a/ [e^g])z/(g/ | [ea]4) |: z4 | (3aza (3(!3!c'=ba) | (3(c'=ba (3c'ba | %19
+w: |||||
+ (3^g=b!5!e'/)[I:staff +1] z2 x/3 ::$[I:staff -1] (3(!3!f'e'!1!d' (3f'e'd') | (3(!3!c'=ba (3c'ba) | %22
+w: |||
+ (3(!3!f!2!e!1!d"_dimin." (3fed) | (3(!3!c!2!=B!1!A (3cBA) | (3(!3!F!2!E!1!D (3FED) | %25
+w: |||
+[I:staff +1] (3(C=B,!1!A, (3CB,A,) |$ E[I:staff -1] z[I:staff +1] E,, z | A,[I:staff -1] z z2 :| %28
+w: |||
+ (3A,z(A, (3A)z(A | (3A,!<(!B,=B, C)!<)! z | Cz(C c) | (3CD^D E z | (3Ez(E (3e)ze |$ %33
+w: |||||
+ (3.Ez(E (3e)z(e | (3E)z(E (3e)ze | (3Ez(E (3e)z(e | (3F)zF (3fed |[I:staff +1] z2"^P," !2![DF] z | %38
+w: |||||
+[I:staff -1] Az/(A/ [EG])z/(G/ | (F2) C) z |$ (3fz(f (3f'e'd' | .c')z/(c'/ b)z/b/ | %42
+w: ||SF * * * *||
+[I:staff +1] .[cf][I:staff -1] z/ a/ [eg]z/g/ | f4 | (3Fz(F (3fed | c)z/(c/ B)z/B/ |$ %46
+w: ||p * * * *||
+ _Az/(A/ [EG])z/(G/ | F2 C)"_JS" z | (3fz(f (3f'e'd' | c') z z2 | (3Fz(F (3fed | c) z z2 || %52
+w: ||||||
+ (3Cz(C (3_AGF) |$[I:staff +1] E4 | [EGB]4- |[I:staff -1] c4 | (3(CzC (3_A)GF | %57
+w: |||||
+[I:staff +1] [EE]4[I:staff -1] !>!_d2 |{/c_d_e} (d4 | c4) ||"^a tempo" z2 (3=AGF | z2 [_d_d']2 |$ %62
+w: |||||
+ z2 (3B=AG | z2 [_e_e']2 | z2 (3c=BA | z2 [ff']2 | z2 [ff']2 | z2 [ff']2 | [ff']4 | ([fc']4 | %70
+w: ||||||||
+ (3(c')c'd' (3c'bc') |$!>(! (d'2 !4!b2) | [fa]4-!>)! | [fa]4 |[I:staff +1] !5![CB]4- | [CB]4 | %76
+w: ||||||
+[I:staff -1] f2 z2 | c4- | c"_ritard."!4!cd x | (d2 B2) | (([FA]4 | A4)) | [EG]4- | [EG]4 |$ %84
+w: ||||||||
+"_D 3" (3ac'f' (3!3!c'!2!af | (3egc'/[I:staff +1] C z x/3 |[I:staff -1] (3Acf (3!3!cAF | %87
+w: |||
+ (3EGc (3!3!GEC |[I:staff +1] (3A,CF (3!3!CA,F, | (3E,G,C (3!3!G,E,C, |[I:staff -1] z4 |] %91
+w: ||||
+V:2
+ z4 |[I:staff -1] .cz/(c/ B)z/B/ |[I:staff +1] !3!C z .!5!!1![C,B,] z | [F,A,]2 z2 | %4
+w: ||||
+[K:treble] .[FAc] z .[FBd] z | [FAc] z .!2!!1![df] z |$[I:staff -1] a[I:staff +1] z !5!!1![CB] z | %7
+w: |||
+ !2!!1![FA]4 |[K:bass] z4 |[I:staff -1] cz/(c/ B)z/B/ |[I:staff +1] !3!C z !5!!1![C,B,] z | %11
+w: ||||
+ !3!!1![F,A,]2 z2 |[K:treble] .[FAc] z .[FBd] z |$ .[FAc][I:staff -1] z/ (!4!c'/ =b)z/b/ | %14
+w: |||
+[I:staff +1] !3!!1![ce] z [E=Bd]2 | !3!!1![Ac]4 |: (!5!A2 !2!e2 | f4) | (!2!e2!<(! ^d2!<)! | %19
+w: |||||
+ e2)[I:staff -1] !1!e z ::$"_fa"[I:staff +1] !3!!1![=bd']3 z | !4!!2![^d^f]3 z | !3!!1![^G=B]3 z | %23
+w: ||||
+ !^!!4!!2![^DF]3 z |[K:bass] !3!!1![G,=B,]3 z | ^F,3 z |$ E, z E,[I:staff -1] z | %27
+w: ||||
+[I:staff +1] A,, z z2 :| x4 | (3(A,,B,,/=B,, C,) z x/3 | z4 | (3(C,D,^D, E,) z | z4 |$ x4 | x4 | %35
+w: ||||||||
+ x4 | x4 |[I:staff -1] cz/(c/ B)z/B/ |[I:staff +1] C z .!5!!1![C,B,] z | !3![F,A,]2 z2 |$ %40
+w: |||||
+[K:treble] .[FAc] z [FBd] z | .[FAc] z .[df] z |[I:staff -1] a[I:staff +1] z [CB] z | [FA]4 | %44
+w: ||||
+[K:bass] z4 | z2 .!2!!1![DF] z |$ !3!C z !5!!1![C,B,] z | !3![F,A,]2 z2 | %48
+w: |ri\-|||
+[K:treble] [FAc]/ z .[FBd] z x/ | [FAc] z z2 |[K:bass] [F,A,C] z .[F,B,D] z | [F,A,C] z z2 || x4 |$ %53
+w: |||||
+[K:treble] E4 | x4[I:staff -1]{/_d"^to"_e} |[I:staff +1] [EGB]4 | z4 | %57
+w: ||||
+[I:staff -1] z2[I:staff +1] ([GG](B (([GB])) x | [EGB]4-)) | [EGB]4 || %60
+w: |||
+[I:staff -1] C2[I:staff +1] z2 |[I:staff -1] (3(EG!1!B)[I:staff +1] z2 |$ %62
+w: ||
+"_L.H"[I:staff -1] ^C2[I:staff +1] z2 |"_L.H."[I:staff -1] (3(^F"_sf: LH"A!1!c)[I:staff +1] z2 | %64
+w: ||
+[I:staff -1] ^D2 x2 |"_LH. 5  LH. sLH. sf) f" (3(^G=B!1!d)[I:staff +1] z2 | %66
+w: ||
+[I:staff -1] (3(^G=B!1!d)[I:staff +1] z2 |[I:staff -1] (3(^G=B!1!d)[I:staff +1] z2 | [Ac]4- | %69
+w: |||
+ [Ac]4- |[I:staff -1] f4 |$ !1!f4 |[I:staff +1] c4- | c4 | x4 | x4 | !2![FA]2 z2 | %77
+w: ||||||||
+[I:staff -1] F4-[I:staff +1][K:bass] |[I:staff -1] F2 (3cBc | F4 |[I:staff +1] C4- | C4 | %82
+w: |||||
+ [C,B,]4- | [C,B,]4 |$[K:treble] .f z F z | c z[I:staff -1] (3!3!gec | %86
+w: ||||
+[I:staff +1][K:bass] .F z .F, z | C z .C, z | !1!F, z z2 | !2!C,"_WWW." z z2 | !5!F,, z"_com" z2 |] %91
+w: |||||
+V:3
+ x2 | x2 | x2 | x2 |[K:treble] x2 | x2 |$ x2 | x2 |[K:bass] x2 | x2 | x2 | x2 |[K:treble] x2 |$ %13
+ x2 | x2 | x2 |: x2 | x2 | x2 | x2 ::$ x2 | x2 | x2 | x2 |[K:bass] x2 | !2!!4!^D,3/2 x/ |$ x2 | %27
+ x2 :| x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 |$[K:treble] x2 | x2 | x2 | x2 | %44
+[K:bass] x2 | x2 |$ x2 | x2 |[K:treble] x2 | x2 |[K:bass] x2 | x2 || x2 |$ %53
+[K:treble]"^nu"[I:staff -1] z !>!_d | x2 | x2 | x2 | x3 | x2 | x2 || x2 | x2 |$ x2 | x2 | %64
+[I:staff +1] z x | x2 | x2 | x2 | x2 | x2 | [Ac]2 |$ x2 | x2 | x2 | x2 | x2 | x2 | %77
+[K:bass] [A,C]2- | [A,C]2 | [B,D]2 | x2 | x2 | x2 | x2 |$[K:treble] x2 | x2 |[K:bass] x2 | x2 | %88
+ x2 | x2 | x2 |] %91
+

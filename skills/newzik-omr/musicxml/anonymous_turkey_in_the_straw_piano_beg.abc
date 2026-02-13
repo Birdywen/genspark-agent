@@ -1,0 +1,41 @@
+X:1
+T:Turkey in the straw Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=145
+M:4/4
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M7: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+L:1/8
+V:2 bass 
+V:1
+"^Allegro moderato" (!4!ED | C!1!B, CD C2 (!4!e)d | cB cd c2)"^Qua" (!4!ed | cB cd e2 f2) | %4
+ !tenuto![dg]2 !tenuto![dg]2 z4 |$ !tenuto!!2!!5![dg]2 !tenuto![dg]2 z4 | !2!!5![DG]2 [DG]2 z4 | %7
+ !fermata!!1!!4!!5![DFG]6 ||S"_a tempo" (!tenuto!!5!ed |:$ c!2!B !3!c!4!d !3!c!1!G !2!EF | %10
+ GA G!2!E G2) !2!cd | e2 e2 (ed cd) | .e2 .!3!d2 !tenuto!!4!d2 !tenuto!ed |$ %13
+ !3!cB cd !3!c!1!G !2!E!3!F | GA GE G2 !2!c!1!d | (!2!e g2 a !4!g!2!e !1!c!4!d |1 %16
+ .e2 !1!!4![Fd]2 !1!!3![Ec]2) !tenuto!ed :|2 (e2 [Fd]2 [Ec]2) z2 |:$ (!1!e !3!g2) e g2 g2 | %19
+ (e g2) e g4 | (!2!f !4!a2) f .a2 .a2 | ((f a2)) f !tenuto!a2 (3!2!g!3!a!4!b | %22
+ (.!5!c'2 .c'2 .!2!g2 .g2 |$ .!1!e2 .!2!e2 !1!d2) (!2!c!1!d | e g2 a ge !1!c!4!d | %25
+ .e2 .[Fd]2 [Ec]2) z2 :|!D.S.! e2 [Fd]2 [Ec]2 ||$ z4 z2 .[CEG] z | z4 z2 .[ceg] z | %29
+ z4 z2"^gua" !>![Bfg]2 | [egc']4 [Ec] z z2 |] %31
+V:2
+ z | [C,E,G,] z z2 |[K:treble] [CEG] z z2 | [ceg] z x2 | x2 !tenuto!!5!!1![da] !tenuto![da] |$ %5
+ x2 !5!!1![DA] [DA] |[K:bass]"^poco rit." z2 !tenuto!!5!!1![D,A,] !tenuto![D,A,] | %7
+ !fermata!!5!!1![G,,D,]3 || z |:$ !5!C, !4!!2!!1![E,G,C] G,, [E,G,C] | C, [E,G,C] G,, [E,G,C] | %11
+ C, [E,G,C] G,, [E,G,C] | A,, [D,^F,C] !tenuto![D,=F,G,B,] z |$ C, [E,G,C] G,, [E,G,C] | %14
+ C, [E,G,C] G,, [E,G,C] | C, [E,G,C] E, [G,C] |1 G,, .!4!!1![B,,G,] !tenuto!!3!!1![C,G,] z :|2 %17
+ G,, .[B,,G,] !tenuto![C,G,] z |:$ !5!C, !5!!2!!1![G,CE] E, [G,CE] | C, [G,CE] E, [G,CE] | %20
+ F, [A,CF] C, [A,CF] | F, [A,CF] !tenuto![A,CF] z | C, [G,CE] E, [G,CE] |$ C, [G,CE] [G,B,F] z | %24
+ C, [G,CE] E, [G,CE] | G, [B,,G,] !tenuto![C,G,] z :| .G, .[B,,G,] !tenuto![C,G,] ||$ %27
+ (!3!E,/ !1!G, E,/) !tenuto!G,2 |[K:treble] (!3!E/ !1!G E/ G2) | %29
+ (!3!e/ !1!g e/ !tenuto!g) !4!!1![dg] | %30
+"_www.theperfectscores.com" !5!!1![cg]2[K:bass] [C,G,]/ z/ z |] %31
+

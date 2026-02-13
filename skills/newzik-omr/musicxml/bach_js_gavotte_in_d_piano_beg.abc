@@ -1,0 +1,42 @@
+X:1
+T:Gavotte in d Sheet music supplied by www.theperfectscores.com
+C:J S Bach
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=148
+M:4/4
+I:linebreak $
+K:Bmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M14: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M30: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+L:1/4
+V:3 bass 
+V:1
+"^Allegro" F2- F2 | (!>!!3!F2 ED EF G2) | (!1!D!3!CB,!1!A,) .!5!A2 A2 | %3
+ (!4!A2 BA) (GF) (!1!E!3!F) |$ (GFED) F2 F2 | (F2 ED EF G2) | (!1!D!3!CB,A,) !4!D2 D2 | %7
+ D2 (CD) (CB,) E2 | A,4 ::$ !4!A2- A2 | (A2 BA GF B2) | (AGFE) z (!3!GFE) | %12
+ z (!2!^DEG) z (!4!F!1!B,!2!D) |$ (!3!E!1!B,!2!EF) !4!G2- G2 | (G!1!E!2!AB !4!c!1!def) | %15
+ (gfe!1!d) (!3!c!4!deB) | (^Ae!2!Be !1!G!4!c!1!FA) |$ !3!B2- B z (.!4!d2 .d2) | (d2 cB cd e2) | %19
+ (dcBA Bc"_cresc."!4!dc) | (e!1!d) (!3!fe) (!4!gf) (!5!ag) |$ (f2 e) z (.f2 f2) | (f2 ed ef g2) | %23
+ (d!3!cBA) (.a2 .a2) | (!4!a2 ba) (gf!1!ef) |$ (gfed) (.f2 f2) | (fagf e!1!d!2!cB) | %27
+ (c!5!bag f!1!e!4!dc) | (BA) a2 [df]2 (ed) |"_ten." !5![FAd]4 :| %30
+V:2
+"^2nd time R.H. one octave up" [D,A,] z | !>![G,B,] z [G,B,] E, | A, z !5!!2![G,C] z | %3
+ [F,D] z [C,A,] z |$ [D,A,] z [D,A,] z | [G,B,] z [G,B,] E, | A, z F,2 | E, z !2!D,"^ten." z | %8
+ [A,,C,]2 ::$ !4!!1![F,C] z | [^D,B,] z B,, B,, | [E,B,] z [=C,A,] z | [B,,G,] z [F,A,] z |$ %13
+ [E,G,] z !3!E, D, |"_cresc." ^C, z A, A, | D, z E, G, | F, G, E, F, |$ [B,,D,] z"^tS" !1!B, =A, | %18
+ ^G,2 A, E, | A,2 =G, G, | !3!F, !1!E, D, B,, |$ D, C,/ z/ [D,A,] z | [G,B,] z [G,B,] E, | %23
+ A, z [G,C] z | [F,D] z [C,A,] z |$ [D,A,] z [D,A,] z | [G,B,]2 G,, G,, | [G,A,]2 G,, G,, | %28
+ [D,F,]"_WWW." z [D,A,] [A,,E,] |"_com" [D,,A,,]2 :| %30
+V:3
+ x4 | x8 | x8 | x8 |$ x8 | x8 | x4 !3!B,,2 !4!A,,2 | !5!^G,,8 | x4 ::$ x4 | x8 | x8 | x8 |$ x8 | %14
+ x8 | x8 | x8 |$ x8 | x8 | x8 | x8 |$ A,,3 x5 | x8 | x8 | x8 |$ x8 | x8 | x8 | %28
+ x6[I:staff -1] [Gc]2 | x4 :| %30
+

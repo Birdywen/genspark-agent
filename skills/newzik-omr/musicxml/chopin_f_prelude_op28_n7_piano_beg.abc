@@ -1,0 +1,29 @@
+X:1
+T:Sheet music supplied by
+C:F Chopin
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=100
+M:3/4
+I:linebreak $
+K:F#min
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M17: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:1
+"^Andante" (E |[Q:1/4=113]"^Prelude" !4!c/>d/ !4![EGB] [EGB] | [EGB]2) (!2!!4![df] | %3
+ !3!!1!^B/>!1!!4![ce]/ !2!!5![ca] [ca] |$ [ca]2) (!5![Ec] | %5
+ !1!!3![C^A]/>!1!!4![DB]/ !2!!5![Fd] [Fd] | [Fd]2) (!1!!3![D^G] | [DG]/>[CA]/ [Cc] [Cc] |$ %8
+ [Cc]2) (E | c/>d/ [EGB] [EGB] | [EGB]2) ([df] | [^Bd]/>([ce]/ [cac']) [cac'] |$ %12
+!<(! [c^ac']2)!<)! (!1!!2![^Ac] | [^Ac]/>[Bd]/ [Bf] [=Af] | [Gf]2) ([DG] | %15
+"_rit." [DB]/>[CA]/ z [ca][I:staff +1] [E,A,E] x |[I:staff -1] [Aca]2) :| %17
+V:2
+ z |"^dolce" E,, [E,D]- [E,D] | [E,D]2 z | A,, (.[A,E] .[A,E]) |$ [A,E]2 z | E,, [E,B,D]- [E,B,D] | %6
+ [E,B,D]2 z | A,,, [E,A,E]- [E,A,E] |$ [E,A,E]2 z |"_cresc." E,, [E,D]- [E,D] | [E,D]2 z | %11
+ A,, (.[A,E] .[A,E]) |$ [F,^A,E]2 z |!<(! B,,,!<)!!>(! (.[F,D] .[F,B,D])!>)! | [E,B,D]2 z | %15
+ A,,, .[E,A,E][I:staff -1] A z [ca] |[I:staff +1] [A,E]2 :| %17
+

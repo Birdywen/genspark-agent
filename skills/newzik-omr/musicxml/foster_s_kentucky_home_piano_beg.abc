@@ -1,0 +1,36 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Kentuckyhome. American folk song
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=108
+M:4/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M11: placeholder (x) detected - possible missing note
+%! CHECK: M17: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:1
+"^Andante" (!3!FG | [FA]2) [FA]2 !1!!3![CF]2 !2!!4![EG]>[FA] | %2
+ !3![GB]>!2![FA] [GB]3/2!2!!5![^Gd]3/2 [Ac] z !5![=GB] | [FA][EG] z !2!!4![DF] F E2 F | %4
+[I:staff +1] !5!C,,!5!C,!4!E,!2!G, !1!C2 z2 |$[I:staff -1] [FA]2 [FA]2 [CF]2"^legato" [EG]>[FA] | %6
+ [GB]>[FA] [GB][^Gd] !fermata![FAc]2 FG | AFBA"_rit." G2 GF | [A,F]6 z2 |$ %9
+[I:staff +1] (!1!FEDC _B,CDE) |[I:staff -1] [Ac]2 !>![FA]2 z2 !3![EG]2 | F3 G F2 D2 | %12
+ [CF]4- [CF] z !3!FG |$ [FA]2 [FA]2 [CF]2 [EG]>[FA] | [GB]>[FA] [GB][^Gd] [FAc]2 FG | %15
+ AFBA"_dimin." G2 G>F | [A,F]4 !fermata![Af]2 |] %17
+V:2
+ z2 | (!5!F,,!5!C,A,)(C, !5!F,,!5!C,A,C,) | (C,,C,G,C,) F,,C,A,C, | F,,C,A,C, G,,D,G,D, | %4
+[I:staff -1] [_B,G]6 A2 |$[I:staff +1] F,,C,A,C, F,,C,A,C, | C,,C,G,C, !fermata![F,,A,]2 D,_D, | %7
+ F,,C,G,=B,, C,,E,_B,C, | [F,,C,]6 z2 |$ %9
+[K:treble]"^ken"[I:staff -1] !4!!2![Ac]3 [FA] !3!!1![GB]2 [^Gd]2 |[I:staff +1] F2 C2 z2 !2!B,2 | %11
+[I:staff -1] D4[I:staff +1][K:bass] z2 D2 | A,4- A, z z2 |$ F,,C,A,C, F,,C,A,C, | %14
+ C,,C,G,C, A,2 D,_D, | F,,C,G,=B,, C,,E,B,C, | [F,,C,]4 !fermata![F,C]2 |] %17
+V:3
+ x2 | x8 | x8 | x4[I:staff -1] =B,4 | x8 |$ x8 | x8 | x8 | x8 |$[I:staff +1][K:treble] x8 | x8 | %11
+[K:bass] (A,G,F,E, D,E,F,G,) | x8 |$ x8 | x4 F,,2 x2 | x8 | x6 |] %17
+

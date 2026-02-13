@@ -1,0 +1,52 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Italian song. Op.39, n.15
+C:P I Tschaikowski
+%%score { 1 | ( 2 3 4 ) }
+L:1/8
+Q:1/8=63
+M:3/8
+I:linebreak $
+K:Bmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:3 bass 
+V:4 bass 
+V:1
+"^Moderato" z!<(! (!2!F!6!G | !4!AB>!<)!F | A.FG) |"_il basso sempre staccato""^ten." E3 | %4
+ z (!1!GA | B!>!d>c |$ Bc)!>!A- | A3 | z (!2!FG | A!>!B>F | A.F.G) |"^ten." E3 |$ z (!1!GA | %13
+ B!>!d>c | d3- | d3) | z z (!2!F | !5!B2 A) |$ (AG!1!E | !2!C3) | z z (!1!E | !4!c2 .B) | %22
+ !4!B!3!A!2!F | !1!D3 |$ D z (!1!A | d/)c/e/d/c/B/ | (B/!3!A/).!2!^G/!3!A/!4!B/A/ | c3- | cB!1!A | %29
+ GA/4[I:staff +1] .[G,A,].[G,A,]3/2 |$[I:staff -1] !5!BAF | D3 | z z (!2!F | B2 A) | AG!1!E | C3 |$ %36
+ z z (!1!E | c2 .B) | (B!3!A!2!F | D3- | D) z A | (d/c/).e/"^da"d/!3!c/B/ |$ %42
+ (!2!^A/B/)c/B/!1!G/.F/ | E3 | z!>(! (!2!^DE | G)B,C!>)! | E3- | (E3 | [F,D]3) |] %49
+V:2
+ .!3!D,.[F,A,].[F,A,] | !5!A,,.[F,A,].[F,A,] | !5!C,.[G,A,].[G,A,] | A,,[G,A,][G,A,] | %4
+ !5!C,[G,A,].[G,A,] | C,.[G,A,].[G,A,] |$ D,.[F,A,].[F,A,] | A,,.[F,A,].[F,A,] | D,.[F,A,].[F,A,] | %9
+ A,,.[F,A,].[F,A,] | !5!C,[G,A,].[G,A,] | A,,.[G,A,][G,A,] |$ !5!C,.[G,A,][G,A,] | %13
+ A,,[G,A,][G,A,] | D,.[F,A,].[F,A,] | A,,[F,A,][F,A,] | !5!D,[F,A,][F,A,] | A,,[F,A,].[F,A,] |$ %18
+ !5!C,[G,A,][G,A,] | A,,[G,A,].[G,A,] | !5!C,.[G,A,][G,A,] | A,,[G,A,][G,A,] | !5!D,.[F,A,][F,A,] | %23
+ A,,.[F,A,].[F,A,] |$ .!5!D,[F,A,][F,A,] | A,,.[F,A,].[F,A,] | !5!C,.[G,A,][G,A,] | %27
+ A,,[G,A,][G,A,] | C,.[G,A,][G,A,] | A,,[I:staff -1] G/4FE3/2 |$[I:staff +1] .D,[F,A,][F,A,] | %31
+ A,,.[F,A,].[F,A,] | D,.[F,A,].[F,A,] | A,,.[F,A,].[F,A,] | C,[G,A,][G,A,] | A,,[G,A,][G,A,] |$ %36
+ C,.[G,A,][G,A,] | A,,[G,A,].[G,A,] | D,[F,A,][F,A,] | A,,.[F,A,].[F,A,] | D,.[F,A,][F,A,] | %41
+"^Di" !4!F,.[A,D].[A,D] |$ G,.[B,D][B,D] |"^poco rit." G,.[B,D][B,D] | A,,.[G,A,][G,A,] | %45
+ A,,[G,A,][G,A,] |[I:staff -1] z [G,C][G,C] | z [G,C][G,C] |[I:staff +1] A,,3 |] %49
+V:3
+ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | %19
+ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x15/4 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | %37
+ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | z A,,A,, | z A,,A,,- | D,,3 |] %49
+V:4
+ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | %19
+ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x15/4 |$ x3 | x3 | x3 | x3 | x3 | x3 |$ x3 | %37
+ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |"_ten." D,,3 |"_ten." D,,3 | x3 |] %49
+

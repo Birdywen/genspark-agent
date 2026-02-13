@@ -1,0 +1,72 @@
+X:1
+T:Sheet music supplied by www.. Venetian boat song n.2. Op.30, n.6
+C:FELIX Mendelssohn
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=171
+M:12/8
+I:linebreak $
+K:F#min
+%
+% === AI REVIEW NEEDED ===
+%! REVIEW: M27: Chord from direction: "DA" → Dmajor/A [REVIEW]
+%! CHECK: M17: placeholder (x) detected - possible missing note
+%! CHECK: M3: placeholder (x) detected - possible missing note
+%! CHECK: M32: placeholder (x) detected - possible missing note
+%! CHECK: M41: placeholder (x) detected - possible missing note
+%! CHECK: M51: placeholder (x) detected - possible missing note
+%! CHECK: M17: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M45: placeholder (x) detected - possible missing note
+%! CHECK: M56: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:1
+"^Allegretto" z |[M:6/8][Q:3/8=69] z6 |[I:staff +1] (F,,C,[F,A,] C,[F,A,]C) |$ %3
+!>(![I:staff -1] (!1!^E6!>)! | G6) | z6 |$ z2 z"_cantabile" z (!2!AB | !4!c3) !3!c3 | %8
+ !2!c3- c2 !3!c |!<(! !2!cag!<)!!>(! fed!>)! |$ !3!c2 z !2!F3 | A3- A B2 | c3!<(! !3!f3!<)! | %13
+[I:staff +1] C,,[I:staff -1] ^e3"^sf." (g x |$ [eg]3-) [eg](!2!AB | c3) !3!c3 | c3- c2 !3!c |$ %17
+!<(! (!2!cag!<)!!>(! fed!>)! | cfe dc^B) | (c!2!Ac !1!!2!F3-) | F2 G ^E2 G |:$ F3 F2 z | %22
+ z2 z z"_cresc." (!1!^EF | [^EG]3) ([EG]3 | [FA]3- [FA])([^EG][FA] |$ [GB]3) (!2!!4![GB]3 | %26
+"D/A" [Ac]3- [Ac])(!1!!3![FA][GB] | [Ac]3) !1!!3![Ac]3 | %28
+[I:staff +1] (F,,!1!A,)(!2!!3![^DF] A,[DF]A) |$[I:staff -1] !3!!5![c^e]6 |!>(! [^eg]6!>)! | %31
+[I:staff +1] (C,,!1!C,)!3![G,B,] [B,D]C,[A,C] |$[I:staff -1] z2 z z2"^fr." c'- |!<(! c'6-!<)! | %34
+!>(! c'6!>)!({/bc'} | e')d'c' b!3!=gf |$"_dimin." e!3!dc P!3!!2!!1!BAB | c3 !2!c3 | c3- c2 c | %39
+ c'6 |$ c'3 !3!d!2!c!1!^B | (c!2!Ac !1!!2!F3-) | F2 G ^E2 G :|$ F3 z2 [A,CF]- | %44
+"_cresc." [A,CF]2 [A,CE]- [A,CE]2 [A,D]- | [A,D]2"^al" !4![F,A,C]- [F,A,C]2"^dr." ^e- | %46
+"_dimin." e6({/!2!^de} |$ c'2 a !2!f2) [A,CF]- |"_cresc." [A,CF]2 [A,CE]- [A,CE]2 [A,D]- | %49
+"^al" [A,D]2 [F,A,C]- [F,A,C]2"^dr." (^e- | e6{/^d^e)} |$[I:staff +1] (F,,C,[F,A,] C,[F,A,]C) | %52
+"_dimin."[I:staff -1] (c'2 a f2 c) | c'3- c'2 a | f6- | !fermata!f6 |] %56
+V:2
+ !3!C, |[M:6/8] (!5!F,,C,!2!!1![F,A,] !5!C,!2![F,A,]C) | x6 |$ %3
+ F,,!3!C,[^E,G,] !5!C,!4!!2![E,G,](C | F,,C,[^E,G,] C,[E,G,]C) | %5
+"_dimin." (F,,!5!C,!3!!2![G,B,] [B,D]C,!2!!1![A,C]) |$ %6
+ !3!!1![G,B,]C,!3!!1![F,A,] !4![^E,G,]!3![F,A,]!2![G,B,] | %7
+ (!5!F,,!3!C,!2!!1![F,A,] !5!C,!3!!2![F,A,](!1!C) | F,,!3!C,!2!!1![^E,G,] !5!C,!4!!2![E,G,]C) | %9
+ (F,,C,[F,A,] C,[F,A,]C) |$ (F,,C,[F,A,] C,[F,A,]C) | (F,,C,[F,A,] C,[F,A,]C) | %12
+ A,,,!4!C,[F,A,] !5!C,[F,A,]C |[I:staff -1] ^e2[I:staff +1] !1!C,!3!!2![G,B,] [B,D]C,/[A,C]/ |$ %14
+ [G,B,]C,[F,A,] [^E,G,][F,A,][G,B,] | (F,,C,[F,A,] C,[F,A,](C) | F,,C,[^E,G,] C,[E,G,]C) |$ %17
+ (F,,C,[F,A,] C,[F,A,]C) | (F,,C,[F,A,] C,[F,A,]C) | A,,,(!4!C,[F,A,] !5!C,[F,A,]C) | %20
+ (C,,!1!C,)(!3!!2![G,B,] C,[G,B,]C) |:$ (F,,C,[F,A,] C,[F,A,]C) | (C,[F,A,]C C,[F,A,]C) | %23
+ (C,,!1!C,)(!3!!2![G,B,] C,[G,B,]C) | (F,,C,[F,A,] C,[F,A,]C) |$ %25
+ (E,,!1!E,)(!3!!2![B,D] E,"^Fari"[B,D]E) | (A,,!3!E,"^più"[A,C] !5!C,[A,C]E) | %27
+ (A,,!3!E,[A,C] !5!E,[A,C]E) |[I:staff -1] [^B^d]3 !>!!3!!1![Bd]3 |$ %29
+[I:staff +1] C,,!5!^E,!4!!2![G,C] E,[G,C](^E | C,,^E,[G,C] E,[G,C]^E) | x6 |$ %32
+ [G,B,]C,[F,A,] [^E,G,][F,A,][G,B,] | (^A,,!3!=E,[=G,C] E,!4![G,C]E) | (^A,,E,[=G,C] E,[G,C]E) | %35
+ .!5!B,,(!5!F,[B,DF]) z2 z |$ z2 z (!4!D,,3 | C,,)(!4!C,[F,A,] !5!C,[F,A,](C) | %38
+ C,,!1!C,!2![^E,G,] C,[E,G,]C) |[I:staff -1] c!3!ag !1!f!2!ed |$ c!2!f!1!e x3 | %41
+[I:staff +1] A,,,(!4!C,[F,A,] !5!C,[F,A,]C) | (C,,C,)([G,B,] C,[G,B,]C) :|$ %43
+ F,,!3!C,([F,A,] F,, F,2) | (F,, F,2) (F,, F,2) | (E,, E,2) D,,(!4!D,[F,B,]) | %46
+ (C,,!1!C,(!3!!2![G,B,] C,)[G,B,]C) |$ (F,,C,([F,A,]) F,, F,2) | (F,, F,2) (F,, F,2) | %49
+ (E,, E,2) x3 | C,,!1!C,!3!!2![G,B,]"_dimin." C,[G,B,]C |$ %51
+!>(![I:staff -1] !5!c'2 !3!a !2!f2 c!>)! |[I:staff +1] (F,,C,[F,A,] C,[F,A,]C) | %53
+ (F,,C,[F,A,] C,[F,A,]C) | z2 (C, [F,A,C]) z (C, | F,,) z z !fermata!z3 |] %56
+V:3
+ x |[M:6/8] x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ %17
+ x6 | x6 | x6 | x6 |:$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 |$ x6 | x6 | x6 | %35
+ x6 |$ x6 | x6 | x6 | (F,,!3!C,[F,A,] C,[F,A,]C) |$ (F,,C,[F,A,] C,[F,A,]C) | x6 | x6 :|$ x6 | x6 | %45
+ x6 | x6 |$ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |] %56
+

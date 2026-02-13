@@ -1,0 +1,75 @@
+X:1
+T:Sheet music supplied by www.. Peasant dance. Op.208, n.5
+%%score { 1 | 2 }
+L:1/8
+Q:1/8=118
+M:4/8
+I:linebreak $
+K:Emin
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+"^Allegretto""^er" .!4!d(B/G/ .g)(!4!e/!8!!1!!1!!2!^c/) | (!>!!3!d/e/d/B/ G)G/^G/ | %2
+w: ||
+ (!>!A/B/A/!2!F/ D)!2!D/!1!D/ | (!>!!4!d/e/d/B/ G) z |$ .d(B/G/ g)(!4!e/^c/) | %5
+w: ||SP * * * * *|
+ (!>!!3!d/e/d/B/ .G) (!1!G/!2!B/ | !>!g)(!4!f/e/ !1!d)!2!^c | .!3!d(!2!!5![^cf]/e/ !3!d) z :|$ %8
+w: ||S * * *|
+ !4![Gd]!3!d/!2!d/ !1!d!4!e | (d c) E .[Ec] | ([DB].A)EF | ([DA]2 .G) z | %12
+w: ||||
+"_JS" [Gd]!3!d/!2!d/ !1!d.!4!e |$ (dc)E.[Ec] | ([DB].A)EF | ([DA]2 G) z |: %16
+w: ||||
+ (!1!!2![EG]!4!!5![ce]).!3!!5![ce].[ce] | ([=FAe]d).!1!!2![FA]!4!d | !1!!2![GB]!4!d.!1!!3![df]a |$ %19
+w: |||
+ (!2!!4![^df]2 .[eg]) z |"_SP" ([EG]!4![ce]).!3!!5![ce][ce] | ([FAe].d).[FA].!5!d | %22
+w: |||
+ ([Fc].B)!1!!2![FA]B |1!>(!"^1." ([Fd]2!>)! .!4![Ec]) !2!G :|2!>(! ([Fd]2!>)! .!4![Ec]) z ||$ %25
+w: |||
+[K:Emin][I:staff +1] .[G,B,D].[G,B,D][G,^A,CE] z |[I:staff -1] (!3!d/e/d/B/ G)G/^G/ | %27
+w: |mf * * * * * *|
+!>(! (!3!A/!>)!B/A/F/ D)!2!D/!1!D/ | (!>!!4!d/e/d/B/ G) z | d(!2!B/G/ .g)(!4!e/^c/) |$ %30
+w: ||SP * * * * *|
+ (!3!d/e/d/B/ G)(G/B/ | g)(f/e/ d).!2!^c | d([^cf]/e/ .!3!d2) | [Gd]!3!d/!2!d/ !1!d.!4!e | %34
+w: ||||
+ (dc)E[Ec] |$ ([DB]A)E.F | ([DA]2 .G) z | [Gd]!3!d/!2!d/ !1!d!4!e | (dc)E[Ec] | ([DB].A)EF |$ %40
+w: ||||||
+ ([DA]2 .G) z | ([Fd]/e/d/e/) !>!d2 | ([Gd]/e/d/e/) !>!d2 | (DE/F/ B)A | (G2 D) z |$ %45
+w: |||||
+ (!4![Fd]/e/d/e/) d2 | ([Gd]/e/d/e/) d2 | (DE/F/ B)A | G z .[B,G] z | [B,G] z !fermata!z2 |] %50
+w: |||||
+V:2
+ !5!!3!!1![G,B,D][G,B,D].!5!!4!!2!!1![G,^A,^CE] z | [G,B,D][G,B,D].[G,B,D] z | %2
+w: ||
+"_cresc." .[D,F,C].[D,F,C].[D,F,C] z | [G,B,D][G,B,D][G,B,D] z |$ .[G,B,D].[G,B,D][G,^A,CE] z | %5
+w: |||
+ .[G,B,D].[G,B,D].[G,B,D] z | .E,[B,EG]A,!2!!1![EG] | .!3!!1![DF](([A,G] .[DF])) z :|$ %8
+w: |||
+ !3!!1![B,=F]G,[B,F].G, | ([CE].G,)A,,[E,A,] |!>(! D,.[F,C]D,[A,C]!>)! | %11
+w: |||
+ (([D,F,C]2 !2!!1![G,B,])) z | [B,=F]G,[B,F]G, |$ ([CE].G,)A,,.[E,A,] |!>(! D,.[F,C]D,.[A,C]!>)! | %15
+w: ||||
+ (([D,F,C]2 .[G,B,])) z |: !5!C,!2!G,C!4!G, | ([F,A,]D).[F,A,]D |!<(! G,[B,DF]G,"^DI"[B,DF]!<)! |$ %19
+w: ||||
+ .C,[G,CE][G,CE][G,CE] | C,.G,.C.!4!G, | F,.[A,D]F,.[A,D] | G,.D!>(!.G,.D |1 %23
+w: ||||
+ C,(!4![G,B,] C)!>)! z :|2 C,(!4!!2![G,B,] C) z ||$[K:Emin][I:staff -1] .d(B/G/ .g)(!4!e/^c/) | %26
+w: ||SP * * * * *|
+[I:staff +1] .[G,B,D][G,B,D].[G,B,D] z | [D,F,C][D,F,C][D,F,C] z | %28
+w: ||
+!>(! .[G,B,D].[G,B,D].[G,B,D]!>)! z | .[G,B,D]!<(!.[G,B,D][G,^A,CE]!<)! z |$ %30
+w: ||
+ .[G,B,D][G,B,D].[G,B,D] z | E, !4![B,EG] A, !2!!1![EG] | !3![DF][A,G] .[DF]2 | %33
+w: |||
+"_LL" [B,=F]G,[B,F]G, | ([CE].G,)A,,[E,A,] |$ !>!D,.[F,C]D,.[A,C] | (([D,F,C]2 .[G,B,])) z | %37
+w: ||||
+ [B,=F]G,[B,F]G, | ([CE].G,)A,,[E,A,] | (D,.[F,C]).D,.[A,C] |$ ([D,F,C]2 .[G,B,]) z | %41
+w: ||||
+"^SP" [D,A,C] z z .[D,A,C] | .[D,G,B,] z z .[D,G,B,] | [D,A,C] z z [D,A,C] | %44
+w: |||
+ .!2![G,B,]D,.[G,B,] z |$ [D,A,C] z z .[D,A,C] | [D,G,B,] z z .[D,G,B,] | %47
+w: |||
+!<(! [D,F,C]!<)! z z [D,F,C] | [G,B,] z!>(!"^www.theperlectscores.com" .[G,,D,] z | %49
+w: ||
+ .[G,,D,]!>)! z !fermata!z2 |] %50
+w: |
+

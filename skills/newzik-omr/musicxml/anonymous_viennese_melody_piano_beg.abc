@@ -1,0 +1,51 @@
+X:1
+T:Viennese melody Sheet music supplied by www.
+%%score { 1 | ( 2 3 ) }
+L:1/4
+Q:1/4=105
+M:3/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M1: placeholder (x) detected - possible missing note
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M4: placeholder (x) detected - possible missing note
+%! CHECK: M11: placeholder (x) detected - possible missing note
+%! CHECK: M25: placeholder (x) detected - possible missing note
+%! CHECK: M11: placeholder (x) detected - possible missing note
+%! CHECK: M15: placeholder (x) detected - possible missing note
+%! CHECK: M25: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+"^Andante" (!1!!4![CA]!1![=B,^G]!1!!4![CA] x3 | %1
+ !1!!5![DB]>!1!!4![CA] !1!!5![CA]!2!!5![CA] !1!!2![A,C][CA] | %2
+ !1!!3!!4![=B,FG]3) (!5![Fd]!4![F^c][Fd] | [Fd]>!1!!4![Ec] !2!!5![Ec][D_B] [CA][=B,^G] |$ %4
+ [CA]3) (!4![CA][=B,^G][CA] | [DB]>[CA] [CA][CA] [A,C][CA] | [=B,FG]3) ([Fd][F^c][Fd] | %7
+ !1!!5![Fd]>!1!!4![Ec]"_poco rit." !2!!5![Ec]!1!!4![D_B] !1!!5![CA]!1!!4![B,G] |$ %8
+ !1!!3![A,F]3) (!5![EFA]!1![DFA]!1![CFA] | !5!A>!4!G !5!G =B, [^A,C][=B,D][^B,D] | %10
+ [=CE]3) [EG][_EG][DG] | !5!B!4!A/[I:staff +1] [E,A,]2 A,,2 x/ |$ %12
+[I:staff -1] !2!!4![DF]3 (!2!!3!!5![DFA][_DFA][CFA] | c>!4!=B !5!B EFB | %14
+ [EG]3) (!2!!4![CE]!1!!4![B,E][B,E] | G>F FA !3!ED |$ !1!!2!!3![_B,EG]3) !1!C!2!FA | %17
+ [Ac]>[Ac] [Ac][Ac] [GB][FA] | [DFG]3 (!2!!4![Bd][df]G | %19
+ [Ac]>[Ac] !1!!3![Ac]!2!!4![^A^c] !1!!3!!5![EBd][DEB] |$ [CFA]3) CFA | %21
+ [Ac]>[Ac] [Ac][Ac] [GB][FA] | [DFG]3 [Bd][df]G | [Ac]>[Ac] [Ac][^A^c] [EBd][B,E] | [A,CF]2 [Af] |] %25
+V:2
+ x3/2 z/ z | F,, [C,F,] [C,F,] | G,, [D,F,G,]!<(! G,,!<)! | C,!>(! [G,C] C,!>)! |$ %4
+ F,, [C,F,A,]/"_a tempo" z/ z | F,, [C,F,] [C,F,] | G,, [D,F,G,] G,, | C, [G,C] C, |$ %8
+ F,, [C,F,]/ z/ z |[I:staff -1] [=B,F] x5/2 |[I:staff +1] C,, [C,G,]/ z/ z | %11
+[I:staff -1] ([^CG] !5![GA]/) !2!!1![^B,D]/!3!!1![CE]/!5!!3![EG]/ |$[I:staff +1] D,, [D,A,]/ z/ z | %13
+[I:staff -1] [DF]- [DF]/ z/ D |[I:staff +1] C,, [C,G,]/ z/ z | %15
+[I:staff -1] [A,D]- [A,D]/ z/ !1!=B, |$[I:staff +1] C, C,,/ z/"^a tempo" z | F,, [F,C] [F,C] | %18
+ B,, [G,B,] [G,B,] | C, [A,C] [C,B,] |$ F,, [C,F,A,]/ z/ z | F,, [F,C] [F,C] | B,, [G,B,] [G,B,] | %23
+ C, [A,C]!>(! [C,G,]/ x/ | [F,,C,] [F,C]/!>)! |] %25
+V:3
+ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 |$ x3 | G,, [D,G,] G,, x/ | x3 | %11
+"_cresc." A,,[I:staff -1] ^C/ x3/2 |$ x3 |[I:staff +1] G,, [F,=G,B,] G,, | x3 | %15
+ D,,"^rit." [D,F,] G,, |$ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3/2 |] %25
+

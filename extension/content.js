@@ -159,9 +159,10 @@ function log(...args) {
   function generateSystemPrompt() {
     const toolCount = state.availableTools.length || 131;
     const toolSummary = `本系统提供 ${toolCount} 个工具，分为 4 大类：
-- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files 等
+- **文件系统** (14个): read_file, write_file, edit_file, list_directory, read_multiple_files, read_media_file 等
+  - **read_media_file(path)** — 读取图片/媒体文件并直接展示。支持 PNG/JPG/GIF/Web等格式。读取图片时必须用此工具，不要用 OCR 或 base64 命令替代
 - **浏览器自动化** (26个): browser_navigate, browser_snapshot, browser_click, browser_type 等  
-- **命令执行** (1个): run_command
+- **命令执行** (4个): run_command, bg_run, bg_status, bg_kill
 - **页面脚本** (4个): 直接操控浏览器标签页，绕过 CSP/Cloudflare
   - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
   - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
@@ -232,18 +233,14 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 2. 多个独立操作用 ΩBATCH 批量执行
 3. 永远不要假设或编造执行结果
 4. 任务完成输出 @DONE
-5. JSON 中的引号使用 \\"
 
 ---
 
 ## 实战指南
 
-### 命令转义（避免转义地狱）
+### 命令转义
 
-- 简单命令 → 直接写 command
-- 有引号/特殊字符 → 用 stdin: {"command":"python3","stdin":"print(123)"}
-- 多行脚本 → 用 stdin: {"command":"bash","stdin":"脚本内容"}
-- 超长脚本 → write_file 到 /private/tmp/ 再执行
+复杂命令（含引号/多行）用 stdin 传入: {"command":"bash","stdin":"脚本内容"}，超长脚本先 write_file 到 /tmp/ 再执行。
 
 ### 代码修改
 
@@ -266,7 +263,26 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ### 长内容处理
 
-超过50行或含大量特殊字符时，用 run_command + stdin (python3/bash) 写入。
+超过50行时，用 run_command + stdin 或先 write_file 再执行。
+
+### 工具选择优先级
+
+**必须遵守** — 优先使用专用工具，不要用 run_command 替代：
+
+| 场景 | 正确工具 | 禁止 |
+|------|----------|------|
+| 读取图片/媒体 | **read_media_file** | read_file、base64 命令 |
+| 抓取网络图片 | **imageFetch** | curl/wget |
+| 代码搜索 | **find_text** (tree-sitter) | run_command + grep/rg |
+| 查找符号定义 | **get_symbols** (tree-sitter) | grep |
+| 查找引用/调用 | **find_usage** (tree-sitter) | grep |
+| 代码复杂度分析 | **analyze_complexity** (tree-sitter) | 手动阅读 |
+| 查库/框架文档 | **context7: query-docs** | web_search |
+| Git/GitHub 操作 | **github** 工具集 | run_command + git (仅限简单 git add/commit/push 可用命令) |
+| 跨会话记忆 | **memory** 工具集 (create_entities, search_nodes 等) | 无 |
+| SSH 远程操作 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command + ssh |
+| 截图 | **take_screenshot** (chrome-devtools) | 无 |
+| 网络请求调试 | **list_network_requests** (chrome-devtools) | 无 |
 
 ### 长时间命令（防 timeout）
 
@@ -1840,6 +1856,14 @@ ${toolSummary}
       const callHash = `${index}:${tool.name}:${JSON.stringify(tool.params)}`;
       
       if (state.executedCalls.has(callHash)) {
+        continue;
+      }
+      
+      // 通用去重：检查 SSE 通道注册的 dedup key
+      const dedupKey = `dedup:${tool.name}:${JSON.stringify(tool.params)}`;
+      if (state.executedCalls.has(dedupKey)) {
+        log('跳过 DOM 扫描（dedup key 已存在）:', tool.name);
+        addExecutedCall(callHash);
         continue;
       }
       
@@ -3597,11 +3621,11 @@ ${tip}
     // 检测 ΩBATCH...ΩEND
     const batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
     if (batchMatch) {
-      const sig = 'sse:batch:' + batchMatch[1].substring(0, 100);
-      if (!sseState.processedCommands.has(sig)) {
-        sseState.processedCommands.add(sig);
-        try {
-          const batch = JSON.parse(batchMatch[1]);
+      try {
+        const batch = JSON.parse(batchMatch[1]);
+        const sig = 'sse:batch:' + JSON.stringify(batch).substring(0, 100);
+        if (!sseState.processedCommands.has(sig)) {
+          sseState.processedCommands.add(sig);
           if (batch.steps && Array.isArray(batch.steps)) {
             addLog('⚡ SSE 直接解析 ΩBATCH', 'tool');
             log('SSE parsed BATCH (raw, no DOM):', batch);
@@ -3609,9 +3633,9 @@ ${tip}
             addExecutedCall(callHash);
             executeBatchCall(batch, callHash);
           }
-        } catch (e) {
-          log('SSE BATCH parse error:', e.message);
         }
+      } catch (e) {
+        log('SSE BATCH parse error:', e.message);
       }
     }
 
@@ -3620,17 +3644,18 @@ ${tip}
     let m;
     while ((m = singleRe.exec(text)) !== null) {
       const jsonStr = m[1];
-      const sig = 'sse:single:' + jsonStr.substring(0, 100);
-      if (sseState.processedCommands.has(sig)) continue;
-      sseState.processedCommands.add(sig);
-      
       try {
         const parsed = JSON.parse(jsonStr);
+        const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
+        if (sseState.processedCommands.has(normalizedSig)) continue;
+        sseState.processedCommands.add(normalizedSig);
         if (parsed.tool) {
           addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
           log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
           const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
           addExecutedCall(callHash);
+          // 同时用通用格册，防止 DOM 扫描重复执行（DOM 用 index:tool:params 格式）
+          addExecutedCall(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
           executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
         }
       } catch (e) {
@@ -3662,6 +3687,7 @@ ${tip}
   function isSSEProcessed(toolName, params) {
     const sig1 = 'sse:single:' + JSON.stringify({tool: toolName, params}).substring(0, 100);
     const sig2 = 'sse:batch:' + JSON.stringify(params).substring(0, 100);
+    // 也检查 callHash 格式（SSE 通道会同时 addExecutedCall）
     return sseState.processedCommands.has(sig1) || sseState.processedCommands.has(sig2);
   }
 

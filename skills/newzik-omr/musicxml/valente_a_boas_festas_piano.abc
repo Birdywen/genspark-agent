@@ -1,0 +1,63 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Boas festas. Marchinha
+%%score { ( 1 2 ) | 3 }
+L:1/8
+Q:1/4=118
+M:2/4
+I:linebreak $
+K:Bmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M20: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M37: placeholder (x) detected - possible missing note
+%! CHECK: M43: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M61: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+V:2 treble 
+V:3 bass 
+V:1
+ [B,D]!1!!1![CE]!8![DF] |: [B,DG]2 B[^E_Ad]- | [EAd]c [D^GB]2 | [FAd]2 [DF][EG] | [DFA]A[DFA]A |$ %5
+ [D^G]2 EF | [CEG]F [CE]2 |1 B4 | A4 :|2 D4 ||$ z4 | z2 [DFA]2 | [GB]2 !>![C=Fc]2 |:S d4- | d4 |$ %15
+ z3 c | [DBd]>[CAc]- [CAc][B,GB] | A4- | A4- | A2 z A |$ B>A AG | F4- | F4 | z3 D | E>D- DE |$ D4 | %26
+ z4 |1 [Fd] z!>(! [DFA]2!>)! |!>(! [DFB]2!>)!!>(! !>![C=Fc]2!>)! :|2 z2 AG ||$ %30
+ [G,CF]E[G,CF][G,CG] |: [DFA]F[DFA]F | [DFA]F[DFA]F | A4 | _A4 |$ G4- | G4 | z2 GG | GAGF | EEEE |$ %40
+ EFED | [A,C][A,C][FA][GB] | [Ac][GB][FA][EG] | F4 |$ F4 | z2 AG | FEFG :| CC[CA][DB] |$ %48
+!dacoda! [Ec][Ec][DB][CA] || d4 | [CE][DF] [CE][EG] |!D.S.! z2 !>![DFA]2 | !>![DFB]2 !>![C=Fc]2 ||$ %53
+O d4- | d [B,D][CE][DF] |: [B,DG]2 B[^E_Ad]- | [EAd]c [D^GB]2 |$ [FAd]2 [DF][EG] | [DFA]A[DFA]A | %59
+ [D^G]2 EF | [CEG]F [CE]2 |1$ B4 | A4 :| D4 ||2 z4 | z4 |$ z4 | (([B,,B,D]4 | (([G,,E,G,]4)) | %69
+ [A,FA]4)) |] %70
+V:2
+[I:staff +1] z3 |: G,,2 G,2 | ^G,,2 ^G,2 | F,,>A,, F,E, | D,C, B,,2 |$ E,,>B,, [^G,D]2 | %6
+ A,,2 G,2 |1[I:staff -1] z3/2 [B,D=F]/ z [B,DF] | z [A,=CF] [A,CF]2 :|2[I:staff +1] F,E,D,C, ||$ %10
+[I:staff -1] [G,B,D]2 [G,CE]2 | [A,DF] z z2 |[I:staff +1] [E,G,B,]2 [A,,G,]2 |: %13
+[I:staff -1] z3/2 [DFA]/ z [DFA] | z [DFA] [DFA]2 |$ [A,D]>[A,D] z A |[I:staff +1] A,,2 [E,G,]2 | %17
+[I:staff -1] z3/2 [CF]/ z [A,CF] | z [A,CF] [A,CF]2 | [A,^DF]>[A,DF] z [A,DF] |$ %20
+ [^DF]>[A,D]- [A,D]2 | z3/2 [^G,B,D]/ z [G,B,D] | z [^G,D] [G,D]2 | z3/2 [G,CE]/ z G, | [G,C]4 |$ %25
+[I:staff +1] D,,>A,, F,D, |[I:staff -1] [CEG]2 [CGB]2 |1[I:staff +1] [D,F,A,]2 [D,F,]2 | %28
+ [E,G,B,]2"^WWW." [A,,G,]2 :|2[I:staff -1] [Fd]2 [CE]2 ||$[I:staff +1] A,,C,D,E, |: D,A,,F,,A,, | %32
+ D,A,,F,,A,, |[I:staff -1] z3/2 [A,CF]/ z [A,CF] | z [B,D] [B,D]2 |$ z3/2 [B,E]/ z [B,E] | %36
+ z [A,^D] [A,D]2 | [G,B,E]2 [B,E]2 | [B,E]2 [B,E]2 | C2 A,2 |$ [G,B,]2 [G,B,]2 | %41
+[I:staff +1] A,,2 G,2 | [A,,G,]4 |[I:staff -1] z3/2 [A,D]/ z [A,D] |$ z [A,CE] [A,CE]2 | %45
+ [A,DF]2 [CE]2 | [G,C]2 [G,C]2 :|[I:staff +1] [A,,G,]>E, G,2 |$ (A,,2 [A,,G,]2) || %49
+[I:staff -1] z3/2 [DFA]/ z [DFA] |[I:staff +1] [A,,G,]2 [E,G,]2 |[I:staff -1] [A,DF] z z2 | %52
+[I:staff +1] [E,G,B,]2 [A,,G,]2 ||$[I:staff -1] z3/2 [DFA]/ z [DFA] | [DFA] z3 |: %55
+[I:staff +1] G,,2 G,2 |"_www.theperfectscores.com" ^G,,2 ^G,2 |$ F,,>A,, F,E, | D,C, B,,2 | %59
+ E,,>B,, [^G,D]2 | A,,2 G,2 |1$[I:staff -1] z3/2 [B,D=F]/ z [B,DF] | z [A,=CF] [A,CF]2 :| %63
+[I:staff +1] F,E,D,C, ||2[I:staff -1] [A,D]2 [G,B,E]2 | [G,CE]3 [G,CE] |$ [A,,A,C]2 [C,A,C]2 | %67
+[I:staff +1] D,,2 A,,D, | C,A,,F,,"_www.theperiectscores.com"E,, | D,,4 |] %70
+V:3
+ x3 |: x4 | x4 | x4 | x4 |$ x4 | x4 |1 ^G,,2 ^G,2 | A,G,F,E, :|2 x4 ||$ G,,2 A,,2 | D, z F,2 | %12
+ x4 |: [D,,D,]2 [D,F,]2 | A,,F,A,,E, |$ [D,F,]2 [D,F,]2 | x4 | F,,2 C,2 | F,,2 F,2 | B,,2 F,2 |$ %20
+ [B,,,B,,]2 F,2 | E,,2 [E,,E,]2 | E,,2 [E,,E,]2 | A,,2 E,B,, | A,,2 C,2 |$ x4 | A, G, F, E, |1 x4 | %28
+ x4 :|2 [D,F,A,]2 G,E, ||$ x4 |: x4 | x4 | F,,2 F,2 | =F,,2 =F,2 |$ E,,2 E,2 | B,,A,,G,,F,, | %37
+ E,,>B,, G,F, | E,2 D,2 | [A,,G,]2 C,2 |$ B,,2 E,,2 | x4 | x4 | %43
+"^www.theperfectscores.com" [D,,D,]2 [D,F,]2 |$ A,,B,,C,A,, | D,2 G,E, | A,,C,D,E, :| x4 |$ x4 || %49
+ D,,2 D,2 | x4 | D,2 [F,A,]2 | x4 ||$ D,,2 A,,2 | D,,D,,E,,F,, |: x4 | x4 |$ x4 | x4 | x4 | x4 |1$ %61
+ ^G,,2 ^G,2 | A,G,F,E, :| x4 ||2 [D,F,]2 G,,2 | A,,2 E,C, |$ A,,B,,A,,F,, | x4 | x4 | x4 |] %70
+

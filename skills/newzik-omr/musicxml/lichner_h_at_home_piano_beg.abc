@@ -1,0 +1,59 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. At home. Op.134, n.6
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=127
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M70: placeholder (x) detected - possible missing note
+%! CHECK: M20: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M70: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+L:1/16
+V:2 bass 
+V:1
+"^Allegro moderato"S (!3!B!4!c | B2) !^!G4 (!2!FG | F2) !^!E4 (e^d | e2=d2 cBAc | B6) (!3!Bc | %5
+ B2) !2!A4 (AB |$ A2) G4 (!3!G!2!F | !1!E!2!^D!1!EF !3!G!2!F!3!GA | B6) (!3!Bc | B2) !^!G4 (!2!FG | %10
+ F2) !^!E4 (!5!e^d) |$ (e2=d2 cBAc | B6) (!3!Bc | B2) !^!A4 (AB | A2) !^!G4 !3!F!2!E | %15
+ (!1!^D2!4!B2) (!5!c2B2) |!dacoda! E6 ||$ (!3!E!2!_E) | (!1!D=EF!1!G A2)!3!^A2 | %19
+ (!4!B2!2!G2) z2 (!3!G=F) | (E^F^GA) !5!B2!1!E2 | (!5!c2!3!A2) z2 (3!2!GAG | %22
+ (!1!F2.!3!!5![ce]2)[ce]2.[ce]2 |$ ([ce]2.[Bd]2) z2 (3!2!GAG | (!1!F2!2!!4![Ac]2)[Ac]2[Ac]2 | %25
+ ([Ac]2!1!!3![GB]2) z !5!AGE | (DEF!1!G A2)!3!^A2 | (B2G2) z2 !3!G=F |$ (E^F^GA B2).E2 | %29
+ (!5!c2A2) z2 (3!2!GAG | (!1!F2.!3!!5![ce]2).[ce]2.[ce]2 | (ed) !1!G4 A2 | %32
+ !1!!3![GB]2>!4!c2!1!!2![FA]2>!3!B2 |!D.S.! G6 |:$[K:Amin][M:2/4][Q:1/4=90]O{/!1!G} !5!e4{/G} e4 | %35
+{/G} (e6 dc | !2!B2!4!d2c2!1!A2 | (!2!^F4 !3!G2)) z2 |{/!1!G} !5!f4{/G} f4 |{/G} f6 ed |$ %40
+ !2!^c2!1!d2!5!b2!4!a2 | !4!a2!3!g2!2!^f2!1!=f2 |{/!1!G} !5!e4{/G} e4 |{/G} e6 dc | B2d2c2!1!A2 | %45
+ (!2!^F4 !3!G2) z2 |${/G} f4{/G} f4 |{/G} (f6 e2 | d!2!^c!1!d!2!e !3!f!1!gab |1 !4!c'6) z2 :|2 %50
+ c'6 ||$[K:Emin][I:staff +1] z2 |[I:staff -1] B2 G4 (FG | F2) E4 (!5!e^d | e2=d2 cBAc | %55
+ B6) (!3!Bc | B2) !^!!2!A4 (AB |$ .A2) G4 (!3!G!2!F | !1!E!2!^D!1!EF !3!G!2!F!3!GA | B6) (!3!Bc | %60
+ B2) G4 (!2!FG | F2) E4 (!5!e^d) |$ (e2=d2 cBAc | B6) (!3!Bc | B2) A4 (AB | A2) !^!G4 !3!F!2!E | %66
+ (!1!^D2!4!B2) (!5!c2B2) | E6 ||$[K:Emin][M:2/4][Q:1/4=90]!dacoda! (!3!GE/ x/ || !5!B6) (!2!F!3!G | %70
+ !1!E6) z2 | z2 !1!!2!!4![AB^d]2 [ABd]4 | [GBe]2 z2 z4 | [GBe]2 z2 [GBe]2 z2 | !fermata![GBe]6 |] %75
+V:2
+ z |"_staccato" !5!E,.!3!!1![G,B,]E,.[G,B,] | E,.[G,B,]E,.[G,B,] | E,.!2!!1![A,C]E,[A,C] | %4
+ E,.[G,B,]E,.[G,B,] | !5!^D,.!3!!1![F,B,]D,.[F,B,] |$ E,[G,B,]E,[G,B,] | !5!C,.[E,A,]C,.[E,A,] | %8
+ B,,[^D,F,B,][D,F,B,] z | E,.[G,B,]E,.[G,B,] | E,.[G,B,]E,.[G,B,] |$ E,.[A,C]E,.[A,C] | %12
+ E,[G,B,]E,[G,B,] | ^D,[F,B,]D,[F,B,] | E,.[G,B,]E,.[G,B,] | B,,.[^D,A,] B,,.[D,A,] | %16
+ (3(!4!!2![E,G,]B,[E,G,]) x ||$ z | (!3!!1![F,C]D,[F,C]D,) | (!2!!1![G,B,]D,[G,B,]) z | %20
+ ([^G,D]E,[G,D]E,) | ([A,C]E,[A,C]) z | !5!D,.!3!!1![F,C]D,[F,C] |$ .G,.[B,D]G,.[B,D] | %24
+ D,.[F,A,]D,.[F,A,] | G,.[B,D].G, z | !3!!1![F,C]!5!D,.[F,C]D, | (!2!!1![G,B,]D,[G,B,]) z |$ %28
+ (!3!!1![^G,D]!5!E,[G,D]E,) | ([A,C]E,[A,C]) z | (D,[F,C]D,[F,C]) | G,(.[B,D]!3!B,!2!^C | %32
+ !1!D) z [D,=C]2 | (3([G,B,]D,[G,B,]) x |:$[K:Amin][M:2/4] ([CE]G,[CE]G,) | ([CE]G,[CE]G,) | %36
+ ([CE]G,[CE]G,) | ([CE]G,[CE]G,) | (!3!!1![B,F]G,[B,F]G,) | ([B,F]G,[B,F]G,) |$ ([B,F]G,[B,F]G,) | %41
+ [B,F](!5!!3![G,B,]!4!!2![A,C]!3!!1![B,D]) | (!2!!1![CE]G,[CE]G,) | ([CE]G,[CE]G,) | %44
+ ([CE]G,[CE]G,) | ([CE]G,[CE]G,) |$ ([B,F]G,[B,F]G,) | ([B,F]G,[B,F]G,) | ([B,F]G,[B,F]G,) |1 %49
+ ([CE]G,[CE]) z :|2 ([CE]G,[CE]) ||$[K:Emin][I:staff -1] !3!B/!4!c/ | %52
+"_staccatto"[I:staff +1] !5!E,!3!!1![G,B,]E,.[G,B,] | E,.[G,B,]E,.[G,B,] | E,.!2!!1![A,C]E,.[A,C] | %55
+ E,.[G,B,]E,.[G,B,] | !5!^D,.!3!!1![F,B,]D,.[F,B,] |$ E,.[G,B,]E,.[G,B,] | .!5!C,.[E,A,]C,.[E,A,] | %59
+ B,,.[^D,F,B,].[D,F,B,] z | E,.[G,B,]E,.[G,B,] | E,.[G,B,]E,.[G,B,] |$ E,.[A,C]E,.[A,C] | %63
+ E,.[G,B,]E,.[G,B,] | ^D,[F,B,]D,[F,B,] | E,[G,B,]E,[G,B,] | B,,.[^D,A,] B,,.[D,A,] | %67
+ (3(!4!!2![E,G,]B,[E,G,]) x ||$[K:Emin][M:2/4] z || z [B,,^D,A,][B,,D,A,] z | %70
+ z !4!!2![E,G,][E,G,] (!2!G,/!4!E,/) | (B,3 !4!^F,/!2!G,/ | !5!E,) z z2 | [E,G,B,] z [E,G,B,] z | %74
+ !fermata![E,G,B,]3 |] %75
+

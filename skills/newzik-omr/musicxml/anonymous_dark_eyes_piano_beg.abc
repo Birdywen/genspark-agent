@@ -1,0 +1,43 @@
+X:1
+T:Darkeyes Sheet music supplied by www.
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=170
+M:3/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M8: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:1
+ !fermata!!3!^G !fermata!A ||!>(![I:staff +1] A,,!>)!"^gl" !4![E,G,A,] [E,G,A,] | %2
+[I:staff -1] z (!3!^G A |!>(! .!1!!2!!5![DFB])!>)! z/ !4![DFA]/ [DFA] | z !2!A d |$ %5
+ (4:3:5z/ [EB^c]/ z/ z/4 [EBc] x15/16 | z (e !4!f |!>(! !1!!2!!3![FBe])!>)! z/ !4![FBd]/ [FBd] | %8
+"_poco rit." z !fermata!!4!f !fermata!g |!>(! (!4![Bdf]!>)! z/ !5!!2![GBe]/ [GBe]) |$ %10
+ z !1!!2!!4![GBe] [ABf] |!>(! ([GAe]!>)! z/ [FAd]/ [FAd]) | z ^G A | %13
+[I:staff +1] A,, [E,G,A,] [E,G,A,] |[I:staff -1] z !2!^D E |$ %15
+!>(!"_poco rit." (!>![=DG]!>)! z/ [A,DF]/ [A,DF]) | z !fermata!!3!^G !fermata!A | %17
+!>(!"^a tempo"[I:staff +1] [A,,E,]!>)! z/ !4![A,E]/ [A,E]- |[I:staff -1] [CGA]/ z/ !3!^G A |$ %19
+!>(! .!1!!2!!5![DFB]!>)! z/ !2!!4![FA]/ [FA]- | [FA]/ z/ (!2!A d | [EBd]) z/ [EB^c]/ [EBc]- | %22
+[I:staff +1] [G,B,C]/ z/ !2!E F |!>(![I:staff -1] [FBe]!>)! z/ [FBd]/ [FBd] |$ %24
+ [Bd]/ z/ (!fermata!!4!f g | .[Bdf]) z/ [GBe]/ [GBe] | z [GBe] [ABf] | %27
+!>(! [GAe]!>)! z/ [FAd]/ [FAd] |$ z ^G A |[I:staff +1] A,, [E,G,A,] [E,G,A,] | %30
+[I:staff -1] z/ [Af]/ [Af] [GAe] | [FAd] z/ [DFA]/ [DFA] | !>![fad'] :| %33
+V:2
+ z z ||[I:staff -1] .!5!!3![^C=GB] z/ !4![CGA]/ [CGA] |[I:staff +1] A,, !2!^G, A, | %3
+ D,, [D,F,A,] [D,F,A,] | A,, !4!A, D |$ G,, [G,B,^C] [G,B,C] | A,, !2!E F | %7
+ B,, !5!!3!!1![D,F,B,] !5!!2!!1![F,B,D] | !fermata!!4!!2!!1![B,DF] z z | G,, [G,B,D] [G,B,D] |$ %10
+ B,, [G,B,D] [G,B,D] | A,, [F,A,D] [F,A,D] | F,, [F,A,D] [F,A,D] | %13
+[I:staff -1] (!>![^CGB] z/ [CGA]/ [CGA]) |[I:staff +1] A,, [E,G,A,] [E,G,A,] |$ D,, [D,F,] [D,F,] | %16
+ D,, !fermata!!2!^G, !fermata!A, |[I:staff -1] [^C=GB] z/ !4!!2!!1![CGA]/ [CGA]- | %18
+[I:staff +1] [A,E]/ z/ !2!^G, A, |$ [A,,F,] z/ [A,D]/ [A,D]- | [A,D]/ z/ (!4!A, D | %21
+ [A,,G,]) z/ [G,B,^C]/ [G,B,C]- |[I:staff -1] [EBc]/ z/ !4!e f | %23
+[I:staff +1] B,,"^poco rit." z/ !4![F,B,D]/ [F,B,D] |$ [B,DF] z z |"^a tempo" G,, [G,B,D] [G,B,D] | %26
+ B,, [G,B,D] [G,B,D] | A,, [F,A,D] [F,A,D] |$ F,, [F,A,D] [F,A,D] | %29
+!>(![I:staff -1] [^CGB]!>)! z/ [CGA]/ [CGA] |[I:staff +1] .A,,, =B, ^C | %31
+ D,, [D,F,A,]"_www.theperlectscores.com" [D,F,A,] | [D,,A,,] :| %33
+

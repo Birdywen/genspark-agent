@@ -1,0 +1,134 @@
+X:1
+T:Gipsy dance Sheet music supplied by www.theperfectscores.com
+%%score { 1 | ( 2 3 4 ) }
+L:1/8
+Q:1/4=127
+M:2/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! REVIEW: M47: Chord from direction: "DA" → Dmajor/A [REVIEW]
+%! CHECK: M111: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+%! CHECK: M69: placeholder (x) detected - possible missing note
+%! CHECK: M84: placeholder (x) detected - possible missing note
+%! CHECK: M95: placeholder (x) detected - possible missing note
+%! CHECK: M114: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M31: placeholder (x) detected - possible missing note
+%! CHECK: M43: placeholder (x) detected - possible missing note
+%! CHECK: M58: placeholder (x) detected - possible missing note
+%! CHECK: M71: placeholder (x) detected - possible missing note
+%! CHECK: M82: placeholder (x) detected - possible missing note
+%! CHECK: M93: placeholder (x) detected - possible missing note
+%! CHECK: M112: placeholder (x) detected - possible missing note
+%! CHECK: M114: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M31: placeholder (x) detected - possible missing note
+%! CHECK: M44: placeholder (x) detected - possible missing note
+%! CHECK: M59: placeholder (x) detected - possible missing note
+%! CHECK: M74: placeholder (x) detected - possible missing note
+%! CHECK: M89: placeholder (x) detected - possible missing note
+%! CHECK: M108: placeholder (x) detected - possible missing note
+%! CHECK: M114: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+L:1/16
+V:2 bass 
+V:3 bass 
+V:4 bass 
+V:1
+"^Allegro agitato""_leggiero" (!3!A^G |: AB=GA !1!F!4!G!2!!1!!2!E!7!F | D6) (!4!dc | BABc d^cdB | %4
+ A6) !3!B!2!A |$ (!1!G!4!AG!2!^F !1!GBAG) | (!3!=FGFE FAGF | !2!EGFE DFED) | %8
+ !2!^C2!4!!3!A2 z2 (A^G |$ AB!2!=G!3!A !1!F!4!GEF | D6) (!4!dc | BABc d^cdB | A6) !5!f2 |$ %13
+ (!4!edce !3!dc=B!4!d | !3!c=BA!3!c BA!2!^G!4!B) | !3!A2{/!2!^d} !3!e2 ((!2!^g2 !3!a2)) z2 |1 %16
+ z4 z2 A^G :|2 z4 z2 !2!AB ||$ cdcB ABAG | !2!^F6 (!3!_e2 | d_ed!1!c !3!B!4!c!3!BA | G6) (GA |$ %22
+ BcBA !1!G!4!AGF | E6) (!4!d2 | cdcB"_TI 4" ABAG | D4) z2 f2 | (e!2!^c!1!A!2!c !3!d!1!A!3!df) |$ %27
+ (!4!e!2!^c!1!B!2!c !3!dAdf) |"_cresc." (e^cAc !3!d!1!A!2!df) |[I:staff +1] [^CE]4 [A,,A,]4 | %30
+[I:staff -1] (e!2!^c!1!A!2!c !3!d!1!A!3!df) |$ (e^cAc dAdf) | (e^cA!2!c !3!d!1!A!2!df) | %33
+[I:staff +1] [^CE]6 A,2 |[I:staff -1] z2{/^g} a2 A2 z2 | z2{/^g} a2A2a2{/g} |$ .A2a2A2a2{/^gg} | %37
+ !2!a4 a4 |"^Gipsy Dance (Lichner)" (!5!d'6 c'a | f4 g2fg) | %40
+[I:staff +1] A,2 !wedge!!4![^CEA]2!wedge![CEA]2[CEA]2 | D2!wedge![FA]2!wedge!D2!wedge![FA]2 | %42
+[I:staff -1] b6 !4!ge |$ !1!d4 e2de | f6 (!1!ga | bc'ba !1!g!4!agf |"D/A" e4) z2 (!2!ef | %47
+ gagf ef!2!ed |$ ^c6) (!2!cd | e!5!fed !>!^c2)(cd | efed !>!^c2)(!5!e^G | ABA^G ABAG | %52
+ A6) (!3!A^G |$"_leggiero" AB=GA !1!F!4!GEF | D6) (dc | BABc d^cdB | A6) (!3!BA | %57
+ G!4!AG!2!^F !1!GBAG) |$ (!3!FGFE FAGF | EGFE DFED) | .^C2A2 z2 (!3!A^G | AB!2!=G!3!A !1!F!4!GEF | %62
+ D6) (!4!dc |$ BABc d^cdB | A6) (A2 | GBAG !1!F!4!AGF | E!4!GFE D!3!FED | %67
+!<(! ^C!1!DEF G2)!<)!.[CA]2 |$ D6 z2 |:[K:Gmin] (!2!!4![Bd]4 [Ac]2>B2 | B4 A2) z2 | %71
+ ([Ae]4 [Bd]2>[Ac]2 | [Ac]4 B2) z2 | [Bf]4 !4![Ae]2>[Bd]2 | [Ac]2 z2 !2!B2 z2 |$ %75
+ !1!!5![Ae]2 z2 [Bd]2 z2 |[I:staff +1] F6 z2 |[I:staff -1] ([_Bd]4 [Ac]2>B2 | B4 A2) z2 | %79
+ ([Ae]4 [Bd]2>[Ac]2 | c4 =B2) z2 | [Gc]4 !2![=Bd]4 | [ce]2g2e2c2 |$ !2!!5![Bf]2 z2 !3!c2!4!d2 |1 %84
+ (3!2!B2!1!F2!2!G2 (3!1!A2B2c2 :|2 B4 z2{/!4!B} A^G ||[K:Dmin] (AB=GA FGEF | D6) (dc | %88
+ BABc d^cdB |$ A6) (BA | GAG^F GBAG | =FGFE FAGF | EG)FE DFED | .^C2 (^G2 A2) z2 A^G |$ %94
+ (AB=GA FGEF | D6) (!3!dc | BABc d^cdB | A6) (!3!A2 | GBAG !1!F!4!AGF | %99
+ (4:3:4!1!EGFE !1!D!3!FED2 |$ !2!^C!1!DEF) G2[CA]2 | D6 (d^c | d_ed!1!=c !3!BcBA | G6) !3!B2 | %104
+!>(! ABAG !3!FGFE!>)! | D6 (!3!d'^c' |$ !3!d'!4!_e'!3!d'=c' bc'ba | g6) !3!b2 | %108
+ (4:3:4!2!abag !3!fgfe2 |[I:staff +1] [D,F,A,D]2 z2 z2 x2 |[I:staff -1] z4"_Sf sf" [GA^c]2 z2 | %111
+ [FAd]2 z2 z4 | [fad']4 z4 | !fermata!D4 z2 |] %114
+V:2
+ z |: .[D,F,A,].[D,F,A,].[D,F,A,].[D,F,A,] | .[D,F,A,].[D,F,A,].[D,F,A,].[D,F,A,] | %3
+ [D,G,B,][D,G,B,][D,G,B,].[D,G,B,] | .[D,F,A,].[D,F,A,].[D,F,A,].[D,F,A,] |$ %5
+ [^C,E,A,][C,E,A,][C,E,A,][C,E,A,] | .[D,F,A,].[D,F,A,].[D,F,A,].[D,F,A,] | %7
+ .[G,B,][G,B,].[^G,B,].[G,B,] | A,[I:staff -1]{/^G}[I:staff +1] z !^![A,,A,]2 |$ %9
+ [D,F,A,].[D,F,A,][D,F,A,].[D,F,A,] | [D,F,A,][D,F,A,][D,F,A,].[D,F,A,] | %11
+ .[D,G,B,].[D,G,B,].[D,G,B,].[D,G,B,] | [D,F,A,][D,F,A,][D,F,A,][D,F,A,] |$ %13
+"_cresc." .[E,A,C][E,A,C][E,^G,=B,].[E,G,B,] | [E,A,C][E,A,C][E,^G,D][E,G,D] | %15
+ [A,C] z z [E,,E,] x |1 [A,,A,]3 z :|2 [A,,A,]3 z ||$ .[^F,A,CD].[F,A,CD].[F,A,CD].[F,A,CD] | %19
+ [A,CD].[A,CD].[A,CD].[A,CD] | .[^F,A,CD].[F,A,CD].[F,A,CD][F,A,CD] | %21
+ .[G,B,D].[G,B,D].[G,B,D].[G,B,D] |$ [E,G,B,C][E,G,B,C][E,G,B,C][E,G,B,C] | %23
+ [E,B,C][E,B,C][E,B,C][E,B,C] | [E,G,B,C][E,G,B,C][E,G,B,C][E,G,B,C] | %25
+ .[F,A,C][F,A,C]/.[F,A,C] z x/ |[K:treble] (!3!!1![^CG]!5!A,!2!!1![DF]A,) |$ ([^CG]A,[DF]A,) | %28
+ ([^CG]A,[DF]A,) |[I:staff -1] a{/!4!^g} !5!a[K:bass] z !5!f | %30
+[I:staff +1][K:treble] (!3!!1![^CG]!5!A,!2!!1![DF]A,) |$ ([^CG]A,[DF]A,) | ([^CG] A, [DF] A,) | %33
+[I:staff -1] a{/!4!^g} a .A[K:bass] z |[I:staff +1] A,, z z{/^G,} A, | A,,A,A,,A, |$ %36
+ A,,^A,A,,[A,A,]{/G,} | !wedge!=F,!wedge![A,C]F,!wedge![A,C] | !5!A,[CF]!wedge!A,[CF] | %39
+ !wedge!!4!B,!wedge![DF]B,[DF] |[K:treble][I:staff -1] a3 z | f2 !^!f2 | %42
+[I:staff +1][K:bass] !wedge!G,[B,E]G,[B,E] |$ !wedge!A,[DF]!wedge!A,[^CE] |[K:treble] D[FA][FA] z | %45
+ x4 | z [^CEGB][CEGB] z | x4 |$ z [EGB][EGB] z | z (!4!!2![FA]!>!!1![GB]) z | %50
+ z (!3!!1![FA]!>![GB]) (!3!!1![DA] | !4![^CE]) ([DF][CE]) ([DF] | !fermata![^CE]3) z |$ %53
+[K:bass] .[D,F,A,].[D,F,A,].[D,F,A,].[D,F,A,] | .[D,F,A,][D,F,A,].[D,F,A,].[D,F,A,] | %55
+ [D,G,B,][D,G,B,][D,G,B,][D,G,B,] | [D,F,A,][D,F,A,][D,F,A,][D,F,A,] | %57
+ [^C,E,A,][C,E,A,][C,E,A,][C,E,A,] |$ [D,F,][D,F,A,][D,F,A,][D,F,A,] | %59
+"_cresc." [G,B,][G,B,][^G,=B,][G,B,] | .A,[I:staff -1]{/^G}[I:staff +1] z [A,,A,]2 | %61
+ [D,F,A,][D,F,A,][D,F,A,][D,F,A,] | [D,F,A,][D,F,A,][D,F,A,][D,F,A,] |$ %63
+ [D,G,B,][D,G,B,][D,G,B,][D,G,B,] | [D,F,A,][D,F,A,][D,F,A,][D,F,A,] | .[B,D].[B,D][A,D].[A,D] | %66
+ .[G,B,].[G,B,].[F,A,].[F,A,] | [E,G,] z z [A,,G,] |$ .[D,F,]A,,3/2[D,F,] x/ |: %69
+[K:Gmin]"^sostenuto con anima" F4[K:treble] |"_gl" [EF]3 z | F4 | F (E D) z | F2 C>B, | %74
+ [EF] z [DF] z |$ [CF] z [B,F] z |[I:staff -1] (!3![^G=B]2 !4!!1![Ac]) z |[I:staff +1] F4 | %78
+ [EF]3 z | F4 |[I:staff -1] _A3 x |[I:staff +1] E2 D2 | [CE] z z2 |$[K:bass] [F,D] z [F,E]2 |1 %84
+ [B,D]2[I:staff -1] z[I:staff +1] z :|2 [B,D]2 z2 || %86
+[K:Dmin]"^leggiero" .[=D,F,A,][D,F,A,].[D,F,A,].[D,F,A,] | D,.[D,F,][D,F,A,][D,F,] | %88
+ .[D,G,B,].[D,G,B,][D,G,B,].[D,G,B,] |$ .[D,F,A,][D,F,A,][D,F,A,].[D,F,A,] | %90
+ [^C,E,A,][C,E,A,][C,E,A,][C,E,A,] | [D,F,A,][D,F,A,][D,F,A,][D,F,] | %92
+"_cresc." [G,B,][G,B,][^G,=B,][G,B,] | .A, z [A,,A,]2 x |$ [D,F,A,][D,F,A,][D,F,A,][D,F,A,] | %95
+ [D,F,A,][D,F,][D,F,][D,F,] | [D,G,B,][D,G,B,][D,G,B,][D,G,B,] | [D,F,][D,F,][D,F,A,][D,F,] | %98
+ [B,D][B,D][A,D][A,D] | [G,B,][G,B,][F,A,][F,A,] |$!<(! [E,G,] z z [A,,G,]!<)! | %101
+ [D,F,][D,F,A,][D,F,][D,F,A,] | [D,^F,A,][D,F,A,C][D,F,A,C][D,F,A,C] | %103
+ [D,G,B,][D,G,B,][D,G,B,][D,G,B,] |"^LL" [D,G,A,^C][D,G,A,C][D,G,A,C][D,G,A,C] | %105
+ [D,F,][D,F,A,][D,F,A,][D,F,A,] |$ [D,^F,C][D,F,A,C][D,F,A,C][D,F,A,C] | %107
+ [D,G,B,][D,G,B,][D,G,B,][D,G,B,] | [D,G,A,][D,G,A,^C][D,G,A,C][D,G,A,C] |[I:staff -1] d ^g a z | %110
+[I:staff +1] A,, z [A,,A,] z | [D,A,] z z2 |[K:treble] [DAd] z2 x |[K:bass] A,2 z |] %114
+V:3
+ x |: x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x5 |1 x4 :|2 x4 ||$ %18
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |[K:treble] x4 |$ x4 | x4 | x2[K:bass] x2 |[K:treble] x4 |$ %31
+ x4 | x4 | x3[K:bass] x | x4 | x{/^G,} x3 |$ x4 | x4 | x4 | x4 |[K:treble] x4 | x4 |[K:bass] x4 |$ %43
+ x4 |[K:treble] x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$[K:bass] x4 | x4 | x4 | x4 | x4 |$ %58
+ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 |:[K:Gmin][K:treble] (!5!B,2 C>D) | x4 | %71
+ !4!C2 D3/2 x/ | x4 | D2 x2 | x4 |$ x4 | x4 | (B,2 C>D) | x4 | (C2 D>[EE]) | [DF]3 z | E2 F2 | %82
+ x4 |$[K:bass] x2[I:staff -1] !1!A2 |1 x4 :|2 x4 ||[K:Dmin] x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | %93
+ x5 |$ x4 | x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 | x4 | %112
+[I:staff +1][K:treble] x4 |[K:bass] F,2 x |] %114
+V:4
+ x |: x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x5 |1 x4 :|2 x4 ||$ %18
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |[K:treble] x4 |$ x4 | x4 | x2[K:bass] x2 |[K:treble] x4 |$ %31
+ x4 | x4 | x3[K:bass] x | x4 | x4 |$ x4 | x4 | x4 | x4 |[K:treble] x4 | x4 |[K:bass] x4 |$ x4 | %44
+[K:treble] x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$[K:bass] x4 | x4 | x4 | x4 | x4 |$ x4 | %59
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 |:[K:Gmin][K:treble] x4 | x4 | x4 | x4 | x4 | %74
+ x4 |$ x4 | x4 | x4 | x4 | x4 | x4 | x4 | x4 |$[K:bass] x4 |1 x4 :|2 x4 ||[K:Dmin] x4 | x4 | x4 |$ %89
+ x4 | x4 | x4 | x4 | x5 |$ x4 | x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | %108
+ x4 | x4 | x4 | x4 |[K:treble] x4 |[K:bass]"_com" !fermata![A,,D,]2 x |] %114
+

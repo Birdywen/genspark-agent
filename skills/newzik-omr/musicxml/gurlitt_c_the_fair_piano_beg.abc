@@ -1,0 +1,36 @@
+X:1
+T:The fair By www.theperfectscores.cor
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=140
+M:2/4
+I:linebreak $
+K:none
+V:1 treble transpose=-7 nm="by www.theperfectscores.cor"
+L:1/16
+V:2 treble transpose=-7 
+V:1
+[K:Amin]"^Vivace" (!3!c!2!B!3!c!4!d !5!e2)G2 | !2!A2!3!B2!4!c2 z2 | (!3!cBcd e2)G2 | A2B2c2 z2 | %4
+ (!3!g!4!a!3!g!1!e !3!f!4!g!3!f!1!d) |$ (!3!e!4!f!3!e!1!c !2!d2) z2 | (!3!gage !3!fgfd | %7
+ !3!efec !2!d2) z2 | (!3!cBcd e2)G2 | A2B2c2 z2 |$ (!3!cBcd e2)!1!G2 | A2B2c2 z2 | %12
+ (!3!gage !3!fgfd | !3!efec !2!d2) z2 | (!3!gage !3!fgfd) |$ (!3!efec !2!d2) z2 | (cBcd e2)G2 | %17
+ A2B2c2 z2 | (edef g2)!1!G2 | A2B2c2 z2 |$ (!3!e!4!f!3!e!2!d !1!c!4!d!3!cB) | .!1!A2 z2 .!1!A2 z2 | %22
+ (efed !1!c!4!d!3!cA) | .B2 z2 .!2!B2 z2 |$ (e!4!f!3!e!2!d !1!c!4!d!3!cA) | %25
+ (f!4!g!3!f!2!e !1!d!4!e!2!dB) | (A!3!B!4!c!1!A !2!^G!3!A!4!BG) | .A2.!5!c2.!3!A2 z2 |$ %28
+ (!3!efed"_1 4" cdcB) | A2 z2 .!1!A2 z2 | (efed !1!c!4!dcA) | B2 z2 .B2 z2 | (efed !1!c!4!dcA) |$ %33
+ (!3!fgfe d!4!edB) | (ABc!1!A !2!^GABG) | A2.!5!c2.!3!A2 z2 || (cBcd e2)!1!G2 | A2B2c2 z2 |$ %38
+ (cBcd e2)G2 | A2B2c2 z2 | (gage !3!fgfd | efec !2!d2) z2 | (gage !3!fgfd) |$ !3!efec !2!d2 z2 | %44
+ (cBcd e2)G2 | A2B2c2 z2 | (edef g2)G2 | A2B2c2 z2 |$ A2B2c2 z2 | A2B2c2 z2 | A2B2c2 z2 | z4 c4 | %52
+ z4 c4 | !fermata!c8 |] %54
+V:2
+[K:Amin]"^Jf scherzando" !3!E!5!CEC | !2!F!5!C!3!E!5!C | !3!E!5!CEC | !2!FC!3!EC | !3!EC!4!DC |$ %5
+ !1!GC!2!FC | !3!EC!3!DC | !1!GC!2!FC | !3!ECEC | !2!FC!3!EC |$ !3!ECEC | !2!FC!3!EC | !3!EC!4!DC | %13
+ GC!2!FC | !3!EC!4!DC |$ !1!GC!2!FC | !3!EC!3!EC | !2!FC!3!EC | ECEC | FCE z |$ %20
+[K:bass] A,[CE]A,[CE] | A,[CE]A,[CE] | A,[CE]A,[CE] | !3!^G,!1![B,E]G,[B,E] |$ %24
+ !5!A,!3!!1![CE]A,[CE] | !5!D,!3!!1![F,B,]D,[F,B,] |"^St" !5!E,!3!!1![A,C]!5!E,!2!!1![B,D] | %27
+ .!3![A,C].[A,C].[A,C] z |$"^tS" A,[CE]A,[CE] | A,[CE]A,[CE] | A,[CE]A,[CE] | ^G,[B,E]G,[B,E] | %32
+ A,[CE]"_cresc."A,[CE] |$ D,[F,B,]D,[F,B,] | E,[A,C]E,[B,D] | .[A,C].[A,C].[A,C] z || %36
+[K:treble] !3!ECEC | FCEC |$ ECEC | FCEC | ECDC | GCFC | ECDC |$ GCFC | !3!ECEC | FCEC | ECEC | %47
+ FCEC |$!>(! FCEC | FCEC!>)! |"^rit." FCEC |!>(! ECEC | E"_www.theperfectscores.com"CE(C!>)! | %53
+ !fermata![CE]4) |] %54
+

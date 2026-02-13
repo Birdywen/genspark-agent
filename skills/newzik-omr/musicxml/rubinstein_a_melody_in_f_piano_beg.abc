@@ -1,0 +1,50 @@
+X:1
+T:Melody in f Sheet music supplied by www.theperfectscores.com
+C:A Bernstein
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=110
+M:2/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M15: placeholder (x) detected - possible missing note
+%! CHECK: M29: placeholder (x) detected - possible missing note
+%! CHECK: M48: placeholder (x) detected - possible missing note
+%! CHECK: M50: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+"^Moderato" (!3!C2 =B,C) | (!3!C2 !2!=B,!1!C) |!<(! (!3!F2 !2!E!1!F) | !4!c4!<)! | %4
+ (!3!B2 !2!A!1!G) | (!2!A2 G2) |$ (!3!F2 !2!E!1!D) | (E2 D2) | (!3!C2 =B,C) | (C2 =B,C) | (F2 EF) | %11
+ (!5!d2 c2) |$ (!3!B2 !2!^FG) | (!4!A3 G) | F2 z"^poco" [FA] ||1"_rit." z [F_Ad] z [EGc] :|2 %16
+ (F !1!!2![CF]!2!!4![FA]!1!!2![Ac] | [Acf]4) ||$ !1!E2 (!5!=BA) | (G2 !1!D!2!E) | %20
+!<(! (!1!FGA=B)!<)! | (c2 C2) | E2 =BA | (G2 DE) |$ (!1!FGA=B) | c2 (Cc) | (c2 _e_d | c2) cc | %28
+ (c2 _e_d) | c3 C |$ (C2 _E_D) | (C2 _E_D) | (C2 _E_D) | !fermata!C4 | (C2 =B,C) | (C2 =B,C) | %36
+ (F2 EF) |$[I:staff +1] ^F,, (^F,A,_E) |[I:staff -1] (B2 AG) | (A2 G2) | (F2 ED) | (E2 D2) | %42
+ (C2 =B,C) |$ (C2 =B,C) |!<(! (F2 EF)!<)! | (d2 c2) | (B2 ^FG) | [EA]2 !fermata![B,EG]2 | %48
+!>(! [A,CF]!>)!!>(!!>![A,CF]!>)!!>(!!>![CFA]!>)!!>![FAc] | [Acf]2 z2 |] %50
+V:2
+ !5!F,, (!5!C,!2!F,A,) | !5!G,, (!5!C,!3!E,B,) | !5!A,, (!4!F,A,C) | ^F,,(^F,A,_E) | G,, (G,B,_D) | %5
+ (!5!C,!3!E,!2!G,!1!B,) |$!>(! F,, (C,F,_A,)!>)! | C,, (C,E,B,) | F,, (C,F,A,) | G,, (C,E,B,) | %10
+!<(! A,, (F,A,C)!<)! | D,, (^F,A,C) |$ G,, (G,B,_D) |[I:staff -1] E4 | %14
+[I:staff +1] ([F,A,]C) (C2 ||1 =B,2 _B,2) :|2 ([F,A,]!<(!!4!A,!2!C!1!F!<)! | [F,C]4) ||$ %18
+ (!5!C,!2!G,!3!^F,!1!C) | (=B,, D,G,=B,) | (!5!G,, !4!F,G,=B,) | (C,E,G,E,) | (C,G,^F,C) | %23
+ =B,, (D,G,=B,) |$!<(! !5!G,, (!4!F,G,=B,)!<)! | (C,E,G,E,) | F, (_A,CF) | C, (E,G,C) | %28
+ !5!F, (!4!_A,CF) | (C,E,G,E,) |$"_dimin." F,, (C,[F,F,]_A,) | G,,"^rit." (C,[F,F,]_A,) | %32
+ G,, (C,F,_A,) | !fermata![C,E,G,]4 | F,, (C,F,A,) | G,, (C,E,B,) |!<(! A,, (F,A,C)!<)! |$ x4 | %38
+ G,, (G,B,_D) | (C,E,G,B,) | F,, (C,F,_A,) | C,, (C,E,B,) | F,, (C,F,A,) |$ G,, (C,E,B,) | %44
+ A,, (F,A,C) | D,, (D,^F,C) | G,, (G,B,_D) | (C,C CC,) | %48
+"_www.theperfectscores.com" (!5!F,,!1!F,!2!C,!4!A,, | F,,2) z2 |] %50
+V:3
+ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | C,/ (C/=B,/_B,/) | x2 ||1 %15
+ x2 :|2 x2 | x2 ||$ x[I:staff -1] !2!_E | x2 | x2 | x2 | x _E | x2 |$ x2 | x2 | x2 | x2 | x2 | %29
+ x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | %48
+ x2 | x2 |] %50
+

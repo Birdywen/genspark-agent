@@ -1,0 +1,53 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Sonatina. Op.36, n.1 - 1st movement
+%%score { ( 1 3 ) | 2 }
+L:1/4
+Q:1/2=90
+M:2/2
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M5: placeholder (x) detected - possible missing note
+%! CHECK: M25: placeholder (x) detected - possible missing note
+%! CHECK: M31: placeholder (x) detected - possible missing note
+%! CHECK: M35: placeholder (x) detected - possible missing note
+%! CHECK: M17: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+L:1/8
+V:2 bass 
+V:3 treble 
+V:1
+"^Spiritoso" (!2!c2 !4!e!2!c .!1!G2) .!5!G2 | (c2 ec .G2) !5!g2 | fed!1!c !3!B!4!cBc | %3
+[I:staff +1] G,,2 z2 !1!G,F,E,D, x |$[I:staff -1] (!2!e2 !4!ec .G2) .G2 | %5
+ (!3!e2 !5!ge .!1!c2) (!4!e!2!c | !3!d!1!B!4!c!2!A !3!B!1!G!4!A!2!^F) | (!1!GAB!1!c !2!de^f(g) | %8
+ !1!A2 .!5!a2) .!4!a2 .!5!a2 |$ (!1!Bcd!1!e !2!^fgab) | (c2 .!5!c'2) .!4!c'2 .!5!c'2 | %11
+ !1!d!2!g!4!b!5!d' !4!c'ba!1!g |[I:staff +1] !1!C2 z2 !5!C,2 z2 |$[I:staff -1] (!4!edcB !5!dcBA | %14
+ G4) x4 :: (!2!B2 !4!dB .G2) .G2 | !2!c3 !4!_ec G3 x2 | !4!f2 !2!d2 !3!_e2 !1!c2 |$ %18
+ (!2!=B!3!cdB G2) .G2 | g"_tS"GgG gGgG | gGgG gGgG | [dd]_efd fedc | %22
+[I:staff +1] !1!G,2 G,,2 G,F,=E,D, |$[I:staff -1] (!2!C2 !4!EC G,2) G,2 | (C2 EC G,2) G2 | %25
+ (FEDC B,CB,C |"^at" DCB,A, G,2) z2 | (C2 !1!G,C !4!E2) E2 |$ (!3!E2 !1!C!3!E !3!G2) .!5!c2 | %29
+ .[EG]2 !2!!4![DF]2 .!1!!3![CE]2 .[B,D]2 | (CDE!1!F !2!GAB(c) | D2 .!5!d2) .!4!d2 .!5!d2 | %32
+ EFG!1!A !2!Bcde |$ (F2 .!5!f2) !4!f2 .!5!f2 | (Gc!4!e!5!g !4!fedc) | (!5!agfe !1!d!4!cBA | %36
+ G!4!A!2!F!3!G"_1 4" EF!2!DE | C2) z2 z4 :| %38
+V:2
+ !3!C, z z2 | C, z z2 | C, z C, z |[I:staff -1] !5!d !4!c/B/A/ x2 |$[I:staff +1] C, z z2 | %5
+ C z z !2!^F, | !1!G, !3!C, !1!D, D,, |!<(! G,,!<)! z z2 | (!4!^F,/D/A,/D/ F,/D/A,/D/) |$ G, z z2 | %10
+ (!4!A,/D/C/D/ A,/D/C/D/ | B,) z z2 |[I:staff -1] !3!^f/!2!e/g/f/ a/g/f/!2!e/ |$ %13
+[I:staff +1] !1!D, z D,, z | (!5!G,,/!4!B,,/D,/G,/ G,,) z ::"^Pp." (!1!F4 | %16
+ !2!_E4)[I:staff -1] !5!g |[I:staff +1] !4!=B,2 !3!C2 |$ G,2 z2 | (!1!F !5!G, !2!D G, | %20
+ !1!_E !5!G, !2!C G, | =B,) z !2!C z |[I:staff -1] [=Bg] z z2 |$[I:staff +1] C, z x2 | C, z x2 | %25
+ C, z C, z | !5!G,, z (!1!G,,/F,,/E,,/D,,/ | C,,) z x2 |$ !2!C, z z2 | G, z G,, z | C, z z2 | %31
+ (!5!B,,/G,/D,/G,/ B,,/G,/D,/G,/ | C,) z z2 |$ (!4!D,/G,/F,/G,/ D,/G,/F,/G,/ | E,) z x2 | %35
+ !2!F, z F, z | !1!G, z !5!G,, z |"_WWW." (!5!C,,/!4!E,,/G,,/C,/"_com" C,,) z :| %38
+V:3
+ x4 | x4 | x4 | x5/2 G z |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 :: x4 | x5 | %17
+ x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | %36
+ x4 | x4 :| %38
+

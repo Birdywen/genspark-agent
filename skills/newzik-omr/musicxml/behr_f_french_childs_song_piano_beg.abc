@@ -1,0 +1,20 @@
+X:1
+T:French child's song Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/4
+Q:1/4=120
+M:4/4
+I:linebreak $
+K:Amin
+V:1 treble 
+V:2 treble 
+V:1
+"^Allegro" !3!e2 e e | g2 g e | c c !2!d d | e2 !1!c2 | e2 e e |$ g2 g e | c c d e | c4 || d2 d d | %9
+ e2 e e | f f e g |$ !3!e2 d2 | d2 d d | e2 e e | f g e f |!>(! d4!>)! | e2 e e |$ !5!g2 g e | %18
+ c c d d | e2 !1!c2 | e2 e e | g2 g e | c c d e | c3 z :| %24
+V:2
+ !5!C !1!G C G | !3!E !1!G E G | E G !2!F !1!G | !5!C G E G | C G C G |$ E G E G | !3!E G !2!F G | %7
+ E G !5!C G || !5!B, G B, G | !5!C G C G | !4!D G !5!C G |$ C G !5!B, G | B, G B, G | !5!C G C G | %14
+ !4!D G C G | !5!B, !1!G !2!G !1!G | !5!C G C G |$ E G E G | E G F G | C G E G | C G C G | %21
+ E G E G | E G F G | !3!E !1!G !5!C z :| %24
+

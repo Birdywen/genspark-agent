@@ -1,0 +1,27 @@
+X:1
+T:Sheet music supplied by
+C:J S Bach
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=130
+M:2/4
+I:linebreak $
+K:Bmin
+V:1 treble nm="Piano Collection for Beginners - Grade 2"
+L:1/16
+V:2 bass 
+V:1
+ !>!!5!a4 (!4!gfed) | !>!a4 (gfed) | (!3!FGA2) .G2.F2 | .!2!E2!5!A2.!3!F2!1!D2 |$ !5!a4 (gfed) | %5
+ !>!a4 (gfed) | (!3!FGA2) G2F2 | E2.A2 !tenuto!D4 :|$ (!2!cde2) (cde2) | .!5!a2.!2!e2 !>!e4 | %10
+ .a2e2.a2.e2 | (!5!dcBA) .!3!B2!1!E2 |$ !5!e2.!4!^d2!1!E2!3!=d2- | d2c2.a2.^g2 | e2^d2E2=d2- | %15
+ d2c2a2^g2 |$ (!4!e^dcd) (edcd) | .e2!2!^G2!1!A2B2 | (cd.e2) A2!1!D2 | (!3!CDE2) !tenuto!A,4 |$ %20
+ !>!!5!a4 (!4!gfed) | !>!a4 (gfed) |"_JS" (FGA2) G2F2 | .!3!E2!5!c2!3!A2.!1!F2 |$ !>!a4 (gfed) | %25
+ !>!a4 (gfed) |"_JS" (FGA2) G2F2 |[I:staff +1] E,2A,2 D,4 |] %28
+V:2
+ !5!D,,.!1!D, D,,.D, | D,,.D, D,,.D, | (!3!F,/G,/A,) A,.F, | !4!E,.!1!A,.!3!F,!5!D, |$ %4
+ D,,.D, D,,.D, | D,,.D, D,,.D, | (F,/G,/.A,) A,.F, | .!4!E,.A, !tenuto!D,2 :|$ .A,,A, A,,.A, | %9
+ A,,.A, A,,.A, | A,,.A, A,,.A, | A,,.A, .E,,E, |$ E,,E, E,,E, | E,,E, E,,E, | E,,E, E,,E, | %15
+ E,,.E, E,,E, |$ E,,E, E,,E, | .!5!E,,!1!D,C,B,, | A,,2- A,,.!1!D, | (!3!C,/D,/.E,) A,,2 |$ %20
+ D,,.D, D,,.D, | .D,,D, D,,.D, | (F,/G,/A,) G,F, | !4!E,.!1!A,!3!F,!5!D, |$ D,,D, D,,.D, | %25
+ D,,.D, D,,.D, | (F,/G,/A,) G,F, |[I:staff -1] EA !tenuto!D2 |] %28
+

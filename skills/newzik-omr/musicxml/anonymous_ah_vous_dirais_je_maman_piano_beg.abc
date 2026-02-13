@@ -1,0 +1,17 @@
+X:1
+T:Ah! vous dirais-je-maman Sheet music supplied by www.theperfectscores.com
+%%score { 1 | 2 }
+L:1/8
+Q:1/4=120
+M:2/4
+I:linebreak $
+K:Emin
+V:1 treble nm="Piano Collection for Beginners - Grade 1"
+V:2 bass 
+V:1
+"^Allegro" !1!GG || !4!dd !5!ee | d2 cc | !2!B!3!B !2!AA |$ G2 !5!dd | cc B B | A2 dd | cc BB |$ %8
+ A2 !1!GG | !4!dd ee | d2 cc | !2!B!3!B AA | G2 |] %13
+V:2
+ !3!B,D || !5!G,D CD | B,D A,D | G,D !5!F,D |$ G,D B,D | A,D G,D | F,D G,D | A,D B,D |$ CD B,D | %9
+ G,D CD | B,D A,D | G,D F,D | !5!!3![G,B,]2 |] %13
+

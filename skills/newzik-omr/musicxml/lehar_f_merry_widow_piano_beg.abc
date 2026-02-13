@@ -1,0 +1,66 @@
+X:1
+T:Sheet music supplied by www.theperfectscores.com. Merry widow. Waltz
+%%score { 1 | ( 2 3 4 ) }
+L:1/4
+Q:1/4=180
+M:3/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M12: placeholder (x) detected - possible missing note
+%! CHECK: M20: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M55: placeholder (x) detected - possible missing note
+%! CHECK: M65: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M34: placeholder (x) detected - possible missing note
+%! CHECK: M53: placeholder (x) detected - possible missing note
+%! CHECK: M65: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+V:2 bass 
+V:3 bass 
+V:4 bass 
+L:1/8
+V:1
+ (!1!D2 !3!G |!<(! A2 B)!<)! | (D2 !2!G | !3!A2 !4!B) | (!5!c3 |$ !5!B3 | !5!A3-) | A3 | %8
+ (D2!<(! !3!A | B2!<)! c) | (D2 !2!A |$!<(! B2 c)!<)! | (!5!d3 | !5!c3 | !5!B3-) | B3 | z [EG] e |$ %17
+!<(! f2 e!<)! |!>(! d3!>)! | G3 | (!4!c2 c | d2 c) |$ B3- | B3 | (A2 A | B2 A) | (d2 B |$ G2 E) | %28
+ (G3 | A3 | G3-) |!fine! G/ ||$ !3!B/c/B/^A/B/ | d2 !>!!4!^c- | c =c3/2 B/ | B2 A- | A !2!^G !1!A | %37
+ g2 f |$ f !>!e3/2 _e/ | _e2 !>!!1!d- | d (!2!^c !3!d) | (^d !>!!5!e3/2) e/ | (e !>!!2!^G3/2) G/ |$ %43
+ !2!^G !3!A/ z/ !2!A/ z/ | !1!A B =c | (^c d3/2) d/ | (d !2!^A3/2) A/ | (^A .B/) z/ .B/ z/ |$ %48
+ z/ !>!!3!B/!>!c/!>!B/!>!^A/!>!B/ | d2 !>!^c- | c !>!=c3/2 B/ | B2 !1!A- | %52
+ A!<(! (!2!^G !1!A)!<)! |$ !4!e2 !3!_e- | e !>!d3/2 c/ | c2 !>!B- | B (!2!^A !1!B) | f2 !>!e- | %58
+ e ^d3/2 e/ |$ !4!e2 !>!d- | d/!>(!!>!!1!B/!>)!!>(!!>!!2!c/!>)!!>(!!>!!1!B/!>)!!>(!!2!^A/!>)!B/ | %61
+ d2 !4!^c- | c !>!!3!=c3/2 F/ |"_dimin." G3- |!D.C.! G/ z/ z z || %65
+V:2
+ G,, [D,G,B,]2 | D,,!>(! !>![D,G,B,]2!>)! | G,, [D,G,B,]2 |!<(! D,, !>![D,G,B,]2!<)! | %4
+[I:staff -1] z [DF] [DF] |$ z [DG] [DG] | z [CDF] [CDF] | z [CDF] [CDF] | %8
+[I:staff +1] A,, [D,F,C]2 | D,, [D,F,C]2 | A,, [D,F,C]2 |$ D,,!>(! [D,F,C]2!>)! | %12
+[I:staff -1] z [DG] [DG] | z [DF] [DF] | z [DG] [DG] | z [DG] [DG] |[I:staff +1] C, !>![G,C]2 |$ %17
+[I:staff -1] z [FA]2 | z [DG] [DG] | z [B,E] [B,E] | z!<(! [EA]2 | z [EA]2!<)! |$ z [^DF] [DF] | %23
+ z [^DF] [DF] | z [=DF]2 | z [DF]2 | z [DG]2 |$ z [CE] z | z [CE] [CE] | z [CDF] [CDF] | %30
+ z [B,D] [B,D] | [B,D]/ ||$[I:staff +1] z/ z z | A,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] | %35
+ F,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] | G,, [D,G,B,] [D,G,B,] |$ D,, [D,G,B,] [D,G,B,] | %39
+ G,, [D,G,B,] [D,G,B,] | D,, [D,G,B,] [D,G,B,] | A,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] |$ %43
+ D,, [D,A,C] [D,A,C] | D,, [D,F,C] [D,F,C] | G,, [D,G,B,] [D,G,B,] | D,, [D,G,B,] [D,G,B,] | %47
+ G,, [D,G,B,] [D,G,B,] |$ [D,D]3 | A,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] | %51
+ F,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] |$ G,, [D,G,B,] [D,G,B,] | D,, [D,G,B,] [D,G,B,] | %55
+ E,, [E,^G,D] [E,G,D] |!<(! E,, [E,^G,D] [E,G,D]!<)! | ^C,, [=G,_B,E] [G,B,E] | [G,_B,E]2 z |$ %59
+ D,, [G,=B,D] [G,B,D] |"_cresc." [G,B,D]2 z | A,, [D,F,C] [D,F,C] | D,, [D,F,C] [D,F,C] | %63
+ G,, [D,G,B,] [D,G,B,] | .G,,,/ z/ z z || %65
+V:3
+ x3 | x3 | x3 | x3 | [A,,A,]3 |$ [G,,G,]3 |!>(! [F,,F,]3!>)! | [D,,D,]3 | x3 | x3 | x3 |$ x3 | %12
+ [B,,B,]3 | [A,,A,]3 |!>(! [G,,G,]3-!>)! | [G,,G,]3 | x3 |$ C, !>![A,C]2 | z [G,B,] [G,B,] | E,3 | %20
+ A,, !>![A,C]2 | F,,!>(! !>![A,C]2!>)! |$ z [F,B,] [F,B,] | z [F,B,] [F,B,] | z A,2 | z A,2 | %26
+ z G,2 |$ z G,2 | (!2!A,,3 |!>(! !5!D,,3)!>)! | (!5!G,,2 !2!D, | !1!G,/) ||$ x5/2 | x3 | x3 | x3 | %36
+ x3 | x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | %55
+ x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 | x3 || %65
+V:4
+ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | %18
+ B,,6 | E,6 | x6 | x6 |$ B,,6 | B,,6 | =D,6 | C,6 | B,,6 |$ C,6 | x6 | x6 | x6 | x ||$ x5 | x6 | %34
+ x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 |$ %53
+ x6 | x6 | x6 | x6 | x6 | x6 |$ x6 | x6 | x6 | x6 | x6 | x6 || %65
+

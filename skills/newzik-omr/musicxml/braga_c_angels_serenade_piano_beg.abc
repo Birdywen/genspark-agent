@@ -1,0 +1,46 @@
+X:1
+T:Angel'sserenade Sheet music supplied by www.sperfectscores.com
+%%score ( 1 2 )
+L:1/8
+Q:1/4=81
+M:3/4
+I:linebreak $
+K:Cmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M5: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 bass nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:1
+"^Slow"[I:staff -1] z G,B,G,EB, | (G2 E2 B,2) | z G,B,G,EB, | (G2 E2 !2!B2) || %4
+S[I:staff +1] E,, (!5!G,!4!B,G,!2!EB,) |[I:staff -1] e6 |$[I:staff +1] E,, (G,B,G,EB,) | %7
+[I:staff -1] !1!c4 !3!B2 |[I:staff +1] G,, (G,B,G,E)B,- |[I:staff -1] G2 D2 E2 | %10
+[I:staff +1] F,, (C,A,F,C!4!A,) |[I:staff -1] A4 !1!c2 |[I:staff +1] F,, (A,CA,FC) |$ %13
+[I:staff -1] e6 | (e6 | d4 !1!=B2) |[I:staff +1] B,, (A,B,A,DB,) |[I:staff -1] A2 =E2 F2 | %18
+[I:staff +1] E,, (G,B,G,EB,-) |[I:staff -1] !1!G4 !2!B2 |$ (g6 | f6) | (f6 | e4 d2) | %24
+ (!5!f2 e2 d2 | c2 G2 !4!c2) |$ (B6 | A4) c2 |"^Angel's Serenade (Braga)" (a6 | g6) | (g6 | %31
+ f4) e2 |$ (!2!d!1!c!2!=B!3!c!1!G!4!_B | AFCDG>F | EG,B,G,EB, |!fine! [EG]4) z2 || %36
+"^Poco Agitato" z _G,B,G,EB, | (_G2 E2 B,2) |$[I:staff +1] !5!E,,"^poco animato" (!5!_C,E,A,E,C,) | %39
+ E,, (_C,E,A,E,C,) | E,, (B,,E,_G,E,B,,) | E,, (B,, _G,2 E,B,,) | E,, (_C,E,A,E,C,) | %43
+ E,, (_C,E,A,E,C,) |$ E,, (B,,E,_G,E,B,,) | E,, (B,,[E,E,]_G,E,B,,) |[I:staff -1] f4 f2 | %47
+[I:staff +1] F,, (F,=A,CA,F,) |[I:staff -1] (e4 !2!_d2) |[I:staff +1] =G,, (_D,_F,B,F,[D,D,]) |$ %50
+[I:staff -1] !2!c6 |[I:staff +1] =A,, (E,_G,_CG,E,) |"_dimin."[I:staff -1] B6 | %53
+[I:staff +1] C, (E,_G,=A,G,E,) |!D.S.![I:staff -1] [DB]4 =B2 | (c4 d2) |] %56
+V:2
+ E,,2 z2 z2 | x6 | E,,2 z2 z2 | x6 ||"_espressivo"[I:staff -1] e6- | %5
+[I:staff +1] (G2 !2!E2 !4!B,2) |$[I:staff -1] !2!d6 |[I:staff +1] (G2 E2 B,2) | %8
+[I:staff -1] !5!c2 B2 A2 |[I:staff +1] B,2 (G,2 B,2) |[I:staff -1] B6 | %11
+[I:staff +1] (!1!F2 C2 A,2) |[I:staff -1] !4!f6 |$[I:staff +1] (F2 C2 A,2) | B,, (!5!A,B,A,DB,) | %15
+ (F2 B,2 A,2) |[I:staff -1] !5!d2 c2 _B2 |[I:staff +1] (F2 D2 B,2) |[I:staff -1] B6 | %19
+[I:staff +1] B,2 (E2 B,2) |$ E,, (G,B,G,EB,) | (G2 E2 B,2) | E,, (G,B,G,EB,) | (G2 E2 B,2) | %24
+ E,, (G,B,G,EB,) | =E,,2 (C2 B,2) |$ F,, (C,A,F,CA,) | (F2 C2 A,2) | (F,,!5!C,!2!A,!3!F, !1!C2) | %29
+ (G,,C,B,=E, C2) | (A,,C,A,F, C2) | (=A,,C,F,C, _G,2) |$ [B,,A,]6- |!>(! [B,,A,]6 | %34
+"^poco rit." E,,6-!>)! | E,,4 z2 || E,,2 z2 z2 | z6 |$[I:staff -1] (!4!e2 !1!_c2 !2!_d2 | %39
+ e2 _g2 f2) | e4- e>B | B6 | (E2 !1!_C2 !2!_D2 | E2 _G2 F2 |$ E6) | _g2 !3!g2 g2 | %46
+[I:staff +1] F,, (F,B,_DB,F,) |[I:staff -1] c'3 !3!=a!1!fe |[I:staff +1] _G,, (_D,_G,B,G,D,) | %49
+[I:staff -1] _d2 !2!d2 d2 |$[I:staff +1] A,, (E,A,CA,E,) |[I:staff -1] _c6 | %52
+!>(![I:staff +1] B,, (E,_G,B,G,E,) |[I:staff -1] =A6!>)! | %54
+"^www.theperfectscores.com"[I:staff +1] [B,,A,]4 z2 | z6 |] %56
+

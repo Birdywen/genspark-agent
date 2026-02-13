@@ -1,0 +1,128 @@
+X:1
+T:Sheet music supplied by
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=88
+M:3/4
+I:linebreak $
+K:Amin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M69: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M33: placeholder (x) detected - possible missing note
+%! CHECK: M42: placeholder (x) detected - possible missing note
+%! CHECK: M49: placeholder (x) detected - possible missing note
+%! CHECK: M62: placeholder (x) detected - possible missing note
+%! CHECK: M79: placeholder (x) detected - possible missing note
+%! CHECK: M93: placeholder (x) detected - possible missing note
+%! CHECK: M103: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble 
+V:2 bass 
+V:3 bass 
+L:1/4
+V:1
+"^Andante con moto" (!5![EG]4 [DF]2 | [CE]4 [DF]2 | [EG]6 | [CE]2) z2 z2 | ([EG]4 [DF]2 |$ %5
+w: |||||
+ [CE]4 [DF]2 | [EG]6 |[I:staff +1] C,2 E,2 G,2) |!<(![I:staff -1] !1!!3![FA]4 [FA]2!<)! | %9
+w: ||||
+ [Ac]4 [FA]2 |$[I:staff +1] C,2 E,2 G,2 |[I:staff -1] z6 | !2!!4![DF]4 [DF]2 | %13
+w: ||||
+!>(! [DF]4 [EG]2!>)! | [CE]4 z2 |$ z6 |!<(! !1!!3![FA]4 [FA]2!<)! |!>(! ([Ac]4 [FA]2!>)! | %18
+w: |||||
+ !1!!2![EG]4) z2 | z6 |$ !2!D4 !3!D2 |!>(! (!2!D4 E2!>)! | C4) z2 | %23
+w: |||||
+!>(!"^The Doll Sleeps." !>!!2!C4 !3!C2!>)! | !2!C4 z2 |$[K:bass]!>(! !>!!2!C,,4!>)! !3!C,,2 | %26
+w: |||
+"_dimin." !2!C,,6- |"^rall." C,,6- | C,,2 z2 z2 | !fermata!z2 z2 ||$ %30
+w: ||||
+[M:4/4][Q:1/4=113]"^Moderato"[K:treble]"_con espress." (!3!GF | E2 !3!G!1!c B2 !1!G!4!d | %32
+w: ||
+ e2 b2) z2 (!3!eB | A2 !5!f!2!d !3!c2 B2 | c4) z2 (!3!GF |$ E2 !2!Gc B2 !1!G!4!d | %36
+w: ||||
+ c2 e2) z2 (!3!cB | A2 fd c2 B2 | c6) !5!e^d |$ %39
+w: |||
+[I:staff +1] z [^G,B,][G,B,][G,B,] z [A,C][A,C][A,C] |[I:staff -1] (!3!B2 E2) z2 (!5!e^d | %41
+w: ||
+[I:staff +1] z [^G,B,][G,B,][G,B,] !5!E,.[A,C] [^F,F,]D | %42
+w: |
+[I:staff -1] d2) z2 !fermata!z2"^a tempo" (!3!GF | E2 !2!Gc B2 !1!G!4!d |$ c2 e2) z2 (!3!cB | %45
+w: |||
+ A2 fd c2"_Se" B2 | g4) z2 (!3!cB | A2 fd c2 B2 |"_SE" g4) z2 (!3!cB |$ A2 fd c2 B2 | %50
+w: |||||
+ c)"^The Doll W akes" z3/2 [c^f]/ [cef] z3/2 [c=eg]/ | %51
+w: |
+[I:staff +1] [G,CE] z3/2 [G,DF]/ [G,DF] z3/2 [G,B,F]/ |[I:staff -1] [fgd']4 || %53
+w: ||
+[M:2/4][Q:1/4=114]"^Allegretto moderato" (!5!e'/c'/g (e'/)c'/g) | !2!bf' f'2 |$ %55
+w: ||
+ (!4!d'/b/g) (d'/b/g) | !3!c'e' e'2 | (e'/c'/g) (e'/c'/g) | b.d' d'2 | (!4!d'/b/g) (d'/b/g) | %60
+w: |||||
+ !3!c'e'c' z |:$ (d'>e' d'c' | b>c' !2!b!1!g | ^f/!3!g/!4!a !>!!2!a2) | g/a/b !>!!3!b2 | %65
+w: |||||
+ (!4!d'>e' d'c' | b>c' b!1!g |$ !2!^f/)!3!g/a af | g/g.!1!g[I:staff +1] z x/ | %69
+w: ||||
+[I:staff -1] (e'/c'/g) (e'/c'/g) | !2!bd' d'2 | (!4!d'/b/g) (d'/b/g) | c'e' e'2 |$ %73
+w: ||||
+ (e'/c'/g) (e'/c'/g) | !2!bd' d'2 | (!4!d'/b/g) (d'/b/g) | c'e'c' z :|$ [af']z[af'] z | %78
+w: ||||F *|
+ [ge']z[ec'] z | !3!b(!2!b/c'/ d'b | c')(!2!c'/d'/ e'c' | [af'])z[af'] z |$ .[ge']z.[ec'] z | %83
+w: |p * * * *||S *||
+ (.!3!b!2!b/c'/ d'b | .!1!c').!3!!5![e'g']!1!!3![c'e'].[e'g'] | %85
+w: ||
+ .[c'e'](g'/f'/ e'/!>(!d'/c'/!2!b/!>)! | .!1!c').[e'g'].[c'e'].[e'g'] |$ %87
+w: ||
+ .[c'e'](g'/f'/"_JE" e'/!>(!d'/c'/!2!b/!>)! | .!1!c')(!3!g/"_JE"^f/ g/f/g/f/ | %89
+w: ||
+ .g)(!1!g/"_JE"a/ b/c'/d'/b/ | .c')(!1!g/"_JE"!2!^f/ !3!g/f/g/f/ | .g)"_SE"!1!g/a/ b/c'/d'/b/ |$ %92
+w: |||
+"^Qua""_tS" .c'(!5!e'/d'/ c'/b/a/g/ | f'/e'/!4!d'/c'/ b/a/!3!g/f/ | e/!2!g/c'/b/ a/g/f/e/) | %95
+w: |||
+ d/c/!4!B/A/ G/F/E/D/ | C z e/(c/G) |$ (e/c/G) (!4!d/B/G) | c z (e'/c'/g) | (e'/c'/g) (!4!d'/b/g) | %100
+w: |||||
+ .!3!c'2 z3/2 [egc']/ | [egc']2 z3/2 [EGc]/ |"^JE" !fermata![EGc]4 |] %103
+w: |||
+V:2
+ (C,2 E,2 G,2 | C,2 E,2 G,2 | C,2 E,2 G,2 | C,2 E,2 G,2) | (C,2 E,2 G,2 |$ C,2 E,2 G,2 | %6
+ C,2 E,2 G,2 |[I:staff -1] [CE]2) z2 z2 |[I:staff +1] (C,2 F,2 A,2 | C,2 F,2 A,2) |$ %10
+[I:staff -1] !2!!1![EG]4 z2 |[I:staff +1] C,2 E,2 G,2 | (B,,2 D,2 G,2 | B,,2 D,2 G,2) | %14
+ (C,2 E,2 G,2 |$ C,2 E,2 G,2) | (C,2 F,2 A,2 | C,2 F,2 A,2) | (C,2 E,2 G,2 | C,2 E,2 G,2) |$ %20
+ (B,,2 F,2 G,2 | B,,2 F,2 G,2) | (C,2 E,2 G,2) | (C,2 F,2 _A,2) | (C,2 E,2 G,2) |$ %25
+"_The Doll's Dream" (C,2 F,2 _A,2) | (C,2 E,2 G,2 | C,2 E,2 G,2 | C,2) z2 z2 | !fermata!z2 z2 ||$ %30
+[M:4/4] z2 | z [E,G,][E,G,][E,G,] z [F,G,][F,G,][F,G,] | z .[G,C].[G,C][G,C] z [G,C].[G,C][G,C] | %33
+ z [A,D][A,D][A,D] G,[CE] G,.[DF] | z [EG][EG][DF] [CE]2 z2 |$ %35
+ z [E,G,][E,G,][E,G,] z [F,G,][F,G,][F,G,] | z [G,C].[G,C][G,C] z [G,C][G,C][G,C] | %37
+ z [A,D][A,D][A,D] G,.[CE] G,.[DF] | z [EG][EG][DF] [CE]2 z2 |$ E,4 E,4 | %40
+ z [^G,B,][G,B,]B,/ G,/ z B,[G,B,][G,B,] | E,4[I:staff -1] z2[I:staff +1] E,2 | %42
+ z [B,D][B,D][A,C] !fermata![G,B,]2 z2 | z G,[E,G,][E,G,] z [F,G,][F,G,][F,G,] |$ %44
+ z [G,C][G,C][G,C] z [G,C][G,C][G,C] | z [A,D][A,D][A,D] G,[CE] [F,F,][G,D] | %46
+ z [G,C][G,C][G,C] z [G,C][G,C]C/ G,/ | z [A,D]"_The Doll Dances"[A,D][A,D] G,[CE] F,[G,D] | %48
+ z [G,C][G,C][G,C] z [G,C][G,C][G,C] |$ z [A,D][A,D][A,D] [G,G,][CE] G,[DF] | %50
+ [CE] z3/2 !4![_A,_CE]/ [A,CE] z3/2 [G,=CE]/ | %51
+"_cresc."[I:staff -1] [ceg] z3/2 [dfb]/ [dfb] z3/2 [fgd']/ |[I:staff +1] [G,B,F]4 || %53
+[M:2/4][K:treble] !4!C[EG]C[EG] | G,[DF]G,.[DF] |$ G,[DF]G,[DF] | !4!C[EG]C[EG] | C[EG]C[EG] | %58
+ G,[DF]G,.[DF] | G,[DF]"_www.theperfectscores.com"G,[DF] | [CE][CE][CE] z |:$ %61
+[K:bass] !4!G,.[B,D]G,.[B,D] | G,.[B,D]G,.[B,D] | D,!3!!1![^F,C]D,.[F,C] | !4!G,.[B,D]G,.[B,D] | %65
+ G,.[B,D]G,.[B,D] | G,.[B,D]G,.[B,D] |$ D,.!2!!1![A,C]D,.[A,C] | %68
+ !3![G,B,][G,B,].[G,B,][I:staff -1] z |[I:staff +1][K:treble] C[EG]C.[EG] | G,.[DF]G,.[DF] | %71
+ G,.[DF]G,.[DF] | C.[EG]C.[EG] |$ C[EG]C[EG] | G,[DF]G,[DF] | G,[DF]G,[DF] | [CE][CE][CE] z :|$ %77
+ !5!C[FA]C[FA] | .C[EG]C[EG] | G,.[DF]G,[DF] | .C[EG]C"^www.theperlectscores.com".[EG] | %81
+ .C[FA].C[FA] |$ .C.[EG]C.[EG] | G,"_Sva".[DF]G,.[DF] | !3![CE] z z2 |[K:bass] z2 ([G,DF]2 | %86
+ .[CE]) z z2 |$ z2 ([G,DF]2 | [CE]) z[K:treble] (!5!!3!!1![GBd]2 | .!2![ce]) z ([Gdf]2 | %90
+ .[ce]) z ([GBd]2 | .[ce]) z ([Gdf]2 |$ .[ce]) z z2 |[K:bass] z2 ([G,B,D]2 | !2!!1![CE]) z z2 | %95
+ z2 ([G,,B,,D,]2 | .[C,E,]) z .[C,E,] z |$ .[C,E,] z .[G,,B,,D,] z | .[C,E,] z .!2!!1![CE] z | %99
+ .[CE] z .[G,B,D] z | .[CE]2 z3/2"^Sf 5" [C,E,G,]/ | %101
+"_www,theperlectscores.cor" [C,E,G,]2 z3/2 [C,E,G,]/ | !fermata![C,E,G,]4 |] %103
+V:3
+ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | %19
+ x3 |$ x3 | x3 | x3 | x3 | x3 |$ x3 | x3 | x3 | x3 | x2 ||$[M:4/4] x | C,2 !4!D,2 | !5!E,2 E,2 | %33
+ !5!F,2 G, G, | !5!C z z2 |$ C,2 !4!D,2 | !5!E,2 E,2 | F,2 G, G, | !5!C z z2 |$ %39
+[I:staff -1] e !2!B/d/ c B/A/ | x2[I:staff +1] E,2 |[I:staff -1] e"_poco rit." !2!B/d/ c d/e/ | %42
+[I:staff +1] !5!G, z3/2 x3/2 | C,2 !4!D,2 |$ !5!E,2 E,2 | F,3 G, | E,2 E,2 | F,2 G, F, | E,2 E,2 |$ %49
+ F,3 G, | x3 | x3 | x2 ||[M:2/4][K:treble] x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 |:$[K:bass] x2 | %62
+ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 |[K:treble] x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 :|$ x2 | x2 | %79
+ x2 | x2 | x2 |$ x2 | x2 | x2 |[K:bass] x2 | x2 |$ x2 | x[K:treble] x | x2 | x2 | x2 |$ x2 | %93
+[K:bass] x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 |] %103
+

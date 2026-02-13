@@ -1,0 +1,137 @@
+X:1
+T:Ecossaises Sheet music supplied by www.theperfectscores.com
+C:L van Beethoven
+%%score 1 ( 2 3 )
+L:1/4
+Q:1/4=150
+M:2/4
+I:linebreak $
+K:Cmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M46: placeholder (x) detected - possible missing note
+%! CHECK: M19: placeholder (x) detected - possible missing note
+%! CHECK: M38: placeholder (x) detected - possible missing note
+%! CHECK: M55: placeholder (x) detected - possible missing note
+%! CHECK: M74: placeholder (x) detected - possible missing note
+%! CHECK: M93: placeholder (x) detected - possible missing note
+%! CHECK: M112: placeholder (x) detected - possible missing note
+%! CHECK: M131: placeholder (x) detected - possible missing note
+%! CHECK: M150: placeholder (x) detected - possible missing note
+%! CHECK: M169: placeholder (x) detected - possible missing note
+%! CHECK: M188: placeholder (x) detected - possible missing note
+%! CHECK: M205: placeholder (x) detected - possible missing note
+%! CHECK: M224: placeholder (x) detected - possible missing note
+%! CHECK: M239: placeholder (x) detected - possible missing note
+%! CHECK: M249: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 4"
+L:1/8
+V:2 bass nm="Piano Collection for Beginners - Grade 4"
+V:3 bass 
+V:1
+ (!1!G"^Leggiero ed animato"!3!B) !wedge!!1!!2![GB]2 | (!4![Gc]!3!B) !wedge!!1!!2![GB]2 | %2
+ (!5![Ge]!3!B) !2![GB]2 | (!4![Gc]!3!B) [GB]2 | !4![DF]!3!B [DB]2 | [EG]!4!B !2![EB]2 |$ %6
+ !tenuto![FA]!4!B !2![FB]2 |!<(! (B!2![fa])!<)! !2!!3![fa]2 | (GB) [GB]2 | ([Gc]B) [GB]2 | %10
+ ([Ge]B) [GB]2 | ([Gc]B) [GB]2 |$ [DF]B [DB]2 | [EG]B [GB]2 | ([FA]B) [FB]2 | [DF]B [DB]2 | %16
+ E2 [B,B]2 |!<(! C[Ec] !2!!5![Ec]2!<)! | D2 [Fd]2 |$!<(! (Ee)!<)! [Ge]2 | F2 [Af]2 | %21
+!<(! (Gg)!<)! [Bg]2 |!<(! (Aafd!<)! |!>(! eg)(eB)!>)! | !wedge!G2 [B,B]2 | (C"^legg."c) [Ec]2 |$ %26
+ D2 [Fd]2 | (Ee) [Ge]2 | D2 [Fd]2 | (Gg) [Bg]2 | (Aa.f.d | .e2) z2 ||"^breve" (b!4!g!2!eB) | %33
+ !wedge!G2 z2 |$ bgeB | G2 z2 | (5:4:5(b/c'/b/=a/b/ !5!c'b | _ag!1!fe) | (bafd | BAFD | (b)geB) |$ %41
+ !wedge!!2!G2 z2 | (bgeB | G2) z2 | (5:4:5(b/c'/b/=a/b/ !5!c'b) | !3!_a!4!b !2!fb | %46
+"^senza ritenuto" db !1!Bb | Ab !wedge!Fd' |$ !1!E2 [B,B]2 |!<(! ((Cc))!<)! [Ec]2 | D2 [Fd]2 | %51
+!<(! (Ee)!<)! [Ge]2 | F2 [Af]2 |!<(! (Gg)!<)! [Bg]2 | (Aafd | eg!wedge!e!wedge!B) |$ %56
+ !wedge!G2 [B,B]2 |"_dimin." ((Cc)) [Ec]2 | D2 [Fd]2 | (Ee) [Ge]2 | D2 [Fd]2 | (Gg) [Bg]2 | (Aafd | %63
+ e2) z2 ||$"^ancora tranquillo" [EGBe]2 (!3![Bd][Ac] | [GB]2) [GB]2 | %66
+ ([Ac]!1!!3![GB]!2!!5![Ac][^F=A] | [GB]2) .[GB]2 | [=F_A]2 (!wedge!!3!!5![fa]!wedge![eg] | %69
+ [df]2) (!3!!5![df][ce] | .[Bd]2) ([Bd][Ac] | [GB]2) .[FA]2 |$ %72
+"^poco piu animato" [EGBe]2 ([Bd][Ac] | [GB]2) [GB]2 | ([Ac][GB][Ac][^F=A]) |"^poco  fz" ([GB]4 | %76
+"^ps" [=F_A]2) (!5!!3!!2![ac']!wedge!!4![gb] | %77
+ !wedge![fa]!wedge!!5!!3!!5!!3![eg]!wedge![df]!wedge![ce]) |!<(! !wedge![Bd]2 !wedge!!2!!4![Ac]2 | %79
+ [GB]2 !2!!4![FA]2!<)! |$"^a tempo" E2 [B,B]2 |!<(! ((Cc))!<)! [Ec]2 | D2 [Fd]2 | (Ee) [Ge]2 | %84
+ F2 [Af]2 |!<(! (Gg)!<)! [Bg]2 |!<(! (Aafd!<)! |!>(! egeB)!>)! |$"^animato" !wedge!G2 [B,B]2 | %89
+ (Cc) [Ec]2 | D2 [Fd]2 | (Ee) [Ge]2 | F2 [Af]2 | (Gg) [Bg]2 |"^a tempo" (Aafd | e2) z2 ||$ %96
+"^espressivo" z (!1!B,!2!EG | B2 A2) | z FA!4!d | f2 e2 | z (B,EG | B2 A2) | z (!4!afd | %103
+ e!4!geB) |$ z B,EG | (B2 A2) | z F.Ad | (f2 e2) | z .B,EG | (B2 A2) | z (af"_rit."d | %111
+ e!5!g!4!eB) |$ E2 [B,B]2 | (Cc) [Ec]2 | D2 [Fd]2 |"_cresc." (Ee) [Ge]2 | F2 [Af]2 | (Gg) [Bg]2 | %118
+ Aafd | egeB |$"_bd" G2 [B,B]2 | (Cc) .[Ec]2 | D2 [Fd]2 | (Ee) [Ge]2 | F2 .[Af]2 | (Gg) [Bg]2 | %126
+!<(! (Aa)!wedge!fd!<)! |"_JE" !wedge!e2 z2 ||$"^con grazia" (!1!!5![Bg]2 (.!2!!5![Bg].[Af] | %129
+ [Ge]4)) | ([G,E]2 [G,E][B,F] | [EG]2) z2 | z2 (!3!!5![fa][eg] | [df]4) | %134
+"_legg." ([DF]!2!!4![EG]!1!!3![FA][GB] | [Ac]4) |$ !2!!4![GB]2 (.[Bg].[Af] | [Ge]4) | %138
+ [G,E]2 ([G,E].[B,F] | [EG]4) | z2 ([fa][eg] | [df]4) | [DF][EG][FA][GB] | [Ac]4 |$ [GB]2 [B,B]2 | %145
+ (C"^a tempo"c) [Ec]2 |"_cresci molto" D2 [Fd]2 | (Ee) [Ge]2 | F2 [Af]2 | (Gg) [Bg]2 | %150
+!<(! (A(afd!<)! | eg)eB) |$"_P subito" G2 [B,B]2 | (Cc) [Ec]2 | D2 [Fd]2 |"_dimin." (Ee) [Ge]2 | %156
+ F2 [Af]2 | (Gg) [Bg]2 | (Aafd | e2) z2 ||$ ([GB](3c/"^(b)"B/=A/ B)!wedge!e | [EG]4 | %162
+ (e(3f/"^(c)"e/d/ e).g |"_SE" [GB]4 |"_mf non legato" BGcB | AG!1!FE | D!3!E!1!FG | A!4!B!1!cd |$ %168
+ (e(3f/e/d/ !wedge!e)g |"^Se" [EG]4 | (B(3c/B/=A/ !wedge!B)e | [GB]4 | BGcB | AGFE | %174
+"_molto cresc." DEFG | DC!3!B,A, |$ G,2 [B,B]2 | Cc [Ec]2 | D2 [Fd]2 | Ee [Ge]2 | F2 [Af]2 | %181
+ G.g [Bg]2 | (Aafd |!>(! egeB)!>)! |$ !wedge!G2 [B,B]2 | (Cc) [Ec]2 | D2 [Fd]2 | (Ee) [Ge]2 | %188
+ F2 [Af]2 | (Gg) [Bg]2 | (Aafd | .e2) z2 ||$ (gb) .[gb]2 | ([gc']b) .[gb]2 | ([ge']b) .[gb]2 | %195
+ ([gc']b) .[gb]2 | ([df]b) [db]2 | ([eg]b) .[eb]2 | ([fa]b) .[fb]2 | ((b[f'a'])) [f'a']2 | %200
+ (gb) .[gb]2 |$ ([gc']b) .[gb]2 | ([ge']b) .[gb]2 | ([gc']b) .[gb]2 |!<(! ([df]b) .[db]2 | %205
+ ([eg]b) .[eb]2!<)! |!>(! ([fa]b) .[fb]2 | ([df]b) .[db]2!>)! | e2 [Bb]2 | cc' [ec']2 |$ %210
+ d2 [fd']2 | ee' [ge']2 | f2 [af']2 | g"^Ecossaises (Beethoven)"g' [bg']2 | (aa'f'd' | e'g'e'b | %216
+ .g2) [Bb]2 | cc' [ec']2 | d2 [fd']2 |$ ee' [ge']2 | f2 [af']2 | gg' [bg']2 | (aa'f'd') | e'2 z2 | %224
+ E2"^Tempo I" [B,B]2 | (Cc) [Ec]2 | D2 [Fd]2 | ((Ee)) [Ge]2 |$ !wedge!F2 [Af]2 | (Gg) [Bg]2 | %230
+ (Aafd | egeB) |"_SS" G2 [B,EB]2 | Cc"^tre corde JE" [CEc]2 | D2"^JE" [DFd]2 | E"_Si"e [EGe]2 | %236
+"_fi" F2 [FAf]2 | Gg"_SE" [GBg]2 |$ dafd | eBGE | DAFD | EB,[K:bass]G,E, | D,A,F,D, | E,B,,G,, z | %244
+ z4 | E,,2 z2 |]$[K:Cmin][M:4/4][Q:1/4=90][K:treble] (c'/b/=a/b/ c'b) | %247
+[M:4/4]"^b)" ([GB]/c/B/=A/ !wedge!B)e |[M:4/4] (e/f/"_www.theperlectscores.com"e/d/ e).f | %249
+V:2
+ E, !wedge![G,B,] | E, !wedge![G,B,] | E, !wedge![G,B,] | E, !wedge![G,B,] | B,, [F,B,] | %5
+ B,, [G,B,] |$ B,, [A,B,] | B,, !wedge![B,D] | E, [G,B,] | E, [G,B,] | E, [G,B,] | E, [G,B,] |$ %12
+ B,, [F,B,] | B,, [G,B,] |!>(! B,, [A,B,] | B,, B,!>)! |"_marcato" G,, G,,, | A,,, A,, | %18
+ B,, B,,, |$ !wedge!C,, C, | !wedge!D, D,, | !wedge!E,, !wedge!E, | B,, B,,, | E,, E, | %24
+ [E,,E,] [G,,G,] |"_dimin." A,, [C,A,] |$ B,, [F,B,] | C, [G,C] | D, [B,D] |"_(a)" E, [B,E] | %30
+ B,, B, | E, E,, || E, [G,B,] | E, [G,B,] |$ E, [G,B,] | E, [G,B,] | E, [G,B,] | E, [G,B,] | %38
+ B,, [F,B,] | B,, [F,B,] | E, [G,B,] |$ E, [G,B,] | E, [G,B,] | E, [G,B,] | E, [G,B,] |{/F,A,} x2 | %46
+ B,, [F,B,] | B,, [F,B,] |$"^J senza affrettando" G,, G,,, | A,,, !wedge!A,, | B,, B,,, | C,, C, | %52
+ D, D,, | E,, E, | B,, B,,, |!>(! E,, E,!>)! |$ [E,,E,] [G,,G,] | A,, [C,A,] | B,, [F,B,] | %59
+ C, [G,C] | D, [B,D] | E, [B,E] | B,, B, | E, E,, ||$ E,, [E,G,] | E,, [E,G,] | E,, [E,A,] | %67
+ E,, [E,G,] | B,,, [B,,D,] | B,,, [B,,D,] | B,,, [B,,D,] | B,,, [B,,D,] |$ E,, [E,G,] | %73
+ E,, [E,G,] | E,, [E,A,] | E,, [E,G,] | B,,, [B,,D,] | B,,, [B,,D,] | %78
+"_www.theperfectscores.com" B,,,"^allarg." B,, | B,,, B,, |$ !wedge!G,, G,,, | A,,, !wedge!A,, | %82
+ B,, B,,, |!<(! C,,!<)! !wedge!C, | !wedge!D, !wedge!D,, | E,, !wedge!E, | B,, B,,, | E,, E, |$ %88
+ [E,,E,] [G,,G,] |"_dimin." A,, [C,A,] | B,, [F,B,] | C, [G,C] | D, [B,D] | E, [B,E] | %94
+ B,, !wedge!B, | E, E,, ||$ .G,,!<(! .G,!<)! |!>(! F,, .F,!>)! | .B,,,!<(! B,,!<)! | %99
+!>(! E,, .E,!>)! | G,,!<(! .G,!<)! |!>(! F,, .F,!>)! | .B,,, .B,, | E,, .E, |$ (G,, G,) | %105
+ (F,, F,) | (B,,, .B,,) | (E,, .E,) | (G,, G,) | (F,,"^poco" .F,) | %110
+"_www.theperfectscores.com" B,,, .B,, | E,, .E, |$ G,, G,,, | A,,, A,, | B,, B,,, | C,, C, | %116
+ D, D,, | E,, E, | B,, B,,, | E,, E, |$"^risoluto" [E,,E,] [G,,G,] | A,, .[C,A,] | B,, [F,B,] | %123
+ C, [G,C] | D, [B,D] | E, [B,E] | B,, B, | E, E,, ||$ E, [G,B,] | E, [G,B,] | E,, [E,G,] | %131
+ E,, [E,G,] | .B,,, .[B,,D,] | .B,,, .[B,,D,] | B,,, [B,,D,] | B,,, [B,,D,] |$ E,, [E,G,] | %137
+ E,, [E,G,] | E,, [E,G,] | E,, [E,G,] | B,,, [B,,D,] | B,,, [B,,D,] | %142
+"_www,theperfectscores.con" B,,, [B,,D,] | B,,,"^poco rit." [B,,D,] |$ G,, G,,, | A,,, A,, | %146
+ B,, B,,, | C,, C, | D, D,, | E,, E, | B,, B,,, | E,,!>(! E,!>)! |$ E, [G,,G,] | A,, [E,A,] | %154
+ B,, [F,B,] | C, [G,C] | D, [B,D] | E, [B,E] | B,, B, | E, E,, ||$ E,, [E,G,] | E,,"^SE" [E,G,] | %162
+ E,, [E,G,] | E,, [E,G,] | !3!G,/E,/A,/G,/ | C/B,/A,/G,/ |!<(! F,/G,/A,/B,/ | C/G,/A,/F,/!<)! |$ %168
+ E,, [E,G,] | E,,"^JE" [E,G,] | E,, [E,G,] | E,,"^JE" [E,G,] | !2!G,/!4!E,/!2!A,/!1!G,/ | %173
+ F,/E,/!1!D,/C,/ |!<(! B,,/C,/D,/C,/ | B,,/!4!A,,/!1!G,,/F,,/!<)! |$ E,, G,,, | A,,, A,, | %178
+ B,, B,,, | C,, C, | D, D,, | E,, E, | B,, B,,, | E,, E, |$ [E,,E,] [G,,G,] | A,, [C,A,] | %186
+ B,, [F,B,] |"_dimin." C, [G,C] | D, [B,D] | E, [B,E] |"^rit. con grazia" B,, B, | E, E,, ||$ %192
+[K:treble]"_una corda" E [GB] | E [GB] | E [GB] |"_simile" E [GB] | B, [FB] | B, [GB] | B, [AB] | %199
+ B, [Bd] | E [GB] |$ E [GB] | E [GB] | E [GB] | B, [FB] | B, [GB] | B, [AB] | B, B | %208
+ G"_senza ped." G, |"_com" A, A |$ B B, | C c | d D | E e | B B, | E z | [E,E] [G,G] | A, [CA] | %218
+ B, [FB] |$ C [Gc] | D [Bd] | E [Be] | B, B | E z |[K:bass] G,, G,,, |"_cresc." A,,, A,, | %226
+ B,, B,,, | C,, !wedge!C, |$"^id" !wedge!D, D,, | E,, E, | B,, B,,, | E,, !wedge!E, | %232
+ [E,,E,] [G,,E,G,] | [A,,,A,,] [A,,E,A,] | [B,,,B,,] [B,,F,B,] | [C,,C,] [C,G,C] | %236
+ [D,,D,] [D,B,D] | [E,,E,] [E,B,E] |$[K:treble] [B,FA] [B,FA] | [EG] z | %240
+[K:bass] [B,,F,A,] [B,,F,A,] | !wedge![E,G,] z |"_SES fs" B,,, B,,, | E,, z/ E,,/ | %244
+ B,,,/E,,/B,,,/G,,,/ |"^Sz" z2 |]$[M:4/4] z2 |[M:4/4] z4 |[M:4/4] z4 | %249
+V:3
+ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ %19
+ x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 || x2 | x2 |$ x2 | x2 | x2 | x2 | %38
+ x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | B,, [F,B,] | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | %55
+ x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 ||$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | %74
+ x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | %93
+ x2 | x2 | x2 ||$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ %112
+ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 ||$ x2 | x2 | x2 | %131
+ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | %150
+ x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 ||$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | %169
+ x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | %188
+ x2 | x2 | x2 | x2 ||$[K:treble] x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | %205
+ x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | %224
+[K:bass] x2 | x2 | x2 | x2 |$ x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 | x2 |$[K:treble] x2 | %239
+ x2 |[K:bass] x2 | x2 | x2 | x2 | x2 | x2 |]$[M:4/4] x2 |[M:4/4] x4 |[M:4/4] x4 | %249
+

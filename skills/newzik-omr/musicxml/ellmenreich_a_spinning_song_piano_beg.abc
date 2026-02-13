@@ -1,0 +1,101 @@
+X:1
+T:Spinning song Sheet music supplied by www.theperfectscores.com
+%%score { 1 | ( 2 3 ) }
+L:1/8
+Q:1/4=117
+M:2/4
+I:linebreak $
+K:Dmin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M8: placeholder (x) detected - possible missing note
+%! CHECK: M53: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M36: placeholder (x) detected - possible missing note
+%! CHECK: M55: placeholder (x) detected - possible missing note
+%! CHECK: M72: placeholder (x) detected - possible missing note
+%! CHECK: M82: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 3"
+V:2 bass 
+V:3 bass 
+V:1
+"^Allegretto"[I:staff +1] .!5!F,,!1!C,.F,,C, | .F,,C,F,,C, | %2
+w: ||
+"^leggiero"[I:staff -1] (A,/!<(!B,/C/D/ !3!C)!<)!!1!!5![A,F]- | %3
+w: |
+!>(! [A,F].!1!!4![CG] !3!!5![FA]2!>)! |$!<(! (A,/B,/C/D/ C)!<)![A,CF]- | %5
+w: ||
+ [A,CF]!>(!!1!!2!!4![B,CE] [A,CF]2!>)! |!<(! (A,/B,/C/D/ C)!<)![A,F]- | %7
+w: ||
+ [A,F]!>(!!1!!4![CG] !3!!5![FA]2!>)! |$ (A,/B,/C/D/ C)!>(![A,CF]-!>)! | %9
+w: ||
+ [A,CF]!>(!.[B,CE] [A,CF]2!>)! | z"_cresc." [EG]z[F_A] |"_cen" z [^F=A]z[GB] |$ %12
+w: |||
+ !3!!5![Bd]!2!!4![Ac]!1!!3![GB]!1!!2![F=A] | !1!!2![EG]!>![FG=B] [EGc] z | z [EG]z.[F_A] | %15
+w: do * * *|* S *|Cres *|
+ z .[^F=A]z.[GB] |$ .[Bd][Ac][GB].[=FA] | [EG]2 z2 | (A,/"^a tempo"B,/C/D/ C)!>(![A,F]-!>)! | %19
+w: ||||
+ [A,F].[CG] .[FA]2 |$!<(! (A,/G,/C/D/!<)! C)(((!>![A,CF] | [F,CF])))!>(!.[B,CE] [A,CF]2!>)! | %22
+w: |||
+!<(! (A,/B,/C/D/ C)!<)!!>![A,F]- | [A,F]!>(!.[CG] [FA]2!>)! |$ %24
+w: ||
+!<(! (A,/B,/C/D/ C)!<)!!>(!!>![A,CF]-!>)! | [A,CF]!>(!.[B,CE] .[A,CF]!>)! z | %26
+w: ||
+"^staccato" !3![_EF][EF][EF][EF] | [_EF][EF][EF][EF] |$!>(! !1!!3![DF][DF][DF][DF]!>)! | %29
+w: |||
+ [DF][DF][DF][DF] | [_EF][EF][EF][EF] | [_EF][EF][EF][EF] |$!>(! [DF][DF][DF][DF]!>)! | %33
+w: ||||
+!<(! [DF][DF]!2!!4![F_A][FA]!<)! | [FG][FG][FG][FG] | !4![_EG][EG][EG][EG] |$ %36
+w: |||
+!>(! [_EF][EF][EF][EF]!>)! | [DF][DF][DF][DF] | [CD^F][CDF][CDF][CDF] | [B,DG][B,DG][D=F][DF] |$ %40
+w: ||||
+ [D=E][DE][DE][DE] | [^CE]!4!E!3!E!2!E | [Ee]3 (d/!2!=B/ | ^c) z z2 |$!>(! !>!!4!=B3 (^G/!>)!E/ | %45
+w: |||||
+ A2) z z | [Ee]3 (d/=B/ | ^c) z z2 |$!>(! !>!!4!=B3 (^G/E/!>)! | A).A z _B | z =G z .=c | z4 |$ %52
+w: |||||||
+[I:staff +1] .F,,C,.F,,C, |[I:staff -1] (A,/"^legg."B,/C/D/ C)!>(![A,F]-!>)! | %54
+w: ||
+ [A,F]!>(!.[CG] [FA]2!>)! |!<(! (A,/B,/C/D/ C)!<)!!>(!"_si"[A,CF]!>)! |$ %56
+w: ||
+ [A,CF]!>(!.[B,CE] [A,CF]2!>)! |!<(! (A,/B,/C/D/!<)! C)[A,F]- | [A,F]!>(!.[CG] [FA]2!>)! | %59
+w: |||
+ (A,/B,/C/D/ C)!>(![A,CF]!>)! |$!>(!"_iS" [A,CF].[B,CE] [A,CF]2!>)! | z .[EG]z[F_A] | %62
+w: |||
+ z .[^F=A]z.[GB] | .[Bd].[Ac][GB].[=FA] |$ [EG]!>![FG=B] [EGc] z | z [EG]z.[F_A] | %66
+w: ||||
+ z .[^F=A]z.[GB] | [Bd].[Ac].[GB].[=FA] |$ [EG]2 z2 |!<(! (A,/B,/C/D/!<)! C)!>(![A,F]-!>)! | %70
+w: ||||
+ [A,F]!>(!.[CG] [FA]2!>)! |!<(! (A,/B,/C/D/ C)!<)![A,CF] |$!>(!"_ie" [A,CF].[B,CE]!>)! [A,CF]2 | %73
+w: |||
+!<(! (A,/B,/C/D/!<)! C)[A,F]- |!>(! [A,F].[CG] [FA]2!>)! |!<(! (A,/B,/C/D/ C)!<)![A,CF] |$ %76
+w: |||
+ [D,A,F].[A,B,E] (([D,A,F]2 | [CF]))D/E/ A2- | A(F/G/) F(D/E/) |$"_tit. moto" [A,F]4- | [A,F]4- | %81
+w: |||||
+ [A,F]2 z2 |] %82
+w: |
+V:2
+ x4 | x4 | .F,,C,.F,,C, | .F,,C,.F,,C, |$ F,,C,F,,C, | F,,C,F,,C, | F,,C,F,,C, | .F,,C,F,,C, |$ %8
+ .F,,C,.F,,C, | .F,,C,.F,,C, | C,,C,C,,C, | C,,C,C,,C, |$ C,,C,C,,C, | C,,!>!C,!>(!C,,!>)!C, | %14
+ C,,C,C,,C, | C,,C,C,,C, |$ C,,C,C,,C, |[I:staff -1] z (!1!C!3!=B,!2!_B,) | %18
+!<(![I:staff +1] F,,C,F,,!<)!C, |!>(! F,,C,F,,!>)!C, |$ F,,C,F,,C, | F,,C,F,,C, | .F,,C,F,,C, | %23
+"_www,theperlectscores.com" F,,C,F,,C, |$ .F,,.C,.F,,.C, | .F,,.C,.F,, z |"_marcato" C3 (A,/F,/ | %27
+ C) z z2 |$ !>!!2!B,3 (A,/G,/ | F,) z z2 | !>!C3 (A,/F,/ | C) z z2 |$ (B,2- B,/A,/B,/G,/) | %33
+ F, z z2 | !>!!1!D3 (=B,/G,/ | C) z z2 |$ !>!!1!C3 (A,/F,/ | B,) z z2 | !1!A,3 (^F,/D,/ | %39
+"_cresc." G,) z A,2 |$ !2!B,2 G,2 | A, z z2 | E,[^G,D][G,D][G,D] | E,[A,^C][A,C][A,C] |$ %44
+ E,[=B,D][B,D][B,D] | E,[A,^C][A,C][A,C] | E,[^G,D][G,D][G,D] | E,[A,^C][A,C][A,C] |$ %48
+ E,[=B,D][B,D][B,D] | [A,^C] z [_B,,_B,] z | [=G,,=G,] z [=C,=C] z | .F,,C,.F,,C, |$ x4 | %53
+ .F,,.C,.F,,.C, | .F,,C,.F,,C, | .F,,C,F,,.C, |$ F,,C,F,,C, | .F,,C,F,,C, | .F,,C,.F,,C, | %59
+!<(! .F,,C,.F,,!<)!C, |$ C,,C,C,,.C, | C,,C,C,,C, | C,,C,C,,C, | C,,C,C,,C, |$ C,,!>!C,C,,C, | %65
+ C,,"_cresc."C,C,,C, | C,,C,C,,C, | C,,C,C,,C, |$[I:staff -1] z!>(! (!1!C!3!=B,_B,)!>)! | %69
+[I:staff +1] F,,C,F,,C, | F,,C,F,,C, | F,,C,F,,C, |$ F,,C,F,,C, | F,,C,.F,,C, | .F,,C,F,,C, | %75
+ .F,,.C,F,,C, |$!>(! .F,,C,!>)!.F,,C, |[I:staff -1] D,B, (A,2 | C)B, A,B, |$ %79
+[I:staff +1] F,,F,E,F, | !2!C,F,!4!A,,C, |"_WWW." F,,2 z2 |] %82
+V:3
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | C,,2 z2 | %18
+ x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ %36
+ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | %55
+ x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ x4 | x4 | x4 | x4 |$ C,,2 z2 | x4 | x4 | x4 |$ %72
+ x4 | x4 | x4 | x4 |$ x4 | .F,,C,.F,,C, | .F,,.C,.F,,C, |$ x4 | x4 | x4 |] %82
+

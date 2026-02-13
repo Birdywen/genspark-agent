@@ -1,0 +1,64 @@
+X:1
+T:Sheet music supplied by www.. Elegie - op.10. Melody
+%%score { 1 | ( 2 3 ) }
+L:1/16
+Q:1/4=45
+M:2/4
+I:linebreak $
+K:Emin
+%
+% === AI REVIEW NEEDED ===
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M30: placeholder (x) detected - possible missing note
+%! CHECK: M31: placeholder (x) detected - possible missing note
+%! CHECK: M30: placeholder (x) detected - possible missing note
+%! CHECK: M33: placeholder (x) detected - possible missing note
+%! CHECK: M18: placeholder (x) detected - possible missing note
+%! CHECK: M26: placeholder (x) detected - possible missing note
+%! CHECK: M28: placeholder (x) detected - possible missing note
+%! CHECK: M33: placeholder (x) detected - possible missing note
+% ===========================
+%
+V:1 treble nm="Piano Collection for Beginners - Grade 4"
+L:1/8
+V:2 bass 
+V:3 bass 
+V:1
+"^Lento ma non troppo" z/ !2!!4![EG]!>(![EG][EG]((.[EG]/!>)! | %1
+!<(! [EG]/)) .[EG] [EG] .[EG]!<)! ((.[EG]/ |!>(! ([EG]/)) .!3![CEF] .[CEF] .[CEA]!>)! (.[CEA]/ |$ %3
+"_RE" [CEA]/))!3![CEF][CEF]!1!!2!!5![B,^DA](((.[DG]/ | %4
+ ([B,DG]/)))[EG]!>(!!1!!2![EG][EG][EG]/-!>)! | [EG]/!<(!"^Le"[EG][EG].[EG][EG]/-)!<)! | %6
+ ([EG]/!>(!!3![CEF][CEF][CEA][CEA]/!>)! |$ [CEA]/)!3![CEF][CEF][B,^DA]!4![B,DG]/- | %8
+ ([B,DG]/.[B,EG]!>(!.!2!!4![EG].[EG][EG]/-!>)! | [EG]/!<(![EG][EG][EG]!<)!((.!3!!4![GA]/) | %10
+!>(! [GA]/))!3!!5![GB][DG][DG]!>)![DG]/ |$ [DG]/[DG][GB][DG]!1!!2![DF]/- | %12
+ ([DF]/.!3![DG]"^animato"[GB][DG]((.[DF]/) | [DF]/)).!1!!4![DG]!2!!3![_EF].[DG]((.[^DF]/ | %14
+ [DF]/))!1!!5![^DB].[DB]"^C7]".[DB](.[DB]/ |$ ([DB]/)[^DB]"^rit."[DB]!2![DA][DA]/-) | %16
+"^a tempo" [DA]/.!2!!4![EG][EG].[EG]((.[EG]/ | [EG]/)) .[EG] .[EG] x11/4 | %18
+ ([EG]/!>(! !3![CEF] [CEF] .[CEA] [CEA]/)!>)! |$ ([CEA]/!3![CEF].[CEF]!5![B,^DA]((.[B,DA]/) | %20
+ ([B,DA]/))!5![B,=D^G][B,DG][B,DG][B,DG]/-) | ([B,DG]/[B,D^G]"_cresc."[B,DG][B,DG][B,DG]/) |$ %22
+ ([B,DG]/ .[B,D^G] .[B,DG] .[B,DG] [DEG]/-) | ([DEG]/.!5![CEA].[CEA].!4![CE=G].[CEG]/) | %24
+ ([CEG]/ .!3![CEF]"^rit." .[CEF] .[CEF] ((.[CEF]/) | ([CEF]/)).[CE][CE]/)"^VA" (!5!B A/)z/4E/4 |$ %26
+ !3!F/EE/"^St." (B A/)z/4(E/4 | !4!G4-) x | x17/4 |$ (!3!E/[EG].[EG].[EG]((.[EG]/ | %30
+"_dimin." [EG]/4)).[EG].[EG].[EG]/)[I:staff +1] B/z/4(E/4 x/4 | %31
+ G) z (!5!E,,/4B,,/4!1!E,/4G,/4)[I:staff -1] !1!B,/4E/4G/4B/4 |"^L.H" !2!e z !fermata!z2 |] %33
+V:2
+"^(con espressione)" !5!E,2(!1!E2.D2^C2) | (!1!=C2 B,)z/(E,/ !3!G,4) | %2
+ (!1!B,2 !2!A,>)(!5!E, !4!F,4) |$ (!2!B,2 A,>)(((B,, !2!F,2))) !1!G,>(B,, | %4
+ !2!!5!E,2)(E2.=D2.^C2) | (!1!=C2 B,)z/(E,/ !3!G,4) | (!1!B,2 !2!A,>)(!5!E, !4!F,4) |$ %7
+ ((!2!B,2 !1!A,>)((B,, !2!F,2)) !1!G,>(B,, | !2!!1!E,2)) (!2!B,,4 E,,2) | z2 (G,>A, B,2^C2 | %10
+ =D2 !4!G,>A, B,4) |$ B, z !5!D,4 !2!A,>(!1!=C | !2!B,) z !>!D,4 !2!A,>(C | %13
+ B,2) !3!A,>(C B,2) A,>(C | !2!B,) z (!1!B,4 A,)B,/ z/ |$ !3!G,2 G,z/(B,/ !4!F,2) F,z/(B,/ | %16
+ E,2)(!1!E2.=D2.^C2) | (!1!=E2 D)z/(B,/ !3!D4)[I:staff -1] [EG]2 [EG]/- | %18
+[I:staff +1] (B,2 A,>)(!5!E, !4!F,4) |$ (!2!B,2 !1!A,>)(B,, !2!F,2) G,>(B,, | %20
+ !2!E,) z (!>!E,4 !1!=F,>(!5!B,, | !2!E,)) z !>!E,4 F,>B,, |$ %22
+"^tt" E, z !1!=F,>(B,, !2!E,) z (!3!=C,B,, | A,,) z !3!E,4 !1!A,2- | A,4 !2!A,2 z2 | %25
+ (!1!B,2!>(! A,)z/(E,/ !4!F,4)!>)! |$[I:staff -1] (CC2C) z ([CE]2C-) | %27
+ (C2[CE]2.[CE]2.[CE]2[I:staff +1] !2!C,[I:staff -1]((.[CE]) | %28
+ ([CE]/))"^Ss"[C^D]2[CD]2[B,D]2.!2!!1![A,D]2) |$ G,2[I:staff +1] z2[K:treble] (!2!e2 x2 | %30
+ !3!d2!4!^c2!1!=c2)[I:staff -1] z2 |[I:staff -1] z4[I:staff +1][K:bass] x4 |[I:staff +1] z8 |] %33
+V:3
+ x8 | x8 | x8 |$ x8 | x8 | x8 | x8 |$ x8 | x8 | x8 | x8 |$ x8 | x8 | x8 | x8 |$ x8 | x8 | x21/2 | %18
+ x8 |$ x8 | x8 | x8 |$ x8 | x8 | x8 | x4[I:staff -1] z ([CE]2C) |$ %26
+[I:staff +1] (B,2 A,)z/(E,/ (F,4) |!<(! !3!G,2) z (!1!E,4 z/ (B,,/!<)! x2 | %28
+ A,,4))!>(! !>!!2!B,,4!>)! x/ |$ [E,,B,,]4[K:treble] x4 | x8 | x4[K:bass] x4 | x8 |] %33
+

@@ -362,4 +362,5 @@ curl -s -X POST 'https://flow.sokt.io/func/scri42hM0QuZ' \
 ## 参考文档
 
 - OpusClip Captions API 详细文档: `skills/opus-video/CAPTIONS_API.md`
+- Genspark 高质量缩略图生成: `skills/opus-video/THUMBNAIL_GENSPARK.md`
 - SQLite changelog/conventions: `.agent_memory/project_knowledge.db`
