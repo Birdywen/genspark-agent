@@ -3234,15 +3234,6 @@ ${tip}
         addLog(`❌ 回放错误: ${msg.error}`, 'error');
         break;
 
-      case 'bg_complete': {
-        const status = msg.success ? '✅' : '❌';
-        const label = msg.exitCode === 0 ? '成功' : `失败 (code ${msg.exitCode})`;
-        const output = msg.lastOutput ? msg.lastOutput.slice(-500) : '(无输出)';
-        sendMessageSafe(`**[bg_run]** ${status} Slot #${msg.slotId} ${label} (${msg.elapsed})\n\n\`\`\`\n${output}\n\`\`\``);
-        addLog(`${status} bg_run Slot #${msg.slotId} ${label} (${msg.elapsed})`, msg.success ? 'success' : 'error');
-        break;
-      }
-
       case 'tool_result':
         // 终端命令的结果不注入聊天框，由终端自己处理
         if (msg.id && msg.id.startsWith('term_')) {
@@ -3627,21 +3618,30 @@ ${tip}
     const text = sseState.currentText;
     if (!text) return;
 
-    // 检测 ΩBATCH...ΩEND - 使用括号平衡法
-    const batchIdx = text.indexOf('ΩBATCH{');
-    let batchMatch = null;
-    if (batchIdx !== -1) {
-      const batchExtracted = extractJsonFromText(text, batchIdx + 6);
-      if (batchExtracted) {
-        const afterBatch = text.substring(batchExtracted.end, batchExtracted.end + 10);
-        if (afterBatch.trim().startsWith('ΩEND')) {
-          batchMatch = [null, batchExtracted.json];
+    // 检测 ΩBATCH...ΩEND (正则快速匹配 + fallback 括号平衡法)
+    let batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
+    let batchJson = batchMatch ? batchMatch[1] : null;
+    if (batchMatch) {
+      try {
+        JSON.parse(batchJson);
+      } catch (e) {
+        // 正则截断，用括号平衡法重新提取
+        const batchIdx = text.indexOf('ΩBATCH{');
+        if (batchIdx !== -1) {
+          const extracted = extractJsonFromText(text, batchIdx + 6);
+          if (extracted) {
+            const after = text.substring(extracted.end, extracted.end + 10);
+            if (after.trim().startsWith('ΩEND')) {
+              batchJson = extracted.json;
+              log('SSE BATCH fallback bracket parse OK');
+            }
+          }
         }
       }
     }
-    if (batchMatch) {
+    if (batchJson) {
       try {
-        const batch = JSON.parse(batchMatch[1]);
+        const batch = JSON.parse(batchJson);
         const sig = 'sse:batch:' + JSON.stringify(batch).substring(0, 100);
         if (!sseState.processedCommands.has(sig)) {
           sseState.processedCommands.add(sig);
@@ -3658,48 +3658,54 @@ ${tip}
       }
     }
 
-    // 检测 Ω{...}ΩSTOP (可能有多个) - 使用括号平衡法而非非贪婪正则
-    let searchPos = 0;
-    while (true) {
-      const omegaIdx = text.indexOf('Ω{', searchPos);
-      if (omegaIdx === -1) break;
-      const extracted = extractJsonFromText(text, omegaIdx + 1);
-      if (!extracted) { searchPos = omegaIdx + 1; continue; }
-      const afterJson = text.substring(extracted.end, extracted.end + 10);
-      if (!afterJson.trim().startsWith('ΩSTOP')) { searchPos = extracted.end; continue; }
-      const jsonStr = extracted.json;
+    // 检测 Ω{...}ΩSTOP (可能有多个)
+    // 策略：先用正则快速匹配，JSON.parse 失败时 fallback 到括号平衡法
+    const singleRe = /Ω(\{[\s\S]*?\})ΩSTOP/g;
+    let m;
+    while ((m = singleRe.exec(text)) !== null) {
+      let jsonStr = m[1];
+      let parsed = null;
       try {
-        const parsed = JSON.parse(jsonStr);
-        const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
-        if (sseState.processedCommands.has(normalizedSig)) continue;
-        sseState.processedCommands.add(normalizedSig);
-        if (parsed.tool) {
-          addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
-          log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
-          const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
-          addExecutedCall(callHash);
-          // 同时用通用格册，防止 DOM 扫描重复执行（DOM 用 index:tool:params 格式）
-          addExecutedCall(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
-          executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
-        }
+        parsed = JSON.parse(jsonStr);
       } catch (e) {
-        log('SSE single parse error:', e.message);
+        // 正则截断了嵌套 JSON，用括号平衡法重新提取
+        try {
+          const omegaIdx = m.index;
+          const extracted = extractJsonFromText(text, omegaIdx + 1);
+          if (extracted) {
+            const after = text.substring(extracted.end, extracted.end + 10);
+            if (after.trim().startsWith('ΩSTOP')) {
+              jsonStr = extracted.json;
+              parsed = JSON.parse(jsonStr);
+              log('SSE fallback bracket parse OK:', parsed.tool);
+            }
+          }
+        } catch (e2) {
+          log('SSE single parse error (both methods):', e2.message);
+        }
+      }
+      if (!parsed) continue;
+      const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
+      if (sseState.processedCommands.has(normalizedSig)) continue;
+      sseState.processedCommands.add(normalizedSig);
+      if (parsed.tool) {
+        addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
+        log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
+        const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
+        addExecutedCall(callHash);
+        addExecutedCall(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
+        executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
     }
 
-    // 检测 ΩPLAN / ΩFLOW / ΩRESUME - 使用括号平衡法
-    const planIdx = text.indexOf('ΩPLAN{');
-    let planJson = null;
-    if (planIdx !== -1) {
-      const planExtracted = extractJsonFromText(text, planIdx + 5);
-      if (planExtracted) planJson = planExtracted.json;
-    }
-    if (planJson) {
-      const sig = 'sse:plan:' + planJson.substring(0, 100);
+    // 检测 ΩPLAN / ΩFLOW / ΩRESUME
+    const planMatch = text.match(/ΩPLAN(\{[\s\S]*?\})/);
+    if (planMatch) {
+      const sig = 'sse:plan:' + planMatch[1].substring(0, 100);
       if (!sseState.processedCommands.has(sig)) {
         sseState.processedCommands.add(sig);
         try {
-          const plan = JSON.parse(planJson);
+          const plan = JSON.parse(planMatch[1]);
           addLog('⚡ SSE 直接解析 ΩPLAN', 'tool');
           const callHash = `sse:${sseState.messageId}:__PLAN__:${JSON.stringify(plan)}`;
           addExecutedCall(callHash);

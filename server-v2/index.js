@@ -572,6 +572,26 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
   
+  // ── 复杂命令自动脚本化：防止转义问题 ──
+  if (tool === 'run_process' && params.command_line && !params._noAutoScript) {
+    const cmd = params.command_line;
+    const hasHighRiskChars = /['"`$\\|&;(){}\[\]]/.test(cmd);
+    const isLong = cmd.length > 200;
+    const hasNestedQuotes = (cmd.match(/'/g) || []).length >= 2 && (cmd.match(/"/g) || []).length >= 2;
+    const hasPipe = cmd.includes(' | ');
+    
+    if ((isLong && hasHighRiskChars) || hasNestedQuotes || (isLong && hasPipe)) {
+      try {
+        const scriptPath = `/private/tmp/cmd_${Date.now()}.sh`;
+        writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
+        logger.info(`[AutoScript] 复杂命令写入脚本: ${scriptPath} (${cmd.length} chars)`);
+        params = { ...params, command_line: `bash ${scriptPath}`, _noAutoScript: true };
+      } catch (e) {
+        logger.warn(`[AutoScript] 写入脚本失败: ${e.message}`);
+      }
+    }
+  }
+
   logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);
 
   // 安全检查
