@@ -238,9 +238,15 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ## 实战指南
 
-### 命令转义
+### 命令执行（必须遵守）
 
-复杂命令（含引号/多行）用 stdin 传入: {"command":"bash","stdin":"脚本内容"}，超长脚本先 write_file 到 /tmp/ 再执行。
+**所有 run_command 一律使用 stdin 模式**，禁止把命令放在 command 参数里：
+
+正确: {"command":"bash","stdin":"你的命令"}
+错误: {"command":"你的命令"}
+
+原因: command 参数经过 SSE 传输会丢失引号、括号等字符。stdin 模式不受影响。
+超长脚本（50行以上）先 write_file 写到 /private/tmp/ 再 bash 执行。
 
 ### 代码修改
 
