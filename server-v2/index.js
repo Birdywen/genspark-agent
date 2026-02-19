@@ -467,6 +467,7 @@ const retryManager = new RetryManager(logger, errorClassifier);
 
 // TaskEngine 将在 main() 中 hub.start() 后初始化
 let taskEngine = null;
+let autoHealer = null;
 
 // 初始化录制器
 const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));
@@ -491,7 +492,22 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     const historyId = addToHistory(tool, params, true, null, null);
     let result;
     if (tool === 'bg_run') {
-      result = processManager.run(params.command, { cwd: params.cwd, shell: params.shell });
+      result = processManager.run(params.command, { cwd: params.cwd, shell: params.shell }, (completedSlot) => {
+        // 进程完成时自动通知前端
+        try {
+          ws.send(JSON.stringify({
+            type: 'bg_complete',
+            tool: 'bg_run',
+            slotId: completedSlot.slotId,
+            exitCode: completedSlot.exitCode,
+            elapsed: completedSlot.elapsed,
+            lastOutput: completedSlot.lastOutput,
+            success: completedSlot.exitCode === 0
+          }));
+        } catch (e) {
+          logger.error(`[bg_complete] 通知发送失败: ${e.message}`);
+        }
+      });
     } else if (tool === 'bg_status') {
       result = processManager.status(params.slotId, { lastN: params.lastN });
     } else {
@@ -681,9 +697,54 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     // 使用错误分类器分析错误
     const classified = errorClassifier.wrapError(e, tool);
     
+    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });
+
+    // ── AutoHealer: 尝试自愈 ──
+    if (autoHealer && !isRetry) {
+      try {
+        const healResult = await autoHealer.tryHeal(e.message || String(e), tool, params);
+        
+        if (healResult.healed && healResult.retry) {
+          const retryTool = healResult.modifiedTool || tool;
+          const retryParams = healResult.modifiedParams || params;
+          logger.info(`[AutoHealer] 自愈成功 (${healResult.message})，重试 ${retryTooltry {
+            const callOptions = message.params?.timeout ? { timeout: parseInt(message.params.timeout) } : {};
+            const r = await hub.call(retryTool, retryParams, callOptions);
+            let result = r;
+            if (r && r.content && Array.isArray(r.content)) {
+              result = r.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+            }
+            let resultStr = typeof result === 'string' ? result : JSON.stringify(result);
+            const historyId = addToHistory(retryTool, retryParams, true, resultStr);
+            logger.info(`[AutoHealer] 重试成功: ${retryTool}`);
+            
+            ws.send(JSON.stringify({
+              type: 'tool_result',
+              id,
+              historyId,
+              tool: retryTool,
+              success: true,
+              result: `[#${historyId}] [自愈: ${healResult.message}] ${resultStr}`
+            }));
+            return;
+          } catch (retryErr) {
+            logger.warn(`[AutoHealer] 重试也失败: ${retryErr.message}`);
+            // 继续走正常失败流程
+          }
+        }
+        
+        // 自愈有建议但无法自动修复，附加到错误信息
+        if (healResult.suggestion) {
+          classified.suggestion = (classified.suggestion || '') + '\n[AutoHealer] ' + healResult.suggestion;
+        }
+      } catch (healErr) {
+        logger.warn(`[AutoHealer] 自愈过程异常: ${healErr.message}`);
+      }
+    }
+
+    // ── 正常失败流程 ──
     const historyId = isRetry ? originalId : addToHistory(tool, params, false, null, e.message);
     
-    // 如果是重试，更新原记录
     if (isRetry && originalId) {
       const entry = getHistoryById(originalId);
       if (entry) {
@@ -693,8 +754,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         saveHistory();
       }
     }
-    
-    logger.error(`工具执行失败: ${tool} [${classified.errorType}]`, { error: e.message });
     
     // 如果有活跃录制，记录失败步骤
     for (const [recId, rec] of recorder.activeRecordings) {
@@ -737,7 +796,7 @@ async function main() {
   const selfValidator = new SelfValidator(logger, hub);
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
   const asyncExecutor = new AsyncExecutor(logger);
-  const autoHealer = new AutoHealer(logger, hub);
+  autoHealer = new AutoHealer(logger, hub);
   const resultCache = new ResultCache(logger);
   const contextCompressor = new ContextCompressor(logger);
   
