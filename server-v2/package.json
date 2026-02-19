@@ -1,25 +1,17 @@
 {
-  "name": "racquetdesk-web-booker",
-  "version": "1.0.0",
-  "description": "RacquetDesk Auto-Booker Web Application with Polling",
-  "main": "server.js",
+  "name": "genspark-agent-server",
+  "version": "2.1.0",
+  "description": "Genspark Agent Local Server v2",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "dependencies": {
-    "dotenv": "^16.3.1",
-    "ejs": "^3.1.9",
-    "express": "^4.18.2",
-    "express-session": "^1.17.3",
-    "git": "^0.1.5",
-    "node-fetch": "^2.7.0",
-    "puppeteer": "^24.34.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "socket.io": "^4.6.1"
+    "ws": "^8.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "type": "module"
 }
