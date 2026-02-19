@@ -573,6 +573,8 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
   
   // ── 复杂命令自动脚本化：防止转义问题 ──
+  // 策略：检测到复杂命令时，将原始命令写入临时脚本文件再执行
+  // 这样即使上游 SSE 传输已丢字符，至少 server→shell 这段不会二次损坏
   if (tool === 'run_process' && params.command_line && !params._noAutoScript) {
     const cmd = params.command_line;
     const hasHighRiskChars = /['"`$\\|&;(){}\[\]]/.test(cmd);
