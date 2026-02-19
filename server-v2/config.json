@@ -328,11 +328,12 @@
       "delete_file",
       "move_file"
     ],
-    "requireConfirmation": false
+    "requireConfirmation": true
   },
   "logging": {
     "enabled": true,
     "file": "./logs/agent.log",
     "console": true
-  }
+  },
+  "version": "2.1.0"
 }
