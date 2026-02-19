@@ -707,7 +707,8 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         if (healResult.healed && healResult.retry) {
           const retryTool = healResult.modifiedTool || tool;
           const retryParams = healResult.modifiedParams || params;
-          logger.info(`[AutoHealer] 自愈成功 (${healResult.message})，重试 ${retryTooltry {
+          logger.info(`[AutoHealer] 自愈成功 (${healResult.message})，重试 ${retryTool}`);
+          try {
             const callOptions = message.params?.timeout ? { timeout: parseInt(message.params.timeout) } : {};
             const r = await hub.call(retryTool, retryParams, callOptions);
             let result = r;
