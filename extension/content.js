@@ -2296,10 +2296,31 @@ ${tip}
       saveBtn.disabled = true;
       saveBtn.textContent = '⏳';
       
-      // 先获取命令历史路径
       const historyPath = '/Users/yay/workspace/genspark-agent/server-v2/command-history.json';
       
-      // 先查活跃项目，再 digest
+      // 提取对话内容（最近 30 条消息）
+      function extractConversation() {
+        const msgs = document.querySelectorAll('.conversation-statement');
+        const lines = [];
+        const recent = Array.from(msgs).slice(-30);
+        for (const msg of recent) {
+          const isUser = msg.classList.contains('user');
+          const isAI = msg.classList.contains('assistant');
+          const contentEl = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
+          let text = (contentEl ? contentEl.innerText : msg.innerText) || '';
+          // 截断工具结果，只保留前 200 字符
+          text = text.replace(/\[执行结果\][\s\S]{200,}/g, (m) => m.substring(0, 200) + '...(截断)');
+          // 截断过长消息
+          if (text.length > 1000) text = text.substring(0, 1000) + '...(截断)';
+          if (isUser) lines.push('## 用户\n' + text);
+          else if (isAI) lines.push('## AI\n' + text);
+        }
+        return lines.join('\n\n');
+      }
+      
+      const conversation = extractConversation();
+      
+      // 先查活跃项目
       chrome.runtime.sendMessage({
         type: 'SEND_TO_SERVER',
         payload: {
@@ -2309,29 +2330,43 @@ ${tip}
           params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js status' }
         }
       }, (statusResp) => {
-        // 从 status 输出中提取项目名，或使用默认值
         let project = 'genspark-agent';
         if (statusResp && statusResp.result) {
           const match = String(statusResp.result).match(/当前项目:\s*(\S+)/);
           if (match && match[1] !== '(未设置)') project = match[1];
         }
         
+        const convPath = '/Users/yay/workspace/.agent_memory/projects/' + project + '/conversation_summary.md';
+        const convContent = '# 对话记录 - ' + project + '\n> ' + new Date().toISOString().substring(0, 16) + '\n\n' + conversation;
+        
+        // 步骤1: 保存对话内容
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
           payload: {
             type: 'tool_call',
-            id: 'save_' + Date.now(),
-            tool: 'run_command',
-            params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
+            id: 'save_conv_' + Date.now(),
+            tool: 'write_file',
+            params: { path: convPath, content: convContent }
           }
-        }, (resp) => {
-          saveBtn.disabled = false;
-          saveBtn.textContent = '💾 存档';
-          if (resp && resp.success) {
-            addLog('💾 存档成功！项目: ' + project, 'success');
-          } else {
-            addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
-          }
+        }, () => {
+          // 步骤2: 生成 digest
+          chrome.runtime.sendMessage({
+            type: 'SEND_TO_SERVER',
+            payload: {
+              type: 'tool_call',
+              id: 'save_' + Date.now(),
+              tool: 'run_command',
+              params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
+            }
+          }, (resp) => {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 存档';
+            if (resp && resp.success) {
+              addLog('💾 存档成功！项目: ' + project + ' (含对话记录)', 'success');
+            } else {
+              addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
+            }
+          });
         });
       });
     };
