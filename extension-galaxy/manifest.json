@@ -1,27 +1,47 @@
 {
   "manifest_version": 3,
   "name": "Galaxy AI Agent Bridge",
-  "version": "1.0.0",
+  "version": "1.0.53",
   "description": "将 Galaxy AI 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://chat.galaxy.ai/*",
     "https://galaxy.ai/*",
+    "https://*.galaxy.ai/*",
     "https://www.genspark.ai/*",
-    "https://genspark.ai/*"
+    "https://genspark.ai/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://chat.galaxy.ai/*", "https://www.genspark.ai/*", "https://genspark.ai/*"],
-      "js": ["content.js"],
-      "css": ["styles.css"],
+      "matches": [
+        "https://chat.galaxy.ai/*"
+      ],
+      "js": [
+        "sse-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://chat.galaxy.ai/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -29,5 +49,15 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sse-hook.js"
+      ],
+      "matches": [
+        "https://chat.galaxy.ai/*"
+      ]
+    }
+  ]
 }

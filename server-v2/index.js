@@ -634,6 +634,24 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   try {
+    // ── payload file 引用解析：从临时文件读取大段内容 ──
+    const fileRefFields = [['contentFile', 'content'], ['stdinFile', 'stdin'], ['codeFile', 'code']];
+    for (const [fileField, targetField] of fileRefFields) {
+      if (params[fileField] && typeof params[fileField] === 'string') {
+        try {
+          const fileContent = readFileSync(params[fileField], 'utf-8');
+          params[targetField] = fileContent;
+          const _tmpFile = params[fileField];
+          delete params[fileField];
+          logger.info('[PayloadFile] 从文件加载 ' + targetField + ': ' + fileContent.length + ' chars <- ' + params[fileField]);
+          // 清理临时文件
+          try { unlinkSync(_tmpFile); } catch(e) {}
+        } catch (e) {
+          logger.warning('[PayloadFile] 读取失败 ' + fileField + ': ' + e.message);
+        }
+      }
+    }
+
     // ── base64 内容解码：彻底解决 SSE 传输转义损坏 ──
     // 当 content/stdin/code 字段以 'base64:' 前缀开头时，自动解码
     const BASE64_PREFIX = 'base64:';

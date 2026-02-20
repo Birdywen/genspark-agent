@@ -122,6 +122,30 @@ const server = createServer(async (req, res) => {
     } else {
       res.end(JSON.stringify({ message: null }));
     }
+  } else if (path === '/upload-payload' && req.method === 'POST') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      const id = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const tmpPath = '/private/tmp/.agent_payload_' + id + '.tmp';
+      try {
+        writeFileSync(tmpPath, body);
+        log('Payload saved: ' + tmpPath + ' (' + body.length + ' bytes)');
+        res.end(JSON.stringify({ success: true, path: tmpPath, size: body.length }));
+      } catch(e) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ success: false, error: e.message }));
+      }
+    });
+    return;
+  } else if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.statusCode = 200;
+    res.end();
+    return;
   } else {
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not found' }));

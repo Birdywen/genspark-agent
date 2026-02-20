@@ -38,7 +38,9 @@
     "https://app.getodin.ai/*",
     "https://*.getodin.ai/*",
     "https://audiocleaner.ai/*",
-    "https://*.audiocleaner.ai/*"
+    "https://*.audiocleaner.ai/*",
+    "https://galaxy.ai/*",
+    "https://*.galaxy.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

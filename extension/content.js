@@ -1999,16 +1999,57 @@ ${toolSummary}
       addLog('💡 建议: 用 run_command + echo/cat 写入，或拆分内容', 'info');
     }
     
-    try {
-      chrome.runtime.sendMessage({
-        type: 'SEND_TO_SERVER',
-        payload: { 
-          type: 'tool_call', 
-          tool: tool.name, 
-          params: tool.params, 
-          id: callId 
+    // ── Payload Upload:段内容通过 HTTP 上传避免 WebSocket 损坏 ──
+    const PAYLOAD_UPLOAD_URL = 'http://localhost:8766/upload-payload';
+    const PAYLOAD_THRESHOLD = 200; // 超过 200 字符的内容走 HTTP 上传
+    const PAYLOAD_FIELDS = ['content', 'stdin', 'code'];
+    const FILE_FIELD_MAP = { content: 'contentFile', stdin: 'stdinFile', code: 'codeFile' };
+
+    async function uploadPayloads(params) {
+      const uploaded = {};
+      for (const field of PAYLOAD_FIELDS) {
+        if (params[field] && typeof params[field] === 'string' && params[field].length > PAYLOAD_THRESHOLD) {
+          try {
+            const resp = await fetch(PAYLOAD_UPLOAD_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: params[field]
+            });
+            const result = await resp.json();
+            if (result.success && result.path) {
+              uploaded[field] = result.path;
+              log('[PayloadUpload] ' + field + ' -> ' + result.path + ' (' + result.size + ' bytes)');
+            }
+          } catch(e) {
+            log('[PayloadUpload] 上传失败 ' + field + ': ' + e.message + ', 回退到 WebSocket');
+          }
         }
-      }, (response) => {
+      }
+      return uploaded;
+    }
+
+    // 异步上传大内容，然后发送 tool_call
+    (async () => {
+      try {
+        const uploadedFields = await uploadPayloads(tool.params);
+        const finalParams = Object.assign({}, tool.params);
+        for (const [field, filePath] of Object.entries(uploadedFields)) {
+          delete finalParams[field];
+          finalParams[FILE_FIELD_MAP[field]] = filePath;
+        }
+        if (Object.keys(uploadedFields).length > 0) {
+          addLog('📦 大内容已通过 HTTP 安全上传 (' + Object.keys(uploadedFields).join(', ') + ')', 'info');
+        }
+
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: { 
+            type: 'tool_call', 
+            tool: tool.name, 
+            params: finalParams, 
+            id: callId 
+          }
+        }, (response) => {
         if (chrome.runtime.lastError) {
           addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
           state.pendingCalls.delete(callId);
@@ -2020,11 +2061,12 @@ ${toolSummary}
         }
       });
     } catch (e) {
-      addLog(`❌ 消息发送异常: ${e.message}`, 'error');
+      addLog('\u274c 消息发送异常: ' + e.message, 'error');
       state.agentRunning = false;
       hideExecutingIndicator();
       updateStatus();
     }
+    })();
     
     addLog(`🔧 ${tool.name}(${Object.keys(tool.params).join(',')})`, 'tool');
     
