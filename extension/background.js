@@ -371,28 +371,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
         const tabId = win.tabs[0].id;
-        let i = 0;
-        function nextCookie() {
-          if (i >= cookies.length) {
-            chrome.tabs.update(tabId, { url: currentUrl });
-            sendResponse({ success: true, windowId: win.id, tabId: tabId, cookiesSet: cookies.length });
-            return;
+        // Get the incognito cookie store ID
+        chrome.cookies.getAllCookieStores((stores) => {
+          let incognitoStoreId = null;
+          stores.forEach((store) => {
+            store.tabIds.forEach((tid) => {
+              if (tid === tabId) incognitoStoreId = store.id;
+            });
+          });
+          console.log('[Synapse] Incognito store ID:', incognitoStoreId);
+          let i = 0;
+          function nextCookie() {
+            if (i >= cookies.length) {
+              chrome.tabs.update(tabId, { url: currentUrl });
+              sendResponse({ success: true, windowId: win.id, tabId: tabId, cookiesSet: cookies.length, storeId: incognitoStoreId });
+              return;
+            }
+            const c = cookies[i];
+            const opts = {
+              url: 'https://www.genspark.ai',
+              name: c.name,
+              value: c.value,
+              path: c.path || '/',
+              secure: c.secure !== false,
+              httpOnly: c.httpOnly || false,
+              sameSite: c.sameSite || 'no_restriction',
+              expirationDate: c.expirationDate || (Date.now()/1000 + 86400*30)
+            };
+            if (c.domain) opts.domain = c.domain;
+            if (incognitoStoreId) opts.storeId = incognitoStoreId;
+            chrome.cookies.set(opts, () => {
+              if (chrome.runtime.lastError) {
+                console.log('[Synapse] Cookie error:', c.name, chrome.runtime.lastError.message);
+              }
+              i++;
+              nextCookie();
+            });
           }
-          const c = cookies[i];
-          chrome.cookies.set({
-            url: 'https://www.genspark.ai',
-            name: c.name,
-            value: c.value,
-            domain: c.domain,
-            path: c.path || '/',
-            secure: c.secure,
-            httpOnly: c.httpOnly,
-            sameSite: c.sameSite || 'no_restriction',
-            expirationDate: c.expirationDate || (Date.now()/1000 + 86400*30),
-            storeId: win.tabs[0].cookieStoreId || undefined
-          }, () => { i++; nextCookie(); });
-        }
-        nextCookie();
+          nextCookie();
+        });
       });
     });
     return true;
