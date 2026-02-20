@@ -311,6 +311,11 @@ SCRIPT
 
 **自定义结束标记:** 当内容本身包含 ΩEND 时（如编写 prompt 文档、解析器代码），在 ΩHERE 工具名后追加自定义结束词，替代默认 ΩEND。格式: ΩHERE 工具名 自定义结束词。不指定时默认用 ΩEND。
 
+### ΩHEREBATCH 格式（HEREDOC 批量执行）
+
+当需要批量执行多个不同工具调用且参数含特殊字符时，使用 ΩHEREBATCH 替代 ΩBATCH。每个 ΩHERE 块支持 @saveAs 和 @when 参数，规则与 ΩBATCH 相同。
+
+
 ### base64 内容模式
 
 write_file 的 content、run_command 的 stdin、eval_js 的 code 字段支持 base64 前缀：content 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
@@ -861,6 +866,100 @@ ${toolSummary}
     return calls;
   }
 
+  // HEREBATCH 格式解析器 - 多个 HEREDOC 工具调用的批量执行
+  function parseHereBatchFormat(text) {
+    var MARKER_START = 'ΩHEREBATCH';
+    var MARKER_END = 'ΩHEREBATCHEND';
+    var HERE = 'ΩHERE';
+    var NL = String.fromCharCode(10);
+    
+    var si = text.indexOf(MARKER_START);
+    if (si === -1) return null;
+    var ei = text.indexOf(MARKER_END, si);
+    if (ei === -1) return null;
+    
+    // Skip examples
+    var before = text.substring(Math.max(0, si - 50), si).toLowerCase();
+    if (before.indexOf('example') !== -1 || before.indexOf('\u793a\u4f8b') !== -1 || before.indexOf('\u683c\u5f0f') !== -1) return null;
+    
+    var body = text.substring(si + MARKER_START.length, ei).trim();
+    
+    // Split into individual HERE blocks
+    var blocks = [];
+    var searchPos = 0;
+    while (true) {
+      var hereIdx = body.indexOf(HERE, searchPos);
+      if (hereIdx === -1) break;
+      // Find the end of this HERE block (next HERE or end of body)
+      var nextHere = body.indexOf(HERE, hereIdx + HERE.length + 1);
+      var blockEnd = nextHere !== -1 ? nextHere : body.length;
+      blocks.push(body.substring(hereIdx, blockEnd).trim());
+      searchPos = hereIdx + HERE.length + 1;
+    }
+    
+    if (blocks.length === 0) return null;
+    
+    var steps = [];
+    for (var b = 0; b < blocks.length; b++) {
+      var block = blocks[b];
+      // Parse each block as a mini heredoc
+      var headerEnd = block.indexOf(NL);
+      if (headerEnd === -1) continue;
+      var header = block.substring(HERE.length, headerEnd).trim();
+      var hdrParts = header.split(/\s+/);
+      if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) continue;
+      var toolName = hdrParts[0];
+      
+      var blockBody = block.substring(headerEnd + 1);
+      var lines = blockBody.split(NL);
+      var params = {};
+      var saveAs = undefined;
+      var when = undefined;
+      var idx = 0;
+      
+      while (idx < lines.length) {
+        var line = lines[idx];
+        // Extract saveAs
+        var saveMatch = line.match(/^@saveAs=(\S+)/);
+        if (saveMatch) { saveAs = saveMatch[1]; idx++; continue; }
+        // Extract when
+        var whenMatch = line.match(/^@when=(.*)/);
+        if (whenMatch) { when = whenMatch[1]; idx++; continue; }
+        // Heredoc param
+        var hdm = line.match(/^@(\w+)<<(\S+)\s*$/);
+        if (hdm) {
+          var hkey = hdm[1], delim = hdm[2], buf = [];
+          idx++;
+          while (idx < lines.length && lines[idx] !== delim) {
+            buf.push(lines[idx]); idx++;
+          }
+          params[hkey] = buf.join(NL);
+          idx++; continue;
+        }
+        // Simple param
+        var spm = line.match(/^@(\w+)=(.*)/);
+        if (spm) {
+          var skey = spm[1], sval = spm[2];
+          if (/^\d+$/.test(sval)) sval = parseInt(sval);
+          else if (sval === 'true') sval = true;
+          else if (sval === 'false') sval = false;
+          params[skey] = sval;
+          idx++; continue;
+        }
+        idx++;
+      }
+      
+      var step = { tool: toolName, params: params };
+      if (saveAs) step.saveAs = saveAs;
+      if (when) step.when = when;
+      steps.push(step);
+    }
+    
+    if (steps.length === 0) return null;
+    return { steps: steps, start: si };
+  }
+
+
 
 
   // 解析新的代码块格式: Ωname ... ΩEND
@@ -954,6 +1053,15 @@ ${toolSummary}
       const hereCalls = parseHeredocFormat(text);
       if (hereCalls.length > 0) {
         return hereCalls;
+      }
+    }
+
+    // 最优先：检查 ΩHEREBATCH 格式（HEREDOC 批量执行）
+    var hereBatchMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
+    if (text.indexOf(hereBatchMarker) !== -1) {
+      var hereBatch = parseHereBatchFormat(text);
+      if (hereBatch && !state.executedCalls.has('herebatch:' + hereBatch.start)) {
+        return [{ name: '__BATCH__', params: hereBatch.steps, isBatch: true, start: hereBatch.start }];
       }
     }
 
@@ -3928,6 +4036,27 @@ ${tip}
         }
       }
     }
+
+    // 检测 ΩHEREBATCH 格式（HEREDOC 批量执行）
+    var hereBatchSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
+    var hereBatchEndSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCHEND';
+    if (text.indexOf(hereBatchSSEMarker) !== -1 && text.indexOf(hereBatchEndSSEMarker) !== -1) {
+      var hereBatchSSE = parseHereBatchFormat(text);
+      if (hereBatchSSE) {
+        var hereBatchSig = 'sse:herebatch:' + hereBatchSSE.start;
+        if (!sseState.processedCommands.has(hereBatchSig)) {
+          sseState.processedCommands.add(hereBatchSig);
+          addLog('\u26A1 SSE \u89E3\u6790 \u03A9HEREBATCH (' + hereBatchSSE.steps.length + ' steps)', 'tool');
+          log('SSE parsed HEREBATCH:', hereBatchSSE.steps.length, 'steps');
+          var hereBatchHash = 'sse:' + sseState.messageId + ':herebatch:' + hereBatchSSE.start;
+          addExecutedCall(hereBatchHash);
+          addExecutedCall('dedup:__BATCH__:' + JSON.stringify(hereBatchSSE.steps).substring(0, 200));
+          sseState.executedInCurrentMessage = true;
+          executeBatchCall({ steps: hereBatchSSE.steps }, hereBatchHash);
+        }
+      }
+    }
+
 
     // 检测 ΩBATCH...ΩEND (正则快速匹配 + fallback 括号平衡法)
     let batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
