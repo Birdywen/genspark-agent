@@ -67,7 +67,7 @@
   
   // Keyboard shortcut: Ctrl+Shift+9 triggers 429 auto-recovery
   document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.key === '9') {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'Digit9') {
       e.preventDefault();
       console.log('[Synapse] 429 Recovery triggered via Ctrl+Shift+9');
       chrome.runtime.sendMessage({type: 'AUTO_429_RECOVERY', url: window.location.href}, function(resp) {
