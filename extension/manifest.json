@@ -7,9 +7,7 @@
     "activeTab",
     "storage",
     "scripting",
-    "clipboardWrite",
-    "browsingData",
-    "cookies"
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://www.genspark.ai/*",
@@ -86,6 +84,5 @@
         "https://www.genspark.ai/*"
       ]
     }
-  ],
-  "incognito": "spanning"
+  ]
 }
