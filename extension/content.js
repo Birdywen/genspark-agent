@@ -316,6 +316,13 @@ SCRIPT
 当需要批量执行多个不同工具调用且参数含特殊字符时，使用 ΩHEREBATCH 替代 ΩBATCH。每个 ΩHERE 块支持 @saveAs 和 @when 参数，规则与 ΩBATCH 相同。
 
 
+### 批量执行格式对比
+
+ΩBATCH: JSON 参数，适合简单调用（read_file、bg_status、echo 等无特殊字符场景）。
+ΩHEREBATCH: HEREDOC 参数，零转义，适合参数含代码、多行脚本、引号、正则等特殊字符的跨工具批量调用。
+单个 ΩHERE bash 脚本: 多个 bash 步骤写在一个 stdin 里，最简单高效，但仅限 bash 操作，无法跨工具。
+选择原则: 纯 bash 操作用单个 ΩHERE 脚本；跨工具+简单参数用 ΩBATCH；跨工具+复杂参数用 ΩHEREBATCH。
+
 ### base64 内容模式
 
 write_file 的 content、run_command 的 stdin、eval_js 的 code 字段支持 base64 前缀：content 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
