@@ -62,6 +62,65 @@
   function loadPanelEnhancer() {
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('panel-enhancer.js');
+
+  
+  
+  // Keyboard shortcut: Ctrl+Shift+9 triggers 429 auto-recovery
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === '9') {
+      e.preventDefault();
+      console.log('[Synapse] 429 Recovery triggered via Ctrl+Shift+9');
+      chrome.runtime.sendMessage({type: 'AUTO_429_RECOVERY', url: window.location.href}, function(resp) {
+        console.log('[Synapse] Recovery result:', resp);
+        if (resp && resp.success) {
+          alert('Synapse: Incognito window opened with auth! (' + resp.cookiesSet + ' cookies set)');
+        } else {
+          alert('Synapse: Recovery failed - ' + (resp ? resp.error : 'unknown error'));
+        }
+      });
+    }
+  });
+
+  // Bridge: eval_js can set window._trigger429Recovery, content script checks and forwards to background
+  setInterval(function() {
+    try {
+      var el = document.getElementById('synapse-429-trigger');
+      if (el) {
+        el.remove();
+        var url = el.getAttribute('data-url') || window.location.href;
+        chrome.runtime.sendMessage({type: 'AUTO_429_RECOVERY', url: url}, function(resp) {
+          var result = document.createElement('div');
+          result.id = 'synapse-429-result';
+          result.style.display = 'none';
+          result.textContent = JSON.stringify(resp);
+          document.body.appendChild(result);
+        });
+      }
+    } catch(e) {}
+  }, 500);
+
+  // Listen for rate limit reset requests from page context (eval_js)
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'RESET_RATE_LIMIT') {
+      chrome.runtime.sendMessage({type: 'RESET_RATE_LIMIT', origin: event.data.origin || 'https://www.genspark.ai'}, function(resp) {
+        console.log('[Synapse] Rate limit reset response:', resp);
+      });
+  // Listen for cookie requests and incognito requests from page context
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'GET_ALL_COOKIES') {
+      chrome.runtime.sendMessage({type: 'GET_ALL_COOKIES', domain: event.data.domain}, function(resp) {
+        window.postMessage({type: 'GET_ALL_COOKIES_RESULT', cookies: resp.cookies}, '*');
+      });
+    }
+    if (event.data && event.data.type === 'OPEN_INCOGNITO_WITH_AUTH') {
+      chrome.runtime.sendMessage({type: 'OPEN_INCOGNITO_WITH_AUTH', url: event.data.url, cookies: event.data.cookies}, function(resp) {
+        window.postMessage({type: 'OPEN_INCOGNITO_RESULT', result: resp}, '*');
+      });
+    }
+  });
+
+    }
+  });
     script.onload = () => {
       if (window.PanelEnhancer) {
         window.PanelEnhancer.init();

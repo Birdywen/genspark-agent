@@ -357,6 +357,117 @@ function getRegisteredAgents() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle 429 rate limit reset
+  // Get all cookies for a domain
+  
+  // Auto 429 recovery: get cookies and open incognito
+  if (message.type === 'AUTO_429_RECOVERY') {
+    const currentUrl = message.url || 'https://www.genspark.ai/agents?id=ed3c4962-dc37-48f6-a11d-e0a8da6e75a1';
+    chrome.cookies.getAll({ domain: 'genspark.ai' }, (cookies) => {
+      console.log('[Synapse] Got', cookies.length, 'cookies for recovery');
+      chrome.windows.create({ url: 'about:blank', incognito: true }, (win) => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        const tabId = win.tabs[0].id;
+        let i = 0;
+        function nextCookie() {
+          if (i >= cookies.length) {
+            chrome.tabs.update(tabId, { url: currentUrl });
+            sendResponse({ success: true, windowId: win.id, tabId: tabId, cookiesSet: cookies.length });
+            return;
+          }
+          const c = cookies[i];
+          chrome.cookies.set({
+            url: 'https://www.genspark.ai',
+            name: c.name,
+            value: c.value,
+            domain: c.domain,
+            path: c.path || '/',
+            secure: c.secure,
+            httpOnly: c.httpOnly,
+            sameSite: c.sameSite || 'no_restriction',
+            expirationDate: c.expirationDate || (Date.now()/1000 + 86400*30),
+            storeId: win.tabs[0].cookieStoreId || undefined
+          }, () => { i++; nextCookie(); });
+        }
+        nextCookie();
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'GET_ALL_COOKIES') {
+    chrome.cookies.getAll({ domain: message.domain || 'genspark.ai' }, (cookies) => {
+      sendResponse({ cookies: cookies.map(c => ({ name: c.name, value: c.value, domain: c.domain, path: c.path, httpOnly: c.httpOnly, secure: c.secure, sameSite: c.sameSite, expirationDate: c.expirationDate })) });
+    });
+    return true;
+  }
+
+  // Open incognito window with cookies injected
+  if (message.type === 'OPEN_INCOGNITO_WITH_AUTH') {
+    const url = message.url;
+    const cookiesToSet = message.cookies;
+    chrome.windows.create({ url: 'about:blank', incognito: true }, (win) => {
+      const tabId = win.tabs[0].id;
+      let setCount = 0;
+      function setCookiesAndNav() {
+        if (setCount >= cookiesToSet.length) {
+          chrome.tabs.update(tabId, { url: url });
+          sendResponse({ success: true, windowId: win.id, tabId: tabId });
+          return;
+        }
+        const c = cookiesToSet[setCount];
+        const details = {
+          url: 'https://www.genspark.ai',
+          name: c.name,
+          value: c.value,
+          domain: c.domain,
+          path: c.path || '/',
+          secure: c.secure !== false,
+          httpOnly: c.httpOnly || false,
+          sameSite: c.sameSite || 'no_restriction'
+        };
+        if (c.expirationDate) details.expirationDate = c.expirationDate;
+        chrome.cookies.set(details, () => { setCount++; setCookiesAndNav(); });
+      }
+      setCookiesAndNav();
+    });
+    return true;
+  }
+
+  if (message.type === 'RESET_RATE_LIMIT') {
+    const origin = message.origin || 'https://www.genspark.ai';
+    chrome.browsingData.remove(
+      { origins: [origin] },
+      {
+        cache: true,
+        serviceWorkers: true,
+        cacheStorage: true
+      },
+      () => {
+        console.log('[Synapse] Rate limit reset: cleared cache/SW for', origin);
+        // Also clear cookies for fresh session
+        chrome.cookies.getAll({ domain: 'genspark.ai' }, (cookies) => {
+          let cleared = 0;
+          cookies.forEach((cookie) => {
+            if (cookie.name === 'ai_session' || cookie.name === 'ai_user') {
+              chrome.cookies.remove({
+                url: 'https://www.genspark.ai' + cookie.path,
+                name: cookie.name
+              });
+              cleared++;
+            }
+          });
+          console.log('[Synapse] Cleared', cleared, 'cookies');
+          sendResponse({ success: true, cookiesCleared: cleared });
+        });
+      }
+    );
+    return true; // async sendResponse
+  }
+
   console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
 
   switch (message.type) {
