@@ -3666,7 +3666,8 @@ ${tip}
         addLog(`📥 ${msg.tool}: ${msg.success ? '成功' : '失败'}`, msg.success ? 'result' : 'error');
         
         state.agentRunning = false;
-        sseState.executedInCurrentMessage = false;  // 重置，允许下一轮工具调用
+        // executedInCurrentMessage 不在此处重置，由 SSE 连接建立/关闭时重置
+        // 避免 batch 执行中间或结果返回后 DOM 扫描重复执行
         hideExecutingIndicator();
         updateStatus();
         
