@@ -19,7 +19,7 @@ class ProcessManager {
     this.nextId = 1;
   }
 
-  run(command, options = {}) {
+  run(command, options = {}, onComplete = null) {
     // 找空槽或分配新槽
     if (this.slots.size >= MAX_SLOTS) {
       // 尝试清理已完成的槽
@@ -78,6 +78,10 @@ class ProcessManager {
         slot.exitCode = code;
         slot.endTime = Date.now();
         console.log(`[ProcessManager] Slot #${slotId} (PID ${slot.pid}) exited with code ${code}`);
+        if (onComplete) {
+          const formatted = this._formatSlot(slotId, slot, );
+          onComplete(formatted);
+        }
       });
 
       child.on('error', (err) => {

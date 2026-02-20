@@ -16,7 +16,7 @@ class TaskEngine {
 
   // 工具别名映射（与 index.js TOOL_ALIASES 保持同步）
   static TOOL_ALIASES = {
-    'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell' }) }
+    'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) }
   };
 
   resolveAlias(tool, params) {

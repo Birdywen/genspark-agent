@@ -2,11 +2,13 @@
 // 自动加载 skills 目录下的所有 Skill，生成系统提示
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
+import { execSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = path.join(__dirname, '..', 'skills');
+const KNOWLEDGE_DB = path.join(__dirname, '..', '..', '.agent_memory', 'project_knowledge.db');
 
 class SkillsManager {
   constructor() {
@@ -48,6 +50,41 @@ class SkillsManager {
   }
 
   /**
+   * 从数据库加载踩坑经验
+   */
+  _loadLessons() {
+    if (!existsSync(KNOWLEDGE_DB)) return '';
+    
+    try {
+      const rows = execSync(
+        `sqlite3 -json "${KNOWLEDGE_DB}" "SELECT category, title, problem, solution FROM lessons_learned ORDER BY category, id"`,
+        { encoding: 'utf8', timeout: 5000 }
+      ).trim();
+      
+      if (!rows || rows === '[]') return '';
+      
+      const lessons = JSON.parse(rows);
+      let prompt = '\n# ⚠️ 踩坑经验（每次对话必读）\n\n';
+      let currentCat = '';
+      
+      for (const l of lessons) {
+        if (l.category !== currentCat) {
+          currentCat = l.category;
+          prompt += `\n## ${currentCat}\n\n`;
+        }
+        prompt += `### ${l.title}\n`;
+        prompt += `**问题**: ${l.problem}\n`;
+        prompt += `**解决**: ${l.solution}\n\n`;
+      }
+      
+      return prompt;
+    } catch (e) {
+      console.error('⚠️ 加载踩坑经验失败:', e.message);
+      return '';
+    }
+  }
+
+  /**
    * 生成系统提示
    */
   _generateSystemPrompt() {
@@ -83,6 +120,13 @@ class SkillsManager {
     
     prompt += `\n如需使用 Skill，可读取 \`${SKILLS_DIR}/<skill-name>/SKILL.md\` 获取详细指南。\n`;
     prompt += `\n如需查看完整工具文档，读取 \`/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\`\n`;
+    
+    // 自动加载踩坑经验
+    const lessonsPrompt = this._loadLessons();
+    if (lessonsPrompt) {
+      prompt += lessonsPrompt;
+      console.log('✅ 已加载踩坑经验到系统提示');
+    }
     
     return envInfo + prompt;
   }
@@ -125,7 +169,7 @@ class SkillsManager {
     const skill = this.skills.find(s => s.name === skillName);
     if (!skill) return [];
     
-    const refDir = path.join(SKILLS_DIR, skill.path, skill.references || 'references');
+    const refDir = path.join( skill.references || 'references');
     if (!existsSync(refDir)) return [];
     
     return readdirSync(refDir)

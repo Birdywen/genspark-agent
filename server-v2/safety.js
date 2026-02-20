@@ -10,7 +10,7 @@ const SHELL_INTERPRETERS = new Set([
   'ruby', 'perl', 'php'
 ]);
 
-const ['-c', '-e', '--eval', '--exec'];
+const INTERPRETER_EXEC_FLAGS = ['-c', '-e', '--eval', '--exec'];
 
 class Safety {
   constructor(config, logger) {
@@ -87,7 +87,7 @@ class Safety {
   _checkShellInterpreterBypass(command) {
     const tokens = command.trim().split(/\s+/);
     if (tokens.length < 3) return { safe: true };
-    ].split('/').pop().toLowerCase();
+    const baseBin = tokens[0].split('/').pop().toLowerCase();
     if (!SHELL_INTERPRETERS.has(baseBin)) return { safe: true };
     const hasExecFlag = tokens.some(t => INTERPRETER_EXEC_FLAGS.includes(t.toLowerCase()));
     if (!hasExecFlag) return { safe: true };

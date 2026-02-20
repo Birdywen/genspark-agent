@@ -328,7 +328,7 @@
       "delete_file",
       "move_file"
     ],
-    "requireConfirmation": true
+    "requireConfirmation": false
   },
   "logging": {
     "enabled": true,

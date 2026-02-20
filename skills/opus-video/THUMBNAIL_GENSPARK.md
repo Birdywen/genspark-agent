@@ -173,11 +173,14 @@ curl -s -X POST 'https://api.opus.pro/api/generative-jobs' \
 
 ## 注意事项
 
-1. **Genspark 图片 API 需要登录态** — `/api/files/s/` 端点需要 cookie 认证，只能通过 eval_js 在同源页面内 fetch，不能用 curl
-2. **upload.php 的 key 参数是简单防护** — 防止外部滥用，生产环境可升级为 token 认证
-3. **图片生成速度** — 通常 10-30 秒，比 OpusClip thumbnail 稍慢但质量显著更高
-4. **每次生成可能产出 1-2 张图** — 选最合适的一张上传
-5. **图片 ID 从 URL 提取** — 格式为 `/api/files/s/{IMAGE_ID}?cache_control=3600`
+1. **ask_proxy 必须用 messages 数组** — 请求体用 `messages: [{id, role: 'user', content: 'prompt', ...}]`，不能用 `query` 字段，否则不触发图片生成
+2. **eval_js 中构建 payload 用变量赋值** — 不要在对 `type: 'image_generation_agent'`，会被多层解析搞坏。用 `var p = {}; p.type = 'image_generation_agent';` 方式构建
+3. **缩略图可以直接带文字** — 不需要 ImageMagick，直接在 prompt 中描述文字内容、颜色、位置，模型可以渲染清晰英文文字
+4. **Genspark 图片 API 需要登录态** — `/api/files/s/` 端点需要 cookie 认证，只能通过 eval_js 在同源页面内 fetch，不能用 curl
+5. **upload.php 的 key 参数是简单防滥用，生产环境可升级为 token 认证
+6. **图片生成速度** — 通常 10-30 秒，比 OpusClip thumbnail 稍慢但质量显著更高
+7. **每次生成可能产出 1-2 张图** — 选最合适的一张上传
+8. **图片 ID 从 URL 提取** — 格式为 `/api/files/s/{IMAGE_ID}?cache_control=3600`
 
 ## 故障排查
 

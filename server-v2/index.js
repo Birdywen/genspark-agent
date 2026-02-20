@@ -526,6 +526,23 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   // 智能路由: 识别长时间命令自动走 bg_run
+  // 防御性校验: run_command 的 command 不应包含空格（除非是路径）
+  // 如果 command 看起来像 "bashecho hello"（参数被拼接），拒绝执行
+  if (tool === 'run_command' && params.command && !params.stdin) {
+    const cmd = params.command.trim();
+    // 正常的 command 应该是 "bash", "python3", "/usr/bin/env" 等
+    // 如果没有 stdin 但 command 包含空格且不像路径，说明参数被损坏
+    if (cmd.includes(' ') && !cmd.startsWith('/') && !cmd.startsWith('./')) {
+      logger.warning(`[防御] run_command 参数异常: command="${cmd}" 无 stdin，疑似参数拼接损跳过执行`);
+      const historyId = addToHistory(tool, params, false, null, '参数损坏: command 和 stdin 被拼接');
+      ws.send(JSON.stringify({
+        type: 'tool_result', id, historyId, tool,
+        success: false,
+        error: `[#${historyId}] 参数异常: command="${cmd}" (无stdin)，疑似 SSE 传输损坏，等待重试`
+      }));
+      return;
+    }
+  }
   if (tool === 'run_command' && params.command) {
     const cmd = params.command.toLowerCase();
     const longPatterns = [
@@ -617,6 +634,35 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   try {
+    // ── base64 内容解码：彻底解决 SSE 传输转义损坏 ──
+    // 当 content/stdin/code 字段以 'base64:' 前缀开头时，自动解码
+    const BASE64_PREFIX = 'base64:';
+    const base64Fields = ['content', 'stdin', 'code'];
+    for (const field of base64Fields) {
+      if (params[field] && typeof params[field] === 'string' && params[field].startsWith(BASE64_PREFIX)) {
+        try {
+          params[field] = Buffer.from(params[field].slice(BASE64_PREFIX.length), 'base64').toString('utf-8');
+          logger.info(`[Base64Decode] 解码字段 ${field}: ${params[field].length} chars`);
+        } catch (e) {
+          logger.warning(`[Base64Decode] 解码失败 ${field}: ${e.message}`);
+        }
+      }
+    }
+    // edits 数组中的 oldText/newText 也支持 base64
+    if (params.edits && Array.isArray(params.edits)) {
+      for (const edit of params.edits) {
+        for (const ef of ['oldText', 'newText']) {
+          if (edit[ef] && typeof edit[ef] === 'string' && edit[ef].startsWith(BASE64_PREFIX)) {
+            try {
+              edit[ef] = Buffer.from(edit[ef].slice(BASE64_PREFIX.length), 'base64').toString('utf-8');
+            } catch (e) {
+              logger.warning(`[Base64Decode] edits.${ef} 解码失败: ${e.message}`);
+            }
+          }
+        }
+      }
+    }
+
     // 支持灵活 timeout: 从原始 message 中提取
     const callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
     const callOptions = callTimeout ? { timeout: callTimeout } : {};

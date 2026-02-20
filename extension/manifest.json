@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://www.genspark.ai/*",
@@ -35,7 +36,9 @@
     "https://take-a-piano-sheet-music-break.com/*",
     "https://*.newzik.com/*",
     "https://app.getodin.ai/*",
-    "https://*.getodin.ai/*"
+    "https://*.getodin.ai/*",
+    "https://audiocleaner.ai/*",
+    "https://*.audiocleaner.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

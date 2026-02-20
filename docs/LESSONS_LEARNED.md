@@ -868,3 +868,91 @@ scp -P 1394 -i /Users/yay/.ssh/cpanel_ezmusic <本地文件> ezmusics@ezmusicsto
 ### 待验证
 - 在 scanForToolCalls 中加日志，记录每次扫描到的文本和解析结果
 - 特别关注 ΩSTOP 是否在文本中
+
+## 2026-02-19 Extension 解析修复 + Batch stdin 修复
+
+### safeJsonParse fallback 增强
+**问题**: safeJsonParse 的 JSON.parse 失败后，fallback 用正则 `[^"]+ ` 只提取 command 和 path 两个字段，stdin/content/code 等字段全部丢失。
+**解决**: fallback 增加 extractJsonStringValue 函数，逐字符扫描处理转义引号，提取所有常用字段（stdin、content、code、condition、label 等），数值字段和 edits 数组也单独提取。
+
+### SSE 通道正则非贪婪截断 JSON
+**问题**: SSE 直通道用正则非贪婪 `*?` 遇到第一个 `}` 就截断，嵌套 JSON 必定被破坏。
+**解决**: SSE 通道改为 extractJsonFromText（括号平衡法）+ safeJsonParse，两条解析路径逻辑完全一致。
+
+### task-engine TOOL_ALIASES 缺少 stdin/timeout/cwd
+**问题**: task-engine.js 的 run_command 别名转换只传了 command_line 和 mode，丢失 stdin、timeout、cwd。导致 batch 中 run_command 的 stdin 从未传给 run_process，bash 无输入直接退出，stdout 永远为空。之前误以为是「batch stdout 经常被吞」的显示问题。
+**解决**: 将 TOOL_ALIASES 与 index.js 同步，补上 stdin、timeout、cwd 透传。一行修复。
+**教训**: 当两处代码需要保持同步时（如别名映射），修改一处后必须检查另一处。
+
+### SSE 代码块检测不可靠，不要做
+**题**: 尝试在 SSE 原始文本中通过计数三反引号来检测代码块，结果长对话中累积计数变成奇数，把所有后续真实工具调用都拦住了，系统彻底瘫痪。局部检测（只看最近一对）也不可靠，因为 AI 回复中讨论代码时会产生各种嵌套情况。
+**解决**: 去掉 SSE 代码块检测。SSE 只保留简单的示例关键词检测。防误执行靠两条：(1) AI 回复中不写完整 Omega 格式引用 (2) 内容级去重兜底防重复执行。简单问题用简单方案从源头解决。
+**教训**: 不要在原始文本流上模拟 markdown 渲染状态，这条路走不通。
+
+## 2026-02-19 转义问题系统性修复
+
+### ΩHERE Heredoc 格式 — 彻底解决 SSE 传输转义损坏
+**问题**: write_file/edit_file/eval_js/run_command 的内容含有引号、反斜杠、模板字符串、正则等特殊字符时，经过 SSE 传输→DOM 渲染→JSON 解析的多层转义链路，字符被随机吞噬或损坏。safeJsonParse 的各种 fallback 治标不治本。
+**根因分析**: Claude 输出经过 Genspark SSE 流→sse-hook.js 拦截→content.js 提取文本→JSON.parse 解析。JSON 格式要求所有内容嵌套在字符串值中，需要精确多层转义，而 SSE 传输会随机丢失字符（尤其是引号、括号、反斜杠附近）。
+**解决**: 新增 ΩHERE heredoc 格式，完全绕过 JSON 转义：
+```
+ΩHERE tool_name
+@simple_param=value
+@big_content<<DELIMITER
+任意内容，零转义，原样传递
+DELIMITER
+ΩEND
+```
+- 实现: content.js 新增 parseHeredocFormat() 函数
+- 集成: parseToolCalls() 和 tryParseSSECommands() 中最优先检测
+- 支持: write_file, edit_file, run_command, eval_js 等所有含大内容的工具
+- edit_file edits 用 @edits + @oldText<</@newText<< 格式
+
+### base64 内容解码 — 备用方案
+**问题**: ΩHERE 格式不可用时（如旧对话），仍需要安全传递特殊内容
+**解决**: index.js handleToolCall 中添加 base64 前缀解码。content/stdin/code 字段以 base64: 开头时自动 Base64 decode。edits 数组的 oldText/newText 同样支持。
+**用法**: 仅作为 ΩHERE 的备用方案，因为 base64 编码会膨胀 33% 内容。
+
+### 关键教训
+1. **用问题系统修复问题是噩梦** — 写解析器代码时反复被 SSE 损坏，最终通过极小的 Python 脚本逐步构建
+2. **短内容不太会被损坏** — write_file/edit_file 对短内容(< 200字符)相对可靠
+3. **特殊字符组合是高** — << 符号、括号+引号组合、正则表达式在 SSE 传输中极易被吞
+4. **分层解决** — ΩHERE 解决内容传递，base64 作为备用，JSON 格式仍用于简单工具调用
+
+## 2026-02-19 Content Script 剪贴板复制修复
+
+### navigator.clipboard.writeText() 在 content script 隔离世界中不可用
+**问题**: 点击"📋 提示词"按钮无反应，navigator.clipboard.writeText() 静默失败
+**根因**: Content script 运行在隔离世界(isolated world)中，navigator.clipboard API 受限，即使页面是 HTTPS 也无法使用
+**解决**: 直接使用 textarea + document.execCommand('copy')，这在隔离世界中可以正常工作
+
+### 跨世界注入 inline script 会被 CSP 拦截
+**问题**: 尝试从 content script 通过 document.createElement('script') 注入代码到 MAIN world，脚本不执行
+**根因**: 页面 CSP(Content Security Policy) 阻止 inline script 执行
+**解决**: 不要依赖跨世界方案，直接在 content script 隔离世界中完成操作即可
+
+### CustomEvent detail 跨隔离世界传递不可靠
+**问题**: content script 发出的 CustomEvent 在 MAIN world 监听器中 e.detail 为空或不可访问
+**根因**: Chrome 隔离世界之间的 DOM 事件共享有限制，structured clone 可能失败
+**解决**: 如果确实需要跨世界传数据，用隐藏 DOM 元素(textContent)传递而非 event.detail
+
+### generateSystemPrompt() 模板字符串中 ${} 会被执行
+**问题**: 提示词模板中的示例代码 `const x = \`hello ${world}\`` 导致 "world is not defined" 运行时错误
+**根因**: generateSystemPrompt() 用 JS 模板字符串(反引号)构建，内部的 ${world} 被引擎当作模板表达式解析
+**解决**: 必须转义为 \${world}，所有模板字符串内的示例代码中的 ${} 都需要加反斜杠转义
+
+### content script 隔离世界的变量从 MAIN world 不可见
+**问题**: eval_js 检查 window.__GENSPARK_AGENT_LOADED__ 返回 false，误以为 content script 没加载
+**根因**: eval_js 在 MAIN world 执行，看不到 content script 隔离世界中设置的变量和事件处理器(onclick)
+**解决**: 不能通过 eval_js 判断 content script 状态，检查 DOM 元素(面板日志内容)间接确认
+
+## 2026-02-19 SSE + DOM 双通道重复执行修复
+
+### run_command 参数被 SSE 通道损坏导致双重执行
+**问题**: 执行 runE 通道和 DOM 通道各执行一次。SSE 通道可能解析出损坏的参数（如 command="bashecho hello" 而非 command="bash" + stdin="echo hello"），两次执行的 dedup key 不同导致去重失败。
+**根因**: 1) safeJsonParse 的 fallback（正则提取字段）可能产生错误结果；2) SSE HEREDOC 解析在 delta 拼接中间状态可能遗漏参数分隔。
+**修复**: 
+1. content.js SSE 通道: 对 _partialParse 结果不执行，对 run_command 做参数完整性检查（command 不应含引号/换行）
+2. server index.js: 防御性校验——run_command 无 stdin 但 command 含空格时拒绝执行
+3. HEREDOC 和 BATCH 的 SSE 执行保留（它们的解析更可靠），只对 JSON 格式加强校验
+**关键**: SSE 通道是主执行通道（拿到原始数据），DOM 是备选（渲染后可能损坏）。加强 SSE 解析可靠性而非禁用它。

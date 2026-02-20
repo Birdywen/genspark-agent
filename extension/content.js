@@ -99,15 +99,55 @@
         }
         return JSON.parse(result);
       } catch (e2) {
-        // 最后尝试：提取工具名和简单参数
-        const toolMatch = fixed.match(/"tool"\s*:\s*"(\w+)"/);
-        const pathMatch = fixed.match(/"path"\s*:\s*"([^"]+)"/);
-        const cmdMatch = fixed.match(/"command"\s*:\s*"([^"]+)"/);
+        // 最后尝试：提取工具名和所有参数
+        const toolMatch = fixed.match(/"tool"\s*:\s*"(\w[\w:-]*)"/);
         if (toolMatch) {
           const params = {};
-          if (pathMatch) params.path = pathMatch[1];
-          if (cmdMatch) params.command = cmdMatch[1];
-          console.warn('[Agent] Partial parse for tool:', toolMatch[1]);
+          // 提取 JSON 字符串值的辅助函数（处理转义引号）
+          function extractJsonStringValue(str, key) {
+            const keyPattern = new RegExp('"' + key + '"\\s*:\\s*"');
+            const m = keyPattern.exec(str);
+            if (!m) return null;
+            let start = m.index + m[0].length;
+            let esc = false;
+            for (let i = start; i < str.length; i++) {
+              if (esc) { esc = false; continue; }
+              if (str[i] === '\\') { esc = true; continue; }
+              if (str[i] === '"') return str.substring(start, i);
+            }
+            return null;
+          }
+          // 提取所有常用字符串字段
+          const fields = ['path', 'command', 'stdin', 'url', 'directory', 'pattern', 'content',
+                          'code', 'condition', 'label', 'slotId', 'lastN', 'tabId', 'query'];
+          for (const f of fields) {
+            const v = extractJsonStringValue(fixed, f);
+            if (v !== null) params[f] = v;
+          }
+          // 提取数值字段
+          const numFields = ['interval', 'timeout', 'tabId'];
+          for (const f of numFields) {
+            const nm = fixed.match(new RegExp('"' + f + '"\\s*:\\s*(\\d+)'));
+            if (nm) params[f] = parseInt(nm[1]);
+          }
+          // 提取 edits 数组（edit_file）
+          const editsIdx = fixed.indexOf('"edits"');
+          if (editsIdx !== -1) {
+            const arrStart = fixed.indexOf('[', editsIdx);
+            if (arrStart !== -1) {
+              let depth = 0, inStr = false, esc2 = false;
+              for (let i = arrStart; i < fixed.length; i++) {
+                const ch = fixed[i];
+                if (esc2) { esc2 = false; continue; }
+                if (ch === '\\') { esc2 = true; continue; }
+                if (ch === '"') { inStr = !inStr; continue; }
+                if (inStr) continue;
+                if (ch === '[') depth++;
+                if (ch === ']') { depth--; if (depth === 0) { try { params.edits = JSON.parse(fixed.substring(arrStart, i + 1)); } catch(ee) {} break; } }
+              }
+            }
+          }
+          console.warn('[Agent] Partial parse for tool:', toolMatch[1], 'fields:', Object.keys(params).join(','));
           return { tool: toolMatch[1], params, _partialParse: true };
         }
         throw e1;
@@ -225,6 +265,56 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
 - ΩRESUME{"taskId":"任务ID"} — 断点续传
 
+### ΩHERE Heredoc 格式（含特殊字符的大内容必须使用）
+
+当 write_file/edit_file/run_command/eval_js 的内容含有引号、反斜杠、模板字符串、正则等特殊字符时，**必须使用 ΩHERE 格式**而非 JSON 格式，避免 SSE 传输损坏：
+
+\`\`\`
+ΩHERE 工具名
+@简单参数=值
+@大内容参数<<分隔符
+任意内容（零转义，原样传递）
+分隔符
+ΩEND
+\`\`\`
+
+**write_file 示例:**
+ΩHERE write_file
+@path=/tmp/test.js
+@content<<EOF
+const x = \`hello \${world}\`;
+EOF
+ΩEND
+
+**edit_file 示例:**
+ΩHERE edit_file
+@path=/tmp/test.js
+@edits
+@oldText<<OLD
+const x = "old";
+OLD
+@newText<<NEW
+const x = "new";
+NEW
+ΩEND
+
+**run_command 示例:**
+ΩHERE run_command
+@command=bash
+@stdin<<SCRIPT
+echo "hello $USER"
+SCRIPT
+ΩEND
+
+**规则:** 数值参数自动转换，true/false 自动转布尔值。分隔符可以是任意标识符（EOF、SCRIPT、CODE 等）。
+
+
+**自定义结束标记:** 当内容本身包含 ΩEND 时（如编写 prompt 文档、解析器代码），在 ΩHERE 工具名后追加自定义结束词，替代默认 ΩEND。格式: ΩHERE 工具名 自定义结束词。不指定时默认用 ΩEND。
+
+### base64 内容模式
+
+write_file 的 content、run_command 的 stdin、eval_js 的 code 字段支持 base64 前缀：content 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
+
 ---
 
 ## 核心规则
@@ -240,26 +330,27 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ### 命令执行（必须遵守）
 
-**所有 run_command 一律使用 stdin 模式**，禁止把命令放在 command 参数里：
-
-正确: {"command":"bash","stdin":"你的命令"}
-错误: {"command":"你的命令"}
-
-原因: command 参数经过 SSE 传输会丢失引号、括号等字符。stdin 模式不受影响。
+**run_command 推荐使用 ΩHERE 格式**（最稳定，零转义）。简单无特殊字符的单行命令可用 JSON stdin 模式。
+禁止把命令放在 command 参数里: {"command":"echo hello"} 是错误的。
 超长脚本（50行以上）先 write_file 写到 /private/tmp/ 再 bash 执行。
+
+### ΩHERE 优先原则（核心规则）
+
+**默认使用 ΩHERE 格式**，JSON 格式仅用于无特殊字符的极简调用（如 read_file、list_directory）。
+适用 ΩHERE: write_file 写代码、edit_file 改代码、run_command 多行脚本、eval_js 页面脚本。
+适用 JSON: read_file、list_directory、bg_status 等纯简单参数调用。
+适用 ΩBATCH: 多个独立的简单查询操作。
 
 ### 代码修改
 
-- 1-20 行小修改 → edit_file
-- 20+ 行或结构性修改 → write_file
+- 1-20 行小修改 → edit_file（含代码时用 ΩHERE edit_file 格式）
+- 20+ 行或结构性修改 → write_file（用 ΩHERE write_file 格式）
 - 不确定 → 先 read_file 查看再决定
 - 修改后必须验证语法: JS 用 node -c，Python 用 python3 -m py_compile
 
-**edit_file 参数格式** (必须严格遵守):
-\`\`\`
-Ω{"tool":"edit_file","params":{"path":"文件路径","edits":[{"oldText":"精确匹配的原文","newText":"替换后的内容"}]}}ΩSTOP
-\`\`\`
-注意: edits 是数组，每项用 oldText/newText（不是 old_string/new_string）。oldText 必须与文件内容完全一致（包括空格和换行）。匹配失败时改用 write_file 重写。
+edit_file 用 ΩHERE 格式时 edits 用 @oldText<<OLD / @newText<<NEW 分隔。
+edit_file 用 JSON 格式时 edits 是数组 [{"oldText":"原文","newText":"新文"}]，仅限 oldText/newText 无特殊字符时使用。
+oldText 必须与文件内容完全一致。匹配失败时改用 write_file 重写。
 
 ### 批量执行黄金法则
 
@@ -269,7 +360,7 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ### 长内容处理
 
-超过50行时，用 run_command + stdin 或先 write_file 再执行。
+超过50行时，用 ΩHERE run_command 或先 ΩHERE write_file 写到 /private/tmp/ 再 bash 执行。
 
 ### 工具选择优先级
 
@@ -670,6 +761,108 @@ ${toolSummary}
     return null;
   }
 
+  // HEREDOC 格式解析器
+  function parseHeredocFormat(text) {
+    var calls = [];
+    var OMEGA = String.fromCharCode(0x03A9);
+    var MARKER = OMEGA + "HERE";
+    var END_STR = OMEGA + "END";
+    var NL = String.fromCharCode(10);
+    var searchFrom = 0;
+    while (true) {
+      var si = text.indexOf(MARKER, searchFrom);
+      if (si === -1) break;
+      // 先找 header 行获取工具名和可选的自定义结束标记
+      var he = text.indexOf(NL, si);
+      if (he === -1) break;
+      var hdr = text.substring(si + MARKER.length, he).trim();
+      var hdrParts = hdr.split(/\s+/);
+      if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) { searchFrom = si + 1; continue; }
+      var toolName = hdrParts[0];
+      var customEnd = hdrParts.length > 1 ? hdrParts[1] : null;
+      // 用自定义结束标记或默认 omega END
+      var actualEnd = customEnd || END_STR;
+      var endNL = text.indexOf(NL + actualEnd, he);
+      var ei = (endNL !== -1) ? endNL : text.indexOf(actualEnd, he);
+      if (ei === -1) { searchFrom = he; break; }
+      var bStart = Math.max(0, si - 50);
+      var before = text.substring(bStart, si).toLowerCase();
+      var skip = before.indexOf("example") !== -1;
+      if (skip) { searchFrom = ei + actualEnd.length + 1; continue; }
+      var body = text.substring(he + 1, ei);
+      var params = {};
+      var blines = body.split(NL);
+      var idx = 0;
+      while (idx < blines.length) {
+        var line = blines[idx];
+        var hdm = line.match(/^@(\w+)<<(\S+)\s*$/);
+        if (hdm) {
+          var hkey = hdm[1], delim = hdm[2], buf = [];
+          idx++;
+          while (idx < blines.length && blines[idx] !== delim) {
+            buf.push(blines[idx]); idx++;
+          }
+          params[hkey] = buf.join(NL);
+          idx++;
+          continue;
+        }
+        var spm = line.match(/^@(\w+)=(.*)$/);
+        if (spm) {
+          var skey = spm[1], sval = spm[2];
+          if (/^\d+$/.test(sval)) sval = parseInt(sval);
+          else if (sval === "true") sval = true;
+          else if (sval === "false") sval = false;
+          params[skey] = sval;
+          idx++;
+          continue;
+        }
+        if (line.trim() === "@edits" || line.indexOf("@oldText<<") === 0) {
+          if (!params.edits) params.edits = [];
+          if (line.trim() === "@edits") { idx++; } // skip @edits marker line
+          while (idx < blines.length) {
+            var eline = blines[idx];
+            if (eline.indexOf("@oldText<<") === 0) {
+              var odm = eline.match(/^@oldText<<(\S+)/);
+              if (!odm) break;
+              var odelim = odm[1], obuf = [];
+              idx++;
+              while (idx < blines.length && blines[idx] !== odelim) {
+                obuf.push(blines[idx]); idx++;
+              }
+              idx++;
+              if (idx < blines.length && blines[idx].indexOf("@newText<<") === 0) {
+                var ndm = blines[idx].match(/^@newText<<(\S+)/);
+                if (!ndm) break;
+                var ndelim = ndm[1], nbuf = [];
+                idx++;
+                while (idx < blines.length && blines[idx] !== ndelim) {
+                  nbuf.push(blines[idx]); idx++;
+                }
+                idx++;
+                params.edits.push({ oldText: obuf.join(NL), newText: nbuf.join(NL) });
+              }
+            } else { break; }
+          }
+          continue;
+        }
+        idx++;
+      }
+      if (Object.keys(params).length > 0) {
+        calls.push({
+          name: toolName,
+          params: params,
+          start: si,
+          end: ei + END_STR.length + 1,
+          isHeredoc: true
+        });
+      }
+      searchFrom = ei + actualEnd.length + 1;
+    }
+    return calls;
+  }
+
+
+
   // 解析新的代码块格式: Ωname ... ΩEND
   function parseCodeBlockFormat(text) {
     const toolCalls = [];
@@ -755,6 +948,15 @@ ${toolSummary}
   }
 
     function parseToolCalls(text) {
+    // 最优先：检查 ΩHERE heredoc 格式（零转义，解决 SSE 传输损坏问题）
+    const hereIdx = text.indexOf('\u03A9HERE');
+    if (hereIdx !== -1) {
+      const hereCalls = parseHeredocFormat(text);
+      if (hereCalls.length > 0) {
+        return hereCalls;
+      }
+    }
+
     // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
     const batchStartIdx = text.indexOf('ΩBATCH');
     if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
@@ -1032,6 +1234,11 @@ ${toolSummary}
   let toolCallWarningTimer = null;
 
   function startToolCallDetection() {
+    // SSE 已执行当前消息的工具调用，跳过 DOM 检测避免重复
+    if (sseState.executedInCurrentMessage && (Date.now() - sseState.lastDeltaTime < 30000)) {
+      log('跳过 DOM 检测（SSE 已执行）');
+      return;
+    }
     if (toolCallWarningTimer) clearTimeout(toolCallWarningTimer);
     expectingToolCall = true;
     toolCallWarningTimer = setTimeout(() => {
@@ -1088,6 +1295,16 @@ ${toolSummary}
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
     clearToolCallDetection();
+
+    // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
+    const contentKey = `exec:__BATCH__:${JSON.stringify(batch).substring(0, 200)}`;
+    if (state.executedCalls.has(contentKey)) {
+      log('跳过重复 BATCH 执行（内容级去重）');
+      addExecutedCall(callHash);
+      return;
+    }
+    addExecutedCall(contentKey);
+    setTimeout(() => state.executedCalls.delete(contentKey), 30000);
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1301,6 +1518,16 @@ ${toolSummary}
 
   function executeToolCall(tool, callHash) {
     clearToolCallDetection();
+    
+    // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
+    const contentKey = `exec:${tool.name}:${JSON.stringify(tool.params).substring(0, 200)}`;
+    if (state.executedCalls.has(contentKey)) {
+      log('跳过重复执行（内容级去重）:', tool.name);
+      addExecutedCall(callHash);
+      return;
+    }
+    addExecutedCall(contentKey);
+    setTimeout(() => state.executedCalls.delete(contentKey), 10000);
     
     // === 本地拦截: list_tabs 查询所有标签页 ===
     if (tool.name === 'list_tabs') {
@@ -1707,6 +1934,9 @@ ${toolSummary}
   // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
+    // SSE 已成功执行当前消息中的工具调用，跳过 DOM 扫描避免重复
+    // 但仅在 SSE 最近有活动时才跳过（避免 SSE 断开后 DOM 也不工作）
+    if (sseState.executedInCurrentMessage && (Date.now() - sseState.lastDeltaTime < 30000)) return;
     // console.log("[Agent] scanning...");
     if (state.agentRunning) return;
     
@@ -2647,20 +2877,32 @@ ${tip}
     });
     
     document.getElementById('agent-copy-prompt').onclick = () => {
-      const prompt = generateSystemPrompt();
-      navigator.clipboard.writeText(prompt).then(() => {
-        addLog('📋 提示词已复制', 'success');
-      }).catch(() => {
+      try {
+        const prompt = generateSystemPrompt();
+        console.log('[Agent] prompt length:', prompt.length);
+        
+        // 直接在 content script 中用 textarea + execCommand 复制
         const ta = document.createElement('textarea');
         ta.value = prompt;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        ta.style.opacity = '0';
         document.body.appendChild(ta);
         ta.select();
-        document.execCommand('copy');
+        const ok = document.execCommand('copy');
         document.body.removeChild(ta);
-        addLog('📋 提示词已复制', 'success');
-      });
+        
+        if (ok) {
+          addLog('📋 提示词已复制', 'success');
+        } else {
+          addLog('❌ execCommand 返回 false', 'error');
+        }
+      } catch (err) {
+        console.error('[Agent] copy-prompt error:', err);
+        addLog('❌ 复制失败: ' + err.message, 'error');
+      }
     };
-    
     document.getElementById('agent-minimize').onclick = () => {
       const panel = document.getElementById('agent-panel');
       const btn = document.getElementById('agent-minimize');
@@ -3316,6 +3558,7 @@ ${tip}
         addLog(`📥 ${msg.tool}: ${msg.success ? '成功' : '失败'}`, msg.success ? 'result' : 'error');
         
         state.agentRunning = false;
+        sseState.executedInCurrentMessage = false;  // 重置，允许下一轮工具调用
         hideExecutingIndicator();
         updateStatus();
         
@@ -3606,7 +3849,8 @@ ${tip}
     processedCommands: new Set(),  // 已从 SSE 处理过的命令签名
     lastDeltaTime: 0,
     messageId: null,
-    enabled: true              // SSE 通道开关
+    enabled: true,             // SSE 通道开关
+    executedInCurrentMessage: false  // 当前消息中 SSE 是否已执行过工具
   };
 
   function initSSEListener() {
@@ -3616,6 +3860,7 @@ ${tip}
       sseState.currentText = '';
       sseState.messageId = null;
       sseState.processedCommands.clear();
+      sseState.executedInCurrentMessage = false;
       log('SSE connected:', e.detail?.transport);
     });
 
@@ -3645,6 +3890,7 @@ ${tip}
     // 监听 SSE 连接关闭
     document.addEventListener('__sse_closed__', (e) => {
       sseState.connected = false;
+      sseState.executedInCurrentMessage = false;  // 重置，允许 DOM 扫描接管
       // 最后一次扫描，确保不遗漏
       if (sseState.currentText) {
         tryParseSSECommands();
@@ -3658,6 +3904,30 @@ ${tip}
   function tryParseSSECommands() {
     const text = sseState.currentText;
     if (!text) return;
+
+    // 最优先：检测 ΩHERE heredoc 格式（支持自定义结束标记，不再硬编码检查 ΩEND）
+    if (text.indexOf('\u03A9HERE') !== -1) {
+      const hereCalls = parseHeredocFormat(text);
+      for (const call of hereCalls) {
+        const sig = 'sse:here:' + call.name + ':' + call.start;
+        if (!sseState.processedCommands.has(sig)) {
+          sseState.processedCommands.add(sig);
+          addLog('\u26A1 SSE \u89E3\u6790 \u03A9HERE ' + call.name, 'tool');
+          log('SSE parsed HEREDOC:', call.name, JSON.stringify(call.params));
+          // run_command 参数完整性检查：command 不应包含引号或换行
+          if (call.name === 'run_command' && call.params.command && /["'\n]/.test(call.params.command)) {
+            log('SSE HEREDOC: run_command params corrupted, skip (defer to DOM)');
+            continue;
+          }
+          const callHash = 'sse:' + sseState.messageId + ':' + call.name + ':' + call.start;
+          addExecutedCall(callHash);
+          // 注册 dedup key 防止 DOM 通道重复执行
+          addExecutedCall('dedup:' + call.name + ':' + JSON.stringify(call.params).substring(0, 200));
+          sseState.executedInCurrentMessage = true;
+          executeToolCall(call, callHash);
+        }
+      }
+    }
 
     // 检测 ΩBATCH...ΩEND (正则快速匹配 + fallback 括号平衡法)
     let batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
@@ -3691,6 +3961,7 @@ ${tip}
             log('SSE parsed BATCH (raw, no DOM):', batch);
             const callHash = `sse:${sseState.messageId}:__BATCH__:${JSON.stringify(batch)}`;
             addExecutedCall(callHash);
+            sseState.executedInCurrentMessage = true;
             executeBatchCall(batch, callHash);
           }
         }
@@ -3700,32 +3971,49 @@ ${tip}
     }
 
     // 检测 Ω{...}ΩSTOP (可能有多个)
-    // 策略：先用正则快速匹配，JSON.parse 失败时 fallback 到括号平衡法
-    const singleRe = /Ω(\{[\s\S]*?\})ΩSTOP/g;
-    let m;
-    while ((m = singleRe.exec(text)) !== null) {
-      let jsonStr = m[1];
+    // 策略：直接用括号平衡法提取完整 JSON + safeJsonParse 解析
+    let searchPos = 0;
+    while (true) {
+      const omegaIdx = text.indexOf('Ω{', searchPos);
+      if (omegaIdx === -1) break;
+      // === SSE example keyword detection ===
+      const sseNearBefore = text.substring(Math.max(0, omegaIdx - 200), omegaIdx);
+      const sseIsExample = /格式[：:]|示例|例如|Example:|e\.g\./.test(sseNearBefore);
+      if (sseIsExample) {
+        const skipExtracted = extractJsonFromText(text, omegaIdx + 1);
+        if (skipExtracted) {
+          try {
+            const skipParsed = safeJsonParse(skipExtracted.json);
+            if (skipParsed && skipParsed.tool) {
+              addExecutedCall(`dedup:${skipParsed.tool}:${JSON.stringify(skipParsed.params)}`);
+              addExecutedCall(`exec:${skipParsed.tool}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
+              log('SSE SKIP (example keyword):', skipParsed.tool);
+            }
+          } catch(e) {}
+        }
+        searchPos = omegaIdx + 2; continue;
+      }
+      const extracted = extractJsonFromText(text, omegaIdx + 1);
+      if (!extracted) { searchPos = omegaIdx + 1; continue; }
+      const after = text.substring(extracted.end, extracted.end + 10);
+      if (!after.trim().startsWith('ΩSTOP')) { searchPos = extracted.end; continue; }
       let parsed = null;
       try {
-        parsed = JSON.parse(jsonStr);
+        parsed = safeJsonParse(extracted.json);
       } catch (e) {
-        // 正则截断了嵌套 JSON，用括号平衡法重新提取
-        try {
-          const omegaIdx = m.index;
-          const extracted = extractJsonFromText(text, omegaIdx + 1);
-          if (extracted) {
-            const after = text.substring(extracted.end, extracted.end + 10);
-            if (after.trim().startsWith('ΩSTOP')) {
-              jsonStr = extracted.json;
-              parsed = JSON.parse(jsonStr);
-              log('SSE fallback bracket parse OK:', parsed.tool);
-            }
-          }
-        } catch (e2) {
-          log('SSE single parse error (both methods):', e2.message);
-        }
+        log('SSE single parse error:', e.message);
+        searchPos = extracted.end;
+        continue;
       }
+      searchPos = extracted.end;
       if (!parsed) continue;
+      // 如果是 partial parse（JSON.parse 失败后的 fallback），跳过 SSE 执行
+      // partial parse 使用正则提取字段，参数可能不准确（如 command+ 被拼接）
+      // 让 DOM 通道用完整文本重新解析
+      if (parsed._partialParse) {
+        log('SSE skip partial parse result:', parsed.tool, '(unreliable params)');
+        continue;
+      }
       const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
       if (sseState.processedCommands.has(normalizedSig)) continue;
       sseState.processedCommands.add(normalizedSig);
@@ -3735,6 +4023,7 @@ ${tip}
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
         addExecutedCall(callHash);
         addExecutedCall(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
+        sseState.executedInCurrentMessage = true;
         executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
     }

@@ -250,6 +250,18 @@
       ]
     },
     {
+      "name": "genspark-image",
+      "description": "Genspark AI 图片生成器，基于 nano-banana-pro 模型，支持任意比例、带文字渲染、自动上传公开托管，可用于缩略图/封面/社交媒体/插图等",
+      "source": "local",
+      "path": "./genspark-image",
+      "skillFile": "SKILL.md",
+      "requiredMcp": [],
+      "tools": [
+        "genspark-generate-image",
+        "genspark-upload-image"
+      ]
+    },
+    {
       "name": "ntfy-notify",
       "description": "手机推送通知工具，基于 ntfy.sh 免费服务，支持任务完成通知、服务器监控告警、定时提醒，一行 curl 推送到手机",
       "source": "local",
