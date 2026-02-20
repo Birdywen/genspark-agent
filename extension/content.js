@@ -4006,7 +4006,8 @@ ${tip}
     // 监听 SSE 连接关闭
     document.addEventListener('__sse_closed__', (e) => {
       sseState.connected = false;
-      sseState.executedInCurrentMessage = false;  // 重置，允许 DOM 扫描接管
+      // executedInCurrentMessage 不在 SSE 关闭时重置
+      // 只在新消息的 SSE 连接建立时重置，避免长时间执行的命令被 DOM 重复执行
       // 最后一次扫描，确保不遗漏
       if (sseState.currentText) {
         tryParseSSECommands();
