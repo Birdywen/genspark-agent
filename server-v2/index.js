@@ -643,7 +643,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           params[targetField] = fileContent;
           const _tmpFile = params[fileField];
           delete params[fileField];
-          logger.info('[PayloadFile] 从文件加载 ' + targetField + ': ' + fileContent.length + ' chars <- ' + params[fileField]);
+          logger.info('[PayloadFile] 从文件加载 ' + targetField + ': ' + fileContent.length + ' chars <- ' + _tmpFile);
           // 清理临时文件
           try { unlinkSync(_tmpFile); } catch(e) {}
         } catch (e) {
