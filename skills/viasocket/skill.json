@@ -1,0 +1,83 @@
+{
+  "name": "viasocket",
+  "version": "1.0.0",
+  "description": "viasocket Flow 管理 - 搜索插件、创建/配置/发布/执行自动化工作流",
+  "author": "agent",
+  "commands": [
+    {
+      "name": "vs_search_plugin",
+      "description": "搜索 viasocket 可用的 plugin 和 action",
+      "usage": "vs_search_plugin <关键词或pluginId>"
+    },
+    {
+      "name": "vs_list_actions",
+      "description": "列出某个 plugin 的所有可用 actions",
+      "usage": "vs_list_actions <pluginId>"
+    },
+    {
+      "name": "vs_create_flow",
+      "description": "创建新的 flow（script）",
+      "usage": "vs_create_flow <title>"
+    },
+    {
+      "name": "vs_add_step",
+      "description": "向 flow 添加步骤（function/plugin/ifBlock 等）",
+      "usage": "vs_add_step <scriptId> <type> <title> [actionId] [iconUrl]"
+    },
+    {
+      "name": "vs_update_step",
+      "description": "更新步骤的代码或配置",
+      "usage": "vs_update_step <scriptId> <stepTitle> <type> <code_or_config>"
+    },
+    {
+      "name": "vs_publish",
+      "description": "发布 flow",
+      "usage": "vs_publish <scriptId>"
+    },
+    {
+      "name": "vs_run",
+      "description": "执行 flow（支持传入 payload）",
+      "usage": "vs_run <scriptId> [payload_json]"
+    },
+    {
+      "name": "vs_dryrun",
+      "description": "Dry run flow",
+      "usage": "vs_dryrun <scriptId> [payload_json]"
+    },
+    {
+      "name": "vs_get_flow",
+      "description": "获取 flow 详情",
+      "usage": "vs_get_flow <scriptId>"
+    },
+    {
+      "name": "vs_list_flows",
+      "description": "列出所有 flows",
+      "usage": "vs_list_flows"
+    },
+    {
+      "name": "vs_delete_step",
+      "description": "删除 flow 中的步骤",
+      "usage": "vs_delete_step <scriptId> <stepTitle>"
+    },
+    {
+      "name": "vs_delete_flow",
+      "description": "删除 flow",
+      "usage": "vs_delete_flow <scriptId>"
+    },
+    {
+      "name": "vs_logs",
+      "description": "查看 flow 执行日志",
+      "usage": "vs_logs <scriptId> [limit]"
+    },
+    {
+      "name": "vs_check_auth",
+      "description": "查看已授权的服务列表",
+      "usage": "vs_check_auth"
+    },
+    {
+      "name": "vs_get_action_detail",
+      "description": "获取 action 详情（含代码模板）",
+      "usage": "vs_get_action_detail <actionId>"
+    }
+  ]
+}
