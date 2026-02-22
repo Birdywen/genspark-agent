@@ -478,7 +478,7 @@ const processManager = new ProcessManager();
 // ==================== 工具调用处理（含历史记录）====================
 // 工具别名映射
 const TOOL_ALIASES = {
-  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) },
+  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.stdinFile && { stdinFile: p.stdinFile }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) },
   'bg_run': null,
   'bg_status': null,
   'bg_kill': null
@@ -528,7 +528,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   // 智能路由: 识别长时间命令自动走 bg_run
   // 防御性校验: run_command 的 command 不应包含空格（除非是路径）
   // 如果 command 看起来像 "bashecho hello"（参数被拼接），拒绝执行
-  if (tool === 'run_command' && params.command && !params.stdin) {
+  if (tool === 'run_command' && params.command && !params.stdin && !params.stdinFile) {
     const cmd = params.command.trim();
     // 正常的 command 应该是 "bash", "python3", "/usr/bin/env" 等
     // 如果没有 stdin 但 command 包含空格且不像路径，说明参数被损坏
