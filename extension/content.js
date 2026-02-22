@@ -268,11 +268,9 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 
 ### Payload 安全通道（重要）
 
-write_file 的 content 通过 HTTP 安全通道传输（不经过 SSE），特殊字符不会丢失。
-run_command 的 stdin 和 eval_js 的 code 仍走 SSE，复杂内容可能被截断。
-**复杂代码的正确做法**: 先用 write_file 写到文件（内容完整），再用短命令执行（如 python3 /private/tmp/script.py 或 bash /private/tmp/task.sh）。
-禁止在 run_command 的 stdin 中直接写超过 5 行的复杂代码，应先 write_file 再执行。
-stdin 中引用长路径时，先用变量赋值（如 F=~/workspace/xxx），再用 "$F" 引用，避免路径在 SSE 传输中被截断。
+write_file 的 content、run_command 的 stdin、eval_js 的 code 均通过 HTTP 安全通道传输（不经过 SSE），特殊字符不会丢失。
+超过 50 字符的 content/stdin/code 自动走 HTTP 上传，无需额外操作。
+eval_js/js_flow/async_task 等浏览器本地工具的参数不走 HTTP 上传（它们在 content.js 中直接拦截执行，不经过服务端）。
 
 ### ΩHERE Heredoc 格式（含特殊字符的大内容必须使用）
 
@@ -2010,7 +2008,7 @@ ${toolSummary}
     // ── Payload Upload:段内容通过 HTTP 上传避免 WebSocket 损坏 ──
     const PAYLOAD_UPLOAD_URL = 'http://localhost:8766/upload-payload';
     const PAYLOAD_THRESHOLD = 50; // 超过 50 字符的内容走 HTTP 上传（降低阈值，防止 SSE 损坏短内容）
-    const PAYLOAD_FIELDS = ['content'];
+    const PAYLOAD_FIELDS = ['content', 'stdin', 'code'];
     const FILE_FIELD_MAP = { content: 'contentFile', stdin: 'stdinFile', code: 'codeFile' };
 
     async function uploadPayloads(params) {
