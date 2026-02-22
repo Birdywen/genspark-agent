@@ -266,6 +266,13 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
 - ΩRESUME{"taskId":"任务ID"} — 断点续传
 
+### Payload 安全通道（重要）
+
+write_file 的 content 通过 HTTP 安全通道传输（不经过 SSE），特殊字符不会丢失。
+run_command 的 stdin 和 eval_js 的 code 仍走 SSE，复杂内容可能被截断。
+**复杂代码的正确做法**: 先用 write_file 写到文件（内容完整），再用短命令执行（如 python3 /private/tmp/script.py 或 bash /private/tmp/task.sh）。
+禁止在 run_command 的 stdin 中直接写超过 5 行的复杂代码，应先 write_file 再执行。
+
 ### ΩHERE Heredoc 格式（含特殊字符的大内容必须使用）
 
 当 write_file/edit_file/run_command/eval_js 的内容含有引号、反斜杠、模板字符串、正则等特殊字符时，**必须使用 ΩHERE 格式**而非 JSON 格式，避免 SSE 传输损坏：
