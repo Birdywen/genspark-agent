@@ -794,6 +794,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
       }
       break;
+
+    case 'UPLOAD_PAYLOAD': {
+      const url = 'http://localhost:8766/upload-payload';
+      const body = message.body || '';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: body
+      })
+      .then(r => r.json())
+      .then(result => {
+        console.log('[BG] UPLOAD_PAYLOAD success:', result.path, result.size, 'bytes');
+        sendResponse(result);
+      })
+      .catch(e => {
+        console.log('[BG] UPLOAD_PAYLOAD failed:', e.message);
+        sendResponse({ success: false, error: e.message });
+      });
+      break;
+    }
+
   }
 
   return true;

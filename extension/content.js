@@ -2001,8 +2001,8 @@ ${toolSummary}
     
     // ── Payload Upload:段内容通过 HTTP 上传避免 WebSocket 损坏 ──
     const PAYLOAD_UPLOAD_URL = 'http://localhost:8766/upload-payload';
-    const PAYLOAD_THRESHOLD = 200; // 超过 200 字符的内容走 HTTP 上传
-    const PAYLOAD_FIELDS = ['content', 'stdin', 'code'];
+    const PAYLOAD_THRESHOLD = 50; // 超过 50 字符的内容走 HTTP 上传（降低阈值，防止 SSE 损坏短内容）
+    const PAYLOAD_FIELDS = ['content'];
     const FILE_FIELD_MAP = { content: 'contentFile', stdin: 'stdinFile', code: 'codeFile' };
 
     async function uploadPayloads(params) {
@@ -2010,18 +2010,24 @@ ${toolSummary}
       for (const field of PAYLOAD_FIELDS) {
         if (params[field] && typeof params[field] === 'string' && params[field].length > PAYLOAD_THRESHOLD) {
           try {
-            const resp = await fetch(PAYLOAD_UPLOAD_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain' },
-              body: params[field]
+            const result = await new Promise((resolve, reject) => {
+              chrome.runtime.sendMessage(
+                { type: 'UPLOAD_PAYLOAD', body: params[field] },
+                (resp) => {
+                  if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                  } else {
+                    resolve(resp);
+                  }
+                }
+              );
             });
-            const result = await resp.json();
-            if (result.success && result.path) {
+            if (result && result.success && result.path) {
               uploaded[field] = result.path;
               log('[PayloadUpload] ' + field + ' -> ' + result.path + ' (' + result.size + ' bytes)');
             }
           } catch(e) {
-            log('[PayloadUpload] 上传失败 ' + field + ': ' + e.message + ', 回退到 WebSocket');
+            log('[PayloadUpload] failed ' + field + ': ' + e.message + ', fallback to WS');
           }
         }
       }
