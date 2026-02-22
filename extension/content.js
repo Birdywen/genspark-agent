@@ -58,6 +58,24 @@
     localStorage.setItem('agent_executed_calls', JSON.stringify(arr));
   }
 
+  // ── SSE→DOM 短生命周期去重（不持久化，自动过期）──
+  const _dedupKeys = new Map(); // key → expireTimestamp
+  function addDedupKey(key, ttlMs) {
+    if (ttlMs === undefined) ttlMs = 15000;
+    _dedupKeys.set(key, Date.now() + ttlMs);
+  }
+  function hasDedupKey(key) {
+    const expire = _dedupKeys.get(key);
+    if (!expire) return false;
+    if (Date.now() > expire) { _dedupKeys.delete(key); return false; }
+    return true;
+  }
+  // 定期清理过期 key
+  setInterval(function() {
+    var now = Date.now();
+    _dedupKeys.forEach(function(exp, k) { if (now > exp) _dedupKeys.delete(k); });
+  }, 30000);
+
   // 加载面板增强模块
   function loadPanelEnhancer() {
     const script = document.createElement('script');
@@ -1420,13 +1438,12 @@ ${toolSummary}
 
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
     const contentKey = `exec:__BATCH__:${JSON.stringify(batch).substring(0, 200)}`;
-    if (state.executedCalls.has(contentKey)) {
+    if (hasDedupKey(contentKey)) {
       log('跳过重复 BATCH 执行（内容级去重）');
       addExecutedCall(callHash);
       return;
     }
-    addExecutedCall(contentKey);
-    setTimeout(() => state.executedCalls.delete(contentKey), 30000);
+    addDedupKey(contentKey, 30000);
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1643,13 +1660,12 @@ ${toolSummary}
     
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
     const contentKey = `exec:${tool.name}:${JSON.stringify(tool.params).substring(0, 200)}`;
-    if (state.executedCalls.has(contentKey)) {
+    if (hasDedupKey(contentKey)) {
       log('跳过重复执行（内容级去重）:', tool.name);
       addExecutedCall(callHash);
       return;
     }
-    addExecutedCall(contentKey);
-    setTimeout(() => state.executedCalls.delete(contentKey), 10000);
+    addDedupKey(contentKey, 10000);
     
     // === 本地拦截: list_tabs 查询所有标签页 ===
     if (tool.name === 'list_tabs') {
@@ -2267,7 +2283,7 @@ ${toolSummary}
       
       // 通用去重：检查 SSE 通道注册的 dedup key
       const dedupKey = `dedup:${tool.name}:${JSON.stringify(tool.params)}`;
-      if (state.executedCalls.has(dedupKey)) {
+      if (hasDedupKey(dedupKey)) {
         log('跳过 DOM 扫描（dedup key 已存在）:', tool.name);
         addExecutedCall(callHash);
         continue;
@@ -4094,7 +4110,7 @@ ${tip}
           const callHash = 'sse:' + sseState.messageId + ':' + call.name + ':' + call.start;
           addExecutedCall(callHash);
           // 注册 dedup key 防止 DOM 通道重复执行
-          addExecutedCall('dedup:' + call.name + ':' + JSON.stringify(call.params).substring(0, 200));
+          addDedupKey('dedup:' + call.name + ':' + JSON.stringify(call.params).substring(0, 200));
           sseState.executedInCurrentMessage = true;
           executeToolCall(call, callHash);
         }
@@ -4114,7 +4130,7 @@ ${tip}
           log('SSE parsed HEREBATCH:', hereBatchSSE.steps.length, 'steps');
           var hereBatchHash = 'sse:' + sseState.messageId + ':herebatch:' + hereBatchSSE.start;
           addExecutedCall(hereBatchHash);
-          addExecutedCall('dedup:__BATCH__:' + JSON.stringify(hereBatchSSE.steps).substring(0, 200));
+          addDedupKey('dedup:__BATCH__:' + JSON.stringify(hereBatchSSE.steps).substring(0, 200));
           sseState.executedInCurrentMessage = true;
           executeBatchCall({ steps: hereBatchSSE.steps }, hereBatchHash);
         }
@@ -4178,8 +4194,8 @@ ${tip}
           try {
             const skipParsed = safeJsonParse(skipExtracted.json);
             if (skipParsed && skipParsed.tool) {
-              addExecutedCall(`dedup:${skipParsed.tool}:${JSON.stringify(skipParsed.params)}`);
-              addExecutedCall(`exec:${skipParsed.tool}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
+              addDedupKey(`dedup:${skipParsed.tool}:${JSON.stringify(skipParsed.params)}`);
+              addDedupKey(`exec:${skipParsed.tool}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
               log('SSE SKIP (example keyword):', skipParsed.tool);
             }
           } catch(e) {}
@@ -4215,7 +4231,7 @@ ${tip}
         log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
         addExecutedCall(callHash);
-        addExecutedCall(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
+        addDedupKey(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
         sseState.executedInCurrentMessage = true;
         executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
