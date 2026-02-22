@@ -4089,6 +4089,68 @@ ${tip}
     log('SSE listener initialized');
   }
 
+  // === SSE 通用参数完整性预检查 ===
+  // 检测 SSE 传输损坏的参数，返回 true 表示应 defer to DOM
+  function sseParamsLookCorrupted(call) {
+    var p = call.params;
+    // eval_js / async_task: JS 语法检查
+    if ((call.name === 'eval_js' || call.name === 'async_task') && p.code) {
+      try { new Function(p.code); } catch (e) {
+        if (e instanceof SyntaxError) {
+          log('SSE pre-check: ' + call.name + ' code SyntaxError: ' + e.message + ', defer to DOM');
+          return true;
+        }
+      }
+    }
+    // run_command: command 不应含引号或换行
+    if (call.name === 'run_command' && p.command && /["'\n]/.test(p.command)) {
+      log('SSE pre-check: run_command command corrupted, defer to DOM');
+      return true;
+    }
+    // run_command: stdin 引号不配对
+    if (call.name === 'run_command' && p.stdin) {
+      var sq = (p.stdin.match(/'/g) || []).length;
+      var dq = (p.stdin.match(/"/g) || []).length;
+      if (sq % 2 !== 0 || dq % 2 !== 0) {
+        log('SSE pre-check: run_command stdin unmatched quotes, defer to DOM');
+        return true;
+      }
+    }
+    // write_file: content 不应为空
+    if (call.name === 'write_file' && !p.content && !p.contentFile) {
+      log('SSE pre-check: write_file empty content, defer to DOM');
+      return true;
+    }
+    // edit_file: edits 必须是非空数组
+    if (call.name === 'edit_file') {
+      if (!p.edits || !Array.isArray(p.edits) || p.edits.length === 0) {
+        log('SSE pre-check: edit_file edits missing/empty, defer to DOM');
+        return true;
+      }
+    }
+    // 路径完整性: path 应以 / 开头
+    if (p.path && typeof p.path === 'string' && !p.path.startsWith('/')) {
+      log('SSE pre-check: path not starting with /, defer to DOM');
+      return true;
+    }
+    // run_command stdin heredoc 未闭合检测
+    if (call.name === 'run_command' && p.stdin) {
+      var hereMatch = p.stdin.match(/<<\s*'?(\w+)'?\s*\n/);
+      if (hereMatch && p.stdin.indexOf('\n' + hereMatch[1]) === -1) {
+        log('SSE pre-check: run_command stdin heredoc unclosed (' + hereMatch[1] + '), defer to DOM');
+        return true;
+      }
+    }
+    // js_flow: steps 必须是非空数组
+    if (call.name === 'js_flow') {
+      if (!p.steps || !Array.isArray(p.steps) || p.steps.length === 0) {
+        log('SSE pre-check: js_flow steps missing/empty, defer to DOM');
+        return true;
+      }
+    }
+    return false;
+  }
+
   function tryParseSSECommands() {
     const text = sseState.currentText;
     if (!text) return;
@@ -4102,9 +4164,8 @@ ${tip}
           sseState.processedCommands.add(sig);
           addLog('\u26A1 SSE \u89E3\u6790 \u03A9HERE ' + call.name, 'tool');
           log('SSE parsed HEREDOC:', call.name, JSON.stringify(call.params));
-          // run_command 参数完整性检查：command 不应包含引号或换行
-          if (call.name === 'run_command' && call.params.command && /["'\n]/.test(call.params.command)) {
-            log('SSE HEREDOC: run_command params corrupted, skip (defer to DOM)');
+          // === SSE 通用参数完整性预检查 (defer to DOM if corrupted) ===
+          if (sseParamsLookCorrupted(call)) {
             continue;
           }
           const callHash = 'sse:' + sseState.messageId + ':' + call.name + ':' + call.start;
@@ -4227,6 +4288,10 @@ ${tip}
       if (sseState.processedCommands.has(normalizedSig)) continue;
       sseState.processedCommands.add(normalizedSig);
       if (parsed.tool) {
+        // === SSE 通用参数完整性预检查 ===
+        if (sseParamsLookCorrupted({ name: parsed.tool, params: parsed.params || {} })) {
+          continue;
+        }
         addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
         log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;

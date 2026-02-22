@@ -40,7 +40,9 @@
     "https://audiocleaner.ai/*",
     "https://*.audiocleaner.ai/*",
     "https://galaxy.ai/*",
-    "https://*.galaxy.ai/*"
+    "https://*.galaxy.ai/*",
+    "https://www.arrangeme.com/*",
+    "https://*.arrangeme.com/*"
   ],
   "background": {
     "service_worker": "background.js"
