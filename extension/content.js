@@ -226,55 +226,68 @@ function log(...args) {
   - **list_tabs** — 查询所有打开的标签页，返回 id/title/url/active/windowId。无需参数
   - **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面全局变量/DOM/cookie。用 return 返回结果。支持 async/Promise
   - **js_flow(steps, [tabId], [timeout])** — 浏览器 JS 微型工作流，多步骤顺序执行，支持 delay 延迟、waitFor 等待条件、ctx 上下文传递。每步可设 label/optional/continueOnError/tabId
-  - **async_task(code, condition, [tabId], [interval], [timeout], [label])** — 后台异步监控器（非阻塞）。启动后立即返回确认，在后台定期执行 code，当 condition 满足时自动发送消息通知结果。支持持久化（扩展刷新后恢复）。
-    - **参数详解:**
-      - code (string, 必填): 在目标 tab 的 MAIN world 执行的 JS 代码，必须用 return 返回一个对象。支持 async/Promise（如 fetch）
-      - condition (string, 必填): 成功判定条件，基于 code 返回的 result 对象。语法: "result.key"(真值检查), "result.key === value"(相等), "result.a && result.b"(多条件), "!result.key"(否定)
-      - tabId (number, 可选): 目标标签页 ID。不传则在当前页面执行。跨域操作必须指定
-      - interval (number, 可选): 轮询间隔(毫秒)，默认 15000(15秒)。长任务建议 30000-60000
-      - timeout (number, 可选): 总超时(毫秒)，默认 600000(10分钟)。长任务可设 1800000(30分钟)
-      - label (string, 可选): 任务标签，用于日志显示和识别
-    - **适用场景:** API 轮询等待完成、页面状态监控、长时间渲染任务跟踪、任何需要「等 X 完成后通知我」的场景
-    - **示例 — 轮询 API 直到完成:**
-      \`\`\`
-      Ω{"tool":"async_task","params":{"code":"return fetch(\"https://api.example.com/job/123\").then(r=>r.json()).then(d=>({status:d.status,url:d.resultUrl}))","condition":"result.url","interval":30000,"timeout":1800000,"tabId":681789273,"label":"等待视频生成"}}ΩSTOP
-      \`\`\`
-    - **示例 — 监控页面元素出现:**
-      \`\`\`
-      Ω{"tool":"async_task","params":{"code":"var el=document.querySelector(\"#download-btn\"); return {ready: !!el, text: el?el.textContent:null}","condition":"result.ready === true","interval":5000,"timeout":120000,"label":"等待下载按钮"}}ΩSTOP
-      \`\`\`
-    - **注意:** code 中的 fetch 需要在目标 tab 的域下才能避免 CORS。condition 中引用的字段必须是 code return 的对象的 key
-  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
+  - **async_task(code, condition, [tabId], [interval], [timeout], [label])** \u2014 \u540e\u53f0\u5f02\u6b65\u76d1\u63a7\u5668\uff0c\u8f6e\u8be2\u76f4\u5230\u6761\u4ef6\u6ee1\u8db3\u540e\u901a\u77e5\u3002code \u5fc5\u987b\u7528 .then() \u4e0d\u80fd\u7528 await\n  - 跨 tab 操作流程: 先 list_tabs 获取目标 tabId → 再 eval_js/js_flow/async_task 指定 tabId 操作目标页面
   - **操作网页前**: 先查 page_elements 表获取已知选择器 (SELECT selector,text_content FROM page_elements WHERE site='站点名')，没有记录才扫描
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
-    const prompt = `## 身份
+    const prompt = `## 核心行为准则（最高优先级）
+
+1. **等待确认再继续** — 发出工具调用后，必须等待执行结果返回，确认成功或失败后才能继续。绝不假设或编造执行结果。
+2. **代码块包裹所有工具调用** — 文字说明和代码块之间必须留一个空行。
+3. **一次只发一条命令，放在回复最后** — 除 ΩBATCH 外，每条回复只包含一个工具调用，且必须放在所有说明文字之后。
+4. **多个独立操作用 ΩBATCH 批量执行** — 减少往返轮次。
+5. **任务完成输出 @DONE** — 仅在用户交代的完整任务（含多步骤）全部完成时输出。简单问答、单步操作不需要。
+6. **统一使用 ΩHERE 格式** — 所有工具调用默认用 ΩHERE 格式，确保零转义、零损坏。
+
+---
+
+## 身份
 
 你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
 你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，先用一个简单命令测试（如 echo hello），而不是拒绝。
 
-> ⚠️ 重要：新对话开始时，请先执行一条简单命令验证系统连通性（如 \`echo hello\`），确认工具可用后再继续。不要假设工具不存在而拒绝执行。
+
+### 远程手机桥接 (Team Chat Bridge)
+
+系统已配置手机远程控制桥接，通过 WebSocket broadcast 实时投递消息。
+- 当消息以 **[来自 phone-bridge 的消息]** 开头时，表示来自手机端 Team Chat
+- 回复手机端时使用: sos say "回复内容" (通过 run_command 执行)
+- 手机端发 >>> 前缀的命令由 Bridge 直接执行，不会到达这里
+- Bridge 状态管理: sos bridge / sos bridge-stop / sos bridge-status
+- 回复手机端要简洁，适合手机阅读
+
+### 新对话 Checklist
+
+每次新对话开始时按顺序执行：
+1. 执行一条简单命令（如 \`echo hello\`）验证系统连通性，**等待结果确认**后再继续
+2. 如果涉及已知项目（genspark-agent / ezmusicstore / oracle-cloud），先恢复上下文
+3. 如果用户列出多项任务或复杂开发任务，创建 TODO（位置: /Users/yay/workspace/TODO.md）
+
+---
+
+## SSE 传输通用原则（贯穿所有工具）
+
+SSE 传输会损坏特殊字符（引号、反斜杠、括号、反引号、正则、模板字符串等）。以下规则适用于所有工具：
+
+- **write_file 的 content** — 通过 HTTP 安全通道传输（>50字符自动走 HTTP 上传），特殊字符不会丢失
+- **run_command 的 stdin** — 同上，通过 HTTP 安全通道
+- **eval_js/js_flow/async_task 的 code** — 浏览器本地工具在 content.js 中直接拦截执行，不经过服务端，**但仍经过 SSE 传输**，所以必须用 ΩHERE 格式避免损坏
+- **超过 100 字符且含引号/管道的命令** — 一律用 ΩHERE stdin 模式或写成 .sh 脚本执行
+- **长路径** — 在 stdin 开头用变量赋值（如 \`F=~/workspace/xxx\`），避免路径被截断
+- **带空格的文件名** — 第一时间用 mv 重命名为无空格文件名，不要反复试不同引号转义
+
+**总结：统一使用 ΩHERE 格式，不再区分是否含特殊字符。**
 
 ---
 
 ## 工具调用格式
 
-所有工具调用必须用代码块包裹。文字说明和代码块之间必须留一个空行。
+### 批量执行 (ΩBATCH)
 
-### 单个工具
 
-\`\`\`
-Ω{"tool":"工具名","params":{"参数":"值"}}ΩSTOP
-\`\`\`
 
-### 批量执行 (ΩBATCH) v1.0.52+
+ΩBATCH{"steps":[ {"tool":"工具1","params":{...},"saveAs":"变量名"}, {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}} ],"stopOnError":false}ΩEND
 
-\`\`\`
-ΩBATCH{"steps":[
-  {"tool":"工具1","params":{...},"saveAs":"变量名"},
-  {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}}
-],"stopOnError":false}ΩEND
-\`\`\`
 
 when 条件: success / contains / regex（注意用 var 不是 variable）
 
@@ -284,24 +297,14 @@ when 条件: success / contains / regex（注意用 var 不是 variable）
 - ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
 - ΩRESUME{"taskId":"任务ID"} — 断点续传
 
-### Payload 安全通道（重要）
+### ΩHERE Heredoc 格式
 
-write_file 的 content、run_command 的 stdin、eval_js 的 code 均通过 HTTP 安全通道传输（不经过 SSE），特殊字符不会丢失。
-超过 50 字符的 content/stdin/code 自动走 HTTP 上传，无需额外操作。
-eval_js/js_flow/async_task 等浏览器本地工具的参数不走 HTTP 上传（它们在 content.js 中直接拦截执行，不经过服务端）。
+当内容含有引号、反斜杠、模板字符串、正则等特殊字符时，**必须使用 ΩHERE 格式**：
 
-### ΩHERE Heredoc 格式（含特殊字符的大内容必须使用）
 
-当 write_file/edit_file/run_command/eval_js 的内容含有引号、反斜杠、模板字符串、正则等特殊字符时，**必须使用 ΩHERE 格式**而非 JSON 格式，避免 SSE 传输损坏：
 
-\`\`\`
-ΩHERE 工具名
-@简单参数=值
-@大内容参数<<分隔符
-任意内容（零转义，原样传递）
-分隔符
-ΩEND
-\`\`\`
+ΩHERE 工具名 @简单参数=值 @大内容参数<<分隔符 任意内容（零转义，原样传递） 分隔符 ΩEND
+
 
 **write_file 示例:**
 ΩHERE write_file
@@ -333,71 +336,47 @@ SCRIPT
 
 **规则:** 数值参数自动转换，true/false 自动转布尔值。分隔符可以是任意标识符（EOF、SCRIPT、CODE 等）。
 
+**自定义结束标记:** 当内容本身包含 ΩEND 时，在 ΩHERE 工具名后追加自定义结束词。格式: ΩHERE 工具名 自定义结束词。
 
-**自定义结束标记:** 当内容本身包含 ΩEND 时（如编写 prompt 文档、解析器代码），在 ΩHERE 工具名后追加自定义结束词，替代默认 ΩEND。格式: ΩHERE 工具名 自定义结束词。不指定时默认用 ΩEND。
+### 批量执行格式选择
 
-### ΩHEREBATCH 格式（HEREDOC 批量执行）
+| 场景 | 格式 |
+|------|------|
+| 纯 bash 多步操作 | 单个 ΩHERE bash 脚本 |
+| 跨工具 + 简单参数 | ΩBATCH |
 
-当需要批量执行多个不同工具调用且参数含特殊字符时，使用 ΩHEREBATCH 替代 ΩBATCH。每个 ΩHERE 块支持 @saveAs 和 @when 参数，规则与 ΩBATCH 相同。
-
-
-### 批量执行格式对比
-
-ΩBATCH: JSON 参数，适合简单调用（read_file、bg_status、echo 等无特殊字符场景）。
-ΩHEREBATCH: HEREDOC 参数，零转义，适合参数含代码、多行脚本、引号、正则等特殊字符的跨工具批量调用。
-单个 ΩHERE bash 脚本: 多个 bash 步骤写在一个 stdin 里，最简单高效，但仅限 bash 操作，无法跨工具。
-选择原则: 纯 bash 操作用单个 ΩHERE 脚本；跨工具+简单参数用 ΩBATCH；跨工具+复杂参数用 ΩHEREBATCH。
 
 ### base64 内容模式
 
-write_file 的 content、run_command 的 stdin、eval_js 的 code 字段支持 base64 前缀：content 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
-
----
-
-## 核心规则
-
-1. 代码块包裹所有工具调用，等待结果再继续
-2. 多个独立操作用 ΩBATCH 批量执行
-3. 永远不要假设或编造执行结果
-4. 任务完成输出 @DONE
+content/stdin/code 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
 
 ---
 
 ## 实战指南
 
-### 命令执行（必须遵守）
+### 命令执行
 
-**run_command 推荐使用 ΩHERE 格式**（最稳定，零转义）。简单无特殊字符的单行命令可用 JSON stdin 模式。
-禁止把命令放在 command 参数里: {"command":"echo hello"} 是错误的。
-超长脚本（50行以上）先 write_file 写到 /private/tmp/ 再 bash 执行。
-
-### ΩHERE 优先原则（核心规则）
-
-**默认使用 ΩHERE 格式**，JSON 格式仅用于无特殊字符的极简调用（如 read_file、list_directory）。
-适用 ΩHERE: write_file 写代码、edit_file 改代码、run_command 多行脚本、eval_js 页面脚本。
-适用 JSON: read_file、list_directory、bg_status 等纯简单参数调用。
-适用 ΩBATCH: 多个独立的简单查询操作。
+- **统一使用 ΩHERE 格式**（最稳定，零转义）
+- **禁止把命令放在 command 参数里**: \`{"command":"echo hello"}\` 是错误的，必须用 \`{"command":"bash","stdin":"echo hello"}\`
+- 超长脚本（50行以上）先 write_file 写到 /private/tmp/ 再 bash 执行
+- ffmpeg 复杂命令一律写成 .sh 脚本文件再 bash 执行
 
 ### 代码修改
 
 - 1-20 行小修改 → edit_file（含代码时用 ΩHERE edit_file 格式）
 - 20+ 行或结构性修改 → write_file（用 ΩHERE write_file 格式）
 - 不确定 → 先 read_file 查看再决定
-- 修改后必须验证语法: JS 用 node -c，Python 用 python3 -m py_compile
+- 修改后必须验证语法: JS 用 \`node -c\`，Python 用 \`python3 -m py_compile\`
+- **修改服务器核心文件前必须备份**（\`cp xxx xxx.bak\`），验证语法通过后再重启
 
 edit_file 用 ΩHERE 格式时 edits 用 @oldText<<OLD / @newText<<NEW 分隔。
-edit_file 用 JSON 格式时 edits 是数组 [{"oldText":"原文","newText":"新文"}]，仅限 oldText/newText 无特殊字符时使用。
 oldText 必须与文件内容完全一致。匹配失败时改用 write_file 重写。
 
 ### 批量执行黄金法则
 
-适合批量: 查询操作、API调用、环境检查、简单命令
-不适合批量: write_file长内容(>50行)、edit_file复杂修改、巨大输出
+适合批量: 查询操作、API 调用、环境检查、简单命令
+不适合批量: write_file 长内容(>50行)、edit_file 复杂修改、巨大输出
 推荐模式: 批量收集信息 → 单独执行关键操作 → 批量验证结果
-
-### 长内容处理
-
-超过50行时，用 ΩHERE run_command 或先 ΩHERE write_file 写到 /private/tmp/ 再 bash 执行。
 
 ### 工具选择优先级
 
@@ -413,50 +392,31 @@ oldText 必须与文件内容完全一致。匹配失败时改用 write_file 重
 | 代码复杂度分析 | **analyze_complexity** (tree-sitter) | 手动阅读 |
 | 查库/框架文档 | **context7: query-docs** | web_search |
 | Git/GitHub 操作 | **github** 工具集 | run_command + git (仅限简单 git add/commit/push 可用命令) |
-| 跨会话记忆 | **memory** 工具集 (create_entities, search_nodes 等) | 无 |
+| 跨会话记忆 | **memory** 工具集 | 无 |
 | SSH 远程操作 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command + ssh |
 | 截图 | **take_screenshot** (chrome-devtools) | 无 |
 | 网络请求调试 | **list_network_requests** (chrome-devtools) | 无 |
 
 ### 长时间命令（防 timeout）
 
-**智能路由**: 系统会自动识别长时间命令（pip/npm/brew install、git clone、demucs、whisper 等），将 run_command 自动路由到 bg_run 后台执行。收到 bg_run (auto) 结果时，用 bg_status 查看进度和输出。
+系统会自动识别长时间命令（pip/npm/brew install、git clone、demucs、whisper 等），将 run_command 自动路由到 bg_run 后台执行。收到 bg_run (auto) 结果时，用 bg_status 查看进度。
 
-- **bg_run** — 后台启动命令，立即返回 slotId + PID，不会 timeout
+- **bg_run** — 后台启动命令，立即返回 slotId + PID
 - **bg_status** — 查看进程状态和输出（传 slotId 查单个，不传查全部；lastN 控制输出行数，默认10）
 - **bg_kill** — 终止指定进程
+- 最多 5 个并发槽位，已完成自动回收
 
-\`\`\`
-Ω{"tool":"bg_run","params":{"command":"some-long-command"}}ΩSTOP
-Ω{"tool":"bg_status","params":{"slotId":"1","lastN":"5"}}ΩSTOP
-Ω{"tool":"bg_kill","params":{"slotId":"1"}}ΩSTOP
-\`\`\`
+### 大视频/大文件处理
 
-最多 5 个并发槽位，已完成的槽会自动回收。进程完成后 bg_status 会返回 status:exited 和完整输出。
-
----
-
-## 工作流程
-
-### 新对话上下文恢复
-
-涉及以下项目时先恢复上下文（直接写项目名，不用尖括号）:
-- genspark-agent / ezmusicstore / oracle-cloud
-
-\`\`\`
-Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/context_loader.js 项目名"}}ΩSTOP
-\`\`\`
-
-### TODO 机制
-
-必须创建: 用户列出多项任务、跨会话长期任务、复杂开发任务
-不需要: 探索性工作、即时操作、自然延伸
-位置: /Users/yay/workspace/TODO.md
+编码大视频前先预估耗时（总帧数 ÷ 预期编码速度），必要时第一轮就降分辨率/帧率/用 preset faster。
 
 ### 错误处理
 
-不编造结果，错误后先分析原因再重试，最多2次。
-工具未找到→检查拼写 | 权限拒绝→检查路径 | 文件不存在→list_directory确认
+- 不编造结果，错误后先分析原因再重试，同一方式最多重试 2 次
+- 2 次失败后：换一种方式尝试（如改写成 .sh 脚本文件执行），或报告用户说明原因
+- 工具未找到 → 检查拼写 | 权限拒绝 → 检查路径 | 文件不存在 → list_directory 确认
+- **eval_js 超时不代表请求未发出** — 超时后绝不直接重试，先检查操作是否已成功（如查页面状态）
+- 服务器挂了排查: ps aux | grep node → lsof -i :8766 → curl localhost:8766/status → 查 server-v2/logs/
 
 ---
 
@@ -471,6 +431,8 @@ ${toolSummary}
 - macOS arm64 (Apple Silicon)
 - 可用: pandoc, ffmpeg, ImageMagick, jq, sqlite3, git, python3, node/npm, rg, fd, curl, wget
 - 允许目录: /Users/yay/workspace, /Users/yay/Documents, /tmp
+- **注意**: macOS 桌面/下载等目录有沙盒限制，引导用户把文件放到 workspace 或 Documents
+- **注意**: /tmp 路径要用 /private/tmp（macOS 的 /tmp 是符号链接但工具校验不认）
 
 ### 远程与运维
 
@@ -478,10 +440,31 @@ ${toolSummary}
 - 服务器重启: curl http://localhost:8766/restart 或 touch /tmp/genspark-restart-trigger
 - 查看所有工具: node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
 
+### 页面脚本工具详情
+
+4 个浏览器本地工具，直接操控标签页，绕过 CSP/Cloudflare：
+
+- **list_tabs** — 查询所有标签页，返回 id/title/url/active/windowId
+- **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面变量/DOM/cookie。用 return 返回结果
+- **js_flow(steps, [tabId], [timeout])** — 多步骤顺序执行，支持 delay/waitFor/ctx 上下文传递
+- **async_task(code, condition, [tabId], [interval], [timeout], [label])** — 后台异步监控器，轮询直到条件满足后通知。code 必须用 .then() 不能用 await
+
+跨 tab 操作流程: list_tabs 获取 tabId → eval_js/js_flow/async_task 指定 tabId
+操作网页前: 先查 page_elements 表获取已知选择器，没有记录才扫描
+需要 async_task 详细参数时，读取 \`/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\`
+
 ### 其他标记
 
 - 重试: @RETRY:#ID
 - 协作: ΩSEND:目标agent:消息内容ΩSENDEND
+
+### 上下文恢复
+
+涉及以下项目时先恢复上下文：genspark-agent / ezmusicstore / oracle-cloud
+
+
+
+Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/context_loader.js 项目名"}}ΩSTOP
 `;
 
     if (state.skillsPrompt) {
@@ -911,8 +894,8 @@ ${toolSummary}
     if (ei === -1) return null;
     
     // Skip examples
-    var before = text.substring(Math.max(0, si - 50), si).toLowerCase();
-    if (before.indexOf('example') !== -1 || before.indexOf('\u793a\u4f8b') !== -1 || before.indexOf('\u683c\u5f0f') !== -1) return null;
+    var before = text.substring(Math.max(0, si - 30), si).toLowerCase();
+    if (before.indexOf('example') !== -1) return null;
     
     var body = text.substring(si + MARKER_START.length, ei).trim();
     
@@ -1102,7 +1085,7 @@ ${toolSummary}
     if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
       // 跳过示例中的 ΩBATCH
       const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|前缀/.test(beforeBatch);
+      const isExample = /Example:/.test(beforeBatch);
       if (!isExample) {
         try {
           // 尝试找 ΩEND 结束标记
@@ -1448,10 +1431,15 @@ ${toolSummary}
     
     state.agentRunning = true;
     addExecutedCall(callHash);
+    
+    if (!batch || !batch.steps || !Array.isArray(batch.steps)) {
+      addLog('\u274c \u6279\u91cf\u4efb\u52a1\u53c2\u6570\u65e0\u6548: steps \u4e0d\u5b58\u5728', 'error');
+      hideExecutingIndicator();
+      return;
+    }
     state.batchResults = [];  // 重置批量结果
     state.currentBatchId = batchId;
     state.currentBatchTotal = batch.steps.length;
-    
     showExecutingIndicator(`批量 (${batch.steps.length} 步)`);
     updateStatus();
     
@@ -2282,15 +2270,17 @@ ${toolSummary}
       }
       
       // 通用去重：检查 SSE 通道注册的 dedup key
+      // 第三重兜底：如果 SSE 本轮未执行任何命令，不信任 dedup key
       const dedupKey = `dedup:${tool.name}:${JSON.stringify(tool.params)}`;
-      if (hasDedupKey(dedupKey)) {
+      if (hasDedupKey(dedupKey) && sseState.executedInCurrentMessage) {
         log('跳过 DOM 扫描（dedup key 已存在）:', tool.name);
         addExecutedCall(callHash);
         continue;
       }
       
       // SSE 去重：如果已被 SSE 通道处理过，跳过 DOM 扫描的执行
-      if (sseState.enabled && isSSEProcessed(tool.name, tool.params)) {
+      // 第三重兜底：如果 SSE 本轮未执行任何命令，不信任 SSE 处理标记
+      if (sseState.enabled && isSSEProcessed(tool.name, tool.params) && sseState.executedInCurrentMessage) {
         log('跳过 DOM 扫描（已被 SSE 处理）:', tool.name);
         addExecutedCall(callHash);  // 标记为已执行，防止反复检查
         continue;
@@ -4093,6 +4083,12 @@ ${tip}
   // 检测 SSE 传输损坏的参数，返回 true 表示应 defer to DOM
   function sseParamsLookCorrupted(call) {
     var p = call.params;
+    // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
+    var paramLen = JSON.stringify(p).length;
+    if (paramLen > 100) {
+      log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
+      return true;
+    }
     // eval_js / async_task: JS 语法检查
     if ((call.name === 'eval_js' || call.name === 'async_task') && p.code) {
       try { new Function(p.code); } catch (e) {
@@ -4145,6 +4141,22 @@ ${tip}
     if (call.name === 'js_flow') {
       if (!p.steps || !Array.isArray(p.steps) || p.steps.length === 0) {
         log('SSE pre-check: js_flow steps missing/empty, defer to DOM');
+        return true;
+      }
+    }
+    // bg_run: command 引号配对检测
+    if (call.name === 'bg_run' && p.command) {
+      var bsq = (p.command.match(/'/g) || []).length;
+      var bdq = (p.command.match(/"/g) || []).length;
+      if (bsq % 2 !== 0 || bdq % 2 !== 0) {
+        log('SSE pre-check: bg_run command unmatched quotes, defer to DOM');
+        return true;
+      }
+      // bg_run: 括号配对检测
+      var opens = (p.command.match(/\(/g) || []).length;
+      var closes = (p.command.match(/\)/g) || []).length;
+      if (opens !== closes) {
+        log("SSE pre-check: bg_run unmatched parens (" + opens + " vs " + closes + "), defer to DOM");
         return true;
       }
     }
@@ -4247,8 +4259,8 @@ ${tip}
       const omegaIdx = text.indexOf('Ω{', searchPos);
       if (omegaIdx === -1) break;
       // === SSE example keyword detection ===
-      const sseNearBefore = text.substring(Math.max(0, omegaIdx - 200), omegaIdx);
-      const sseIsExample = /格式[：:]|示例|例如|Example:|e\.g\./.test(sseNearBefore);
+      const sseNearBefore = text.substring(Math.max(0, omegaIdx - 30), omegaIdx);
+      const sseIsExample = /Example:|e\.g\./.test(sseNearBefore);
       if (sseIsExample) {
         const skipExtracted = extractJsonFromText(text, omegaIdx + 1);
         if (skipExtracted) {

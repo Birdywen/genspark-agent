@@ -57,7 +57,7 @@ class SkillsManager {
     
     try {
       const rows = execSync(
-        `sqlite3 -json "${KNOWLEDGE_DB}" "SELECT category, title, problem, solution FROM lessons_learned ORDER BY category, id"`,
+        `sqlite3 -json "${KNOWLEDGE_DB}" "SELECT category, title, problem, solution FROM lessons_learned WHERE integrated = 0 ORDER BY category, id"`,
         { encoding: 'utf8', timeout: 5000 }
       ).trim();
       

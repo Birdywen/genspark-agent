@@ -18,6 +18,7 @@ import SelfValidator from './self-validator.js';
 import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
+import http from "http";
 import ResultCache from './result-cache.js';
 import ContextCompressor from './context-compressor.js';
 import TaskPlanner from './task-planner.js';
@@ -504,7 +505,19 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
             lastOutput: completedSlot.lastOutput,
             success: completedSlot.exitCode === 0
           }));
+          logger.info("[bg_complete] 准备推送到手机, slot=" + completedSlot.slotId);
+          // 自动推送到手机
+          try {
+            const pStatus = completedSlot.exitCode === 0 ? "✅" : "❌";
+            const pMsg = pStatus + " bg_run slot " + completedSlot.slotId + " 完成 (" + (completedSlot.elapsed ? Math.round(completedSlot.elapsed/1000) : "?") + "s) exit=" + completedSlot.exitCode;
+            const pData = JSON.stringify({text: pMsg});
+            const pReq = http.request({hostname:"localhost",port:8769,path:"/reply",method:"POST",headers:{"Content-Type":"application/json","Content-Length":Buffer.byteLength(pData)}}, () => {});
+            pReq.write(pData);
+            pReq.end();
+            logger.info("[bg_complete] 推送请求已发送");
+          } catch(pe) { logger.error("[bg_complete] 推送异常: " + pe.message); }
         } catch (e) {
+
           logger.error(`[bg_complete] 通知发送失败: ${e.message}`);
         }
       });
@@ -1895,6 +1908,19 @@ async function main() {
               type: 'online_agents',
               agents: getOnlineAgents()
             }));
+            break;
+
+          case 'broadcast':
+            // 转发消息给所有其他客户端（用于 bridge -> background.js -> content.js）
+            if (msg.payload) {
+              logger.info("广播消息: " + (msg.payload.type || "unknown"));
+              for (const client of clients) {
+                if (client !== ws && client.readyState === 1) {
+                  client.send(JSON.stringify(msg.payload));
+                }
+              }
+              ws.send(JSON.stringify({ type: "broadcast_result", success: true }));
+            }
             break;
             
           default:

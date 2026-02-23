@@ -220,3 +220,14 @@
 - Session cookie handles all server-side authentication
 - arrangement typeId is loaded dynamically via `/sell/arrangementTypeGroups.action` after selecting groupId
 - Some arrangement types require instrument selection (Vocal Solo, Vocal Duet, etc.)
+
+### Minimum Price by Arrangement Type
+
+| Arrangement Type | Minimum Price |
+|-----------------|---------------|
+| Piano Solo      | $5.99         |
+| Easy Piano      | $4.99         |
+
+- The server silently ignores price updates below the minimum (returns HTTP 200 but does not persist the change).
+- Most unsold titles are Piano Solo, already at the $5.99 floor — no further discount possible.
+- The "Please enter a price of at least $X.XX" message only appears in the browser UI; the API gives no error.
