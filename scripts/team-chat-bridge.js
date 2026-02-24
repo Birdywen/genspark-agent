@@ -341,6 +341,60 @@ const replyServer = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/image') {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', async () => {
+      try {
+        const { url, name } = JSON.parse(body);
+        const ext = (name || url).split('.').pop().split('?')[0] || 'jpg';
+        const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
+        const mime = mimeMap[ext.toLowerCase()] || 'image/jpeg';
+        const https = await import('https');
+        const data = JSON.stringify({
+          category: 'message',
+          type: 'image',
+          receiver: CONFIG.GROUP_ID,
+          receiverType: 'group',
+          data: {
+            url: url,
+            attachments: [{ extension: ext, mimeType: mime, name: name || 'image.' + ext, url: url }]
+          }
+        });
+        const apiReq = https.default.request({
+          hostname: '1670754dd7dd407a4.apiclient-us.cometchat.io',
+          port: 443,
+          path: '/v3.0/messages',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'appId': CONFIG.APP_ID,
+            'authToken': CONFIG.AUTH_TOKEN,
+            'Content-Length': Buffer.byteLength(data)
+          }
+        }, (apiRes) => {
+          let respBody = '';
+          apiRes.on('data', c => respBody += c);
+          apiRes.on('end', () => {
+            log('Image sent to team chat');
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          });
+        });
+        apiReq.on('error', (e) => {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: e.message }));
+        });
+        apiReq.write(data);
+        apiReq.end();
+      } catch(e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/reply') {
     let body = '';
     req.on('data', c => body += c);

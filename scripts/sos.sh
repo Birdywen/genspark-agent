@@ -202,6 +202,16 @@ case "$CMD" in
     fi
     ;;
 
+  img)
+    URL="${2}"
+    NAME="${3:-image}"
+    if [ -z "$URL" ]; then
+      echo "用法: sos img <图片URL> [文件名]"
+    else
+      curl -s -X POST http://localhost:8769/image -H "Content-Type: application/json" -d "{\"url\":\"$URL\",\"name\":\"$NAME\"}" > /dev/null && echo "🖼️ 图片已发送" || echo "❌ 发送失败"
+    fi
+    ;;
+
   # === 帮助 ===
   help|*)
     cat << 'HELP'
