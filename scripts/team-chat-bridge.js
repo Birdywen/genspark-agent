@@ -1,286 +1,402 @@
-#!/usr/bin/env node
-// === Team Chat Bridge v2 - WebSocket Edition ===
-// 手机 Team Chat <-> WebSocket broadcast <-> AI 对话
+/**
+ * Team Chat Bridge v3.0 - CometChat WebSocket Realtime Edition
+ * 
+ * 架构: CometChat WS (实时推送) + REST API (发送消息) + Local WS (broadcast)
+ * 零轮询，毫秒级延迟
+ */
 
-const http = require('http');
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import { WebSocket as WS } from 'ws';
+import { readFileSync, writeFileSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const CONFIG = {
+  // CometChat
   COMET_API: 'https://1670754dd7dd407a4.apiclient-us.cometchat.io/v3.0',
+  COMET_WS: 'wss://1670754dd7dd407a4.websocket-us.cometchat.io/',
   APP_ID: '1670754dd7dd407a4',
   AUTH_TOKEN: '180ee88d-516d-45e1-aa63-272c7ad3186d_177187404381eed77145044b5996ac9c53bacd70',
+  JWT: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImNjcHJvX2p3dF9yczI1Nl9rZXkxIn0.eyJpc3MiOiIxNjcwNzU0ZGQ3ZGQ0MDdhNC5hcGljbGllbnQtdXMuY29tZXRjaGF0LmlvIiwiYXVkIjoiKiIsImlhdCI6MTc3MTg3NDA0NCwic3ViIjoiWzE2NzA3NTRkZDdkZDQwN2E0XTE4MGVlODhkLTUxNmQtNDVlMS1hYTYzLTI3MmM3YWQzMTg2ZCIsIm5iZiI6MTc3MTg3MDQ0NCwiZXhwIjoxNzc3MTM0MDQ0LCJkYXRhIjp7ImFwcElkIjoiMTY3MDc1NGRkN2RkNDA3YTQiLCJyZWdpb24iOiJ1cyIsImF1dGhUb2tlbiI6IjE4MGVlODhkLTUxNmQtNDVlMS1hYTYzLTI3MmM3YWQzMTg2ZF8xNzcxODc0MDQzODFlZWQ3NzE0NTA0NGI1OTk2YWM5YzUzYmFjZDcwIiwidXNlciI6eyJ1aWQiOiIxODBlZTg4ZC01MTZkLTQ1ZTEtYWE2My0yNzJjN2FkMzE4NmQiLCJuYW1lIjoiZ2Vuc3BhcmtfZmFuIiwiYXZhdGFyIjoiaHR0cHM6Ly9jZG4xLmdlbnNwYXJrLmFpL3VzZXItdXBsb2FkLWltYWdlL3YxLzZhYjg2YjAxLTY3YmMtNDVhYy1iNmIyLWM4ODhlZjQwOWE0NSIsInN0YXR1cyI6Im9mZmxpbmUiLCJyb2xlIjoiZGVmYXVsdCJ9fX0.XxsNDqpY2kh4BXS5gAxkveVGVlY_iSJGDEoeUIAdAQR82YQI6-EQF0HBTXDjgtKu2g0h8j-M7o5uVidTkJKLTc4skSm920O1sqKd1MdKnHAJGAni9U9ecREfw6SvkuNJZ0qvt3aBAAFm4mJoROsgZ5Q5V6CdBUxYX-mCGLXeqQc',
+  DEVICE_ID: '1670754dd7dd407a4_86804b96-32dd-41b4-ab7b-a8485c7f1783_1771874044137',
   GROUP_ID: 'project_c2a9886e-89c8-436a-b12f-1ef3da3778fe',
   MY_UID: '180ee88d-516d-45e1-aa63-272c7ad3186d',
-  WS_URL: 'ws://localhost:8765',
-  POLL_INTERVAL: 1500,
+
+  // Local
+  LOCAL_WS: 'ws://localhost:8765',
+  REPLY_PORT: 8769,
   PREFIX: '>>>',
   PID_FILE: '/tmp/team-chat-bridge.pid',
   LOG_FILE: path.join(__dirname, '../server-v2/logs/bridge.log'),
-  REPLY_PORT: 8769
+
+  // Reconnect
+  PING_INTERVAL: 25000,
+  RECONNECT_DELAY: 3000,
+  MAX_RECONNECT_DELAY: 30000,
 };
 
-let running = true;
-let lastMessageId = null;
-let wsConnection = null;
-
-// === Logging ===
+// --- Logger ---
 function log(msg) {
   const ts = new Date().toLocaleTimeString();
   const line = `[${ts}] ${msg}`;
   console.log(line);
-  try { fs.appendFileSync(CONFIG.LOG_FILE, line + '\n'); } catch(e) {}
+  try {
+  } catch(e) {}
+  try {
+    writeFileSync(CONFIG.LOG_FILE, line + '\n', { flag: 'a' });
+  } catch(e) {}
 }
 
-// === HTTP Helper ===
-function fetchJSON(url, options = {}) {
+// --- CometChat REST API (发送消息) ---
+function sendMessage(text) {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith('https') ? require('https') : require('http');
-    const parsed = new URL(url);
-    const opts = {
-      hostname: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname + parsed.search,
-      method: options.method || 'GET',
-      headers: options.headers || {}
-    };
-    const req = mod.request(opts, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); } catch(e) { reject(new Error('Parse error: ' + data.substring(0, 200))); }
-      });
+    const data = JSON.stringify({
+      category: 'message',
+      type: 'text',
+      data: { text },
+      receiver: CONFIG.GROUP_ID,
+      receiverType: 'group'
+    });
+
+    const url = new URL(`${CONFIG.COMET_API}/messages`);
+    const req = http.request({
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'appId': CONFIG.APP_ID,
+        'authToken': CONFIG.AUTH_TOKEN,
+        'Content-Length': Buffer.byteLength(data)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => resolve(body));
     });
     req.on('error', reject);
-    if (options.body) req.write(options.body);
+    req.write(data);
     req.end();
   });
 }
 
-// === CometChat API ===
-function getMessages() {
-  let url = `${CONFIG.COMET_API}/groups/${CONFIG.GROUP_ID}/messages?per_page=10&categories=message&types=text`;
-  if (lastMessageId) url += `&id=${lastMessageId}&affix=append`;
-  return fetchJSON(url, {
-    headers: { 'appId': CONFIG.APP_ID, 'authToken': CONFIG.AUTH_TOKEN, 'Accept': 'application/json' }
+// 用 https 发送
+async function sendMessageHttps(text) {
+  const https = await import('https');
+  const data = JSON.stringify({
+    category: 'message',
+    type: 'text',
+    data: { text },
+    receiver: CONFIG.GROUP_ID,
+    receiverType: 'group'
   });
-}
 
-function sendMessage(text) {
-  return fetchJSON(`${CONFIG.COMET_API}/messages`, {
-    method: 'POST',
-    headers: {
-      'appId': CONFIG.APP_ID,
-      'authToken': CONFIG.AUTH_TOKEN,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      category: 'message',
-      type: 'text',
-      data: { text: text.substring(0, 1500) },
-      receiver: CONFIG.GROUP_ID,
-      receiverType: 'group'
-    })
-  });
-}
-
-// === WebSocket Broadcast ===
-function connectWS() {
-  const WebSocket = require('ws');
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(CONFIG.WS_URL);
-    ws.on('open', () => {
-      log('WebSocket connected to ' + CONFIG.WS_URL);
-      resolve(ws);
+    const req = https.default.request({
+      hostname: '1670754dd7dd407a4.apiclient-us.cometchat.io',
+      port: 443,
+      path: '/v3.0/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'appId': CONFIG.APP_ID,
+        'authToken': CONFIG.AUTH_TOKEN,
+        'Content-Length': Buffer.byteLength(data)
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => resolve(body));
     });
-    ws.on('error', (e) => {
-      log('WebSocket error: ' + e.message);
-      reject(e);
-    });
-    ws.on('close', () => {
-      log('WebSocket disconnected');
-      wsConnection = null;
-    });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
   });
 }
 
-async function broadcastToChat(senderName, text) {
+// --- Local WebSocket (broadcast to agent) ---
+let localWs = null;
+let localWsConnected = false;
+
+function connectLocalWs() {
   try {
-    if (!wsConnection || wsConnection.readyState !== 1) {
-      wsConnection = await connectWS();
-    }
-    wsConnection.send(JSON.stringify({
+    localWs = new WS(CONFIG.LOCAL_WS);
+    localWs.on('open', () => {
+      localWsConnected = true;
+      log('Local WS connected to ' + CONFIG.LOCAL_WS);
+    });
+    localWs.on('close', () => {
+      localWsConnected = false;
+      log('Local WS disconnected');
+      setTimeout(connectLocalWs, 3000);
+    });
+    localWs.on('error', (e) => {
+      localWsConnected = false;
+    });
+  } catch(e) {
+    setTimeout(connectLocalWs, 5000);
+  }
+}
+
+function broadcastToAgent(text) {
+  if (localWs && localWsConnected) {
+    localWs.send(JSON.stringify({
       type: 'broadcast',
       payload: {
         type: 'CROSS_TAB_MESSAGE',
         from: 'phone-bridge',
-        to: 'all',
-        message: text,
-        timestamp: Date.now()
+        message: text
       }
     }));
-    log('Broadcast sent: ' + text.substring(0, 80));
     return true;
-  } catch(e) {
-    log('Broadcast failed: ' + e.message);
-    return false;
   }
+  return false;
 }
 
-// === Command Execution ===
+// --- Command execution ---
 function runCommand(cmd) {
-  try {
-    const result = execSync(cmd, {
-      timeout: 30000,
-      encoding: 'utf8',
-      env: { ...process.env, PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:' + process.env.PATH }
+  return new Promise((resolve) => {
+    exec(cmd, { timeout: 30000 }, (err, stdout, stderr) => {
+      resolve(stdout || stderr || (err ? err.message : 'done'));
     });
-    return { success: true, result: result.trim() };
+  });
+}
+
+// --- CometChat WebSocket (实时接收) ---
+let cometWs = null;
+let cometConnected = false;
+let reconnectDelay = CONFIG.RECONNECT_DELAY;
+let pingTimer = null;
+
+function connectCometChat() {
+  log('Connecting to CometChat WebSocket...');
+  
+  try {
+    cometWs = new WS(CONFIG.COMET_WS);
   } catch(e) {
-    return { success: false, error: e.message, result: (e.stdout || '').trim() };
+    log('CometChat WS create error: ' + e.message);
+    scheduleReconnect();
+    return;
+  }
+
+  cometWs.on('open', () => {
+    log('CometChat WS connected, authenticating...');
+    
+    const authMsg = {
+      appId: CONFIG.APP_ID,
+      deviceId: 'bridge-v3-' + Date.now(),
+      type: 'auth',
+      sender: CONFIG.MY_UID,
+      body: {
+        auth: CONFIG.JWT,
+        deviceId: CONFIG.DEVICE_ID,
+        params: {
+          appInfo: { version: '4.1.5', apiVersion: 'v3.0', resource: 'uikit-v4', platform: 'web' },
+          deviceId: CONFIG.DEVICE_ID,
+          platform: 'javascript'
+        }
+      }
+    };
+    
+    cometWs.send(JSON.stringify(authMsg));
+  });
+
+  cometWs.on('message', (data) => {
+    const msg = data.toString();
+    try {
+      const parsed = JSON.parse(msg);
+      handleCometMessage(parsed, msg);
+    } catch(e) {
+      log('CometChat parse error: ' + e.message);
+    }
+  });
+
+  cometWs.on('close', (code, reason) => {
+    cometConnected = false;
+    clearInterval(pingTimer);
+    log('CometChat WS closed: ' + code + ' ' + reason.toString());
+    scheduleReconnect();
+  });
+
+  cometWs.on('error', (e) => {
+    log('CometChat WS error: ' + e.message);
+  });
+}
+
+function handleCometMessage(parsed, raw) {
+  if (parsed.type === 'auth') {
+    if (parsed.body && parsed.body.code === '200') {
+      cometConnected = true;
+      reconnectDelay = CONFIG.RECONNECT_DELAY;
+      log('CometChat authenticated! Realtime listening active.');
+      
+      // 启动 ping
+      pingTimer = setInterval(() => {
+        if (cometWs && cometWs.readyState === 1) {
+          cometWs.send(JSON.stringify({ action: 'ping', ack: 'true' }));
+        }
+      }, CONFIG.PING_INTERVAL);
+    } else {
+      log('CometChat auth failed: ' + raw.substring(0, 200));
+    }
+    return;
+  }
+
+  if (parsed.type === 'message') {
+    // 提取消息内容
+    const body = parsed.body || {};
+    const sender = body.sender || parsed.sender;
+    const msgData = body.data || {};
+    const text = msgData.text || '';
+    const receiver = body.receiver || parsed.receiver;
+    const category = body.category;
+
+    // 只处理目标 group 的消息
+    if (receiver !== CONFIG.GROUP_ID) return;
+    
+    // 忽略自己发的消息
+    if (sender === CONFIG.MY_UID) return;
+
+    // 忽略非 text 消息
+    if (category !== 'message' || body.type !== 'text') return;
+
+    const senderName = (msgData.entities && msgData.entities.sender && msgData.entities.sender.entity) 
+      ? msgData.entities.sender.entity.name 
+      : sender;
+
+    log('Realtime message from ' + senderName + ': ' + text.substring(0, 100));
+
+    // 处理命令
+    if (text.startsWith(CONFIG.PREFIX)) {
+      handleCommand(text.slice(CONFIG.PREFIX.length).trim(), senderName);
+      return;
+    }
+
+    // 转发到 agent
+    const sent = broadcastToAgent(text);
+
+
+    
+    if (sent) {
+      log('Broadcast sent: ' + text.substring(0, 50));
+      // 发送已送达回执
+      sendMessageHttps('📬 Delivered to AI agent.').catch(e => log('Reply error: ' + e.message));
+    } else {
+      log('Broadcast failed, local WS not connected');
+      sendMessageHttps('⚠️ Agent 未连接，消息未送达').catch(e => {});
+    }
+    return;
+  }
+
+  // 忽略 receipts, pong 等
+}
+
+async function handleCommand(cmd, sender) {
+  log('Command from ' + sender + ': ' + cmd);
+  const result = await runCommand(cmd);
+  const reply = '```\n' + result.substring(0, 800) + '\n```';
+  try {
+    await sendMessageHttps(reply);
+    log('Command result sent');
+  } catch(e) {
+    log('Command reply error: ' + e.message);
   }
 }
 
-function handleCommand(text) {
-  const cmd = text.replace(CONFIG.PREFIX, '').trim();
-  if (!cmd) return;
-  
-  log('Executing: ' + cmd);
-  
-  let shellCmd = cmd;
-  if (cmd.startsWith('sos ')) {
-    shellCmd = `source ~/.zshrc && ${cmd}`;
-  }
-  
-  const result = runCommand(shellCmd);
-  const output = result.success
-    ? '✅ ' + (result.result || '(no output)').substring(0, 800)
-    : '❌ ' + (result.result || result.error).substring(0, 800);
-  
-  sendMessage(output).catch(e => log('Reply failed: ' + e.message));
+function scheduleReconnect() {
+  log('Reconnecting in ' + (reconnectDelay / 1000) + 's...');
+  setTimeout(() => {
+    connectCometChat();
+    reconnectDelay = Math.min(reconnectDelay * 1.5, CONFIG.MAX_RECONNECT_DELAY);
+  }, reconnectDelay);
 }
 
-// === Reply HTTP Server (for AI to send results back) ===
-const replyServer = http.createServer((req, res) => {
+// --- Reply HTTP server ---
+const replyServer = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-  
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
+  if (req.url === '/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      version: '3.0',
+      mode: 'realtime-websocket',
+      running: true,
+      cometConnected,
+      localWsConnected,
+      uptime: Math.round(process.uptime())
+    }));
+    return;
+  }
+
   if (req.method === 'POST' && req.url === '/reply') {
     let body = '';
     req.on('data', c => body += c);
-    req.on('end', () => {
+    req.on('end', async () => {
       try {
-        const data = JSON.parse(body);
-        sendMessage(data.text.substring(0, 1500)).then(() => {
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ok:true}));
-        }).catch(e => {
-          res.writeHead(500, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ok:false, error:e.message}));
-        });
+        const { text } = JSON.parse(body);
+        await sendMessageHttps(text);
+        log('Reply sent to team chat');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
       } catch(e) {
-        res.writeHead(400, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false, error:'Invalid JSON'}));
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
       }
     });
     return;
   }
-  
-  if (req.url === '/status') {
-    res.writeHead(200, {'Content-Type':'application/json'});
-    res.end(JSON.stringify({ running: true, wsConnected: wsConnection?.readyState === 1, lastMessageId }));
-    return;
-  }
-  
+
   res.writeHead(404);
   res.end('Not found');
 });
 
-// === Main Poll Loop ===
-async function pollLoop() {
-  // Connect WebSocket
-  try {
-    wsConnection = await connectWS();
-  } catch(e) {
-    log('Initial WS connection failed, will retry: ' + e.message);
-  }
+// --- Start ---
+function start() {
+  log('Team Chat Bridge v3.0 (Realtime WebSocket Edition) starting...');
   
-  // Get latest message ID
-  try {
-    const init = await getMessages();
-    if (init.data && init.data.length > 0) {
-      lastMessageId = init.data[init.data.length - 1].id;
-      log('Starting from message ID: ' + lastMessageId);
-    }
-  } catch(e) {
-    log('Init error: ' + e.message);
-  }
-  
-  while (running) {
-    try {
-      const result = await getMessages();
-      const messages = result.data || [];
-      
-      for (const msg of messages) {
-        if (msg.id <= lastMessageId) continue;
-        lastMessageId = msg.id;
-        
-        const sender = msg.sender || '';
-        const senderUid = typeof sender === 'string' ? sender : sender.uid;
-        if (senderUid === CONFIG.MY_UID) continue;
-        
-        const senderName = (typeof sender === 'object' ? sender.name : sender) || 'Unknown';
-        const text = (msg.data?.text || msg.text || '').trim();
-        if (!text) continue;
-        
-        log('Chat from ' + senderName + ': ' + text.substring(0, 100));
-        
-        if (text.startsWith(CONFIG.PREFIX)) {
-          handleCommand(text);
-        } else {
-          // 普通消息 -> WebSocket broadcast -> content.js -> enqueueMessage
-          const sent = await broadcastToChat(senderName, text);
-          if (sent) {
-            await sendMessage('📬 Delivered to AI agent.');
-          } else {
-            await sendMessage('❌ Failed to deliver - WebSocket not connected.');
-          }
-        }
-      }
-    } catch(e) {
-      log('Poll error: ' + e.message);
-    }
-    
-    await new Promise(r => setTimeout(r, CONFIG.POLL_INTERVAL));
-  }
+  // PID file
+  writeFileSync(CONFIG.PID_FILE, process.pid.toString());
+  log('PID: ' + process.pid);
+
+  // Connect local WS
+  connectLocalWs();
+
+  // Connect CometChat realtime WS
+  connectCometChat();
+
+  // Start reply server
+  replyServer.listen(CONFIG.REPLY_PORT, () => {
+    log('Reply server on http://localhost:' + CONFIG.REPLY_PORT);
+  });
 }
 
-// === Start/Stop ===
-if (process.argv.includes('--stop')) {
-  try {
-    const pid = fs.readFileSync(CONFIG.PID_FILE, 'utf8').trim();
-    process.kill(parseInt(pid));
-    fs.unlinkSync(CONFIG.PID_FILE);
-    console.log('Bridge stopped (PID ' + pid + ')');
-  } catch(e) {
-    console.log('Stop failed: ' + e.message);
-  }
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  log('Shutting down...');
+  if (cometWs) cometWs.close();
+  if (localWs) localWs.close();
+  replyServer.close();
   process.exit(0);
-}
-
-fs.writeFileSync(CONFIG.PID_FILE, String(process.pid));
-log('Team Chat Bridge v2.0 (WebSocket Edition) started, PID: ' + process.pid);
-
-replyServer.listen(CONFIG.REPLY_PORT, 'localhost', () => {
-  log('Reply server on http://localhost:' + CONFIG.REPLY_PORT);
+});
+process.on('SIGINT', () => {
+  log('Shutting down...');
+  if (cometWs) cometWs.close();
+  if (localWs) localWs.close();
+  replyServer.close();
+  process.exit(0);
 });
 
-process.on('SIGTERM', () => { running = false; try { fs.unlinkSync(CONFIG.PID_FILE); } catch(e) {} process.exit(0); });
-process.on('SIGINT', () => { running = false; try { fs.unlinkSync(CONFIG.PID_FILE); } catch(e) {} process.exit(0); });
-
-pollLoop().catch(e => log('Fatal: ' + e.message));
+start();
