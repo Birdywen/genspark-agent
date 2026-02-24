@@ -96,6 +96,20 @@
 - [ ] 自定义 MCP 工具接入我们的 bridge 系统
 - [ ] Automations 定时任务利用免费模型低峰期批量执行
 
+
+### 工具链完整清单 (已探明)
+- delegate_task / delegate_tasks: 子 agent 任务委派 (单任务+并行)
+- web_search: 网页搜索
+- url_fetch: 抓取网页内容
+- http_client: 任意 HTTP 请求 (可调 bridge API)
+- automations_tools: 创建定时任务/自动化工作流
+- Google Drive / Sheets / Calendar: Google 全家桶
+- markdown_document / html_document / python_document: 文档生成
+- search_conversation_history: 搜索历史对话
+- activity_tools: 活动日志查询
+- MCP: Coder Workspaces (VS Code), Browser Control (Chrome 自动化), Fetch Youtube
+- 所有内置工具均为 Python 实现, MCP 工具为外部服务协议接入
+- 可自建 MCP server 接入本地 shell, 实现远程命令执行 (无转义问题)
 ### 注意事项
 - 免费模型共享 OpenRouter 额度, 高峰期 429
 - 付费模型按量计费
