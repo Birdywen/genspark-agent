@@ -2,12 +2,13 @@
   "manifest_version": 3,
   "name": "Genspark Agent Bridge",
   "version": "1.0.41",
-  "description": "\u5c06 Genspark \u804a\u5929\u7a97\u53e3\u8f6c\u53d8\u4e3a AI Agent \u8fd0\u884c\u65f6",
+  "description": "将 Genspark 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "clipboardWrite"
+    "clipboardWrite",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.genspark.ai/*",

@@ -1,5 +1,27 @@
 // Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
+// === Service Worker 保活 (chrome.alarms) ===
+// MV3 service worker 空闲30秒会被挂起，用 alarms 定期唤醒
+chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 }); // 每24秒
+chrome.alarms.create("wsCheck", { periodInMinutes: 1 }); // 每分钟检查连接
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "keepAlive") {
+    // 仅唤醒 service worker，保持活跃
+    console.log('[BG] ⏰ keepAlive alarm fired');
+  }
+  if (alarm.name === "wsCheck") {
+    console.log('[BG] ⏰ wsCheck alarm fired');
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.log('[BG] WebSocket 断开，尝试重连');
+      connectWebSocket();
+    } else {
+      socket.send(JSON.stringify({ type: 'ping' }));
+    }
+  }
+});
+// === End 保活 ===
+
 let socket = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
