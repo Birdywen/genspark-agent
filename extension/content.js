@@ -4343,6 +4343,11 @@ ${tip}
     return sseState.processedCommands.has(sig1) || sseState.processedCommands.has(sig2);
   }
 
+  // Tab 保活心跳 - 防止 Chrome 休眠
+  setInterval(function() {
+    document.title = document.title;
+  }, 30000);
+
   function init() {
     log('初始化 Agent v34 (Genspark)');
 
