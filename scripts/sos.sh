@@ -261,6 +261,9 @@ Git:
   sos bridge (br)       - 启动 Team Chat Bridge
   sos bridge-stop (brs) - 停止 Bridge
   sos bridge-status     - 查看 Bridge 状态
+  sos bridge-switch <id>- 切换 Team Chat (bsw)
+  sos say "消息" (s)    - 发文字到手机
+  sos img <url>         - 发图片到手机
 HELP
     ;;
 esac
