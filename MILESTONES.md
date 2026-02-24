@@ -59,3 +59,38 @@ sos say 消息        # 发消息到手机
 - 延迟: Poller 4000ms -> WebSocket <100ms (40x 提升)
 
 ---
+
+---
+
+## Milestone #2 — CometChat WebSocket Realtime (Bridge v3.0)
+**日期**: 2026-02-24
+**提交**: e733dac
+
+### 突破
+从 REST API 轮询升级为 CometChat WebSocket 实时推送，彻底消除轮询。
+
+### 技术路径
+1. 在浏览器端 hook `WebSocket` 构造函数，捕获 CometChat SDK 的认证消息
+2. 逆向完整的 WebSocket 协议：
+   - 连接: `wss://APP_ID.websocket-us.cometchat.io/`
+   - 认证: `{type:"auth", appId, deviceId, sender, body:{auth: JWT}}`
+   - 响应: `{type:"auth", body:{code:"200", status:"OK"}}`
+   - 消息: `{type:"message", body:{sender, data:{text}, receiver}}`
+   - 心跳: `{action:"ping"}` / `{action:"pong"}`
+3. 从 localStorage 获取 sessionId，从拦截器获取 JWT token (60天有效期)
+4. Node.js 端直连 CometChat WebSocket，零 SDK 依赖
+5. 修复 broadcast 路由：使用 `CROSS_TAB_MESSAGE` 格式匹配 content.js
+
+### 对比
+| 指标 | Bridge v2 (轮询) | Bridge v3 (WebSocket) |
+|------|------------------|----------------------|
+| 延迟 | ~1500ms | <100ms |
+| HTTP 请求 | 每1.5秒1次 | 0 (零轮询) |
+| 模式 | REST poll | WebSocket push |
+| 资源消耗 | 持续网络请求 | 单一长连接 |
+
+### 文件
+- `scripts/team-chat-bridge.js` — Bridge v3 主程序
+- `scripts/team-chat-bridge-v2-backup.js` — v2 备份
+- `TODO.md` — 项目待办事项
+

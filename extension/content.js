@@ -3807,7 +3807,8 @@ ${tip}
           clearTimeout(buffer.timer);
         }
         
-        // 设置新定时器，等待 2 秒后合并发送（给足够时间让所有分段到达）
+        // 设置定时器合并发送（phone-bridge 消息不需要等太久）
+        const delay = fromAgent === 'phone-bridge' ? 200 : 2000;
         buffer.timer = setTimeout(() => {
           const combinedMsg = buffer.messages.join('');
           const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容ΩSENDEND 来回复。`;
@@ -3815,7 +3816,7 @@ ${tip}
           
           // 清空缓冲区
           delete state.crossTabBuffer[fromAgent];
-        }, 2000);
+        }, delay);
         break;
     }
 
