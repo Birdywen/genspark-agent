@@ -43,7 +43,9 @@
     "https://galaxy.ai/*",
     "https://*.galaxy.ai/*",
     "https://www.arrangeme.com/*",
-    "https://*.arrangeme.com/*"
+    "https://*.arrangeme.com/*",
+    "https://app.cochat.ai/*",
+    "https://*.cochat.ai/*"
   ],
   "background": {
     "service_worker": "background.js"

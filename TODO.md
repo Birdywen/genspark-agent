@@ -76,3 +76,27 @@
 - [x] bridge-switch 快捷切换 (0738196)
 - [x] 优化 phone-bridge 延迟 200ms (a9efd21)
 - [x] 远程命令环境修复 source zshrc (7a4b805)
+
+## 🔗 CoChat 跨平台协作 (构想中)
+
+### 平台能力已探明
+- API 认证: JWT Bearer token (localStorage)
+- 自定义 Agent API: /api/custom/agents/ (POST 创建, 需 name + system_prompt)
+- Tools API: /api/v1/tools/ (24个工具, 含 delegate_task, web_search, browser_control, coder_workspaces)
+- Functions API: /api/v1/functions/ (11个过滤器, 含 OpenRouter Manifold Pipe)
+- Automations API: /api/v1/automations/ (可创建定时任务)
+- Chat API: /api/chat/completions (OpenAI 兼容格式)
+- 免费模型: 9个 (Llama 3.3 70B, Gemma 3 27B, Mistral Small 3.1 等, 通过 OpenRouter, 易限流)
+- 付费模型: Claude Sonnet 4.5, Grok 4.1 Fast 等
+
+### 构想方向
+- [ ] CoChat Agent 通过 HTTP Client 调用 Genspark bridge API (需公网隧道: ngrok/cloudflare tunnel)
+- [ ] Genspark 侧通过 bridge 调用 CoChat API, 利用 MCP 工具链
+- [ ] 跨平台任务委派: Genspark 做主力对话, CoChat 做高级任务 (浏览器控制, 代码环境, Google 集成)
+- [ ] 自定义 MCP 工具接入我们的 bridge 系统
+- [ ] Automations 定时任务利用免费模型低峰期批量执行
+
+### 注意事项
+- 免费模型共享 OpenRouter 额度, 高峰期 429
+- 付费模型按量计费
+- localhost bridge 需公网隧道才能被 CoChat 云端访问
