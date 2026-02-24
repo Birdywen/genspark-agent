@@ -867,7 +867,8 @@ ${toolSummary}
         }
         idx++;
       }
-      if (Object.keys(params).length > 0) {
+      var noParamTools = ['list_tabs', 'health_check', 'reload_tools'];
+      if (Object.keys(params).length > 0 || noParamTools.indexOf(toolName) !== -1) {
         calls.push({
           name: toolName,
           params: params,
