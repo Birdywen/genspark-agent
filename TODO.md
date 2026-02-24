@@ -3,7 +3,7 @@
 
 ## 高优先级
 
-### 1. CometChat WebSocket 实时连接（替代轮询）
+### ~~1. CometChat WebSocket 实时连接（替代轮询）~~ ✅ 已完成
 - **现状**: Bridge v2 用 REST API 每 1.5s 轮询，延迟可接受但不优雅
 - **方案**: Node.js 端用 CometChat JS SDK 完整 init + login，让 SDK 管理 WebSocket
 - **难点**: JWT token 绑定 session/deviceId，需要 SDK 走完整认证流程
@@ -22,6 +22,15 @@
 ### 3. 系统提示词自动注入
 - 新对话 tab 自动识别 bridge 消息并用 sos say 回复
 - content.js 已插入说明（第248行），需验证新对话是否生效
+
+### 3. Code Sandbox 远程操作
+- **已发现 API**:
+  - `GET /api/code_sandbox/list_directory?project_id=ID&path=PATH` — 列目录
+  - `GET /api/code_sandbox/download_file?project_id=ID&path=PATH` — 读文件
+  - `PUT /api/code_sandbox/save_file` body: {project_id, file_path, content} — 写文件
+- **待解决**: 命令执行 API（终端输入框可能通过 WebSocket）
+- **sandbox_id**: iqjibt8rmgxnlo3q2tphz-cbeee0f9 (novita 类型)
+- **目标**: 当作免费远程虚拟环境使用
 
 ## 中优先级
 
@@ -62,3 +71,8 @@
 - [x] Speakly Terminal Helper 集成
 - [x] MILESTONES.md 里程碑
 - [x] Git push (daac5a9)
+- [x] Bridge v3 CometChat WebSocket 实时连接 (e733dac)
+- [x] 图片发送 sos img (d85fdca)
+- [x] bridge-switch 快捷切换 (0738196)
+- [x] 优化 phone-bridge 延迟 200ms (a9efd21)
+- [x] 远程命令环境修复 source zshrc (7a4b805)
