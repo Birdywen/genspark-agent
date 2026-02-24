@@ -285,7 +285,7 @@ function handleCometMessage(parsed, raw) {
     if (sent) {
       log('Broadcast sent: ' + text.substring(0, 50));
       // 发送已送达回执
-      sendMessageHttps('📬 Delivered to AI agent.').catch(e => log('Reply error: ' + e.message));
+      // sendMessageHttps('📬 Delivered to AI agent.').catch(e => log('Reply error: ' + e.message));
     } else {
       log('Broadcast failed, local WS not connected');
       sendMessageHttps('⚠️ Agent 未连接，消息未送达').catch(e => {});

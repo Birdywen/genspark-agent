@@ -193,6 +193,20 @@ case "$CMD" in
       echo "🔴 Bridge 未运行"
     fi
     ;;
+
+  bridge-switch|bsw)
+    NEW_ID="${2}"
+    if [ -z "$NEW_ID" ]; then
+      echo "用法: sos bridge-switch <agent-id>"
+      CURRENT=$(grep "GROUP_ID:" ~/workspace/genspark-agent/scripts/team-chat-bridge.js | head -1)
+      echo "当前: $CURRENT"
+    else
+      sed -i "" "s|GROUP_ID: 'project_[^']*'|GROUP_ID: 'project_${NEW_ID}'|" ~/workspace/genspark-agent/scripts/team-chat-bridge.js
+      echo "✅ GROUP_ID 已切换到 project_${NEW_ID}"
+      echo "重启生效: sos bridge-stop && sos bridge"
+    fi
+    ;;
+
   say|s)
     MSG="${@:2}"
     if [ -z "$MSG" ]; then
