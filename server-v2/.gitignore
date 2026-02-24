@@ -37,3 +37,14 @@ temp/
 # PM2
 .pm2/
 .env
+
+# 运行时数据
+*.pid
+*.db
+.DS_Store
+history-archives/
+command-history.json
+logs/
+recordings/
+checkpoints/
+_unused/
