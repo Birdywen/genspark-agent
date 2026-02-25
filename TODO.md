@@ -1,126 +1,58 @@
-# TODO List
-> 更新于 2026-02-25
+# TODO - Genspark Agent
 
-## 高优先级
+> Updated: 2026-02-25
 
-### ~~1. CometChat WebSocket 实时连接（替代轮询）~~ ✅ 已完成
-- **现状**: Bridge v2 用 REST API 每 1.5s 轮询，延迟可接受但不优雅
-- **方案**: Node.js 端用 CometChat JS SDK 完整 init + login，让 SDK 管理 WebSocket
-- **难点**: JWT token 绑定 session/deviceId，需要 SDK 走完整认证流程
-- **已知信息**:
-  - WS 地址: wss://1670754dd7dd407a4.websocket-us.cometchat.io/
-  - 认证消息: type=auth, appId, deviceId, sender(uid), body.auth=JWT
-  - 认证响应: type=auth, body.code=200, body.status=OK
-  - 消息推送: type=message, 包含完整消息数据
-  - 心跳: {action:"ping",ack:"true"} / {action:"pong"}
-- **文件**: `scripts/team-chat-bridge.js`
+## High Priority
 
-### 2. Bridge 断线自动恢复优化
-- 偶发 ETIMEDOUT / DNS 错误后自动恢复
-- 增加连续失败计数，超阈值重启
+### 1. CometChat WebSocket 替代方案
+- 当前 WS URL: `wss://1670754dd7dd407a4.websocket-us.cometchat.io/`
+- 需要实现: JWT 认证, 自动重连 (ETIMEDOUT/DNS errors)
+- 脚本: `scripts/team-chat-bridge.js`
 
-### 3. 系统提示词自动注入
-- 新对话 tab 自动识别 bridge 消息并用 sos say 回复
-- content.js 已插入说明（第248行），需验证新对话是否生效
+### 2. System Prompt 自动注入
+- 新 chat tab 打开时自动注入 system prompt
+- 参考: `content.js` line 248
 
-### 3. Code Sandbox 远程操作
-- **已发现 API**:
-  - `GET /api/code_sandbox/list_directory?project_id=ID&path=PATH` — 列目录
-  - `GET /api/code_sandbox/download_file?project_id=ID&path=PATH` — 读文件
-  - `PUT /api/code_sandbox/save_file` body: {project_id, file_path, content} — 写文件
-- **待解决**: 命令执行 API（终端输入框可能通过 WebSocket）
-- **sandbox_id**: iqjibt8rmgxnlo3q2tphz-cbeee0f9 (novita 类型)
-- **目标**: 当作免费远程虚拟环境使用
+### 3. Sandbox 集成优化
+- ✅ Full-Stack sandbox API 打通 (read/write/list)
+- ✅ 公网预览: `https://3000-i3tin0xbrjov9c7se6vov-8f57ffe2.sandbox.novita.ai`
+- project_id: `a6e50804-320f-4f61-bcd6-93c57f8d6403`
+- API 需通过浏览器 eval_js 调用 (Cloudflare 保护)
+- AI Developer (Kimi) 可执行 Bash 命令, 安装工具
+- 待办: 实时数据对接, 真实监控面板
 
-## 中优先级
+## Medium Priority
 
-### 4. Speakly 提示词持久化
-- Speakly 重启后覆盖 custom-instructions.json
-- 需要找到 app.asar 内置模板或用 UI 手动粘贴
-- 已将提示词保存在 scripts/terminal-helper-prompt.txt
+### 4. Speakly Prompt 持久化
+- 源文件: `scripts/terminal-helper-prompt.txt`
+- Speakly 重启会覆盖 `custom-instructions.json`
 
 ### 5. bg_run 推送增强
-- 当前只推送 exit code，可附带最后几行输出
-- 长任务增加进度推送（每 N 秒推一次 stdout 最新行）
+- 加入 stdout 行数, 进度更新
 
-### 6. 手机端图片/文件支持
-- Team Chat 手机端无图片输入框
-- 可通过 CometChat media message API 实现
+### 6. 手机端文件支持
+- CometChat media API 上传/下载
 
-## 低优先级
+## Low Priority
 
-### 7. sos 工具箱扩展
-- sos deploy - 一键部署
-- sos update - 自动更新 extension
-- sos doctor - 深度诊断
+### 7. sos 工具扩展
+- deploy, update, doctor 命令
 
 ### 8. ArrangeMe 逆向工程
-- 已有 skills/reverse-engineering/arrangeme/
-- 待继续分析 API
+- 继续 API 分析
 
----
-## 已完成 ✅
-- [x] **MCP SSE Transport + 并行启动优化 (e9d9f10)** — 2026-02-25
-  - SSE 远程 MCP server 支持（url 字段自动识别）
-  - 启动时间 30s → 5s（npx→node + 串行→并行）
-  - recorder.activeRecordings 崩溃修复
-  - health-checker SSE 适配
-  - viasocket YouTube API 验证通过（75 tools）
-- [x] **RacquetDesk Booker 修复 + ntfy 通知** — 2026-02-25
-  - 修复 booker.connect is not a function → smartLogin()
-  - ntfy 精简通知：预订成功即时推 + 每日 21:30 摘要 + 重启通知
-  - topic: racquetdesk-yay
-- [x] **Speakly Terminal Helper 提示词增强** — 2026-02-25
-  - 新增 sos img/bridge-switch、Quick Recipes、中文语音映射
-  - 现代工具偏好 (fd/rg/bat/eza)
-  - sos symlink 创建 (~/.local/bin/sos)
-- [x] Team Chat Bridge v2 (WebSocket broadcast)
-- [x] sos say 快捷命令
-- [x] bg_run 自动推送到手机
-- [x] 开机自启 (launchd)
-- [x] Speakly Terminal Helper 集成
-- [x] MILESTONES.md 里程碑
-- [x] Git push (daac5a9)
-- [x] Bridge v3 CometChat WebSocket 实时连接 (e733dac)
-- [x] 图片发送 sos img (d85fdca)
-- [x] bridge-switch 快捷切换 (0738196)
-- [x] 优化 phone-bridge 延迟 200ms (a9efd21)
-- [x] 远程命令环境修复 source zshrc (7a4b805)
+## Completed (2026-02-25)
 
-## 🔗 CoChat 跨平台协作 (构想中)
-
-### 平台能力已探明
-- API 认证: JWT Bearer token (localStorage)
-- 自定义 Agent API: /api/custom/agents/ (POST 创建, 需 name + system_prompt)
-- Tools API: /api/v1/tools/ (24个工具, 含 delegate_task, web_search, browser_control, coder_workspaces)
-- Functions API: /api/v1/functions/ (11个过滤器, 含 OpenRouter Manifold Pipe)
-- Automations API: /api/v1/automations/ (可创建定时任务)
-- Chat API: /api/chat/completions (OpenAI 兼容格式)
-- 免费模型: 9个 (Llama 3.3 70B, Gemma 3 27B, Mistral Small 3.1 等, 通过 OpenRouter, 易限流)
-- 付费模型: Claude Sonnet 4.5, Grok 4.1 Fast 等
-
-### 构想方向
-- [ ] CoChat Agent 通过 HTTP Client 调用 Genspark bridge API (需公网隧道: ngrok/cloudflare tunnel)
-- [ ] Genspark 侧通过 bridge 调用 CoChat API, 利用 MCP 工具链
-- [ ] 跨平台任务委派: Genspark 做主力对话, CoChat 做高级任务 (浏览器控制, 代码环境, Google 集成)
-- [ ] 自定义 MCP 工具接入我们的 bridge 系统
-- [ ] Automations 定时任务利用免费模型低峰期批量执行
-
-### 工具链完整清单 (已探明)
-- delegate_task / delegate_tasks: 子 agent 任务委派 (单任务+并行)
-- web_search: 网页搜索
-- url_fetch: 抓取网页内容
-- http_client: 任意 HTTP 请求 (可调 bridge API)
-- automations_tools: 创建定时任务/自动化工作流
-- Google Drive / Sheets / Calendar: Google 全家桶
-- markdown_document / html_document / python_document: 文档生成
-- search_conversation_history: 搜索历史对话
-- activity_tools: 活动日志查询
-- MCP: Coder Workspaces (VS Code), Browser Control (Chrome 自动化), Fetch Youtube
-- 所有内置工具均为 Python 实现, MCP 工具为外部服务协议接入
-- 可自建 MCP server 接入本地 shell, 实现远程命令执行 (无转义问题)
-
-### 注意事项
-- 免费模型共享 OpenRouter 额度, 高峰期 429
-- 付费模型按量计费
-- localhost bridge 需公网隧道才能被 CoChat 云端访问
+- ✅ **MCP 并行启动优化**: 30s → 5s (6x 提速)
+  - npx → node 直接调用 (2.9s → 0.26s, 11x)
+  - 串行 → Promise.allSettled 并行
+- ✅ **MCP SSE Transport**: stdio + SSE 双模式支持
+  - config.json 用 `url` 字段触发 SSE, `command` 用 stdio
+- ✅ **RacquetDesk Booker 修复**: `booker.connect()` → `booker.smartLogin()`
+- ✅ **ntfy 通知集成**: 预约成功即时推送 + 每日 21:30 汇总
+- ✅ **Sandbox API 打通**: Full-Stack E2B 容器
+  - save_file / download_file / list_directory
+  - Node 20 + Python 3.12 + PM2 + 20G 磁盘
+  - Agent Dashboard 部署成功
+- ✅ **Speakly Terminal Helper 增强**: sos img, bridge-switch, Quick Recipes
+- ✅ **稳定性修复**: recorder.activeRecordings guard, health-checker SSE, reload 并行化

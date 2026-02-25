@@ -49,3 +49,4 @@ __pycache__/
 # Large converted files
 skills/newzik-omr/converted/*.musicxml
 server-v2/.env.api
+scripts/sos.sh.bak5

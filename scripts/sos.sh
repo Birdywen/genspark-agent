@@ -1,6 +1,11 @@
 #!/bin/bash
 # === Genspark Agent SOS 急救工具箱 ===
 # 用法: source ~/.zshrc 后直接用 sos 命令
+# Sandbox Config
+SANDBOX_PROJECT_ID="a6e50804-320f-4f61-bcd6-93c57f8d6403"
+SANDBOX_PREVIEW_URL="https://3000-i3tin0xbrjov9c7se6vov-8f57ffe2.sandbox.novita.ai"
+GENSPARK_COOKIE_FILE="$HOME/.genspark_cookie"
+
 # 或者: bash ~/workspace/genspark-agent/scripts/sos.sh [命令]
 
 CMD="${1:-help}"
@@ -227,7 +232,7 @@ case "$CMD" in
     ;;
 
   # === 帮助 ===
-  help|*)
+  help)
     cat << 'HELP'
 🆘 Genspark Agent SOS 急救工具箱
 
@@ -264,6 +269,19 @@ Git:
   sos bridge-switch <id>- 切换 Team Chat (bsw)
   sos say "消息" (s)    - 发文字到手机
   sos img <url>         - 发图片到手机
+
+Sandbox:
+  sos sandbox-push <file> [path] (sp) - 推送文件到 Sandbox
+  sos sandbox-list [path] (sl)  - 列出 Sandbox 文件
+  sos sandbox-read <path> (sr)  - 读取 Sandbox 文件
+  sos sandbox-url (su)          - 显示预览地址
+  sos sandbox-login             - 设置 Cookie
 HELP
+    ;;
+  sandbox-url|su)
+    echo "$SANDBOX_PREVIEW_URL"
+    ;;
+  *)
+    show_help
     ;;
 esac
