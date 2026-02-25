@@ -79,11 +79,12 @@ class HealthChecker {
     const results = [];
     
     for (const [name, conn] of hub.conns) {
-      const isAlive = conn.process && conn.process.exitCode === null;
+      const isSSE = conn.transport === 'sse';
+      const isAlive = isSSE ? conn.ready : (conn.process && conn.process.exitCode === null);
       results.push({
         name: `mcp:${name}`,
         healthy: isAlive && conn.ready,
-        message: isAlive ? `${conn.tools.length} 个工具` : '进程已退出',
+        message: isAlive ? `${conn.tools.length} 个工具${isSSE ? ' (SSE)' : ''}` : (isSSE ? 'SSE 连接断开' : '进程已退出'),
         toolCount: conn.tools.length
       });
     }

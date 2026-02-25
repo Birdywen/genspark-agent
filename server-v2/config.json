@@ -5,19 +5,17 @@
   },
   "mcpServers": {
     "filesystem": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
+        "/Users/yay/.npm/_npx/a3241bba59c344f5/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
         "/Users/yay/workspace",
         "/private/tmp"
       ]
     },
     "shell": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "mcp-server-commands"
+        "/Users/yay/.npm/_npx/d597531c0c0615ae/node_modules/mcp-server-commands/build/index.js"
       ]
     },
     "tree-sitter": {
@@ -25,31 +23,27 @@
       "args": []
     },
     "sqlite": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "mcp-sqlite"
+        "/Users/yay/.npm/_npx/3967201a30e40786/node_modules/mcp-sqlite/mcp-sqlite-server.js"
       ]
     },
     "fetch": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@kazuph/mcp-fetch"
+        "/Users/yay/.npm/_npx/e5ec6e1360b435a5/node_modules/@kazuph/mcp-fetch/dist/index.js"
       ]
     },
     "context7": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@upstash/context7-mcp"
+        "/Users/yay/.npm/_npx/eea2bd7412d4593b/node_modules/@upstash/context7-mcp/dist/index.js"
       ]
     },
     "ssh-oracle": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "ssh-mcp",
+        "/Users/yay/.npm/_npx/e1b9a49f0f079214/node_modules/ssh-mcp/build/index.js",
         "--",
         "--host=157.151.227.157",
         "--port=22",
@@ -60,10 +54,9 @@
       ]
     },
     "ssh-cpanel": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "ssh-mcp",
+        "/Users/yay/.npm/_npx/e1b9a49f0f079214/node_modules/ssh-mcp/build/index.js",
         "--",
         "--host=ezmusicstore.com",
         "--port=1394",
@@ -74,11 +67,15 @@
       ]
     },
     "chrome-devtools": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "chrome-devtools-mcp@latest"
+        "/Users/yay/.npm/_npx/15c61037b1978c83/node_modules/chrome-devtools-mcp/build/src/index.js"
       ]
+    },
+    "youtube-upload": {
+      "url": "https://mcp.viasocket.com/mcp/699919f8856d355d5f1809a9-54490",
+      "startupTimeout": 15000,
+      "requestTimeout": 120000
     }
   },
   "safety": {

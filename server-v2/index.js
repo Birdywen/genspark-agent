@@ -271,23 +271,36 @@ class MCPConnection {
     this.env = env;
     this.startupTimeout = options.startupTimeout || 5000;
     this.requestTimeout = options.requestTimeout || 60000;
+    this.transport = options.transport || 'stdio'; // 'stdio' or 'sse'
+    this.url = options.url || null; // SSE endpoint URL
     this.process = null;
     this.requestId = 0;
     this.pending = new Map();
     this.buffer = '';
     this.tools = [];
     this.ready = false;
+    this.sseAbort = null;
+    this.messageEndpoint = null; // POST endpoint for SSE
   }
 
   async start() {
-    logger.info(`[${this.name}] 启动中...`);
+    if (this.transport === 'sse') {
+      await this.startSSE();
+    } else {
+      await this.startStdio();
+    }
+  }
+
+  // === STDIO transport ===
+  async startStdio() {
+    logger.info(`[${this.name}] 启动中 (stdio)...`);
     
     this.process = spawn(this.cmd, this.args, { 
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...this.env }
     });
     
-    this.process.stdout.on('data', d => this.onData(d));
+    this.process.stdout.on('data', d => this.onStdioData(d));
     this.process.stderr.on('data', d => logger.warning(`[${this.name}] stderr: ${d.toString().trim()}`));
     this.process.on('error', e => logger.error(`[${this.name}] error: ${e.message}`));
     this.process.on('close', code => {
@@ -305,8 +318,104 @@ class MCPConnection {
     await this.init();
     this.tools = await this.getTools();
     this.ready = true;
+    this._logReady();
+  }
+
+  // === SSE transport ===
+  async startSSE() {
+    logger.info(`[${this.name}] 连接中 (sse: ${this.url})...`);
+    
+    this.sseAbort = new AbortController();
+    
+    // Connect to SSE endpoint
+    const response = await fetch(this.url, {
+      headers: { 'Accept': 'text/event-stream' },
+      signal: this.sseAbort.signal,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`SSE connection failed: ${response.status} ${response.statusText}`);
+    }
+    
+    // Parse SSE stream in background
+    this._readSSEStream(response.body);
+    
+    // Wait for endpoint event (SSE servers send the POST endpoint URL)
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('SSE endpoint timeout')), this.startupTimeout);
+      const check = () => {
+        if (this.messageEndpoint) {
+          clearTimeout(timeout);
+          resolve();
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
+    
+    logger.info(`[${this.name}] SSE connected, POST endpoint: ${this.messageEndpoint}`);
+    
+    await this.init();
+    this.tools = await this.getTools();
+    this.ready = true;
+    this._logReady();
+  }
+
+  async _readSSEStream(body) {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let eventType = '';
+    let eventData = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            eventData = line.slice(5).trim();
+          } else if (line === '') {
+            // End of event
+            if (eventType === 'endpoint' && eventData) {
+              // Resolve relative URL against SSE base URL
+              try {
+                this.messageEndpoint = new URL(eventData, this.url).href;
+              } catch {
+                this.messageEndpoint = eventData;
+              }
+            } else if (eventType === 'message' && eventData) {
+              try {
+                const msg = JSON.parse(eventData);
+                if (msg.id !== undefined && this.pending.has(msg.id)) {
+                  const { resolve, reject } = this.pending.get(msg.id);
+                  this.pending.delete(msg.id);
+                  msg.error ? reject(new Error(msg.error.message)) : resolve(msg.result);
+                }
+              } catch {}
+            }
+            eventType = '';
+            eventData = '';
+          }
+        }
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        logger.error(`[${this.name}] SSE stream error: ${e.message}`);
+      }
+    }
+  }
+
+  _logReady() {
     logger.success(`[${this.name}] 就绪, ${this.tools.length} 个工具`);
-    // 打印工具名（截断），方便在日志中确认每个 MCP server 暴露了哪些 tools
     try {
       const names = this.tools.map(t => t.name);
       const preview = names.slice(0, 40);
@@ -316,7 +425,8 @@ class MCPConnection {
     }
   }
 
-  onData(data) {
+  // === Data handling ===
+  onStdioData(data) {
     this.buffer += data.toString();
     const lines = this.buffer.split('\n');
     this.buffer = lines.pop();
@@ -334,12 +444,30 @@ class MCPConnection {
     }
   }
 
+  // === Send (supports both transports) ===
   send(method, params = {}, options = {}) {
     const id = ++this.requestId;
     const timeout = options.timeout || this.requestTimeout;
+    const payload = JSON.stringify({ jsonrpc: '2.0', id, method, params });
+
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.process.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+      
+      if (this.transport === 'sse') {
+        // POST to message endpoint
+        fetch(this.messageEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+        }).catch(e => {
+          this.pending.delete(id);
+          reject(new Error(`SSE POST failed: ${e.message}`));
+        });
+      } else {
+        // Write to stdin
+        this.process.stdin.write(payload + '\n');
+      }
+      
       setTimeout(() => {
         if (this.pending.has(id)) {
           this.pending.delete(id);
@@ -355,12 +483,22 @@ class MCPConnection {
       capabilities: {},
       clientInfo: { name: 'genspark-agent', version: '2.0' }
     });
-    this.process.stdin.write('{"jsonrpc":"2.0","method":"notifications/initialized"}\n');
+    
+    // Send initialized notification
+    const notification = JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    if (this.transport === 'sse') {
+      await fetch(this.messageEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: notification,
+      });
+    } else {
+      this.process.stdin.write(notification + '\n');
+    }
   }
 
   async getTools() {
     const r = await this.send('tools/list');
-    // 对 ssh 开头的 server 添加前缀避免工具名冲突
     const needsPrefix = this.name.startsWith('ssh');
     return (r.tools || []).map(t => ({
       ...t,
@@ -371,12 +509,15 @@ class MCPConnection {
   }
 
   call(name, args, options = {}) {
-    // 如果工具名有前缀，提取原始名称发送给 MCP server
     const originalName = name.includes(':') ? name.split(':')[1] : name;
     return this.send('tools/call', { name: originalName, arguments: args || {} }, options);
   }
 
   stop() {
+    if (this.sseAbort) {
+      this.sseAbort.abort();
+      this.sseAbort = null;
+    }
     this.process?.kill();
   }
 }
@@ -388,22 +529,36 @@ class MCPHub {
   }
 
   async start() {
-    for (const [name, cfg] of Object.entries(config.mcpServers)) {
-      const options = {
-        startupTimeout: cfg.startupTimeout || 5000,
-        requestTimeout: cfg.requestTimeout || 60000
-      };
-      
-      const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options);
-      try {
+    const startTime = Date.now();
+    const entries = Object.entries(config.mcpServers);
+    
+    // 并行启动所有 MCP servers
+    const results = await Promise.allSettled(
+      entries.map(async ([name, cfg]) => {
+        const isSSE = !!cfg.url;
+        const options = {
+          startupTimeout: cfg.startupTimeout || (isSSE ? 10000 : 5000),
+          requestTimeout: cfg.requestTimeout || 60000,
+          transport: isSSE ? 'sse' : 'stdio',
+          url: cfg.url || null,
+        };
+        const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options);
         await c.start();
-        this.conns.set(name, c);
-        this.tools.push(...c.tools);
-      } catch (e) {
-        logger.error(`[${name}] 启动失败: ${e.message}`);
+        return { name, conn: c };
+      })
+    );
+    
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        this.conns.set(r.value.name, r.value.conn);
+        this.tools.push(...r.value.conn.tools);
+      } else {
+        logger.error(`MCP 启动失败: ${r.reason?.message || r.reason}`);
       }
     }
-    logger.success(`MCP Hub 就绪, 总工具数: ${this.tools.length}`);
+    
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    logger.success(`MCP Hub 就绪, 总工具数: ${this.tools.length} (${elapsed}s)`);
   }
 
   findConn(tool) {
@@ -439,20 +594,30 @@ class MCPHub {
     const newConfig = JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8'));
     const expandedConfig = expandEnvVars(newConfig);
     
-    // 3. 重新启动所有 MCP server
-    for (const [name, cfg] of Object.entries(expandedConfig.mcpServers)) {
-      const options = {
-        startupTimeout: cfg.startupTimeout || 5000,
-        requestTimeout: cfg.requestTimeout || 60000
-      };
-      
-      const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options);
-      try {
+    // 3. 并行重新启动所有 MCP server
+    const reloadStart = Date.now();
+    const entries = Object.entries(expandedConfig.mcpServers);
+    const results = await Promise.allSettled(
+      entries.map(async ([name, cfg]) => {
+        const isSSE = !!cfg.url;
+        const options = {
+          startupTimeout: cfg.startupTimeout || (isSSE ? 10000 : 5000),
+          requestTimeout: cfg.requestTimeout || 60000,
+          transport: isSSE ? 'sse' : 'stdio',
+          url: cfg.url || null,
+        };
+        const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options);
         await c.start();
-        this.conns.set(name, c);
-        this.tools.push(...c.tools);
-      } catch (e) {
-        logger.error(`[${name}] 重启失败: ${e.message}`);
+        return { name, conn: c };
+      })
+    );
+    
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        this.conns.set(r.value.name, r.value.conn);
+        this.tools.push(...r.value.conn.tools);
+      } else {
+        logger.error(`[MCPHub] 重启失败: ${r.reason?.message || r.reason}`);
       }
     }
     
@@ -752,7 +917,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     logger.tool(tool, params, resultStr.slice(0, 200));
     
     // 如果有活跃录制，记录此步骤
-    for (const [recId, rec] of recorder.activeRecordings) {
+    for (const [recId, rec] of (recorder.activeRecordings || [])) {
       if (rec.status === 'recording') {
         recorder.recordStep(recId, {
           tool,
@@ -856,7 +1021,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
     
     // 如果有活跃录制，记录失败步骤
-    for (const [recId, rec] of recorder.activeRecordings) {
+    for (const [recId, rec] of (recorder.activeRecordings || [])) {
       if (rec.status === 'recording') {
         recorder.recordStep(recId, {
           tool,
