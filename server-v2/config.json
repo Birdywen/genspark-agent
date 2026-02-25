@@ -71,11 +71,6 @@
       "args": [
         "/Users/yay/.npm/_npx/15c61037b1978c83/node_modules/chrome-devtools-mcp/build/src/index.js"
       ]
-    },
-    "youtube-upload": {
-      "url": "https://mcp.viasocket.com/mcp/699919f8856d355d5f1809a9-54490",
-      "startupTimeout": 15000,
-      "requestTimeout": 120000
     }
   },
   "safety": {
