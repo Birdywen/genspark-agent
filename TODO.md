@@ -1,5 +1,5 @@
 # TODO List
-> 更新于 2026-02-24
+> 更新于 2026-02-25
 
 ## 高优先级
 
@@ -49,21 +49,31 @@
 
 ## 低优先级
 
-### 7. ntfy 备用通道
-- 当 bridge 不可用时，用 ntfy.sh 作为备用推送
-- 已验证 curl 可用: echo "msg" | curl -d @- ntfy.sh/mytopic
-
-### 8. sos 工具箱扩展
+### 7. sos 工具箱扩展
 - sos deploy - 一键部署
 - sos update - 自动更新 extension
 - sos doctor - 深度诊断
 
-### 9. ArrangeMe 逆向工程
+### 8. ArrangeMe 逆向工程
 - 已有 skills/reverse-engineering/arrangeme/
 - 待继续分析 API
 
 ---
 ## 已完成 ✅
+- [x] **MCP SSE Transport + 并行启动优化 (e9d9f10)** — 2026-02-25
+  - SSE 远程 MCP server 支持（url 字段自动识别）
+  - 启动时间 30s → 5s（npx→node + 串行→并行）
+  - recorder.activeRecordings 崩溃修复
+  - health-checker SSE 适配
+  - viasocket YouTube API 验证通过（75 tools）
+- [x] **RacquetDesk Booker 修复 + ntfy 通知** — 2026-02-25
+  - 修复 booker.connect is not a function → smartLogin()
+  - ntfy 精简通知：预订成功即时推 + 每日 21:30 摘要 + 重启通知
+  - topic: racquetdesk-yay
+- [x] **Speakly Terminal Helper 提示词增强** — 2026-02-25
+  - 新增 sos img/bridge-switch、Quick Recipes、中文语音映射
+  - 现代工具偏好 (fd/rg/bat/eza)
+  - sos symlink 创建 (~/.local/bin/sos)
 - [x] Team Chat Bridge v2 (WebSocket broadcast)
 - [x] sos say 快捷命令
 - [x] bg_run 自动推送到手机
@@ -96,7 +106,6 @@
 - [ ] 自定义 MCP 工具接入我们的 bridge 系统
 - [ ] Automations 定时任务利用免费模型低峰期批量执行
 
-
 ### 工具链完整清单 (已探明)
 - delegate_task / delegate_tasks: 子 agent 任务委派 (单任务+并行)
 - web_search: 网页搜索
@@ -110,6 +119,7 @@
 - MCP: Coder Workspaces (VS Code), Browser Control (Chrome 自动化), Fetch Youtube
 - 所有内置工具均为 Python 实现, MCP 工具为外部服务协议接入
 - 可自建 MCP server 接入本地 shell, 实现远程命令执行 (无转义问题)
+
 ### 注意事项
 - 免费模型共享 OpenRouter 额度, 高峰期 429
 - 付费模型按量计费
