@@ -299,7 +299,7 @@ function handleCometMessage(parsed, raw) {
 async function handleCommand(cmd, sender) {
   log('Command from ' + sender + ': ' + cmd);
   const result = await runCommand(cmd);
-  const reply = '```\n' + result.substring(0, 800) + '\n```';
+  const reply = '```\n' + result.substring(0, 3000) + '\n```';
   try {
     await sendMessageHttps(reply);
     log('Command result sent');
