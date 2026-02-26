@@ -311,6 +311,29 @@ HELP
     echo "$SANDBOX_PREVIEW_URL"
     ;;
 
+    oracle-exec|oe)
+        shift
+        cmd="$*"
+        if [ -z "$cmd" ]; then
+            echo "Usage: sos oracle-exec <command>"
+            exit 1
+        fi
+        ssh -i ~/.ssh/oracle-cloud.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@150.136.51.61 "curl -s -X POST http://localhost:3000/api/exec -H 'Content-Type: application/json' -d '$(python3 -c "import json,sys; print(json.dumps({\"command\": sys.argv[1]}))" "$cmd")'" 2>/dev/null | python3 -c "
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    if d.get('ok'):
+        print(d.get('stdout','').rstrip())
+    else:
+        print('ERR:', d.get('stderr',''), file=sys.stderr)
+        sys.exit(d.get('exitCode',1))
+except Exception as e:
+    print('Parse error:', e, file=sys.stderr)
+"
+        ;;
+    oracle-status|os)
+        ssh -i ~/.ssh/oracle-cloud.key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ubuntu@150.136.51.61 'curl -s http://localhost:3000/api/status' 2>/dev/null | python3 -c 'import sys,json; d=json.load(sys.stdin); m=d["memory"]; print("Host: %s | Arch: %s | CPUs: %s" % (d["hostname"],d["arch"],d["cpus"])); print("Uptime: %.1fh | Mem: %.1fG / %.0fG" % (d["uptime"]/3600,m["used"]/1024/1024/1024,m["total"]/1024/1024/1024))'
+        ;;
     info|i)
         echo "=== Genspark Agent Infrastructure ==="
         echo ""
@@ -322,7 +345,7 @@ HELP
         echo "🤖 1min.ai:             ~31.5M credits | GPT-4.1/Claude Opus 4/o3"
         echo "🎮 Genspark:            ~8500 credits  | 10 models"
         echo ""
-        echo "Commands: ask|se|sp|sl|sr|ss|su|say|info"
+        echo "Commands: ask|se|sp|sl|sr|ss|su|say|oe|os|info"
         ;;
     ask|a)
         # Ask AI via 1min.ai API - direct curl, no browser needed
