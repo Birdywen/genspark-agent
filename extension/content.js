@@ -2315,7 +2315,7 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
     
     // 先检查跨 Tab 发送命令 ΩSEND:agent_id:message
     // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/ΩSEND:([\w_]+):([\s\S]+?)ΩSENDEND/);
+    const sendMatch = text.match(/ΩSEND:([\w_-]+):([\s\S]+?)ΩSENDEND/);
     const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
     const timeSinceStable = Date.now() - state.lastStableTime;
     if (sendMatch && !isExampleSend && timeSinceStable >= 3000) {
@@ -2325,7 +2325,17 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
         const toAgent = sendMatch[1];
         const message = sendMatch[2].trim();
         addLog(`📨 发送给 ${toAgent}...`, 'tool');
-        sendToAgent(toAgent, message);
+        if (toAgent === 'phone-bridge') {
+          // phone-bridge 是外部进程，通过 HTTP 直接发送
+          fetch('http://localhost:8769/reply', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: message})
+          }).then(() => addLog('📱 已发送到手机', 'success'))
+            .catch(e => addLog('❌ 手机发送失败: ' + e.message, 'error'));
+        } else {
+          sendToAgent(toAgent, message);
+        }
         return;
       }
     }
