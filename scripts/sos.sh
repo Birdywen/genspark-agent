@@ -238,51 +238,61 @@ case "$CMD" in
     ;;
 
   # === 帮助 ===
-  help)
-    cat << 'HELP'
-🆘 Genspark Agent SOS 急救工具箱
-
-用法: sos <命令> [参数]
-
-状态:
-  sos status (s)        - 检查 Agent 状态
-  sos check (ck)        - 全面体检
-  sos port [端口] (p)   - 查端口占用
-  sos disk (d)          - 查磁盘空间
-
-重启:
-  sos restart (r)       - 正常重启
-  sos force-restart (fr)- 强制杀进程重启
-  sos killport [端口]   - 杀端口进程
-
-日志:
-  sos log [名称] (l)    - 查日志 (main/agent/watchdog)
-  sos logf [名称] (lf)  - 实时跟踪日志
-
-Git:
-  sos history [N] (h)   - 最近 N 个 commit
-  sos rollback [N] (rb) - 回退 N 个 commit
-  sos reset <hash>      - 回退到指定 commit
-  sos backup (bk)       - 创建备份标签
-
-维护:
-  sos clean (c)         - 清理临时文件
-
-远程:
-  sos bridge (br)       - 启动 Team Chat Bridge
-  sos bridge-stop (brs) - 停止 Bridge
-  sos bridge-status     - 查看 Bridge 状态
-  sos bridge-switch <id>- 切换 Team Chat (bsw)
-  sos say "消息" (s)    - 发文字到手机
-  sos img <url>         - 发图片到手机
-
-Sandbox:
-  sos sandbox-push <file> [path] (sp) - 推送文件到 Sandbox
-  sos sandbox-list [path] (sl)  - 列出 Sandbox 文件
-  sos sandbox-read <path> (sr)  - 读取 Sandbox 文件
-  sos sandbox-url (su)          - 显示预览地址
-  sos sandbox-login             - 设置 Cookie
-HELP
+    help)
+        echo ""
+        echo -e "  \033[1;36m=== SOS 命令手册 ===\033[0m"
+        echo ""
+        echo -e "  \033[1;33m📊 状态 & 诊断\033[0m"
+        echo "    status  (s)     Agent 健康检查"
+        echo "    check   (ck)    全面系统检查"
+        echo "    port    (p)     检查端口占用"
+        echo "    disk    (d)     磁盘空间"
+        echo "    info    (i)     基础设施总览"
+        echo ""
+        echo -e "  \033[1;33m🔄 服务器控制\033[0m"
+        echo "    restart (r)     优雅重启"
+        echo "    force-restart (fr)  强制重启"
+        echo "    killport (kp)   杀端口进程"
+        echo ""
+        echo -e "  \033[1;33m📋 日志\033[0m"
+        echo "    log     (l)     查看日志 (最后50行)"
+        echo "    logf    (lf)    实时跟踪日志"
+        echo ""
+        echo -e "  \033[1;33m🔀 Git\033[0m"
+        echo "    history (h)     最近 commit"
+        echo "    rollback (rb)   回滚 commit"
+        echo "    reset           重置到指定 commit"
+        echo "    backup  (bk)    创建 git tag 备份"
+        echo ""
+        echo -e "  \033[1;33m🧹 维护\033[0m"
+        echo "    clean   (c)     清理临时文件"
+        echo ""
+        echo -e "  \033[1;33m📱 手机 / Bridge\033[0m"
+        echo "    bridge  (br)    启动 Bridge"
+        echo "    bridge-stop (brs)  停止 Bridge"
+        echo "    bridge-switch (bsw) 切换群组"
+        echo "    say             发文字到手机"
+        echo "    img             发图片到手机"
+        echo ""
+        echo -e "  \033[1;33m📦 Sandbox (4核 8GB, 0 credit)\033[0m"
+        echo "    sandbox-exec (se)   执行 Bash"
+        echo "    sandbox-push (sp)   推送文件"
+        echo "    sandbox-list (sl)   列目录"
+        echo "    sandbox-read (sr)   读文件"
+        echo "    sandbox-status (ss) 服务状态"
+        echo "    sandbox-url  (su)   预览 URL"
+        echo ""
+        echo -e "  \033[1;33m🦾 Oracle ARM (4核 24GB)\033[0m"
+        echo "    oracle-exec (oe)    执行 Bash"
+        echo "    oracle-status (os)  服务器状态"
+        echo ""
+        echo -e "  \033[1;33m🤖 AI (1min.ai, 31.5M credits)\033[0m"
+        echo "    ask     (a)     AI 问答 (默认 gpt-4.1-mini)"
+        echo "                    ONEMIN_MODEL=xxx sos ask 切换模型"
+        echo ""
+        echo -e "  \033[1;33m❓ 帮助\033[0m"
+        echo "    help            显示此菜单"
+        echo ""
     ;;
   sandbox-push|sp)
     # sos sandbox-push <local_file> [remote_path]
