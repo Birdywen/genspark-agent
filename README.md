@@ -1,104 +1,120 @@
-# Genspark Agent Bridge
+# Genspark Agent Infrastructure
 
-将 Genspark.ai 聊天窗口转变为 AI Agent 运行时，支持本地工具调用和自主任务执行。
+## 🖥️ Servers
 
-## 架构
+### Oracle ARM (Beast Mode) - PRIMARY
+- **IP**: 150.136.51.61
+- **SSH**: `ssh -i ~/.ssh/oracle-cloud.key ubuntu@150.136.51.61`
+- **Specs**: 4 CPU (Neoverse-N1 ARM) / 24 GB RAM / 45 GB disk
+- **OS**: Ubuntu 22.04 aarch64
+- **永久免费** (Oracle Always Free PAYG)
+- **PM2 Services**: sandbox-keepalive
+- **Repo**: /home/ubuntu/genspark-agent
 
-```
-Genspark 网页 <---> Chrome Extension <---> WebSocket <---> Local Server <---> 工具执行
-```
+### Oracle AMD (Light Duty)
+- **IP**: 157.151.227.157
+- **SSH**: `ssh -i ~/.ssh/oracle-cloud.key ubuntu@157.151.227.157`
+- **Specs**: 2 CPU (x86_64) / 956 MB RAM / 45 GB disk
+- **OS**: Ubuntu 24.04 x86_64
+- **永久免费** (Oracle Always Free)
+- **PM2 Services**: racquetdesk-booker
+- **OCI CLI configured**: ~/.oci/config
 
-## 项目结构
+### Genspark Sandbox (High-Perf)
+- **Project ID**: c172a082-7ba2-4105-8050-a56b7cf52cf4
+- **Sandbox ID**: isjad10r8glpogdbe5r7n-02b9cc79
+- **API Base**: https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai
+- **Specs**: 4 CPU (Xeon 2.5GHz) / 7.8 GB RAM / 26 GB disk
+- **OS**: Debian Linux x86_64, sudo root
+- **Exec API**: POST /api/exec `{"command":"..."}`
+- **File API**: GET /api/file/:path, PUT /api/file/:path
+- **Status API**: GET /api/status
+- **需要保活**: Oracle keepalive 每3分钟ping
 
-```
-genspark-agent/
-├── extension/          # Chrome 扩展
-│   ├── manifest.json   # 扩展配置
-│   ├── background.js   # WebSocket 客户端
-│   └── content.js      # 页面交互、UI 控制面板
-├── server-v2/          # 本地服务器
-│   ├── index.js        # 主入口（WebSocket 服务）
-│   ├── safety.js       # 安全检查（路径、命令白名单）
-│   ├── skills.js       # Skills 加载器
-│   ├── logger.js       # 日志模块
-│   └── config.json     # 配置文件
-├── mcp-servers/        # MCP 服务（可选）
-│   ├── mcp-server.js   # MCP 协议服务
-│   └── webhook-server.js
-├── skills/             # 技能模块
-│   ├── skills.json     # 技能索引
-│   └── */SKILL.md      # 各技能文档
-├── docs/               # 文档
-└── logs/               # 运行日志
-```
+### Genspark Sandbox (Standard)
+- **Project ID**: a6e50804-320f-4f61-bcd6-93c57f8d6403
+- **Sandbox ID**: i3tin0xbrjov9c7se6vov-8f57ffe2
+- **URL**: https://3000-i3tin0xbrjov9c7se6vov-8f57ffe2.sandbox.novita.ai
 
-## 快速开始
+## 🌐 Deployments
 
-### 1. 启动本地服务器
+### Cloudflare Workers
+- **Dashboard**: https://agent-dashboard.woshipeiwenhao.workers.dev
+- **CF Token**: ${CF_API_TOKEN}
+- **Account ID**: ${CF_ACCOUNT_ID}
+- **Deploy**: `wrangler deploy` from sandbox /home/user/webapp
+
+## 🤖 AI APIs
+
+### 1min.ai (Primary - Lifetime Plan)
+- **API Key**: ${ONEMIN_API_KEY}
+- **Credits**: ~31.5M remaining
+- **Endpoint**: https://api.1min.ai/api/features
+- **Models**: GPT-4.1, GPT-4o, GPT-4.1-Mini, Claude Opus 4, Claude Sonnet 4, o3, o4-mini, Mistral Large, DeepSeek
+- **Usage**: `sos ask "question"` or `ONEMIN_MODEL=claude-opus-4-20250514 sos ask "question"`
+
+### Genspark (Browser-based)
+- **Models**: Claude Opus 4, Claude Sonnet 4, GPT-4.1, GPT-4.1 Mini, GPT-4o, o3, o4-mini, Gemini 2.5 Pro, Gemini 2.5 Flash, Kimi K2P5
+- **Cost**: ~4 credits per ask_proxy call
+- **Credits**: ~8500 remaining
+
+## 🔧 SOS Command Reference
 
 ```bash
-cd /Users/yay/workspace/genspark-agent/server-v2
-npm install
-npm start
-```
+sos ask "question"       # AI query (1min.ai, ~5-50 credits)
+sos se "command"         # Execute bash in sandbox (0 credit)
+sos sp file [dest]       # Push file to sandbox (0 credit)
+sos sl [path]            # List sandbox directory (0 credit)
+sos sr path              # Read sandbox file (0 credit)
+sos ss                   # Sandbox status (0 credit)
+sos su                   # Sandbox preview URL (0 credit)
+sos say "message"        # Mobile push notification (ntfy)
 
-服务器启动后会显示「WebSocket 服务已启动」。
 
-### 2. 安装 Chrome 扩展
+Environment: ONEMIN_MODEL to switch AI model (default: gpt-4.1-mini)
 
-1. 打开 Chrome，访问 `chrome://extensions/`
-2. 开启右上角「开发者模式」
-3. 点击「加载已解压的扩展程序」
-4. 选择目录：`/Users/yay/workspace/genspark-agent/extension`
+🔐 Credentials
+Oracle Cloud
+Email: ${ORACLE_EMAIL}
+Tenancy: ${OCI_TENANCY}
+ARM Instance: ${OCI_ARM_INSTANCE}
+GitHub
+Repo: https://github.com/Birdywen/genspark-agent
+Token: ${GITHUB_TOKEN}
+Other APIs
+1min.ai Notebook: PUT https://api.1min.ai/users/notebook
+Apipod: ${APIPOD_API_KEY}
+Retool: ${RETOOL_API_KEY}
+ntfy Topics: yay-agent-alerts, oci-arm-grabber-yay
+📊 Resource Summary
+Server	CPU	RAM	Disk	Status
+Oracle ARM	4 core	24 GB	45 GB	Permanent
+Oracle AMD	2 core	956 MB	45 GB	Permanent
+Sandbox HP	4 core	7.8 GB	26 GB	Keep-alive
+Sandbox Std	-	-	-	Keep-alive
+Total	10 core	~33 GB	116 GB	
+🛡️ Keep-Alive System
+Oracle ARM runs sandbox-keepalive.js via PM2
+Pings both sandboxes every 3 minutes
+After 3 consecutive failures: ntfy push alert
+On recovery: ntfy push confirmation
+Sandbox server.js has self-heartbeat (writes /tmp/heartbeat every 2 min)
+🧩 Chrome Extensions
+Genspark Agent Bridge (extension/) - main agent runtime
+Per-page toggle: green dot (enabled) / red dot (disabled)
+Disable on sandbox page to prevent unnecessary AI responses on lid open/close
+📝 TutorLens
+Interactive tutorial engine at /tutorial-engine/
+Preview: https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai/tutorial-engine/
+Zero-dependency, works on any webpage
+6-step demo with spotlight, bubbles, navigation EOF
 
-### 3. 使用
+git add -A git commit -m "docs: comprehensive infrastructure README
 
-1. 打开 Genspark.ai 对话页面
-2. 页面右下角出现「Agent Bridge」控制面板
-3. 面板显示「已连接」即可开始使用
-
-## 工具调用格式
-
-AI 通过以下格式调用工具：
-
-```
-@TOOL:{"tool":"工具名","params":{"参数":"值"}}
-```
-
-### 常用工具
-
-| 工具 | 用途 | 参数 |
-|------|------|------|
-| `read_file` | 读取文件 | `path`: 文件路径 |
-| `write_file` | 写入文件 | `path`, `content` |
-| `edit_file` | 编辑文件 | `path`, `edits` |
-| `list_directory` | 列出目录 | `path`: 目录路径 |
-| `run_command` | 执行命令 | `command`: 命令字符串 |
-
-完整工具列表见 [docs/GUIDE.md](docs/GUIDE.md)。
-
-## 安全机制
-
-- **路径限制**：只能访问 `/Users/yay/workspace` 和 `/private/tmp`
-- **命令过滤**：屏蔽危险命令（`sudo`, `rm -rf /` 等）
-- **操作日志**：所有操作记录在 `logs/` 目录
-
-## 配置
-
-编辑 `server-v2/config.json` 可修改：
-
-- `allowedPaths`: 允许访问的目录
-- `blockedCommands`: 屏蔽的危险命令
-- `logLevel`: 日志级别
-
-## 故障排除
-
-| 问题 | 解决方法 |
-|------|----------|
-| 扩展显示「断开」 | 确保服务器已启动，检查终端错误 |
-| 工具调用无响应 | 刷新页面，检查控制面板日志 |
-| 权限被拒绝 | 检查路径是否在 allowedPaths 中 |
-
-## 许可
-
-MIT License
+All servers: Oracle ARM (4c/24G), Oracle AMD (2c/1G), Sandboxes
+AI APIs: 1min.ai (31.5M credits), Genspark models
+SOS command reference
+Credentials and endpoints
+Keep-alive system docs
+TutorLens docs
+Resource summary table" git push origin main 2>&1 | tail -3 SCRIPT 
