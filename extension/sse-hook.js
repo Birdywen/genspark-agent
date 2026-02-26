@@ -8,6 +8,13 @@
   if (window.__SSE_HOOK_ACTIVE__) return;
   window.__SSE_HOOK_ACTIVE__ = true;
 
+  // Per-tab disable check
+  const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
+  if (localStorage.getItem(DISABLED_KEY) === 'true') {
+    console.log('[SSE-Hook] Disabled on this page');
+    return;
+  }
+
   // ── Hook 1: EventSource (in case it's used) ──────────────────
   const OrigEventSource = window.EventSource;
 

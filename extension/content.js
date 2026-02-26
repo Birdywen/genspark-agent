@@ -9,6 +9,41 @@
   }
   window.__GENSPARK_AGENT_LOADED__ = true;
 
+  // Per-tab disable: check localStorage
+  const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
+  const isDisabled = localStorage.getItem(DISABLED_KEY) === 'true';
+  
+  // Create floating toggle button
+  setTimeout(() => {
+    const btn = document.createElement('div');
+    btn.id = 'agent-toggle-btn';
+    btn.innerHTML = isDisabled ? '🔴' : '🟢';
+    btn.title = isDisabled ? 'Agent: OFF (click to enable)' : 'Agent: ON (click to disable)';
+    btn.style.cssText = 'position:fixed;bottom:70px;right:12px;z-index:99999;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;background:#1a1a2e;border:1px solid #333;box-shadow:0 2px 8px rgba(0,0,0,0.3);opacity:0.7;transition:opacity 0.2s;';
+    btn.onmouseenter = () => btn.style.opacity = '1';
+    btn.onmouseleave = () => btn.style.opacity = '0.7';
+    btn.onclick = () => {
+      const current = localStorage.getItem(DISABLED_KEY) === 'true';
+      localStorage.setItem(DISABLED_KEY, current ? 'false' : 'true');
+      btn.innerHTML = current ? '🟢' : '🔴';
+      btn.title = current ? 'Agent: ON (click to disable)' : 'Agent: OFF (click to enable)';
+      if (!current) {
+        // Just disabled - show notice
+        const notice = document.createElement('div');
+        notice.textContent = 'Agent disabled on this page. Refresh to take effect.';
+        notice.style.cssText = 'position:fixed;bottom:110px;right:12px;z-index:99999;background:#333;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;';
+        document.body.appendChild(notice);
+        setTimeout(() => notice.remove(), 3000);
+      }
+    };
+    document.body.appendChild(btn);
+  }, 2000);
+
+  if (isDisabled) {
+    console.log('[Agent] Disabled on this page via toggle');
+    return;
+  }
+
   const CONFIG = {
     SCAN_INTERVAL: 200,
     TIMEOUT_MS: 120000,
