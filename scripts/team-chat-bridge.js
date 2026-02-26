@@ -161,7 +161,7 @@ function broadcastToAgent(text) {
 // --- Command execution ---
 function runCommand(cmd) {
   return new Promise((resolve) => {
-    exec('source ~/.zshrc 2>/dev/null; ' + cmd, { timeout: 30000, shell: '/bin/zsh' }, (err, stdout, stderr) => {
+    exec('setopt noglob 2>/dev/null; source ~/.zshrc 2>/dev/null; ' + cmd, { timeout: 30000, shell: '/bin/zsh' }, (err, stdout, stderr) => {
       resolve(stdout || stderr || (err ? err.message : 'done'));
     });
   });
