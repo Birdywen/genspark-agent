@@ -305,11 +305,31 @@ HELP
   sandbox-url|su)
     echo "$SANDBOX_PREVIEW_URL"
     ;;
+
+    sandbox-exec|se)
+        shift
+        cmd="$*"
+        if [ -z "$cmd" ]; then
+            echo "Usage: sos sandbox-exec <command>"
+            exit 1
+        fi
+        json_body=$(python3 -c 'import json,sys;print(json.dumps({"command":sys.argv[1],"timeout":30000}))' "$cmd")
+        curl -s -X POST "${SANDBOX_API}/exec" \
+            -H "Content-Type: application/json" \
+            -d "$json_body" | python3 -c '
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    if d.get("ok"):
+        print(d.get("stdout","").rstrip())
+    else:
+        print("STDERR:",d.get("stderr",""),file=sys.stderr)
+        sys.exit(d.get("exitCode",1))
+except Exception as e:
+    print("Error:",e,file=sys.stderr)
+'
+        ;;
   *)
     show_help
     ;;
 esac
-
-# --- sandbox-exec: Execute command in sandbox via ask_proxy ---
-# Usage: sos sandbox-exec <command>
-# Requires: eval_js with sandboxExec/sandboxResult functions loaded on tab 2012096819
