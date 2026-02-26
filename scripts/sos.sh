@@ -223,7 +223,7 @@ case "$CMD" in
     if [ -z "$MSG" ]; then
       echo "用法: sos say <消息>"
     else
-      curl -s -X POST http://localhost:8769/reply -H "Content-Type: application/json" -d "{\"text\":\"$MSG\"}" > /dev/null && echo "📱 已发送" || echo "❌ 发送失败"
+      curl -s -X POST http://localhost:8769/reply -H "Content-Type: application/json" -d "{\"text\":\"$MSG\"}" > /dev/null 2>&1 || echo "❌ 发送失败"
     fi
     ;;
 
