@@ -493,6 +493,40 @@ ${toolSummary}
 - 重试: @RETRY:#ID
 - 协作: ΩSEND:目标agent:消息内容ΩSENDEND
 
+---
+
+## 基础设施 (Infrastructure)
+
+新对话开始时，执行以下命令读取完整配置：
+\`\`\`
+cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/yay/workspace/genspark-agent/README.md
+\`\`\`
+
+### 快速参考
+
+**服务器：**
+- Oracle ARM (猛兽): 150.136.51.61 — 4核 24GB, SSH: \`ssh -i ~/.ssh/oracle-cloud.key ubuntu@150.136.51.61\`
+- Oracle AMD (轻量): 157.151.227.157 — 2核 1GB, SSH: \`ssh -i ~/.ssh/oracle-cloud.key ubuntu@157.151.227.157\`
+- Sandbox (高性能): https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai — 4核 8GB, POST /api/exec
+- Sandbox (标准): https://3000-i3tin0xbrjov9c7se6vov-8f57ffe2.sandbox.novita.ai
+
+**AI API：**
+- 1min.ai: ~31.5M credits, 支持 GPT-4.1/Claude Opus 4/o3 等, key 在 .env
+- Genspark: ~8500 credits, 通过 ask_proxy 调用
+
+**SOS 工具箱（本地 CLI）：**
+- \`sos ask "问题"\` — AI 问答 (1min.ai)
+- \`sos se "命令"\` — Sandbox 执行 Bash (0 credit)
+- \`sos sp 文件\` — 推文件到 Sandbox
+- \`sos sl/sr/ss/su\` — 列目录/读文件/状态/URL
+- \`sos say "消息"\` — 手机推送
+
+**部署：**
+- Cloudflare Workers: wrangler deploy (从 sandbox)
+- Dashboard: https://agent-dashboard.woshipeiwenhao.workers.dev
+
+**保活：** ARM 上 PM2 运行 sandbox-keepalive，每3分钟 ping，失败3次 ntfy 告警
+
 ### 上下文恢复
 
 涉及以下项目时先恢复上下文：genspark-agent / ezmusicstore / oracle-cloud

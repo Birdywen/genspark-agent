@@ -311,6 +311,19 @@ HELP
     echo "$SANDBOX_PREVIEW_URL"
     ;;
 
+    info|i)
+        echo "=== Genspark Agent Infrastructure ==="
+        echo ""
+        echo "🦾 Oracle ARM (Beast):  150.136.51.61  | 4 CPU / 24 GB | PM2: sandbox-keepalive"
+        echo "🖥️  Oracle AMD (Light):  157.151.227.157 | 2 CPU / 1 GB  | PM2: racquetdesk-booker"
+        echo "📦 Sandbox HP:          isjad10r8glpogdbe5r7n-02b9cc79     | 4 CPU / 8 GB"
+        echo "📦 Sandbox Std:         i3tin0xbrjov9c7se6vov-8f57ffe2"
+        echo "🌐 CF Workers:          agent-dashboard.woshipeiwenhao.workers.dev"
+        echo "🤖 1min.ai:             ~31.5M credits | GPT-4.1/Claude Opus 4/o3"
+        echo "🎮 Genspark:            ~8500 credits  | 10 models"
+        echo ""
+        echo "Commands: ask|se|sp|sl|sr|ss|su|say|info"
+        ;;
     ask|a)
         # Ask AI via 1min.ai API - direct curl, no browser needed
         shift
