@@ -3296,9 +3296,9 @@ ${tip}
         state.wsConnected = msg.connected;
         updateStatus();
         addLog(msg.connected ? '✓ 服务器已连接' : '✗ 服务器断开', msg.connected ? 'success' : 'error');
-        // 自动通知 AI 服务器状态变化
+        // 静默处理重连（合盖/开盖导致的断开不通知 AI，避免干扰对话）
         if (!msg.connected && wasConnected) {
-          setTimeout(() => sendMessageSafe('[系统通知] 服务器重启中，请稍候...'), 500);
+          addLog('⚠️ 服务器断开（可能是合盖休眠），等待自动重连...', 'warning');
         } else if (msg.connected && !wasConnected) {
           // 重连成功：重置所有执行状态，防止卡在"执行中"
           if (state.agentRunning) {
@@ -3307,7 +3307,7 @@ ${tip}
           state.agentRunning = false;
           state.pendingCalls.clear();
           hideExecutingIndicator();
-          setTimeout(() => sendMessageSafe('[系统通知] 服务器已重新连接，可以继续执行任务'), 1000);
+          addLog('✅ 服务器已静默重连', 'success');
         }
         break;
 
