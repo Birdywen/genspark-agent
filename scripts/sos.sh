@@ -3,7 +3,8 @@
 # 用法: source ~/.zshrc 后直接用 sos 命令
 # Sandbox Config
 SANDBOX_PROJECT_ID="a6e50804-320f-4f61-bcd6-93c57f8d6403"
-SANDBOX_PREVIEW_URL="https://3000-i3tin0xbrjov9c7se6vov-8f57ffe2.sandbox.novita.ai"
+SANDBOX_PREVIEW_URL="https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai"
+SANDBOX_API="https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai/api"
 GENSPARK_COOKIE_FILE="$HOME/.genspark_cookie"
 
 # 或者: bash ~/workspace/genspark-agent/scripts/sos.sh [命令]
@@ -277,6 +278,29 @@ Sandbox:
   sos sandbox-url (su)          - 显示预览地址
   sos sandbox-login             - 设置 Cookie
 HELP
+    ;;
+  sandbox-push|sp)
+    # sos sandbox-push <local_file> [remote_path]
+    local_file="$2"
+    remote_path="${3:-/home/user/webapp/public/$(basename "$2")}"
+    if [ ! -f "$local_file" ]; then
+      echo "❌ File not found: $local_file"; exit 1
+    fi
+    response=$(curl -s -X PUT "$SANDBOX_API/file${remote_path}" \
+      -H "Content-Type: application/json" \
+      -d "$(jq -n --arg c "$(cat "$local_file")" '{content:$c}')")
+    echo "$response"
+    echo "🌐 $SANDBOX_PREVIEW_URL/$(basename "$local_file")"
+    ;;
+  sandbox-list|sl)
+    spath="${2:-/home/user/webapp/public}"
+    curl -s "$SANDBOX_API/ls${spath}" | python3 -m json.tool
+    ;;
+  sandbox-read|sr)
+    curl -s "$SANDBOX_API/file${2}"
+    ;;
+  sandbox-status|ss)
+    curl -s "$SANDBOX_API/status" | python3 -m json.tool
     ;;
   sandbox-url|su)
     echo "$SANDBOX_PREVIEW_URL"
