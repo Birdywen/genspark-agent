@@ -309,3 +309,7 @@ HELP
     show_help
     ;;
 esac
+
+# --- sandbox-exec: Execute command in sandbox via ask_proxy ---
+# Usage: sos sandbox-exec <command>
+# Requires: eval_js with sandboxExec/sandboxResult functions loaded on tab 2012096819
