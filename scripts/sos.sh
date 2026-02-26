@@ -5,6 +5,11 @@
 SANDBOX_PROJECT_ID="a6e50804-320f-4f61-bcd6-93c57f8d6403"
 SANDBOX_PREVIEW_URL="https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai"
 SANDBOX_API="https://3000-isjad10r8glpogdbe5r7n-02b9cc79.sandbox.novita.ai/api"
+
+# 1min.ai Config
+ONEMIN_API_KEY="c81dc363907e8c1777e37fde4c6abd319135d71fa4a4a7c723c00ae6f4dc6da4"
+ONEMIN_API="https://api.1min.ai/api/features"
+ONEMIN_MODEL="${ONEMIN_MODEL:-gpt-4.1-mini}"
 GENSPARK_COOKIE_FILE="$HOME/.genspark_cookie"
 
 # 或者: bash ~/workspace/genspark-agent/scripts/sos.sh [命令]
@@ -306,6 +311,31 @@ HELP
     echo "$SANDBOX_PREVIEW_URL"
     ;;
 
+    ask|a)
+        # Ask AI via 1min.ai API - direct curl, no browser needed
+        shift
+        question="$*"
+        if [ -z "$question" ]; then
+            echo "Usage: sos ask <question>"
+            echo "  env ONEMIN_MODEL=claude-opus-4-20250514 sos ask <question>"
+            exit 1
+        fi
+        json_body=$(python3 -c 'import json,sys;print(json.dumps({"type":"CHAT_WITH_AI","model":"'"${ONEMIN_MODEL}"'","promptObject":{"prompt":sys.argv[1]}}))' "$question")
+        curl -s -X POST "${ONEMIN_API}" \
+            -H "Content-Type: application/json" \
+            -H "API-KEY: ${ONEMIN_API_KEY}" \
+            -d "$json_body" | python3 -c '
+import sys,json
+try:
+    d=json.load(sys.stdin)
+    rec=d.get("aiRecord",{})
+    detail=rec.get("aiRecordDetail",{})
+    result=detail.get("resultObject",[""])
+    print(result[0] if result else "No response")
+except Exception as e:
+    print("Error:",e)
+'
+        ;;
     sandbox-exec|se)
         shift
         cmd="$*"
