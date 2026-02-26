@@ -2326,13 +2326,17 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
         const message = sendMatch[2].trim();
         addLog(`📨 发送给 ${toAgent}...`, 'tool');
         if (toAgent === 'phone-bridge') {
-          // phone-bridge 是外部进程，通过 HTTP 直接发送
-          fetch('http://localhost:8769/reply', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({text: message})
-          }).then(() => addLog('📱 已发送到手机', 'success'))
-            .catch(e => addLog('❌ 手机发送失败: ' + e.message, 'error'));
+          // phone-bridge 是外部进程，通过 Agent 服务器中转
+          chrome.runtime.sendMessage({
+            type: 'SEND_TO_SERVER',
+            payload: { type: 'phone_reply', text: message }
+          }, (resp) => {
+            if (chrome.runtime.lastError) {
+              addLog('❌ 手机发送失败: ' + chrome.runtime.lastError.message, 'error');
+            } else {
+              addLog('📱 已发送到手机', 'success');
+            }
+          });
         } else {
           sendToAgent(toAgent, message);
         }

@@ -1139,6 +1139,21 @@ async function main() {
             ws.send('{"type":"pong"}');
             break;
 
+          case 'phone_reply': {
+            try {
+              const pData = JSON.stringify({text: msg.text || msg.payload?.text || ''});
+              const pReq = http.request({hostname:"localhost",port:8769,path:"/reply",method:"POST",headers:{"Content-Type":"application/json","Content-Length":Buffer.byteLength(pData)}}, () => {});
+              pReq.write(pData);
+              pReq.end();
+              ws.send(JSON.stringify({type:'phone_reply_result', success:true}));
+              logger.info('[WS] phone_reply sent');
+            } catch(e) {
+              ws.send(JSON.stringify({type:'phone_reply_result', success:false, error:e.message}));
+              logger.error('[WS] phone_reply error: ' + e.message);
+            }
+            break;
+          }
+
           case 'browser_tool_result': {
             const pending = browserToolPending.get(msg.callId);
             if (pending) {
