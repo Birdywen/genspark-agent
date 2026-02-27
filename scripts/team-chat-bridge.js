@@ -160,8 +160,9 @@ function broadcastToAgent(text) {
 
 // --- Command execution ---
 function runCommand(cmd) {
+  const timeout = cmd.includes('ask2') ? 90000 : 30000;
   return new Promise((resolve) => {
-    exec('setopt noglob 2>/dev/null; source ~/.zshrc 2>/dev/null; ' + cmd, { timeout: 30000, shell: '/bin/zsh' }, (err, stdout, stderr) => {
+    exec('setopt noglob 2>/dev/null; source ~/.zshrc 2>/dev/null; ' + cmd, { timeout, shell: '/bin/zsh' }, (err, stdout, stderr) => {
       resolve(stdout || stderr || (err ? err.message : 'done'));
     });
   });
@@ -277,8 +278,18 @@ function handleCometMessage(parsed, raw) {
       return;
     }
 
+    // 路由过滤: @local/@arm 前缀定向发送
+    const BRIDGE_ID = CONFIG.DEVICE_ID.includes('arm-bridge') ? 'arm' : 'local';
+    const trimmedText = text.trim();
+    if (trimmedText.startsWith('@local ') && BRIDGE_ID !== 'local') { log('Skipped (not for this bridge)'); return; }
+    if (trimmedText.startsWith('@arm ') && BRIDGE_ID !== 'arm') { log('Skipped (not for this bridge)'); return; }
+    // 去掉路由前缀
+    let routedText = trimmedText;
+    if (routedText.startsWith('@local ')) routedText = routedText.slice(7);
+    if (routedText.startsWith('@arm ')) routedText = routedText.slice(5);
+
     // 转发到 agent
-    const sent = broadcastToAgent(text);
+    const sent = broadcastToAgent(routedText);
 
 
     

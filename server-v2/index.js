@@ -1134,7 +1134,96 @@ async function main() {
           case 'confirm_result':
             safety.handleConfirmation(msg.id, msg.approved);
             break;
+
+          case 'browser_eval': {
+            // 外部脚本(如 sos ask2)请求浏览器执行 eval_js
+            const beCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const beTimeout = setTimeout(() => {
+              browserToolPending.delete(beCallId);
+              ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: false, error: '浏览器执行超时 (90s)' }));
+            }, msg.timeout || 90000);
+
+            browserToolPending.set(beCallId, {
+              resolve: (result) => {
+                clearTimeout(beTimeout);
+                ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: true, result }));
+              },
+              reject: (err) => {
+                clearTimeout(beTimeout);
+                ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: false, error: err.message || String(err) }));
+              },
+              timeout: beTimeout
+            });
+
+            // 广播给所有客户端(浏览器扩展会拦截 browser_tool_call)
+            for (const client of clients) {
+              if (client !== ws && client.readyState === 1) {
+                client.send(JSON.stringify({ type: 'browser_tool_call', callId: beCallId, tool: 'eval_js', params: { code: msg.code, tabId: msg.tabId || null, allFrames: msg.allFrames || false } }));
+              }
+            }
+            logger.info(`[BrowserEval] 转发到浏览器: ${beCallId}`);
+            break;
+          }
             
+
+          case 'browser_screenshot': {
+            // runner.js 请求截图（通过扩展的 captureVisibleTab）
+            const bsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const bsTimeout = setTimeout(() => {
+              browserToolPending.delete(bsCallId);
+              ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: false, error: '截图超时 (30s)' }));
+            }, 30000);
+
+            browserToolPending.set(bsCallId, {
+              resolve: (result) => {
+                clearTimeout(bsTimeout);
+                ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: true, result }));
+              },
+              reject: (err) => {
+                clearTimeout(bsTimeout);
+                ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: false, error: err.message || String(err) }));
+              },
+              timeout: bsTimeout
+            });
+
+            for (const client of clients) {
+              if (client !== ws && client.readyState === 1) {
+                client.send(JSON.stringify({ type: 'browser_tool_call', callId: bsCallId, tool: 'screenshot', params: { tabId: msg.tabId || null } }));
+              }
+            }
+            logger.info(`[BrowserScreenshot] 转发到浏览器: ${bsCallId}`);
+            break;
+          }
+
+          case 'browser_list_tabs': {
+            // runner.js 请求获取 tab 列表
+            const ltCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const ltTimeout = setTimeout(() => {
+              browserToolPending.delete(ltCallId);
+              ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: false, error: '超时 (30s)' }));
+            }, 30000);
+
+            browserToolPending.set(ltCallId, {
+              resolve: (result) => {
+                clearTimeout(ltTimeout);
+                ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: true, result }));
+              },
+              reject: (err) => {
+                clearTimeout(ltTimeout);
+                ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: false, error: err.message || String(err) }));
+              },
+              timeout: ltTimeout
+            });
+
+            for (const client of clients) {
+              if (client !== ws && client.readyState === 1) {
+                client.send(JSON.stringify({ type: 'browser_tool_call', callId: ltCallId, tool: 'list_tabs', params: {} }));
+              }
+            }
+            logger.info(`[BrowserListTabs] 转发到浏览器: ${ltCallId}`);
+            break;
+          }
+
           case 'ping':
             ws.send('{"type":"pong"}');
             break;

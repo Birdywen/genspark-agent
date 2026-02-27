@@ -128,7 +128,10 @@
     "tschaikowsky_p_italian_song_piano_beg",
     "valente_a_boas_festas_piano",
     "straussjr_j_on_the_beautiful_blue_danube_piano_beg",
-    "yradier_c_la_paloma_piano_beg"
+    "yradier_c_la_paloma_piano_beg",
+    "my-heart-will-go-on"
   ],
-  "processing": {}
+  "processing": {
+    "sonata-no3-for-violin-solo": "9C40EE9A-0763-4DCE-BBEE-D89BA8F319C4"
+  }
 }

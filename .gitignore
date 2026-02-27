@@ -50,3 +50,13 @@ __pycache__/
 skills/newzik-omr/converted/*.musicxml
 server-v2/.env.api
 scripts/sos.sh.bak5
+
+# Backup files (extended patterns)
+*.bak.*
+server-v2/index.js.bak.*
+
+# OMR song files
+skills/newzik-omr/songs/
+
+# SOS experimental scripts
+scripts/sos-ask2.*

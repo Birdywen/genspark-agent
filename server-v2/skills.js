@@ -57,7 +57,7 @@ class SkillsManager {
     
     try {
       const rows = execSync(
-        `sqlite3 -json "${KNOWLEDGE_DB}" "SELECT category, title, problem, solution FROM lessons_learned WHERE integrated = 0 ORDER BY category, id"`,
+        `sqlite3 -json "${KNOWLEDGE_DB}" "SELECT category, title, problem, solution FROM lessons_learned WHERE integrated = 0 AND category IN ('eval_js','ffmpeg') ORDER BY category, id"`,
         { encoding: 'utf8', timeout: 5000 }
       ).trim();
       
@@ -88,22 +88,12 @@ class SkillsManager {
    * 生成系统提示
    */
   _generateSystemPrompt() {
-    let envInfo = '';
-    
-    // 尝试读取本地环境信息
-    const envPath = path.join(__dirname, '..', '..', '.ai-env.md');
-    console.log('🔍 检查环境文件:', envPath, '存在:', existsSync(envPath));
-    if (existsSync(envPath)) {
-      envInfo = readFileSync(envPath, 'utf-8') + '\n\n---\n\n';
-      console.log('✅ 已加载本地环境信息 (.ai-env.md), 长度:', envInfo.length);
-    } else {
-      console.log('⚠️ 环境文件不存在');
-    }
+    // .ai-env.md 内容已合并到主 prompt，不再重复加载
     
     // 尝试读取预生成的系统提示
     const promptPath = path.join(SKILLS_DIR, 'SYSTEM_PROMPT_SKILLS.md');
     if (existsSync(promptPath)) {
-      return envInfo + readFileSync(promptPath, 'utf-8');
+      return readFileSync(promptPath, 'utf-8');
     }
 
     // 动态生成简短摘要（详细文档按需加载）
@@ -128,7 +118,7 @@ class SkillsManager {
       console.log('✅ 已加载踩坑经验到系统提示');
     }
     
-    return envInfo + prompt;
+    return prompt;
   }
 
   /**

@@ -288,6 +288,7 @@ case "$CMD" in
         echo ""
         echo -e "  \033[1;33m🤖 AI (1min.ai, 31.5M credits)\033[0m"
         echo "    ask     (a)     AI 问答 (默认 gpt-4.1-mini)"
+        echo "    ask2    (a2)    AI 问答 via 浏览器 (零credit, -c 连续对话)"
         echo "                    ONEMIN_MODEL=xxx sos ask 切换模型"
         echo ""
         echo -e "  \033[1;33m❓ 帮助\033[0m"
@@ -356,6 +357,18 @@ except Exception as e:
         echo "🎮 Genspark:            ~8500 credits  | 10 models"
         echo ""
         echo "Commands: ask|se|sp|sl|sr|ss|su|say|oe|os|info"
+        ;;
+    ask2|a2)
+        # Ask AI via Genspark browser session (zero credit, requires browser open)
+        shift
+        question="$*"
+        if [ -z "$question" ]; then
+            echo "Usage: sos ask2 <question>"
+            echo "  env GENSPARK_MODEL=gpt-4.1 sos ask2 <question>"
+            echo "  Requires: Genspark page open in browser + agent server running"
+            exit 1
+        fi
+        node "$AGENT_DIR/scripts/sos-ask2.js" "$@"
         ;;
     ask|a)
         # Ask AI via 1min.ai API - direct curl, no browser needed

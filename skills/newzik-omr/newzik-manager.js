@@ -7,6 +7,7 @@
  *   node newzik-manager.js upload <dir>     - 上传目录中的 PDF
  *   node newzik-manager.js submit [n]       - 提交 n 个 OMR 任务
  *   node newzik-manager.js download         - 下载已完成的 MusicXML
+ *   node newzik-manager.js wait [timeout]   - 等待所有 OMR 任务完成
  *   node newzik-manager.js delete <pattern> - 删除匹配的曲目
  *   node newzik-manager.js cleanup          - 删除重复曲目
  *   node newzik-manager.js trash            - 查看回收站
@@ -47,8 +48,19 @@ function loadSecrets() {
   return secrets;
 }
 
-const secrets = loadSecrets();
-const TOKEN = secrets.NEWZIK_ACCESS_TOKEN;
+function saveSecret(key, value) {
+  let content = fs.readFileSync(SECRETS_FILE, 'utf-8');
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+  if (regex.test(content)) {
+    content = content.replace(regex, `${key}=${value}`);
+  } else {
+    content += `\n${key}=${value}`;
+  }
+  fs.writeFileSync(SECRETS_FILE, content);
+}
+
+let secrets = loadSecrets();
+let TOKEN = secrets.NEWZIK_ACCESS_TOKEN;
 const USER_UUID = secrets.NEWZIK_USER_UUID;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -62,6 +74,40 @@ function saveState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
+// ============ Token 自动刷新 ============
+
+let refreshAttempted = false;
+
+async function refreshToken() {
+  const refreshToken = loadSecrets().NEWZIK_REFRESH_TOKEN;
+  if (!refreshToken) throw new Error('No refresh token available');
+
+  console.log('  🔄 Token 过期，自动刷新...');
+  const res = await fetch(`${API_BASE}/uaa/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=refresh_token&client_id=newzik&refresh_token=${refreshToken}`
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Token refresh failed (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  if (!data.access_token) throw new Error('No access_token in refresh response');
+
+  // 保存新 token
+  TOKEN = data.access_token;
+  saveSecret('NEWZIK_ACCESS_TOKEN', data.access_token);
+  if (data.refresh_token) {
+    saveSecret('NEWZIK_REFRESH_TOKEN', data.refresh_token);
+  }
+  secrets = loadSecrets();
+  refreshAttempted = false;
+  console.log('  ✓ Token 已刷新');
+}
+
 async function api(endpoint, options = {}) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -70,11 +116,30 @@ async function api(endpoint, options = {}) {
       'x-nz-product': 'com.syncsing.Newzik4',
       'Accept': 'application/json',
       'Content-Type': 'application/json; charset=UTF-8',
-      'Accept': 'application/json',
       'Origin': 'https://web.newzik.com',
       ...options.headers
     }
   });
+
+  // 自动刷新 token on 401/403
+  if ((res.status === 401 || res.status === 403) && !refreshAttempted) {
+    refreshAttempted = true;
+    await refreshToken();
+    // 用新 token 重试
+    return fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${TOKEN}`,
+        'x-nz-product': 'com.syncsing.Newzik4',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Origin': 'https://web.newzik.com',
+        ...options.headers
+      }
+    });
+  }
+
+  refreshAttempted = false;
   return res;
 }
 
@@ -82,7 +147,11 @@ async function api(endpoint, options = {}) {
 
 async function getServerPieces() {
   const res = await api(`/ws4/musicians/${USER_UUID}/pieces`);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`获取曲目列表失败 (${res.status}): ${text.slice(0, 200)}`);
+    return [];
+  }
   const data = await res.json();
   return Object.values(data.pieces || {});
 }
@@ -136,7 +205,10 @@ async function uploadFile(filePath) {
     body: formData
   });
   
-  if (!uploadRes.ok) throw new Error('Upload failed');
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(() => 'no body');
+    throw new Error(`Upload failed (${uploadRes.status}): ${errText.slice(0, 200)}`);
+  }
   
   // 2. 创建元数据
   const now = new Date().toISOString();
@@ -169,13 +241,21 @@ async function uploadFile(filePath) {
     body: JSON.stringify(metadata)
   });
   
-  if (!metaRes.ok) throw new Error('Metadata failed');
+  if (!metaRes.ok) {
+    const errText = await metaRes.text().catch(() => 'no body');
+    throw new Error(`Metadata failed (${metaRes.status}): ${errText.slice(0, 200)}`);
+  }
   
   // 3. 设置版本
-  await fetch(`${API_BASE}/ws2/version/current?song=${pieceUuid}&version=${partUuid}`, {
+  const verRes = await fetch(`${API_BASE}/ws2/version/current?song=${pieceUuid}&version=${partUuid}`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${TOKEN}`, 'x-nz-product': 'com.syncsing.Newzik4', 'Origin': 'https://web.newzik.com' }
   });
+  
+  if (!verRes.ok) {
+    const errText = await verRes.text().catch(() => 'no body');
+    console.log(`  ⚠ Set version warning (${verRes.status}): ${errText.slice(0, 100)}`);
+  }
   
   return { pieceUuid, partUuid, title };
 }
@@ -183,7 +263,12 @@ async function uploadFile(filePath) {
 async function submitOmr(partUuid) {
   const res = await api(`/ws4/omr/part/${partUuid}/submit`, { method: 'POST', headers: { 'Content-Length': '0' } });
   if (res.status === 429) return 'rate_limited';
-  return res.ok ? 'submitted' : 'failed';
+  if (!res.ok) {
+    const errText = await res.text().catch(() => 'no body');
+    console.log(`  ⚠ Submit error (${res.status}): ${errText.slice(0, 100)}`);
+    return 'failed';
+  }
+  return 'submitted';
 }
 
 async function checkOmrStatus(partUuid) {
@@ -196,7 +281,11 @@ async function checkOmrStatus(partUuid) {
 
 async function downloadMusicXml(partUuid, title) {
   const res = await api(`/ws4/omr/part/${partUuid}/jobs/latest/output/xml`);
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const errText = await res.text().catch(() => 'no body');
+    console.log(`  ⚠ Download error (${res.status}): ${errText.slice(0, 100)}`);
+    return null;
+  }
   const data = await res.json();
   if (!data.url) return null;
   
@@ -269,9 +358,22 @@ async function cmdStatus() {
 }
 
 async function cmdUpload(dirPath) {
-  const files = fs.readdirSync(dirPath)
-    .filter(f => f.toLowerCase().endsWith('.pdf'))
-    .sort();
+  if (!fs.existsSync(dirPath)) {
+    console.log(`\n目录不存在: ${dirPath}`);
+    return;
+  }
+
+  const stat = fs.statSync(dirPath);
+  let files;
+  if (stat.isFile() && dirPath.toLowerCase().endsWith('.pdf')) {
+    // 支持直接传单个 PDF 文件路径
+    files = [path.basename(dirPath)];
+    dirPath = path.dirname(dirPath);
+  } else {
+    files = fs.readdirSync(dirPath)
+      .filter(f => f.toLowerCase().endsWith('.pdf'))
+      .sort();
+  }
   
   console.log(`\n找到 ${files.length} 个 PDF`);
   
@@ -316,7 +418,8 @@ async function cmdSubmit(count = 5) {
   const state = loadState();
   const items = Object.entries(state.processing);
   
-  console.log(`\n尝试提交 ${count} 个 OMR 任务...\n`);
+  const pending = items.filter(([_, partUuid]) => true).length;
+  console.log(`\n检查 ${pending} 个待处理任务 (最多提交 ${count} 个)...\n`);
   
   let submitted = 0;
   for (const [title, partUuid] of items) {
@@ -342,6 +445,68 @@ async function cmdSubmit(count = 5) {
   }
   
   console.log(`\n提交了 ${submitted} 个任务`);
+}
+
+async function cmdWait(timeoutSec = 600, notify = false) {
+  const startTime = Date.now();
+  const timeoutMs = timeoutSec * 1000;
+  let lastLog = '';
+
+  console.log(`\n等待 OMR 任务完成 (超时: ${timeoutSec}秒${notify ? ', 完成推送通知' : ''})...\n`);
+
+  while (Date.now() - startTime < timeoutMs) {
+    const state = loadState();
+    const items = Object.entries(state.processing);
+
+    if (items.length === 0) {
+      console.log('✓ 没有待处理的任务');
+      return true;
+    }
+
+    let completed = 0, processing = 0, notStarted = 0, failed = 0;
+
+    for (const [title, partUuid] of items) {
+      const status = await checkOmrStatus(partUuid);
+      const s = status.status || 'unknown';
+      if (s === 'completed') completed++;
+      else if (s === 'processing') processing++;
+      else if (s === 'failed') failed++;
+      else notStarted++;
+      await sleep(50);
+    }
+
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const logLine = `[${elapsed}s] 完成=${completed} 处理中=${processing} 未开始=${notStarted} 失败=${failed}`;
+
+    // 只在状态变化时打印，避免刷屏
+    if (logLine !== lastLog) {
+      console.log(logLine);
+      lastLog = logLine;
+    }
+
+    if (completed + failed === items.length) {
+      const msg = `OMR 全部完成！成功=${completed} 失败=${failed}`;
+      console.log(`\n✓ ${msg}`);
+      if (notify) {
+        try {
+          execSync(`curl -s -d "${msg}" ntfy.sh/yay-agent-alerts`);
+          console.log('  📱 已推送通知');
+        } catch {}
+      }
+      return failed === 0;
+    }
+
+    await sleep(10000); // 每 10 秒检查一次
+  }
+
+  const timeoutMsg = 'OMR 等待超时，请手动检查';
+  console.log(`\n⚠ ${timeoutMsg}`);
+  if (notify) {
+    try {
+      execSync(`curl -s -d "${timeoutMsg}" ntfy.sh/yay-agent-alerts`);
+    } catch {}
+  }
+  return false;
 }
 
 async function cmdDownload() {
@@ -388,6 +553,16 @@ async function cmdDelete(titlePattern) {
   
   const ok = await deletePieces(toDelete.map(p => p.uuid));
   console.log(ok ? '\n✓ 删除成功' : '\n✗ 删除失败');
+  
+  // 同时清理本地状态
+  if (ok) {
+    const state = loadState();
+    for (const p of toDelete) {
+      delete state.processing[p.title];
+      state.completed = state.completed.filter(t => t !== p.title);
+    }
+    saveState(state);
+  }
 }
 
 async function cmdCleanup() {
@@ -471,28 +646,23 @@ async function cmdAuto(dirPath = './songs') {
   console.log('\n--- 步骤 2: 上传 ---');
   await cmdUpload(dirPath);
   
-  // 3. 循环: 提交 OMR -> 等待 -> 下载
-  console.log('\n--- 步骤 3: OMR 转换 ---');
-  for (let round = 1; round <= 30; round++) {
-    console.log(`\n[第 ${round} 轮]`);
-    
-    // 提交任务
-    await cmdSubmit(5);
-    
-    // 等待
-    console.log('等待 30 秒...');
-    await sleep(30000);
-    
-    // 下载
-    await cmdDownload();
-    
-    // 检查是否完成
-    const state = loadState();
-    if (Object.keys(state.processing).length === 0) {
-      console.log('\n✓ 全部完成！');
-      break;
-    }
+  // 3. 提交 OMR
+  console.log('\n--- 步骤 3: 提交 OMR ---');
+  const state = loadState();
+  const pendingCount = Object.keys(state.processing).length;
+  if (pendingCount > 0) {
+    await cmdSubmit(pendingCount);
+  } else {
+    console.log('没有待提交的任务');
   }
+  
+  // 4. 等待完成
+  console.log('\n--- 步骤 4: 等待 OMR 完成 ---');
+  await cmdWait(1200); // 最多等 20 分钟
+  
+  // 5. 下载结果
+  console.log('\n--- 步骤 5: 下载 MusicXML ---');
+  await cmdDownload();
   
   console.log('\n===== 处理结束 =====');
   await cmdStatus();
@@ -509,18 +679,27 @@ Newzik 智能管理器 - PDF 转 MusicXML 工具
 
 命令:
   status           查看服务器和本地状态
-  upload <dir>     上传目录中的 PDF (默认 ./songs)
+  upload <dir>     上传目录中的 PDF (支持目录或单个文件)
   submit [n]       提交 n 个 OMR 任务 (默认 5)
+  wait [timeout]   等待所有 OMR 任务完成 (默认 600 秒)
   download         下载已完成的 MusicXML
   delete <pattern> 删除标题匹配的曲目
   cleanup          删除重复曲目
   trash            查看回收站
   purge            清空回收站 (彻底删除)
-  auto [dir]       自动完成全流程
+  auto [dir]       自动完成全流程 (上传→提交→等待→下载)
+
+特性:
+  - Token 过期自动刷新 (无需手动操作)
+  - 上传失败显示具体 HTTP 错误信息
+  - wait 命令智能轮询，状态变化才输出
+  - upload 支持单个 PDF 文件路径
 
 示例:
   node newzik-manager.js upload ./my-scores
+  node newzik-manager.js upload ./songs/my-song.pdf
   node newzik-manager.js submit 10
+  node newzik-manager.js wait 300
   node newzik-manager.js auto
 `);
 }
@@ -539,6 +718,12 @@ async function main() {
       case 'status': await cmdStatus(); break;
       case 'upload': await cmdUpload(args[1] || './songs'); break;
       case 'submit': await cmdSubmit(parseInt(args[1]) || 5); break;
+      case 'wait': {
+        const notify = args.includes('--notify');
+        const timeoutArg = args.find(a => a !== '--notify' && a !== 'wait');
+        await cmdWait(parseInt(timeoutArg) || 600, notify);
+        break;
+      }
       case 'download': await cmdDownload(); break;
       case 'delete': 
         if (!args[1]) { console.log('请指定要删除的曲目名称'); return; }

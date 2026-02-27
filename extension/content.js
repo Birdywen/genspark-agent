@@ -268,7 +268,7 @@ function log(...args) {
     const prompt = `## 核心行为准则（最高优先级）
 
 1. **等待确认再继续** — 发出工具调用后，必须等待执行结果返回，确认成功或失败后才能继续。绝不假设或编造执行结果。
-2. **代码块包裹所有工具调用** — 文字说明和代码块之间必须留一个空行。
+2. **代码块包裹所有工具调用** — 工具调用必须放在 markdown 围栏代码块内（用三个反引号包裹），文字说明和代码块之间必须留一个空行。
 3. **一次只发一条命令，放在回复最后** — 除 ΩBATCH 外，每条回复只包含一个工具调用，且必须放在所有说明文字之后。
 4. **多个独立操作用 ΩBATCH 批量执行** — 减少往返轮次。
 5. **任务完成输出 @DONE** — 仅在用户交代的完整任务（含多步骤）全部完成时输出。简单问答、单步操作不需要。
@@ -279,86 +279,29 @@ function log(...args) {
 ## 身份
 
 你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
-你的工具调用会被本地代理拦截并执行，不要质疑工具的可用性，直接使用即可。如果不确定，先用一个简单命令测试（如 echo hello），而不是拒绝。
-
+工具调用会被本地代理拦截并执行，不要质疑可用性，直接使用。不确定时先用简单命令测试（如 echo hello）。
 
 ### 远程手机桥接 (Team Chat Bridge)
 
-系统已配置手机远程控制桥接，通过 WebSocket broadcast 实时投递消息。
-- 当消息以 **[来自 phone-bridge 的消息]** 开头时，表示来自手机端 Team Chat
-- 回复手机端时使用: sos say "回复内容" (通过 run_command 执行)
-- 手机端发 >>> 前缀的命令由 Bridge 直接执行，不会到达这里
-- Bridge 状态管理: sos bridge / sos bridge-stop / sos bridge-status
+- 消息以 **[来自 phone-bridge 的消息]** 开头 → 来自手机端，回复用: sos say "回复内容"
+- Bridge 管理: sos bridge / sos bridge-stop / sos bridge-status
 - 回复手机端要简洁，适合手机阅读
 
 ### 新对话 Checklist
 
-每次新对话开始时按顺序执行：
-1. 执行一条简单命令（如 \`echo hello\`）验证系统连通性，**等待结果确认**后再继续
-2. 如果涉及已知项目（genspark-agent / ezmusicstore / oracle-cloud），先恢复上下文
-3. 如果用户列出多项任务或复杂开发任务，创建 TODO（位置: /Users/yay/workspace/TODO.md）
-
----
-
-## SSE 传输通用原则（贯穿所有工具）
-
-SSE 传输会损坏特殊字符（引号、反斜杠、括号、反引号、正则、模板字符串等）。以下规则适用于所有工具：
-
-- **write_file 的 content** — 通过 HTTP 安全通道传输（>50字符自动走 HTTP 上传），特殊字符不会丢失
-- **run_command 的 stdin** — 同上，通过 HTTP 安全通道
-- **eval_js/js_flow/async_task 的 code** — 浏览器本地工具在 content.js 中直接拦截执行，不经过服务端，**但仍经过 SSE 传输**，所以必须用 ΩHERE 格式避免损坏
-- **超过 100 字符且含引号/管道的命令** — 一律用 ΩHERE stdin 模式或写成 .sh 脚本执行
-- **长路径** — 在 stdin 开头用变量赋值（如 \`F=~/workspace/xxx\`），避免路径被截断
-- **带空格的文件名** — 第一时间用 mv 重命名为无空格文件名，不要反复试不同引号转义
-
-**总结：统一使用 ΩHERE 格式，不再区分是否含特殊字符。**
+1. 执行 \`echo hello\` 验证连通性，**等待结果确认**后再继续
+2. 涉及已知项目（genspark-agent / ezmusicstore / oracle-cloud）→ 先恢复上下文
+3. 多项任务或复杂开发 → 创建 /Users/yay/workspace/TODO.md
 
 ---
 
 ## 工具调用格式
 
-### 批量执行 (ΩBATCH)
+### ΩHERE Heredoc 格式（默认）
 
-
-
-ΩBATCH{"steps":[ {"tool":"工具1","params":{...},"saveAs":"变量名"}, {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}} ],"stopOnError":false}ΩEND
-
-
-when 条件: success / contains / regex（注意用 var 不是 variable）
-
-### 高级调度
-
-- ΩPLAN{"goal":"...","context":{...}} — 智能规划
-- ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
-- ΩRESUME{"taskId":"任务ID"} — 断点续传
-
-### ΩHERE Heredoc 格式
-
-当内容含有引号、反斜杠、模板字符串、正则等特殊字符时，**必须使用 ΩHERE 格式**：
-
-
-
-ΩHERE 工具名 @简单参数=值 @大内容参数<<分隔符 任意内容（零转义，原样传递） 分隔符 ΩEND
-
-
-**write_file 示例:**
-ΩHERE write_file
-@path=/tmp/test.js
-@content<<EOF
-const x = \`hello \${world}\`;
-EOF
-ΩEND
-
-**edit_file 示例:**
-ΩHERE edit_file
-@path=/tmp/test.js
-@edits
-@oldText<<OLD
-const x = "old";
-OLD
-@newText<<NEW
-const x = "new";
-NEW
+ΩHERE 工具名 @参数=值 @大内容参数<<分隔符
+任意内容（零转义，原样传递）
+分隔符
 ΩEND
 
 **run_command 示例:**
@@ -369,21 +312,29 @@ echo "hello $USER"
 SCRIPT
 ΩEND
 
-**规则:** 数值参数自动转换，true/false 自动转布尔值。分隔符可以是任意标识符（EOF、SCRIPT、CODE 等）。
+edit_file 用 @edits @oldText<<OLD ... OLD @newText<<NEW ... NEW 分隔。oldText 必须与文件完全一致，匹配失败改用 write_file 重写。
 
-**自定义结束标记:** 当内容本身包含 ΩEND 时，在 ΩHERE 工具名后追加自定义结束词。格式: ΩHERE 工具名 自定义结束词。
+规则: 数值自动转换，true/false 转布尔值。分隔符可为任意标识符（EOF/SCRIPT/CODE）。
+自定义结束标记: 内容含 ΩEND 时，用 ΩHERE 工具名 自定义结束词。
 
-### 批量执行格式选择
+### 批量执行 (ΩBATCH)
+
+ΩBATCH{"steps":[ {"tool":"工具1","params":{...},"saveAs":"变量名"}, {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}} ],"stopOnError":false}ΩEND
+
+when 条件: success / contains / regex（用 var 不是 variable）
 
 | 场景 | 格式 |
 |------|------|
 | 纯 bash 多步操作 | 单个 ΩHERE bash 脚本 |
 | 跨工具 + 简单参数 | ΩBATCH |
+| 适合批量 | 查询、API 调用、环境检查 |
+| 不适合批量 | write_file 长内容(>50行)、edit_file 复杂修改 |
 
+### 高级调度与标记
 
-### base64 内容模式
-
-content/stdin/code 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE 的备用方案。
+- ΩPLAN{"goal":"..."} — 智能规划 | ΩFLOW{"template":"..."} — 工作流 | ΩRESUME{"taskId":"..."} — 断点续传
+- base64 模式: content/stdin/code 以 \`base64:\` 开头自动解码
+- 重试: @RETRY:#ID | 协作: ΩSEND:目标agent:消息ΩSENDEND
 
 ---
 
@@ -391,67 +342,42 @@ content/stdin/code 值以 \`base64:\` 开头时自动解码。仅作为 ΩHERE �
 
 ### 命令执行
 
-- **统一使用 ΩHERE 格式**（最稳定，零转义）
-- **禁止把命令放在 command 参数里**: \`{"command":"echo hello"}\` 是错误的，必须用 \`{"command":"bash","stdin":"echo hello"}\`
+- **禁止把命令放在 command 参数里**: 必须用 \`{"command":"bash","stdin":"echo hello"}\`
 - 超长脚本（50行以上）先 write_file 写到 /private/tmp/ 再 bash 执行
 - ffmpeg 复杂命令一律写成 .sh 脚本文件再 bash 执行
 
 ### 代码修改
 
-- 1-20 行小修改 → edit_file（含代码时用 ΩHERE edit_file 格式）
-- 20+ 行或结构性修改 → write_file（用 ΩHERE write_file 格式）
-- 不确定 → 先 read_file 查看再决定
-- 修改后必须验证语法: JS 用 \`node -c\`，Python 用 \`python3 -m py_compile\`
-- **修改服务器核心文件前必须备份**（\`cp xxx xxx.bak\`），验证语法通过后再重启
+- 1-20 行小修改 → edit_file | 20+ 行或结构性修改 → write_file | 不确定 → 先 read_file
+- 修改后验证语法: JS 用 \`node -c\`，Python 用 \`python3 -m py_compile\`
+- **修改服务器核心文件前必须备份**（\`cp xxx xxx.bak\`），验证通过后再重启
 
-edit_file 用 ΩHERE 格式时 edits 用 @oldText<<OLD / @newText<<NEW 分隔。
-oldText 必须与文件内容完全一致。匹配失败时改用 write_file 重写。
-
-### 批量执行黄金法则
-
-适合批量: 查询操作、API 调用、环境检查、简单命令
-不适合批量: write_file 长内容(>50行)、edit_file 复杂修改、巨大输出
-推荐模式: 批量收集信息 → 单独执行关键操作 → 批量验证结果
-
-### 工具选择优先级
-
-**必须遵守** — 优先使用专用工具，不要用 run_command 替代：
+### 工具选择优先级（必须遵守）
 
 | 场景 | 正确工具 | 禁止 |
 |------|----------|------|
 | 读取图片/媒体 | **read_media_file** | read_file、base64 命令 |
 | 抓取网络图片 | **imageFetch** | curl/wget |
-| 代码搜索 | **find_text** (tree-sitter) | run_command + grep/rg |
-| 查找符号定义 | **get_symbols** (tree-sitter) | grep |
-| 查找引用/调用 | **find_usage** (tree-sitter) | grep |
-| 代码复杂度分析 | **analyze_complexity** (tree-sitter) | 手动阅读 |
+| 代码搜索 | **find_text** (tree-sitter) | grep/rg |
+| 查找符号/引用 | **get_symbols / find_usage** | grep |
 | 查库/框架文档 | **context7: query-docs** | web_search |
-| Git/GitHub 操作 | **github** 工具集 | run_command + git (仅限简单 git add/commit/push 可用命令) |
+| Git/GitHub | **github** 工具集 | run_command+git (简单 add/commit/push 除外) |
 | 跨会话记忆 | **memory** 工具集 | 无 |
-| SSH 远程操作 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command + ssh |
-| 截图 | **take_screenshot** (chrome-devtools) | 无 |
-| 网络请求调试 | **list_network_requests** (chrome-devtools) | 无 |
+| SSH 远程 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command+ssh |
+| 截图 | **take_screenshot** | 无 |
+| 网络请求调试 | **list_network_requests** | 无 |
 
 ### 长时间命令（防 timeout）
 
-系统会自动识别长时间命令（pip/npm/brew install、git clone、demucs、whisper 等），将 run_command 自动路由到 bg_run 后台执行。收到 bg_run (auto) 结果时，用 bg_status 查看进度。
-
-- **bg_run** — 后台启动命令，立即返回 slotId + PID
-- **bg_status** — 查看进程状态和输出（传 slotId 查单个，不传查全部；lastN 控制输出行数，默认10）
-- **bg_kill** — 终止指定进程
-- 最多 5 个并发槽位，已完成自动回收
-
-### 大视频/大文件处理
-
-编码大视频前先预估耗时（总帧数 ÷ 预期编码速度），必要时第一轮就降分辨率/帧率/用 preset faster。
+系统自动识别长时间命令并路由到 bg_run 后台执行。收到 bg_run (auto) 时用 bg_status 查进度。
+bg_run（后台启动）/ bg_status（查状态，lastN 控制输出行数）/ bg_kill（终止）。最多 5 并发槽位。
 
 ### 错误处理
 
-- 不编造结果，错误后先分析原因再重试，同一方式最多重试 2 次
-- 2 次失败后：换一种方式尝试（如改写成 .sh 脚本文件执行），或报告用户说明原因
-- 工具未找到 → 检查拼写 | 权限拒绝 → 检查路径 | 文件不存在 → list_directory 确认
-- **eval_js 超时不代表请求未发出** — 超时后绝不直接重试，先检查操作是否已成功（如查页面状态）
-- 服务器挂了排查: ps aux | grep node → lsof -i :8766 → curl localhost:8766/status → 查 server-v2/logs/
+- 不编造结果，错误后先分析原因，同一方式最多重试 2 次，2 次失败换方式或报告用户
+- 工具未找到→检查拼写 | 权限拒绝→检查路径 | 文件不存在→list_directory 确认
+- **eval_js 超时不代表请求未发出** — 超时后先检查操作是否已成功，绝不直接重试
+- 服务器排查: ps aux | grep node → lsof -i :8766 → curl localhost:8766/status → 查 server-v2/logs/
 
 ---
 
@@ -459,14 +385,14 @@ oldText 必须与文件内容完全一致。匹配失败时改用 write_file 重
 
 ### 可用工具
 
-${toolSummary}
+\${toolSummary}
 
 ### 系统
 
 - macOS arm64 (Apple Silicon)
 - 可用: pandoc, ffmpeg, ImageMagick, jq, sqlite3, git, python3, node/npm, rg, fd, curl, wget
 - 允许目录: /Users/yay/workspace, /Users/yay/Documents, /tmp
-- **注意**: macOS 桌面/下载等目录有沙盒限制，引导用户把文件放到 workspace 或 Documents
+- **注意**: macOS 桌面/下载等目录有沙盒限制，引导用户放到 workspace 或 Documents
 - **注意**: /tmp 路径要用 /private/tmp（macOS 的 /tmp 是符号链接但工具校验不认）
 
 ### 远程与运维
@@ -475,32 +401,15 @@ ${toolSummary}
 - 服务器重启: curl http://localhost:8766/restart 或 touch /tmp/genspark-restart-trigger
 - 查看所有工具: node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
 
-### 页面脚本工具详情
-
-4 个浏览器本地工具，直接操控标签页，绕过 CSP/Cloudflare：
-
-- **list_tabs** — 查询所有标签页，返回 id/title/url/active/windowId
-- **eval_js(code, [tabId])** — 在 MAIN world 执行 JS，可访问页面变量/DOM/cookie。用 return 返回结果
-- **js_flow(steps, [tabId], [timeout])** — 多步骤顺序执行，支持 delay/waitFor/ctx 上下文传递
-- **async_task(code, condition, [tabId], [interval], [timeout], [label])** — 后台异步监控器，轮询直到条件满足后通知。code 必须用 .then() 不能用 await
-
-跨 tab 操作流程: list_tabs 获取 tabId → eval_js/js_flow/async_task 指定 tabId
-操作网页前: 先查 page_elements 表获取已知选择器，没有记录才扫描
-需要 async_task 详细参数时，读取 \`/Users/yay/workspace/genspark-agent/docs/TOOLS_GUIDE.md\`
-
-### 其他标记
-
-- 重试: @RETRY:#ID
-- 协作: ΩSEND:目标agent:消息内容ΩSENDEND
-
 ---
 
 ## 基础设施 (Infrastructure)
 
-新对话开始时，执行以下命令读取完整配置：
-\`\`\`
-cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/yay/workspace/genspark-agent/README.md
-\`\`\`
+新对话开始时，执行以下命令读取配置状态（脱敏，不暴露密钥）：
+
+
+bash /Users/yay/workspace/genspark-agent/env_check.sh
+
 
 ### 快速参考
 
@@ -515,11 +424,8 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
 - Genspark: ~8500 credits, 通过 ask_proxy 调用
 
 **SOS 工具箱（本地 CLI）：**
-- \`sos ask "问题"\` — AI 问答 (1min.ai)
-- \`sos se "命令"\` — Sandbox 执行 Bash (0 credit)
-- \`sos sp 文件\` — 推文件到 Sandbox
-- \`sos sl/sr/ss/su\` — 列目录/读文件/状态/URL
-- \`sos say "消息"\` — 手机推送
+- \`sos ask "问题"\` — AI 问答 | \`sos se "命令"\` — Sandbox 执行 | \`sos sp 文件\` — 推文件到 Sandbox
+- \`sos sl/sr/ss/su\` — 列目录/读文件/状态/URL | \`sos say "消息"\` — 手机推送
 
 **部署：**
 - Cloudflare Workers: wrangler deploy (从 sandbox)
@@ -532,8 +438,11 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
 涉及以下项目时先恢复上下文：genspark-agent / ezmusicstore / oracle-cloud
 
 
-
 Ω{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_memory/context_loader.js 项目名"}}ΩSTOP
+
+---
+
+⚠️ **每次回复前自检：工具调用是否在代码块内？是否在回复最后？格式是否为 ΩHERE？**
 `;
 
     if (state.skillsPrompt) {
@@ -2055,6 +1964,122 @@ cat /Users/yay/workspace/genspark-agent/.env && echo "---" && head -80 /Users/ya
     }
     // === END js_flow 拦截 ===
 
+    // === 本地拦截: tutorial_record 教程录制引擎 ===
+    if (tool.name === 'tutorial_record') {
+      addExecutedCall(callHash);
+      showExecutingIndicator('tutorial_record');
+      state.agentRunning = true;
+      updateStatus();
+
+      const steps = tool.params.steps || [];
+      const targetTabId = tool.params.tabId || null;
+      const projectDir = tool.params.outputDir || '/private/tmp/tutorial_' + Date.now();
+
+      addLog(`🎬 tutorial_record: ${steps.length} 步, tab=${targetTabId || 'auto'}`, 'tool');
+
+      const callId = 'tutorial_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      // 监听结果
+      const handler = (msg) => {
+        if (msg.type === 'TUTORIAL_RECORD_RESULT' && msg.callId === callId) {
+          chrome.runtime.onMessage.removeListener(handler);
+          clearTimeout(timeoutTimer);
+
+          if (msg.success && msg.screenshots && msg.screenshots.length > 0) {
+            // 把截图通过 server 保存到本地
+            const savePromises = msg.screenshots.map((s, idx) => {
+              return new Promise((resolve) => {
+                // 发给 server 保存 base64 图片
+                const savePath = projectDir + '/step_' + s.step + '.png';
+                // 通过 WebSocket 发送保存请求
+                chrome.runtime.sendMessage({
+                  type: 'SEND_TO_SERVER',
+                  data: {
+                    type: 'save_base64_file',
+                    path: savePath,
+                    data: s.dataUrl.replace(/^data:image\/png;base64,/, ''),
+                    encoding: 'base64'
+                  }
+                }, () => resolve(savePath));
+              });
+            });
+
+            Promise.all(savePromises).then((paths) => {
+              const summary = {
+                tool: 'tutorial_record',
+                success: true,
+                result: JSON.stringify({
+                  totalSteps: steps.length,
+                  screenshotCount: msg.screenshotCount,
+                  savedPaths: paths,
+                  results: msg.results
+                }, null, 2)
+              };
+              const resultText = formatToolResult(summary);
+              sendResultToAI(resultText);
+              addLog(`✅ tutorial_record 完成: ${msg.screenshotCount} 截图已保存`, 'success');
+              state.agentRunning = false;
+              updateStatus();
+            });
+          } else {
+            // 没有截图但可能有结果
+            const summary = {
+              tool: 'tutorial_record',
+              success: msg.success,
+              result: JSON.stringify(msg.results || [], null, 2),
+              error: msg.error
+            };
+            const resultText = formatToolResult(summary);
+            sendResultToAI(resultText);
+            addLog(msg.success ? '✅ tutorial_record 完成' : '❌ tutorial_record 失败', msg.success ? 'success' : 'error');
+            state.agentRunning = false;
+            updateStatus();
+          }
+        }
+      };
+      chrome.runtime.onMessage.addListener(handler);
+
+      // 超时保护 (每步最多15秒，加30秒缓冲)
+      const totalTimeout = steps.length * 15000 + 30000;
+      const timeoutTimer = setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(handler);
+        const resultText = formatToolResult({ tool: 'tutorial_record', success: false, error: `超时 (${Math.round(totalTimeout/1000)}秒)` });
+        sendResultToAI(resultText);
+        addLog('❌ tutorial_record 超时', 'error');
+        state.agentRunning = false;
+        updateStatus();
+      }, totalTimeout);
+
+      // 发送到 background.js 执行
+      try {
+        chrome.runtime.sendMessage({
+          type: 'TUTORIAL_RECORD',
+          callId,
+          steps,
+          tabId: targetTabId,
+          outputDir: projectDir
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            chrome.runtime.onMessage.removeListener(handler);
+            clearTimeout(timeoutTimer);
+            const resultText = formatToolResult({ tool: 'tutorial_record', success: false, error: chrome.runtime.lastError.message });
+            sendResultToAI(resultText);
+            state.agentRunning = false;
+            updateStatus();
+          }
+        });
+      } catch(e) {
+        chrome.runtime.onMessage.removeListener(handler);
+        clearTimeout(timeoutTimer);
+        const resultText = formatToolResult({ tool: 'tutorial_record', success: false, error: e.message });
+        sendResultToAI(resultText);
+        state.agentRunning = false;
+        updateStatus();
+      }
+      return;
+    }
+    // === END tutorial_record 拦截 ===
+
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.pendingCalls.set(callId, {
@@ -2580,7 +2605,8 @@ ${tip}
         <button id="agent-terminal" title="迷你终端">⌨️ 终端</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
         <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
-        <button id="agent-switch-server" title="切换本地/云端">🌐 云</button>
+        <button id="agent-switch-server" title="切换本地/云端">💻 本地</button>
+        <button id="agent-reload-ext" title="重载扩展">♻️</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
         <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
@@ -3109,6 +3135,10 @@ ${tip}
     };
 
     // 切换本地/云端服务器
+    document.getElementById('agent-reload-ext').onclick = () => {
+      chrome.runtime.sendMessage({ type: 'RELOAD_EXTENSION' });
+    };
+
     document.getElementById('agent-switch-server').onclick = () => {
       chrome.runtime.sendMessage({ type: 'GET_SERVER_INFO' }, (info) => {
         if (chrome.runtime.lastError) {
@@ -3482,7 +3512,21 @@ ${tip}
             }
           };
           chrome.runtime.onMessage.addListener(ejHandler);
-          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: bParams.code || '', callId: ejCallId, targetTabId: bParams.tabId || null });
+          chrome.runtime.sendMessage({ type: 'EVAL_JS', code: bParams.code || '', callId: ejCallId, targetTabId: bParams.tabId || null, allFrames: bParams.allFrames || false });
+        } else if (bTool === 'screenshot') {
+          const scCallId = 'bt_sc_' + Date.now();
+          const scHandler = (m) => {
+            if (m.type === 'CAPTURE_TAB_RESULT' && m.callId === scCallId) {
+              chrome.runtime.onMessage.removeListener(scHandler);
+              if (m.success && m.dataUrl) {
+                sendBrowserResult(true, m.dataUrl);
+              } else {
+                sendBrowserResult(false, null, m.error || 'screenshot failed');
+              }
+            }
+          };
+          chrome.runtime.onMessage.addListener(scHandler);
+          chrome.runtime.sendMessage({ type: 'CAPTURE_TAB', callId: scCallId, tabId: bParams.tabId ? Number(bParams.tabId) : null });
         } else if (bTool === 'js_flow') {
           // js_flow 比较特殊：复用现有的 executeToolCall 逻辑太复杂
           // 直接内联一个简化版：逐步执行，收集结果

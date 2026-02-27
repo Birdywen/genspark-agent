@@ -5,12 +5,14 @@
   "description": "将 Genspark 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
+    "tabs",
     "storage",
     "scripting",
     "clipboardWrite",
     "alarms"
   ],
   "host_permissions": [
+    "<all_urls>",
     "https://www.genspark.ai/*",
     "https://*.google.com/*",
     "https://*.github.com/*",
