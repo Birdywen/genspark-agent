@@ -2833,28 +2833,57 @@ ${tip}${contextInfo}
     document.getElementById('agent-compress').onclick = () => {
       let summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
       
-      // 主动路线：没有预设总结时，弹出编辑框让用户自己写
+      // 主动路线：没有预设总结时，自动生成并弹出编辑框
       if (!summary) {
-        // 自动从页面提取基础信息
-        const msgs = document.querySelectorAll('.conversation-statement');
-        const totalMsgs = msgs.length;
-        const totalChars = Array.from(msgs).reduce((sum, m) => sum + m.textContent.length, 0);
-        const firstUserMsg = document.querySelector('.conversation-statement.user .bubble');
-        const topic = firstUserMsg ? firstUserMsg.innerText.substring(0, 100) : '未知';
-        const today = new Date().toISOString().split('T')[0];
+        addLog('🔄 正在自动生成压缩总结...', 'info');
+        const btn = document.getElementById('agent-compress');
+        btn.disabled = true;
+        btn.textContent = '⏳';
         
-        const template = `[上下文压缩总结 - ${today}]\n\n## 项目/任务\n${topic}\n\n## 环境\n<!-- 关键路径、服务器、端口等 -->\n\n## 已完成\n<!-- 列出已完成的工作 -->\n\n## TODO\n<!-- 接下来要做的事 -->\n\n## 关键信息\n<!-- project ID、重要配置等 -->`;
-        
-        const edited = prompt(
-          `📝 主动压缩模式\n\n当前对话: ${totalMsgs}条 / ${Math.round(totalChars/1000)}K字符\n\n请编辑压缩总结（或粘贴自己准备的总结）:`,
-          template
-        );
-        
-        if (!edited || edited.trim().length < 50) {
-          addLog('❌ 取消压缩或总结太短（至少50字符）', 'error');
-          return;
-        }
-        summary = edited.trim();
+        // 通过 server 执行 history_compressor
+        chrome.runtime.sendMessage({
+          type: 'SEND_TO_SERVER',
+          payload: {
+            type: 'tool_call',
+            id: 'compress_gen_' + Date.now(),
+            tool: 'run_command',
+            params: { command: 'bash', stdin: 'node /Users/yay/workspace/.agent_memory/history_compressor.js context /Users/yay/workspace/genspark-agent/server-v2/command-history.json --since 24' }
+          }
+        }, (resp) => {
+          btn.disabled = false;
+          btn.textContent = '🗜️ 压缩';
+          
+          const compressorOutput = (resp && resp.result) ? String(resp.result) : '';
+          
+          // 从页面提取补充信息
+          const msgs = document.querySelectorAll('.conversation-statement');
+          const totalMsgs = msgs.length;
+          const totalChars = Array.from(msgs).reduce((sum, m) => sum + m.textContent.length, 0);
+          const firstUserMsg = document.querySelector('.conversation-statement.user .bubble');
+          const topic = firstUserMsg ? firstUserMsg.innerText.substring(0, 200) : '未知';
+          const today = new Date().toISOString().split('T')[0];
+          
+          // 从对话中提取最近的用户消息作为 TODO 线索
+          const userMsgs = document.querySelectorAll('.conversation-statement.user .bubble');
+          const recentUserMsgs = Array.from(userMsgs).slice(-5).map(m => '- ' + m.innerText.substring(0, 100)).join('\n');
+          
+          const generated = `[上下文压缩总结 - ${today}]\n\n## 项目/任务\n${topic}\n\n## 环境\n- macOS arm64, genspark-agent 项目\n- 扩展目录: /Users/yay/workspace/genspark-agent/extension/\n\n${compressorOutput}\n\n## 最近用户消息\n${recentUserMsgs}\n\n## TODO\n<!-- 请补充接下来要做的事 -->\n\n## 关键信息\n<!-- 请补充 project ID、重要配置等 -->`;
+          
+          const edited = prompt(
+            '📝 自动生成的压缩总结\n\n当前对话: ' + totalMsgs + '条 / ' + Math.round(totalChars/1000) + 'K字符\n\n请检查并编辑（或粘贴自己的总结）:',
+            generated
+          );
+          
+          if (!edited || edited.trim().length < 50) {
+            addLog('❌ 取消压缩或总结太短（至少50字符）', 'error');
+            return;
+          }
+          
+          // 设置总结并重新触发压缩流程
+          window.__COMPRESS_SUMMARY = edited.trim();
+          document.getElementById('agent-compress').click();
+        });
+        return;
       }
 
       const projectId = new URLSearchParams(location.search).get('id');
