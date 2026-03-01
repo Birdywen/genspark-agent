@@ -2751,8 +2751,10 @@ ${tip}${contextInfo}
       #agent-save:hover { background: #047857 !important; }
       #agent-compress { background: #92400e !important; }
       #agent-compress:hover { background: #b45309 !important; }
-      #agent-compress.ready { background: #dc2626 !important; animation: pulse-compress 2s infinite; }
+      #agent-compress.ready { background: #dc2626 !important; animation: pulse-compress 1.5s infinite; }
+      #agent-compress.warning { background: #ea580c !important; animation: pulse-warning 3s infinite; }
       @keyframes pulse-compress { 0%,100%{opacity:1} 50%{opacity:0.6} }
+      @keyframes pulse-warning { 0%,100%{opacity:1} 50%{opacity:0.7} }
       #agent-video { background: #dc2626 !important; }
       #agent-video:hover { background: #ef4444 !important; }
       #agent-terminal { background: #7c3aed !important; }
@@ -3211,16 +3213,41 @@ ${conversationText}
     // 自动检测 __COMPRESS_SUMMARY，按钮变红闪烁
     setInterval(() => {
       const btn = document.getElementById('agent-compress');
-      if (!btn) return;
+      if (!btn || btn.disabled) return; // 正在执行时不干扰
       const hasSummary = !!(window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY'));
-      if (hasSummary && !btn.classList.contains('ready')) {
+      
+      // 检测对话量
+      let overThreshold = false;
+      let nearThreshold = false;
+      try {
+        const allMsgs = document.querySelectorAll('.conversation-statement');
+        const totalMsgs = allMsgs.length;
+        let totalChars = 0;
+        allMsgs.forEach(m => { totalChars += m.textContent.length; });
+        overThreshold = totalChars > 700000 || totalMsgs > 300;
+        nearThreshold = totalChars > 500000 || totalMsgs > 200;
+      } catch(e) {}
+      
+      // 优先级: ready(总结就绪) > warning(超阈值) > 正常
+      if (hasSummary) {
         btn.classList.add('ready');
+        btn.classList.remove('warning');
         btn.title = '✅ 总结已就绪 — 点击执行压缩';
-      } else if (!hasSummary && btn.classList.contains('ready')) {
+      } else if (overThreshold) {
         btn.classList.remove('ready');
+        btn.classList.add('warning');
+        btn.textContent = '🗜️ 压缩!';
+        btn.title = '⚠️ 对话已超过压缩阈值 — 点击自动生成总结并压缩';
+      } else if (nearThreshold) {
+        btn.classList.remove('ready');
+        btn.classList.add('warning');
+        btn.title = '⚠️ 对话接近压缩阈值 — 建议尽快压缩';
+      } else {
+        btn.classList.remove('ready', 'warning');
+        btn.textContent = '🗜️ 压缩';
         btn.title = '上下文压缩：用预设总结替换当前对话';
       }
-    }, 3000);
+    }, 5000);
 
     document.getElementById('agent-save').onclick = () => {
       addLog('💾 存档中...', 'info');
