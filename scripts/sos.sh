@@ -398,9 +398,9 @@ except Exception as e:
         ;;
     delegate|td)
         shift
-        # 委派任务给 DeepSeek/Kimi 通过 MCP 工具执行
+        # 委派任务给 Kimi/DeepSeek 通过原生 function calling + MCP 工具执行
         delegate_args=""
-        delegate_model="${ONEMIN_MODEL:-moonshot-v1-auto}"
+        delegate_model="kimi"
         while [[ "$1" == --* ]]; do
           if [ "$1" = "--model" ] && [ -n "$2" ]; then
             delegate_model="$2"; shift 2
@@ -414,8 +414,8 @@ except Exception as e:
         if [ -z "$task_desc" ]; then
             echo "Usage: sos delegate <任务描述>"
             echo "  sos td \"创建 /tmp/test.txt 内容为 hello\""
-            echo "  sos td --model moonshot-v1-auto \"任务描述\""
-            echo "  ONEMIN_MODEL=deepseek-chat sos td \"任务描述\""
+            echo "  sos td --model deepseek \"任务描述\""
+            echo "  模型: kimi (默认), deepseek"
             exit 1
         fi
         node "$AGENT_DIR/scripts/task-delegate.js" --model "$delegate_model" $delegate_args "$task_desc"
