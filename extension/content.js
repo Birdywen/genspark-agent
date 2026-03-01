@@ -2847,7 +2847,7 @@ ${tip}${contextInfo}
             type: 'tool_call',
             id: 'compress_gen_' + Date.now(),
             tool: 'run_command',
-            params: { command: 'bash', stdin: 'node /Users/yay/workspace/.agent_memory/history_compressor.js context /Users/yay/workspace/genspark-agent/server-v2/command-history.json --since 24' }
+            params: { command: 'bash', stdin: 'COMPRESSOR=""; HISTORY=""; for p in /Users/yay/workspace/.agent_memory/history_compressor.js /home/ubuntu/genspark-agent/scripts/history_compressor.cjs; do [ -f "$p" ] && COMPRESSOR="$p" && break; done; for p in /Users/yay/workspace/genspark-agent/server-v2/command-history.json /home/ubuntu/genspark-agent/server-v2/command-history.json; do [ -f "$p" ] && HISTORY="$p" && break; done; [ -n "$COMPRESSOR" ] && [ -n "$HISTORY" ] && node "$COMPRESSOR" context "$HISTORY" --since 24 || echo "compressor or history not found"' }
           }
         }, (resp) => {
           btn.disabled = false;
