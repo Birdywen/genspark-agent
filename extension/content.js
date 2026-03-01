@@ -2830,6 +2830,153 @@ ${tip}${contextInfo}
     `;
     document.head.appendChild(style);
 
+    // ── 压缩总结编辑模态框 ──
+    function showCompressModal(summaryText) {
+      // 移除已有的模态框
+      const existing = document.getElementById('compress-modal-overlay');
+      if (existing) existing.remove();
+      
+      const overlay = document.createElement('div');
+      overlay.id = 'compress-modal-overlay';
+      overlay.innerHTML = `
+        <div id="compress-modal">
+          <div id="compress-modal-header">
+            <span>📝 压缩总结编辑器</span>
+            <span id="compress-modal-chars"></span>
+          </div>
+          <textarea id="compress-modal-editor"></textarea>
+          <div id="compress-modal-actions">
+            <button id="compress-modal-cancel">取消</button>
+            <button id="compress-modal-confirm">✅ 确认压缩</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      
+      const editor = document.getElementById('compress-modal-editor');
+      const charsSpan = document.getElementById('compress-modal-chars');
+      editor.value = summaryText;
+      charsSpan.textContent = summaryText.length + ' 字符';
+      
+      editor.addEventListener('input', () => {
+        charsSpan.textContent = editor.value.length + ' 字符';
+      });
+      
+      document.getElementById('compress-modal-cancel').onclick = () => {
+        overlay.remove();
+        addLog('❌ 取消压缩', 'error');
+      };
+      
+      document.getElementById('compress-modal-confirm').onclick = () => {
+        const edited = editor.value.trim();
+        if (edited.length < 50) {
+          alert('总结太短，至少需要 50 字符');
+          return;
+        }
+        overlay.remove();
+        window.__COMPRESS_SUMMARY = edited;
+        document.getElementById('agent-compress').click();
+      };
+      
+      // ESC 关闭
+      overlay.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          overlay.remove();
+          addLog('❌ 取消压缩', 'error');
+        }
+      });
+      
+      // 添加样式
+      if (!document.getElementById('compress-modal-style')) {
+        const style = document.createElement('style');
+        style.id = 'compress-modal-style';
+        style.textContent = `
+          #compress-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2147483647;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          #compress-modal {
+            width: 80vw;
+            max-width: 900px;
+            height: 80vh;
+            background: #1a1a2e;
+            border: 1px solid #0f3460;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+          }
+          #compress-modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #e4e4e7;
+          }
+          #compress-modal-chars {
+            font-size: 13px;
+            color: #a1a1aa;
+            font-weight: normal;
+          }
+          #compress-modal-editor {
+            flex: 1;
+            margin: 12px 20px;
+            padding: 16px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #c9d1d9;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+          }
+          #compress-modal-editor:focus {
+            border-color: #58a6ff;
+          }
+          #compress-modal-actions {
+            padding: 12px 20px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+          }
+          #compress-modal-cancel {
+            padding: 8px 20px;
+            background: #333;
+            color: #e4e4e7;
+            border: 1px solid #555;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          #compress-modal-cancel:hover { background: #444; }
+          #compress-modal-confirm {
+            padding: 8px 24px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+          }
+          #compress-modal-confirm:hover { background: #ef4444; }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      editor.focus();
+    }
+
     document.getElementById('agent-compress').onclick = () => {
       let summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
       
@@ -2946,21 +3093,9 @@ ${conversationText}
                   
                   addLog('✅ AI 总结已生成 (' + aiSummary.length + ' 字符)', 'success');
                   
-                  // Step 4: 弹出编辑框让用户确认
-                  const edited = prompt(
-                    '📝 AI 生成的压缩总结\n\n请检查并编辑（或粘贴自己的总结）:',
-                    aiSummary.trim()
-                  );
-                  
-                  if (!edited || edited.trim().length < 50) {
-                    addLog('❌ 取消压缩或总结太短', 'error');
-                    return;
-                  }
-                  
-                  // Step 5: 设置总结并触发压缩
-                  window.__COMPRESS_SUMMARY = edited.trim();
-                  document.getElementById('agent-compress').click();
-                  return;
+                  // Step 4: 全屏模态框让用户查看和编辑总结
+                  showCompressModal(aiSummary.trim());
+                   return;
                 }
                 const text = decoder.decode(result.value, { stream: true });
                 const lines = text.split('\n');
