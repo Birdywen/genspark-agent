@@ -2574,11 +2574,30 @@ bash /Users/yay/workspace/genspark-agent/env_check.sh
     // 优先使用服务器返回的建议，否则使用本地 SmartTips
     const tip = msg.suggestion || SmartTips.getTip(msg.tool, msg.success, content, msg.error);
     
+    // 上下文计数：统计当前对话消息数，附加到结果末尾
+    let contextInfo = '';
+    try {
+      const allMsgs = document.querySelectorAll('.conversation-statement');
+      const totalMsgs = allMsgs.length;
+      let totalChars = 0;
+      allMsgs.forEach(function(m) { totalChars += m.textContent.length; });
+      const charsK = Math.round(totalChars / 1000);
+      
+      // 主要靠字符数判断，消息数辅助
+      if (totalChars > 700000 || totalMsgs > 300) {
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${charsK}K字符 — 已超过压缩阈值，建议执行上下文压缩]`;
+      } else if (totalChars > 500000 || totalMsgs > 200) {
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${charsK}K字符 — 接近压缩阈值]`;
+      } else {
+        contextInfo = `\n[对话状态: ${totalMsgs}条/${charsK}K字符]`;
+      }
+    } catch(e) {}
+    
     return `**[执行结果]** \`${msg.tool}\` ${status}:
 \`\`\`
 ${content}
 \`\`\`
-${tip}
+${tip}${contextInfo}
 `;
   }
 
@@ -2609,6 +2628,7 @@ ${tip}
         <button id="agent-reload-ext" title="重载扩展">♻️</button>
         <button id="agent-list" title="查看在线Agent">👥</button>
         <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
+        <button id="agent-compress" title="上下文压缩：用预设总结替换当前对话">🗜️ 压缩</button>
         <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
@@ -2729,6 +2749,10 @@ ${tip}
       #agent-copy-prompt:hover { background: #4338ca !important; }
       #agent-save { background: #065f46 !important; }
       #agent-save:hover { background: #047857 !important; }
+      #agent-compress { background: #92400e !important; }
+      #agent-compress:hover { background: #b45309 !important; }
+      #agent-compress.ready { background: #dc2626 !important; animation: pulse-compress 2s infinite; }
+      @keyframes pulse-compress { 0%,100%{opacity:1} 50%{opacity:0.6} }
       #agent-video { background: #dc2626 !important; }
       #agent-video:hover { background: #ef4444 !important; }
       #agent-terminal { background: #7c3aed !important; }
@@ -2805,6 +2829,113 @@ ${tip}
       }
     `;
     document.head.appendChild(style);
+
+    document.getElementById('agent-compress').onclick = () => {
+      const summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
+      if (!summary) {
+        addLog('❌ 没有压缩总结。AI 需要先设置 window.__COMPRESS_SUMMARY', 'error');
+        return;
+      }
+
+      const projectId = new URLSearchParams(location.search).get('id');
+      if (!projectId) {
+        addLog('❌ 无法获取 project ID', 'error');
+        return;
+      }
+
+      // 获取第一条用户消息（保持标题）
+      const firstUserBubble = document.querySelector('.conversation-statement.user .bubble');
+      if (!firstUserBubble) {
+        addLog('❌ 找不到第一条用户消息', 'error');
+        return;
+      }
+      const firstMsg = firstUserBubble.innerText;
+
+      if (!confirm('确认执行上下文压缩？\n\n总结长度: ' + summary.length + ' 字符\nProject: ' + projectId + '\n\n压缩后页面会自动刷新。')) {
+        return;
+      }
+
+      addLog('🗜️ 开始压缩...', 'info');
+      const btn = document.getElementById('agent-compress');
+      btn.disabled = true;
+      btn.textContent = '⏳';
+
+      const msgId = crypto.randomUUID();
+      const requestBody = {
+        ai_chat_model: 'claude-opus-4-6',
+        ai_chat_enable_search: false,
+        ai_chat_disable_personalization: true,
+        use_moa_proxy: false,
+        moa_models: [],
+        writingContent: null,
+        type: 'ai_chat',
+        project_id: projectId,
+        messages: [
+          { id: projectId, role: 'user', content: firstMsg },
+          { id: crypto.randomUUID(), role: 'assistant', content: '**[执行结果]** `run_process` ✓ 成功:\n```\nhello\n```' },
+          { id: msgId, role: 'user', content: summary }
+        ],
+        user_s_input: summary.substring(0, 200),
+        is_private: true,
+        push_token: ''
+      };
+
+      addLog('📡 发送 ask_proxy 请求...', 'info');
+
+      fetch('/api/agent/ask_proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(requestBody)
+      }).then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let aiContent = '';
+        function read() {
+          return reader.read().then(result => {
+            if (result.done) {
+              addLog('✅ 压缩完成! AI 回复: ' + aiContent.substring(0, 100) + '...', 'success');
+              addLog('🔄 2 秒后刷新页面...', 'info');
+              setTimeout(() => location.reload(), 2000);
+              return;
+            }
+            const text = decoder.decode(result.value, { stream: true });
+            const lines = text.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.type === 'message_field_delta' && data.field_name === 'content') {
+                    aiContent += data.delta;
+                  }
+                } catch(e) {}
+              }
+            }
+            return read();
+          });
+        }
+        return read();
+      }).catch(err => {
+        addLog('❌ 压缩失败: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '🗜️ 压缩';
+      });
+    };
+
+    // 自动检测 __COMPRESS_SUMMARY，按钮变红闪烁
+    setInterval(() => {
+      const btn = document.getElementById('agent-compress');
+      if (!btn) return;
+      const hasSummary = !!(window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY'));
+      if (hasSummary && !btn.classList.contains('ready')) {
+        btn.classList.add('ready');
+        btn.title = '✅ 总结已就绪 — 点击执行压缩';
+      } else if (!hasSummary && btn.classList.contains('ready')) {
+        btn.classList.remove('ready');
+        btn.title = '上下文压缩：用预设总结替换当前对话';
+      }
+    }, 3000);
 
     document.getElementById('agent-save').onclick = () => {
       addLog('💾 存档中...', 'info');
