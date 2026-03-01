@@ -2833,55 +2833,156 @@ ${tip}${contextInfo}
     document.getElementById('agent-compress').onclick = () => {
       let summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
       
-      // 主动路线：没有预设总结时，自动生成并弹出编辑框
+      // 主动路线：没有预设总结时，AI 自动生成压缩总结
       if (!summary) {
-        addLog('🔄 正在自动生成压缩总结...', 'info');
+        addLog('🔄 正在提取对话内容并生成压缩总结...', 'info');
         const btn = document.getElementById('agent-compress');
         btn.disabled = true;
         btn.textContent = '⏳';
         
-        // 通过 server 执行 history_compressor
+        // Step 1: 从 DOM 提取对话内容
+        function extractFullConversation() {
+          const msgs = document.querySelectorAll('.conversation-statement');
+          const lines = [];
+          let totalLen = 0;
+          const maxLen = 80000; // 限制总长度，留空间给 prompt
+          for (const msg of msgs) {
+            if (totalLen > maxLen) { lines.push('...(后续对话省略)'); break; }
+            const isUser = msg.classList.contains('user');
+            const contentEl = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
+            let text = (contentEl ? contentEl.innerText : msg.innerText) || '';
+            // 截断工具执行结果
+            text = text.replace(/\[执行结果\][\s\S]{300,}/g, (m) => m.substring(0, 300) + '...(截断)');
+            text = text.replace(/```[\s\S]{500,}?```/g, (m) => m.substring(0, 500) + '\n...(截断)\n```');
+            if (text.length > 2000) text = text.substring(0, 2000) + '...(截断)';
+            const role = isUser ? '用户' : 'AI';
+            const line = `【${role}】${text}`;
+            lines.push(line);
+            totalLen += line.length;
+          }
+          return lines.join('\n\n');
+        }
+        
+        const conversationText = extractFullConversation();
+        const projectId = new URLSearchParams(location.search).get('id');
+        
+        if (!projectId) {
+          addLog('❌ 无法获取 project ID', 'error');
+          btn.disabled = false;
+          btn.textContent = '🗜️ 压缩';
+          return;
+        }
+        
+        // Step 2: 同时跑 history_compressor
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
           payload: {
             type: 'tool_call',
-            id: 'compress_gen_' + Date.now(),
+            id: 'compress_hist_' + Date.now(),
             tool: 'run_command',
-            params: { command: 'bash', stdin: 'COMPRESSOR=""; HISTORY=""; for p in /Users/yay/workspace/.agent_memory/history_compressor.js /home/ubuntu/genspark-agent/scripts/history_compressor.cjs; do [ -f "$p" ] && COMPRESSOR="$p" && break; done; for p in /Users/yay/workspace/genspark-agent/server-v2/command-history.json /home/ubuntu/genspark-agent/server-v2/command-history.json; do [ -f "$p" ] && HISTORY="$p" && break; done; [ -n "$COMPRESSOR" ] && [ -n "$HISTORY" ] && node "$COMPRESSOR" context "$HISTORY" --since 24 || echo "compressor or history not found"' }
+            params: { command: 'bash', stdin: 'COMPRESSOR=""; HISTORY=""; for p in /Users/yay/workspace/.agent_memory/history_compressor.js /home/ubuntu/genspark-agent/scripts/history_compressor.cjs; do [ -f "$p" ] && COMPRESSOR="$p" && break; done; for p in /Users/yay/workspace/genspark-agent/server-v2/command-history.json /home/ubuntu/genspark-agent/server-v2/command-history.json; do [ -f "$p" ] && HISTORY="$p" && break; done; [ -n "$COMPRESSOR" ] && [ -n "$HISTORY" ] && node "$COMPRESSOR" context "$HISTORY" --since 24 || echo "(无命令历史)"' }
           }
-        }, (resp) => {
-          btn.disabled = false;
-          btn.textContent = '🗜️ 压缩';
+        }, (histResp) => {
+          const historyInfo = (histResp && histResp.result) ? String(histResp.result) : '(无命令历史)';
           
-          const compressorOutput = (resp && resp.result) ? String(resp.result) : '';
+          addLog('📡 调用 AI 生成压缩总结...', 'info');
           
-          // 从页面提取补充信息
-          const msgs = document.querySelectorAll('.conversation-statement');
-          const totalMsgs = msgs.length;
-          const totalChars = Array.from(msgs).reduce((sum, m) => sum + m.textContent.length, 0);
-          const firstUserMsg = document.querySelector('.conversation-statement.user .bubble');
-          const topic = firstUserMsg ? firstUserMsg.innerText.substring(0, 200) : '未知';
-          const today = new Date().toISOString().split('T')[0];
+          // Step 3: 发 ask_proxy 让 AI 生成压缩总结
+          const summarizePrompt = `你是一个上下文压缩专家。请根据以下对话内容和命令历史，生成一份结构化的压缩总结。
+
+要求：
+1. 第一行必须是: [上下文压缩总结 - ${new Date().toISOString().split('T')[0]}]
+2. 包含以下章节: ## 项目/任务、## 环境、## 已完成、## 关键发现、## TODO、## 关键信息
+3. 保留所有硬信息：project ID、文件路径、端口号、IP地址、API key 名称等
+4. 简洁但完整，总长度控制在 2K-5K 字符
+5. TODO 要从对话中提取用户提到的待办事项
+6. 关键发现要包含踩坑经验和重要技术决策
+
+=== 命令历史摘要 ===
+${historyInfo}
+
+=== 对话内容 ===
+${conversationText}
+
+请直接输出压缩总结，不要加任何前缀说明。`;
           
-          // 从对话中提取最近的用户消息作为 TODO 线索
-          const userMsgs = document.querySelectorAll('.conversation-statement.user .bubble');
-          const recentUserMsgs = Array.from(userMsgs).slice(-5).map(m => '- ' + m.innerText.substring(0, 100)).join('\n');
+          const summarizeBody = {
+            ai_chat_model: 'claude-opus-4-6',
+            ai_chat_enable_search: false,
+            ai_chat_disable_personalization: true,
+            use_moa_proxy: false,
+            moa_models: [],
+            writingContent: null,
+            type: 'ai_chat',
+            project_id: projectId,
+            messages: [
+              { id: crypto.randomUUID(), role: 'user', content: summarizePrompt }
+            ],
+            user_s_input: '生成压缩总结',
+            is_private: true,
+            push_token: ''
+          };
           
-          const generated = `[上下文压缩总结 - ${today}]\n\n## 项目/任务\n${topic}\n\n## 环境\n- macOS arm64, genspark-agent 项目\n- 扩展目录: /Users/yay/workspace/genspark-agent/extension/\n\n${compressorOutput}\n\n## 最近用户消息\n${recentUserMsgs}\n\n## TODO\n<!-- 请补充接下来要做的事 -->\n\n## 关键信息\n<!-- 请补充 project ID、重要配置等 -->`;
-          
-          const edited = prompt(
-            '📝 自动生成的压缩总结\n\n当前对话: ' + totalMsgs + '条 / ' + Math.round(totalChars/1000) + 'K字符\n\n请检查并编辑（或粘贴自己的总结）:',
-            generated
-          );
-          
-          if (!edited || edited.trim().length < 50) {
-            addLog('❌ 取消压缩或总结太短（至少50字符）', 'error');
-            return;
-          }
-          
-          // 设置总结并重新触发压缩流程
-          window.__COMPRESS_SUMMARY = edited.trim();
-          document.getElementById('agent-compress').click();
+          fetch('/api/agent/ask_proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(summarizeBody)
+          }).then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            const reader = r.body.getReader();
+            const decoder = new TextDecoder();
+            let aiSummary = '';
+            function readStream() {
+              return reader.read().then(result => {
+                if (result.done) {
+                  btn.disabled = false;
+                  btn.textContent = '🗜️ 压缩';
+                  
+                  if (!aiSummary || aiSummary.length < 100) {
+                    addLog('❌ AI 生成的总结太短或为空', 'error');
+                    return;
+                  }
+                  
+                  addLog('✅ AI 总结已生成 (' + aiSummary.length + ' 字符)', 'success');
+                  
+                  // Step 4: 弹出编辑框让用户确认
+                  const edited = prompt(
+                    '📝 AI 生成的压缩总结\n\n请检查并编辑（或粘贴自己的总结）:',
+                    aiSummary.trim()
+                  );
+                  
+                  if (!edited || edited.trim().length < 50) {
+                    addLog('❌ 取消压缩或总结太短', 'error');
+                    return;
+                  }
+                  
+                  // Step 5: 设置总结并触发压缩
+                  window.__COMPRESS_SUMMARY = edited.trim();
+                  document.getElementById('agent-compress').click();
+                  return;
+                }
+                const text = decoder.decode(result.value, { stream: true });
+                const lines = text.split('\n');
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.substring(6));
+                      if (data.type === 'message_field_delta' && data.field_name === 'content') {
+                        aiSummary += data.delta;
+                      }
+                    } catch(e) {}
+                  }
+                }
+                return readStream();
+              });
+            }
+            return readStream();
+          }).catch(err => {
+            addLog('❌ AI 总结生成失败: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.textContent = '🗜️ 压缩';
+          });
         });
         return;
       }
