@@ -289,6 +289,7 @@ case "$CMD" in
         echo -e "  \033[1;33m🤖 AI (1min.ai, 31.5M credits)\033[0m"
         echo "    ask     (a)     AI 问答 (默认 gpt-4.1-mini)"
         echo "    ask2    (a2)    AI 问答 via 浏览器 (零credit, -c 连续对话)"
+        echo "    delegate (td)   委派任务给 DeepSeek/Kimi 执行"
         echo "                    ONEMIN_MODEL=xxx sos ask 切换模型"
         echo ""
         echo -e "  \033[1;33m❓ 帮助\033[0m"
@@ -394,6 +395,30 @@ try:
 except Exception as e:
     print("Error:",e)
 '
+        ;;
+    delegate|td)
+        shift
+        # 委派任务给 DeepSeek/Kimi 通过 MCP 工具执行
+        delegate_args=""
+        delegate_model="${ONEMIN_MODEL:-deepseek-chat}"
+        while [[ "$1" == --* ]]; do
+          if [ "$1" = "--model" ] && [ -n "$2" ]; then
+            delegate_model="$2"; shift 2
+          elif [ "$1" = "--max-turns" ] && [ -n "$2" ]; then
+            delegate_args="$delegate_args --max-turns $2"; shift 2
+          else
+            shift
+          fi
+        done
+        task_desc="$*"
+        if [ -z "$task_desc" ]; then
+            echo "Usage: sos delegate <任务描述>"
+            echo "  sos td \"创建 /tmp/test.txt 内容为 hello\""
+            echo "  sos td --model moonshot-v1-auto \"任务描述\""
+            echo "  ONEMIN_MODEL=deepseek-chat sos td \"任务描述\""
+            exit 1
+        fi
+        node "$AGENT_DIR/scripts/task-delegate.js" --model "$delegate_model" $delegate_args "$task_desc"
         ;;
     sandbox-exec|se)
         shift
