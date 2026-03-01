@@ -400,7 +400,7 @@ except Exception as e:
         shift
         # 委派任务给 DeepSeek/Kimi 通过 MCP 工具执行
         delegate_args=""
-        delegate_model="${ONEMIN_MODEL:-deepseek-chat}"
+        delegate_model="${ONEMIN_MODEL:-moonshot-v1-auto}"
         while [[ "$1" == --* ]]; do
           if [ "$1" = "--model" ] && [ -n "$2" ]; then
             delegate_model="$2"; shift 2

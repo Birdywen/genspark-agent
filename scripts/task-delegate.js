@@ -24,7 +24,7 @@ const path = require('path');
 const ONEMIN_API_KEY = 'c81dc363907e8c1777e37fde4c6abd319135d71fa4a4a7c723c00ae6f4dc6da4';
 const ONEMIN_API = 'https://api.1min.ai/api/features';
 const WS_URL = 'ws://localhost:8765';
-const DEFAULT_MODEL = 'deepseek-chat';
+const DEFAULT_MODEL = 'moonshot-v1-auto';
 const MAX_TURNS = 15;
 const TOOL_TIMEOUT = 30000;
 
