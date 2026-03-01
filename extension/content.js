@@ -2831,10 +2831,30 @@ ${tip}${contextInfo}
     document.head.appendChild(style);
 
     document.getElementById('agent-compress').onclick = () => {
-      const summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
+      let summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
+      
+      // 主动路线：没有预设总结时，弹出编辑框让用户自己写
       if (!summary) {
-        addLog('❌ 没有压缩总结。AI 需要先设置 window.__COMPRESS_SUMMARY', 'error');
-        return;
+        // 自动从页面提取基础信息
+        const msgs = document.querySelectorAll('.conversation-statement');
+        const totalMsgs = msgs.length;
+        const totalChars = Array.from(msgs).reduce((sum, m) => sum + m.textContent.length, 0);
+        const firstUserMsg = document.querySelector('.conversation-statement.user .bubble');
+        const topic = firstUserMsg ? firstUserMsg.innerText.substring(0, 100) : '未知';
+        const today = new Date().toISOString().split('T')[0];
+        
+        const template = `[上下文压缩总结 - ${today}]\n\n## 项目/任务\n${topic}\n\n## 环境\n<!-- 关键路径、服务器、端口等 -->\n\n## 已完成\n<!-- 列出已完成的工作 -->\n\n## TODO\n<!-- 接下来要做的事 -->\n\n## 关键信息\n<!-- project ID、重要配置等 -->`;
+        
+        const edited = prompt(
+          `📝 主动压缩模式\n\n当前对话: ${totalMsgs}条 / ${Math.round(totalChars/1000)}K字符\n\n请编辑压缩总结（或粘贴自己准备的总结）:`,
+          template
+        );
+        
+        if (!edited || edited.trim().length < 50) {
+          addLog('❌ 取消压缩或总结太短（至少50字符）', 'error');
+          return;
+        }
+        summary = edited.trim();
       }
 
       const projectId = new URLSearchParams(location.search).get('id');
