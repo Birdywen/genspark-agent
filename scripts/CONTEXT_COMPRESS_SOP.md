@@ -107,6 +107,42 @@ AI 可先运行智能提取脚本辅助生成总结：
     msgs.forEach(function(m) { totalChars += m.textContent.length; });
     return JSON.stringify({total: msgs.length, user: userMsgs.length, chars: totalChars});
 
+## 敏感信息脱敏
+
+压缩流程中自动过滤敏感信息，确保 API key、密码、token 等不会泄露到压缩总结中。
+
+### 过滤层级（三道防线）
+
+1. **对话内容提取时** — content.js 中 `redactSecretsForCompress()` 在传给 AI 生成总结前过滤
+2. **AI 生成总结后** — `showCompressModal()` 前再次调用 `redactSecretsForCompress()` 兜底
+3. **浏览器端注入时** — context-compress.js 在注入编辑器前做最后一道过滤
+
+### 过滤规则
+
+- `sk-` 开头的 API key（Kimi/DeepSeek/OpenAI 等） → `[REDACTED_API_KEY]`
+- 41+ 位 hex 串（保留 40 位 git hash） → `[REDACTED_HEX_KEY]`
+- 环境变量赋值中的敏感值（KEY/SECRET/TOKEN/PASSWORD=xxx） → 变量名保留，值替换为 `[REDACTED]`
+- JSON 中的 password/secret/token 字段 → `[REDACTED]`
+- URL 中内嵌的认证信息 → `[REDACTED]`
+- SSH private key 块 → `[REDACTED_SSH_KEY]`
+
+### Node.js 独立工具
+
+    # 管道模式
+    cat summary.md | node scripts/redact-secrets.js
+
+    # 文件模式（自动加载 .env.api 中的已知 key 做精确匹配）
+    node scripts/redact-secrets.js summary.md --verbose
+
+### AI 手动写总结时的注意事项
+
+AI 在 eval_js 设置 `__COMPRESS_SUMMARY` 时，**禁止**包含以下内容：
+- 实际的 API key 值（只写变量名，如 `KIMI_API_KEY` 而非实际值）
+- 密码或 token 明文
+- SSH private key 内容
+
+正确示例：`- API 配置: KIMI_API_KEY / DEEPSEEK_API_KEY / 1min.ai KEY (配置在 server-v2/.env.api)`
+
 ## 回滚
 
 - 按钮方案：刷新页面即可恢复（ask_proxy 不修改原对话历史）
@@ -117,9 +153,10 @@ AI 可先运行智能提取脚本辅助生成总结：
 
 | 文件 | 用途 |
 |------|------|
-| extension/content.js | 实时对话状态监控 + 压缩按钮 |
-| scripts/context-compress-smart.sh | 智能摘要生成（支持 --since） |
-| scripts/context-compress.js | 浏览器端压缩脚本（延迟6秒，备用方案） |
+| extension/content.js | 实时对话状态监控 + 压缩按钮 + 敏感信息过滤 |
+| scripts/redact-secrets.js | 敏感信息脱敏模块（Node.js + CLI） |
+| scripts/context-compress-smart.sh | 智能摘要生成（支持 --since，自动脱敏） |
+| scripts/context-compress.js | 浏览器端压缩脚本（延迟6秒，备用方案，含兜底过滤） |
 | scripts/context-check.js | 对话状态检测 |
 | scripts/context-compress-archive.sh | 存档 shell 脚本 |
 | scripts/CONTEXT_COMPRESS_SOP.md | 本文档 |

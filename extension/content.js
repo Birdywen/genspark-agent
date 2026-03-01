@@ -3005,6 +3005,29 @@ ${tip}${contextInfo}
         btn.textContent = '⏳';
         
         // Step 1: 从 DOM 提取对话内容
+        // 敏感信息脱敏函数（浏览器端精简版）
+        function redactSecretsForCompress(text) {
+          if (!text) return text;
+          let r = text;
+          // 1. sk- 开头的 API key (Kimi, DeepSeek, OpenAI 等)
+          r = r.replace(/\bsk-[A-Za-z0-9_-]{20,}\b/g, '[REDACTED_API_KEY]');
+          // 2. Bearer token
+          r = r.replace(/Bearer\s+[A-Za-z0-9_\-\.]{20,}/g, 'Bearer [REDACTED_TOKEN]');
+          // 3. 长 hex 串 (41+ chars, 跳过 40 位 git hash)
+          r = r.replace(/\b[0-9a-f]{41,}\b/g, '[REDACTED_HEX_KEY]');
+          // 4. 环境变量中的敏感值
+          r = r.replace(/((?:API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL)\s*[=:]\s*)[^\s\n'"]{8,}/gi, '$1[REDACTED]');
+          // 5. JSON 中的敏感字段
+          r = r.replace(/"(password|secret|token|apiKey|api_key|private_key)"\s*:\s*"[^"]{4,}"/gi, '"$1": "[REDACTED]"');
+          // 6. URL 中内嵌的认证
+          r = r.replace(/:\/\/([^:@\s]+):([^@\s]{4,})@/g, '://$1:[REDACTED]@');
+          // 7. SSH private key block
+          r = r.replace(/-----BEGIN[A-Z ]*PRIVATE KEY-----[\s\S]*?-----END[A-Z ]*PRIVATE KEY-----/g, '[REDACTED_SSH_KEY]');
+          // 8. .env 格式的敏感行
+          r = r.replace(/^(.*(?:KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL).*?=).{8,}$/gm, '$1[REDACTED]');
+          return r;
+        }
+
         function extractFullConversation() {
           const msgs = document.querySelectorAll('.conversation-statement');
           const lines = [];
@@ -3027,7 +3050,7 @@ ${tip}${contextInfo}
           return lines.join('\n\n');
         }
         
-        const conversationText = extractFullConversation();
+        const conversationText = redactSecretsForCompress(extractFullConversation());
         const projectId = new URLSearchParams(location.search).get('id');
         
         if (!projectId) {
@@ -3057,7 +3080,7 @@ ${tip}${contextInfo}
 要求：
 1. 第一行必须是: [上下文压缩总结 - ${new Date().toISOString().split('T')[0]}]
 2. 包含以下章节: ## 项目/任务、## 环境、## 已完成、## 关键发现、## TODO、## 关键信息
-3. 保留所有硬信息：project ID、文件路径、端口号、IP地址、API key 名称等
+3. 保留硬信息：project ID、文件路径、端口号、IP地址，但 API key/token/密码等敏感值必须用 [REDACTED] 占位符替代，只保留变量名不保留实际值
 4. 简洁但完整，总长度控制在 2K-5K 字符
 5. TODO 要从对话中提取用户提到的待办事项
 6. 关键发现要包含踩坑经验和重要技术决策
@@ -3111,7 +3134,7 @@ ${conversationText}
                   addLog('✅ AI 总结已生成 (' + aiSummary.length + ' 字符)', 'success');
                   
                   // Step 4: 全屏模态框让用户查看和编辑总结
-                  showCompressModal(aiSummary.trim());
+                  showCompressModal(redactSecretsForCompress(aiSummary.trim()));
                    return;
                 }
                 const text = decoder.decode(result.value, { stream: true });

@@ -152,6 +152,14 @@ $AUTO_STATS
 [AI 在此处生成最终的压缩总结文本]
 TMPLEOF
 
+# Step 6: 对模板做敏感信息脱敏
+REDACTOR="/Users/yay/workspace/genspark-agent/scripts/redact-secrets.js"
+if [ -f "$REDACTOR" ]; then
+  node "$REDACTOR" "$TEMPLATE_FILE" > "${TEMPLATE_FILE}.clean"
+  mv "${TEMPLATE_FILE}.clean" "$TEMPLATE_FILE"
+  echo "🔒 敏感信息已脱敏"
+fi
+
 echo ""
 echo "✅ Template generated: $TEMPLATE_FILE"
 echo ""

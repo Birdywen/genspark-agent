@@ -25,6 +25,12 @@
     return JSON.stringify({error: 'No summary provided. Set window.__COMPRESS_SUMMARY first.'});
   }
   
+  // 敏感信息兜底过滤
+  summary = summary.replace(/\bsk-[A-Za-z0-9_-]{20,}\b/g, '[REDACTED_API_KEY]');
+  summary = summary.replace(/\b[0-9a-f]{41,}\b/g, '[REDACTED_HEX_KEY]');
+  summary = summary.replace(/((?:API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL)\s*[=:]\s*)[^\s\n'"]{8,}/gi, '$1[REDACTED]');
+  summary = summary.replace(/"(password|secret|token|apiKey|api_key|private_key)"\s*:\s*"[^"]{4,}"/gi, '"$1": "[REDACTED]"');
+  
   var summaryLen = summary.length;
   
   // 核心操作延迟执行，避免被 eval_js 结果消息顶走
