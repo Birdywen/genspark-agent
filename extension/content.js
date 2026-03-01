@@ -20,6 +20,10 @@
     btn.innerHTML = isDisabled ? '🔴' : '🟢';
     btn.title = isDisabled ? 'Agent: OFF (click to enable)' : 'Agent: ON (click to disable)';
     btn.style.cssText = 'position:fixed;bottom:70px;right:12px;z-index:99999;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;background:#1a1a2e;border:1px solid #333;box-shadow:0 2px 8px rgba(0,0,0,0.3);opacity:0.7;transition:opacity 0.2s;';
+    // 修复 Genspark 页面中文排版：去掉 justify 两端对齐
+    const fixStyle = document.createElement('style');
+    fixStyle.textContent = '.markdown-viewer, .markdown-viewer p, .markdown-viewer li, .bubble .content, .conversation-statement { text-align: left !important; } .markdown-viewer p { word-break: break-word; }';
+    document.head.appendChild(fixStyle);
     btn.onmouseenter = () => btn.style.opacity = '1';
     btn.onmouseleave = () => btn.style.opacity = '0.7';
     btn.onclick = () => {
