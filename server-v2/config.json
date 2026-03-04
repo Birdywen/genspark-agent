@@ -43,27 +43,26 @@
     "ssh-oracle": {
       "command": "node",
       "args": [
-        "/Users/yay/.npm/_npx/e1b9a49f0f079214/node_modules/ssh-mcp/build/index.js",
-        "--",
-        "--host=157.151.227.157",
-        "--port=22",
+        "/Users/yay/workspace/genspark-agent/mcp-ssh/index.js",
+        "--host=150.136.51.61",
         "--user=ubuntu",
         "--key=/Users/yay/.ssh/oracle-cloud.key",
-        "--timeout=60000",
-        "--maxChars=none"
+        "--timeout=120000",
+        "--maxChars=none",
+        "--name=oracle"
       ]
     },
     "ssh-cpanel": {
       "command": "node",
       "args": [
-        "/Users/yay/.npm/_npx/e1b9a49f0f079214/node_modules/ssh-mcp/build/index.js",
-        "--",
+        "/Users/yay/workspace/genspark-agent/mcp-ssh/index.js",
         "--host=ezmusicstore.com",
         "--port=1394",
         "--user=ezmusics",
         "--key=/Users/yay/.ssh/cpanel_ezmusic",
-        "--timeout=60000",
-        "--maxChars=none"
+        "--timeout=120000",
+        "--maxChars=none",
+        "--name=cpanel"
       ]
     },
     "chrome-devtools": {

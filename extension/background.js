@@ -43,7 +43,7 @@ const tabAgents = new Map(); // tabId -> agentId
 // 服务器地址配置（可切换本地/云端）
 const SERVERS = {
   local: 'ws://localhost:8765',
-  cloud: 'ws://150.136.51.61:8765'
+  cloud: 'ws://150.136.51.61:8765?token=ys8765'
 };
 let currentServer = 'local';  // 默认云端
 const WS_URL = SERVERS[currentServer];

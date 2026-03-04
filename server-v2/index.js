@@ -706,6 +706,36 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   // 智能路由: 识别长时间命令自动走 bg_run
   // 防御性校验: run_command 的 command 不应包含空格（除非是路径）
   // 如果 command 看起来像 "bashecho hello"（参数被拼接），拒绝执行
+  // ── 拦截 sos replay/rp 命令：mini terminal 兼容 ──
+  if (tool === 'run_command' && params.command) {
+    const sosMatch = params.command.match(/\bsos\s+(replay|rp)(?:\s+(\d+))?\s*$/);
+    if (sosMatch) {
+      const targetId = sosMatch[2] ? parseInt(sosMatch[2]) : null;
+      let entry;
+      if (targetId) {
+        entry = getHistoryById(targetId);
+      } else {
+        // 取最后一条可重放命令
+        const skipTools = new Set(['bg_status', 'bg_kill', 'replay', 'delay_run']);
+        const candidates = commandHistory.filter(h => !skipTools.has(h.tool));
+        entry = candidates.length ? candidates[candidates.length - 1] : null;
+      }
+      if (!entry) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, tool: 'replay', success: false, error: targetId ? `找不到命令 #${targetId}` : '没有可重放的命令' }));
+        return;
+      }
+      logger.info(`[sos replay] 从 mini terminal 触发重放 #${entry.id}: ${entry.tool}`);
+      const replayMsg = { type: 'tool_call', id, tool: entry.tool, params: { ...entry.params } };
+      if (entry.tool === 'run_process' && entry.params.command_line === 'bash' && entry.params.stdin) {
+        replayMsg.tool = 'run_command';
+        replayMsg.params = { command: 'bash', stdin: entry.params.stdin };
+        if (entry.params.cwd) replayMsg.params.cwd = entry.params.cwd;
+      }
+      await handleToolCall(ws, replayMsg, true, entry.id);
+      return;
+    }
+  }
+
   if (tool === 'run_command' && params.command && !params.stdin && !params.stdinFile) {
     const cmd = params.command.trim();
     // 正常的 command 应该是 "bash", "python3", "/usr/bin/env" 等
@@ -720,6 +750,78 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       }));
       return;
     }
+  }
+
+  // ── replay: 一键重试历史命令 ──
+  if (tool === 'replay') {
+    const targetId = parseInt(params.id || params.historyId);
+    if (!targetId) {
+      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: 'replay 需要 id 参数（历史命令 ID）' }));
+      return;
+    }
+    const entry = getHistoryById(targetId);
+    if (!entry) {
+      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: `找不到历史命令 #${targetId}` }));
+      return;
+    }
+    logger.info(`[replay] 重放历史命令 #${targetId}: ${entry.tool}`);
+    // 还原原始 tool 和 params，走正常流程
+    const replayMsg = { type: 'tool_call', id, tool: entry.tool, params: { ...entry.params } };
+    // 如果原始是 run_process（由 run_command 别名转换来的），还原成 run_command
+    if (entry.tool === 'run_process' && entry.params.command_line === 'bash' && entry.params.stdin) {
+      replayMsg.tool = 'run_command';
+      replayMsg.params = { command: 'bash', stdin: entry.params.stdin };
+      if (entry.params.cwd) replayMsg.params.cwd = entry.params.cwd;
+    }
+    await handleToolCall(ws, replayMsg, true, targetId);
+    return;
+  }
+
+  // ── delay_run: 延迟执行命令（替代 sleep，不阻塞消息通道） ──
+  if (tool === 'delay_run') {
+    const delay = parseInt(params.delay || params.seconds || 0) * 1000;
+    const command = params.command;
+    if (!command) {
+      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: 'delay_run 需要 command 参数' }));
+      return;
+    }
+    if (delay > 600000) {
+      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: '延迟不能超过 600 秒' }));
+      return;
+    }
+    const historyId = addToHistory('delay_run', params, true, null, null);
+    logger.info(`[delay_run] ${delay/1000}s 后执行: ${command.substring(0, 100)}`);
+    
+    // 立即返回确认
+    ws.send(JSON.stringify({
+      type: 'tool_result', id, historyId, tool: 'delay_run',
+      success: true,
+      result: `[#${historyId}] 已安排 ${delay/1000}s 后执行，将以 bg_run 方式运行`
+    }));
+
+    // 延迟后启动
+    setTimeout(() => {
+      const result = processManager.run(command, { cwd: params.cwd }, (completedSlot) => {
+        try {
+          ws.send(JSON.stringify({
+            type: 'bg_complete', tool: 'delay_run',
+            slotId: completedSlot.slotId, exitCode: completedSlot.exitCode,
+            elapsed: completedSlot.elapsed, lastOutput: completedSlot.lastOutput,
+            success: completedSlot.exitCode === 0
+          }));
+        } catch (e) { logger.error('[delay_run] 完成通知失败: ' + e.message); }
+      });
+      logger.info(`[delay_run] 延迟 ${delay/1000}s 到期，bg_run 启动: slot=${result.slotId || '?'}`);
+      // 发通知告诉前端已开始
+      try {
+        ws.send(JSON.stringify({
+          type: 'tool_result', id: 'delay_run_started_' + historyId,
+          tool: 'delay_run', success: true,
+          result: `[delay_run #${historyId}] 延迟到期，已启动 bg_run: ${JSON.stringify(result)}`
+        }));
+      } catch(e) {}
+    }, delay);
+    return;
   }
   if (tool === 'run_command' && params.command) {
     const cmd = params.command.toLowerCase();
@@ -740,10 +842,20 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       /\bbasic[_-]pitch\b/,
     ];
     const isLong = longPatterns.some(p => p.test(cmd));
-    if (isLong && !params._noAutoRoute) {
-      logger.info(`[智能路由] run_command → bg_run (检测到长时间命令)`);
+    // 检测 sleep 命令也走 bg_run（sleep 在普通执行模式下必定 timeout）
+    const hasSleep = /\bsleep\s+\d/.test(cmd) || (params.stdin && /\bsleep\s+\d/.test(params.stdin));
+    const shouldBgRun = isLong || hasSleep;
+    if (shouldBgRun && !params._noAutoRoute) {
+      logger.info(`[智能路由] run_command → bg_run (${hasSleep ? '检测到sleep' : '检测到长时间命令'})`);
       const historyId = addToHistory('bg_run', params, true, null, null);
-      const result = processManager.run(params.command, { cwd: params.cwd });
+      // 如果有 stdin，写成临时脚本文件再执行（processManager.run 不支持 stdin pipe）
+      let bgCommand = params.command;
+      if (params.stdin) {
+        const tmpScript = '/private/tmp/bg_run_' + Date.now() + '.sh';
+        writeFileSync(tmpScript, params.stdin, { mode: 0o755 });
+        bgCommand = 'bash ' + tmpScript + ' ; rm -f ' + tmpScript;
+      }
+      const result = processManager.run(bgCommand, { cwd: params.cwd });
       ws.send(JSON.stringify({
         type: 'tool_result',
         id,
@@ -860,7 +972,11 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
 
     // 支持灵活 timeout: 从原始 message 中提取
-    const callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
+    let callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
+    // SSH 工具默认给 120s timeout（SSH 连接可能需要重连）
+    if (!callTimeout && tool.startsWith('ssh-')) {
+      callTimeout = 120000;
+    }
     const callOptions = callTimeout ? { timeout: callTimeout } : {};
     const r = await hub.call(tool, params, callOptions);
     let result = r;

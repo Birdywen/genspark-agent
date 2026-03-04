@@ -170,12 +170,12 @@ class Safety {
   async checkOperation(operation, params, broadcastConfirmRequest) {
     this.logger.info(`[Safety] checkOperation: operation=${operation}`);
 
-    if (params.path) {
+    const isRemoteTool = operation.startsWith('ssh-');
+
+    if (params.path && !isRemoteTool) {
       const pathCheck = this.isPathAllowed(params.path);
       if (!pathCheck.allowed) return { allowed: false, reason: pathCheck.reason };
     }
-
-    const isRemoteTool = operation.startsWith('ssh-');
 
     if (params.command && !isRemoteTool) {
       const cmdCheck = this.isCommandSafe(params.command);

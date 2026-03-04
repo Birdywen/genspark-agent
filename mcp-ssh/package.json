@@ -1,0 +1,11 @@
+{
+  "name": "mcp-ssh",
+  "version": "1.0.0",
+  "description": "Custom SSH MCP server with exec, read_file, write_file, edit_file",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ssh2": "^1.16.0"
+  }
+}

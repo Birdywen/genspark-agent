@@ -378,7 +378,8 @@ when 条件: success / contains / regex（用 var 不是 variable）
 | 查库/框架文档 | **context7: query-docs** | web_search |
 | Git/GitHub | **github** 工具集 | run_command+git (简单 add/commit/push 除外) |
 | 跨会话记忆 | **memory** 工具集 | 无 |
-| SSH 远程 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command+ssh |
+| SSH 远程执行 | **ssh-oracle:exec / ssh-cpanel:exec** | run_command+ssh |
+| SSH 远程文件 | **ssh-oracle:read_file / write_file / edit_file** | ssh exec+cat/sed/转义 |
 | 截图 | **take_screenshot** | 无 |
 | 网络请求调试 | **list_network_requests** | 无 |
 
@@ -413,6 +414,8 @@ bg_run（后台启动）/ bg_status（查状态，lastN 控制输出行数）/ b
 ### 远程与运维
 
 - SSH 禁止 run_command+ssh，使用 ssh-oracle:exec / ssh-cpanel:exec
+- SSH 远程文件操作优先用 read_file/write_file/edit_file（SFTP 直传，零转义问题）
+- edit_file 用 @oldText<< @newText<< heredoc 格式，内容原样传输不经 shell
 - 服务器重启: curl http://localhost:8766/restart 或 touch /tmp/genspark-restart-trigger
 - 查看所有工具: node /Users/yay/workspace/genspark-agent/server-v2/list-tools.js
 
