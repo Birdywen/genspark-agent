@@ -658,7 +658,19 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     const historyId = addToHistory(tool, params, true, null, null);
     let result;
     if (tool === 'bg_run') {
-      result = processManager.run(params.command, { cwd: params.cwd, shell: params.shell }, (completedSlot) => {
+      // stdin/stdinFile fix: stdinFile is a temp file already containing the stdin content
+      logger.info('[bg_run] params keys: ' + JSON.stringify(Object.keys(params)));
+      let bgCommand = params.command;
+      if (params.stdinFile) {
+        bgCommand = (params.command || 'bash') + ' ' + params.stdinFile;
+        logger.info('[bg_run] using stdinFile: ' + params.stdinFile);
+      } else if (params.stdin) {
+        const tmpScript = '/private/tmp/bg_run_' + Date.now() + '.sh';
+        writeFileSync(tmpScript, params.stdin, { mode: 0o755 });
+        bgCommand = (params.command || 'bash') + ' ' + tmpScript;
+        logger.info('[bg_run] stdin -> tmpScript: ' + tmpScript);
+      }
+      result = processManager.run(bgCommand, { cwd: params.cwd, shell: params.shell }, (completedSlot) => {
         // 进程完成时自动通知前端
         try {
           ws.send(JSON.stringify({
