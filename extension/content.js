@@ -460,6 +460,23 @@ bash /Users/yay/workspace/genspark-agent/env_check.sh
 
 ---
 
+---
+
+## ΩCODE 零转义代码传输通道
+
+当需要在浏览器中执行复杂代码（含正则、引号嵌套、特殊字符）时，用 ΩCODE 通道代替 eval_js 直接写代码。
+
+**流程：**
+1. AI 直接输出 ΩCODE + 换行 + 代码内容 + 换行 + ΩCODEEND（不需要代码块包裹）
+2. Extension SSE hook 自动拦截并存入临时存储
+3. 用 eval_js 一行读取执行: \`return window.readContextStorage().then(function(code){var fn=new Function(code);return fn()})\`
+
+**优势：** 代码从 AI token 流直达 extension，不经过任何 JSON/shell 序列化，真正零转义。
+**注意：** ΩCODE 会覆盖临时存储内容。如需保留压缩总结，执行完后重新写入。
+**适用：** 复杂正则、引号嵌套、模板字符串、JSON 内嵌 JSON、任何之前 eval_js 会被转义搞坏的代码
+
+---
+
 ⚠️ **每次回复前自检：工具调用是否在代码块内？是否在回复最后？格式是否为 ΩHERE？**
 `;
 
