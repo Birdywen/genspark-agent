@@ -5009,6 +5009,30 @@ ${conversationText}
     const text = sseState.currentText;
     if (!text) return;
 
+    // -- OMEGACODE: zero-escape code transport channel --
+    var codeStartMarker = "\u03A9CODE\n";
+    var codeEndMarker = "\n\u03A9CODEEND";
+    var codeStartIdx = text.indexOf(codeStartMarker);
+    var codeEndIdx = text.indexOf(codeEndMarker);
+    if (codeStartIdx !== -1 && codeEndIdx !== -1 && codeEndIdx > codeStartIdx) {
+      var codeSig = "sse:omegacode:" + codeStartIdx;
+      if (!sseState.processedCommands.has(codeSig)) {
+        sseState.processedCommands.add(codeSig);
+        var codeContent = text.substring(codeStartIdx + codeStartMarker.length, codeEndIdx);
+        addLog("\u26A1 OMEGACODE captured " + codeContent.length + " chars", "tool");
+        log("SSE OMEGACODE captured:", codeContent.length, "chars");
+        if (typeof window.writeContextStorage === "function") {
+          window.writeContextStorage(codeContent).then(function(len) {
+            addLog("\u2705 OMEGACODE stored " + len + " chars", "success");
+            log("OMEGACODE stored:", len, "chars");
+          });
+        } else {
+          window.__OMEGA_CODE = codeContent;
+          addLog("\u26A0 OMEGACODE saved to window.__OMEGA_CODE (storage unavailable)", "warning");
+        }
+      }
+    }
+
     // 最优先：检测 ΩHERE heredoc 格式（支持自定义结束标记，不再硬编码检查 ΩEND）
     if (text.indexOf('\u03A9HERE') !== -1) {
       const hereCalls = parseHeredocFormat(text);
