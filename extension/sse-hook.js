@@ -464,3 +464,132 @@
 
   console.log('[SSE-Hook] VFS + Context + Code storage functions registered in MAIN world');
 })();
+
+// ── Hook 3: Fetch interceptor for dynamic prompt injection ──
+// Runs as a separate IIFE. Uses defineProperty setter trap on window.fetch
+// to survive Genspark's JS bundle overwriting fetch after document_start.
+(function() {
+  var __nativeFetch = window.fetch;
+  var __DYNAMIC_PROMPT_MARKER = '\n\n---\n\n# \uD83E\uDDE0 VFS Dynamic Injection';
+  var __promptCache = { content: null, ts: 0, ttl: 30000 };
+  var __thirdPartyFetch = null;
+
+  function buildDynamicPrompt() {
+    var now = Date.now();
+    if (__promptCache.content && (now - __promptCache.ts) < __promptCache.ttl) {
+      return Promise.resolve(__promptCache.content);
+    }
+    if (typeof window.vfs !== 'object' || typeof window.vfs.ls !== 'function') {
+      return Promise.resolve(null);
+    }
+    return window.vfs.ls().then(function(list) {
+      var slotNames = list.map(function(s) { return s.name; });
+      var lines = [];
+      lines.push(__DYNAMIC_PROMPT_MARKER);
+      lines.push('');
+      lines.push('VFS \u5DF2\u6CE8\u518C\u69FD\u4F4D (' + list.length + '): ' + slotNames.join(', '));
+      lines.push('');
+      lines.push('\u52A8\u6001\u63D0\u793A\u8BCD\u6CE8\u5165\u65F6\u95F4: ' + new Date().toISOString());
+      return window.vfs.read('boot-prompt').then(function(bpContent) {
+        if (bpContent && !bpContent.error && bpContent.length > 0) {
+          try {
+            var fn = new Function('vfs', 'slotNames', bpContent);
+            var result = fn(window.vfs, slotNames);
+            if (result && typeof result.then === 'function') {
+              return result.then(function(r) {
+                if (typeof r === 'string' && r.length > 0) lines.push(r);
+                return lines.join('\n');
+              });
+            }
+            if (typeof result === 'string' && result.length > 0) lines.push(result);
+          } catch(e) {
+            lines.push('(boot-prompt exec error: ' + e.message + ')');
+          }
+        }
+        return lines.join('\n');
+      }).catch(function() {
+        return lines.join('\n');
+      });
+    }).then(function(content) {
+      __promptCache.content = content;
+      __promptCache.ts = Date.now();
+      return content;
+    }).catch(function() {
+      return null;
+    });
+  }
+
+  function hookFetch(targetFetch) {
+    return function() {
+      var args = Array.prototype.slice.call(arguments);
+      var url = args[0];
+      var opts = args[1];
+
+      if (typeof url !== 'string' || url.indexOf('/api/agent/ask_proxy') === -1 || !opts || !opts.body) {
+        return targetFetch.apply(this, args);
+      }
+
+      var body;
+      try { body = JSON.parse(opts.body); } catch(e) {
+        return targetFetch.apply(this, args);
+      }
+
+      if (!body.messages || body.messages.length === 0) {
+        return targetFetch.apply(this, args);
+      }
+
+      var firstMsg = body.messages[0];
+      if (firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1) {
+        return targetFetch.apply(this, args);
+      }
+
+      var self = this;
+      return buildDynamicPrompt().then(function(dynamicContent) {
+        if (dynamicContent) {
+          body.messages[0].content = firstMsg.content + dynamicContent;
+          console.log('[SSE-Hook] Dynamic prompt injected: +' + dynamicContent.length + ' chars');
+        }
+        var newOpts = {};
+        for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
+        newOpts.body = JSON.stringify(body);
+        return targetFetch.call(self, url, newOpts);
+      }).catch(function(e) {
+        console.error('[SSE-Hook] Dynamic prompt injection failed:', e);
+        return targetFetch.apply(self, args);
+      });
+    };
+  }
+
+  // Install immediately with native fetch
+  var __currentHook = hookFetch(__nativeFetch);
+
+  // Use defineProperty to trap any future overwrites of window.fetch
+  Object.defineProperty(window, 'fetch', {
+    configurable: true,
+    enumerable: true,
+    get: function() {
+      return __currentHook;
+    },
+    set: function(newFetch) {
+      if (newFetch === __currentHook) return;
+      // Genspark (or other code) is trying to overwrite fetch
+      // Capture their wrapper and re-hook on top of it
+      __thirdPartyFetch = newFetch;
+      __currentHook = hookFetch(newFetch);
+      console.log('[SSE-Hook] Fetch re-hooked after third-party overwrite');
+    }
+  });
+
+  // Expose for debugging
+  window.__buildDynamicPrompt = buildDynamicPrompt;
+  window.__flushPromptCache = function() { __promptCache.content = null; __promptCache.ts = 0; };
+  window.__fetchHookInfo = function() {
+    return {
+      hasThirdParty: !!__thirdPartyFetch,
+      cacheAge: __promptCache.ts ? (Date.now() - __promptCache.ts) + 'ms' : 'empty',
+      cacheLen: __promptCache.content ? __promptCache.content.length : 0
+    };
+  };
+
+  console.log('[SSE-Hook] Fetch prompt-injection hook installed with defineProperty trap');
+})();
