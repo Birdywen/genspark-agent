@@ -5102,6 +5102,7 @@ ${conversationText}
     const text = sseState.currentText;
     if (!text) return;
 
+    window.__OMEGA_WRITE_VERSION = 2;
     // -- OMEGA WRITE: zero-escape data transport channel --
     // Supports: \u03A9CODE, \u03A9DATA, with optional :slot=ID modifier
     // Format: \u03A9CODE[:slot=conversationId]\n...content...\n\u03A9CODEEND
