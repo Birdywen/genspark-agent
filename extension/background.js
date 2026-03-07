@@ -1137,6 +1137,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     }
 
+    case 'VFS_BACKUP_REGISTRY': {
+      const data = message.data;
+      chrome.storage.local.set({ vfs_registry: data, vfs_registry_ts: Date.now() }, () => {
+        console.log('[BG] VFS registry backed up to chrome.storage.local, len:', data.length);
+        sendResponse({ ok: true, length: data.length });
+      });
+      break;
+    }
+
+    case 'VFS_RECOVER_REGISTRY': {
+      chrome.storage.local.get(['vfs_registry', 'vfs_registry_ts'], (result) => {
+        if (result.vfs_registry) {
+          console.log('[BG] VFS registry recovered from chrome.storage.local, len:', result.vfs_registry.length, 'ts:', result.vfs_registry_ts);
+          sendResponse({ ok: true, data: result.vfs_registry, timestamp: result.vfs_registry_ts });
+        } else {
+          console.log('[BG] VFS registry not found in chrome.storage.local');
+          sendResponse({ ok: false, error: 'no_backup' });
+        }
+      });
+      break;
+    }
+
   }
 
   return true;

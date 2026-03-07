@@ -462,18 +462,41 @@ bash /Users/yay/workspace/genspark-agent/env_check.sh
 
 ---
 
-## ΩCODE 零转义代码传输通道
+## ΩCODE/ΩDATA 零转义传输通道
 
-当需要在浏览器中执行复杂代码（含正则、引号嵌套、特殊字符）时，用 ΩCODE 通道代替 eval_js 直接写代码。
+当需要在浏览器中执行复杂代码或传输结构化数据时，用 ΩCODE/ΩDATA 通道。内容从 AI token 流直达 extension，不经过任何 JSON/shell 序列化，真正零转义。
 
-**流程：**
-1. AI 直接输出 ΩCODE + 换行 + 代码内容 + 换行 + ΩCODEEND（不需要代码块包裹）
-2. Extension SSE hook 自动拦截并存入临时存储
-3. 用 eval_js 一行读取执行: \`return window.readContextStorage().then(function(code){var fn=new Function(code);return fn()})\`
+**基本格式：**
+- \`ΩCODE\\n代码内容\\nΩCODEEND\` — 存入默认代码存储
+- \`ΩDATA\\n数据内容\\nΩDATAEND\` — 存入默认代码存储
 
-**优势：** 代码从 AI token 流直达 extension，不经过任何 JSON/shell 序列化，真正零转义。
-**注意：** ΩCODE 会覆盖临时存储内容。如需保留压缩总结，执行完后重新写入。
-**适用：** 复杂正则、引号嵌套、模板字符串、JSON 内嵌 JSON、任何之前 eval_js 会被转义搞坏的代码
+**修饰符（可组合）：**
+- \`:slot=UUID\` — 写入指定对话槽位（原始ID）
+- \`:name=xxx\` — 写入 VFS 命名槽位（需先 mount）
+- \`:append\` — 追加模式，不覆盖已有内容
+
+**示例：**
+- \`ΩCODE:name=utils:append\\nfunction helper(){...}\\nΩCODEEND\` — 追加到 vfs:utils
+- \`ΩDATA:slot=d5686637-...\\nJSON数据\\nΩDATAEND\` — 写入指定槽位
+- \`ΩCODE\\n代码\\nΩCODEEND\` — 写入默认代码存储（向后兼容）
+
+**读取执行：** \`return window.readCodeStorage().then(function(code){var fn=new Function(code);return fn()})\`
+
+## VFS 虚拟文件系统
+
+浏览器端持久化存储，基于 Genspark 对话 API，每个槽位 ~2MB。
+
+**eval_js 调用方式：**
+- \`return window.vfs.ls()\` — 列出所有槽位
+- \`return window.vfs.mount('mylib', '工具函数库')\` — 创建命名槽位
+- \`return window.vfs.read('mylib')\` — 读取内容
+- \`return window.vfs.write('mylib', '内容')\` — 覆盖写入
+- \`return window.vfs.append('mylib', '\\n新内容')\` — 追加
+- \`return window.vfs.safeWrite('mylib', '新内容')\` — 写入前自动备份到 mylib._prev
+- \`return window.vfs.unmount('test')\` — 删除槽位
+- \`return window.vfs.resolve('mylib')\` — 获取底层对话 ID
+
+**已注册槽位：** context（上下文压缩）、code（ΩCODE默认）、test（测试）、registry（VFS注册表）
 
 ---
 
@@ -3140,6 +3163,186 @@ ${tip}${contextInfo}
     window.readSlot = readSlot;
     window.createSlot = createSlot;
 
+    // ── VFS (Virtual File System) ──
+    const VFS_REGISTRY_ID = '9045a811-9a4c-4d33-ad79-31c12cebd911';
+    window.__VFS_REGISTRY_ID = VFS_REGISTRY_ID;
+
+    async function vfsReadRegistry() {
+      try {
+        const data = await readSlot(VFS_REGISTRY_ID);
+        if (data) return JSON.parse(data);
+        throw new Error('empty registry');
+      } catch(e) {
+        // Fallback: try chrome.storage.local via background
+        console.log('[VFS] Registry read failed, trying chrome.storage.local recovery...');
+        try {
+          const backup = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({ type: 'VFS_RECOVER_REGISTRY' }, resolve);
+          });
+          if (backup && backup.ok && backup.data) {
+            const reg = JSON.parse(backup.data);
+            console.log('[VFS] Recovered registry from chrome.storage.local, ts:', backup.timestamp);
+            addLog('🔄 VFS registry recovered from local backup', 'warning');
+            // Restore to cloud
+            await writeSlot(VFS_REGISTRY_ID, backup.data);
+            return reg;
+          }
+        } catch(e2) { console.error('[VFS] Local recovery also failed:', e2); }
+        return { __meta: { version: 1 }, slots: {} };
+      }
+    }
+
+    async function vfsSaveRegistry(reg) {
+      const json = JSON.stringify(reg);
+      const len = await writeSlot(VFS_REGISTRY_ID, json);
+      // Async backup to chrome.storage.local (fire and forget)
+      try {
+        chrome.runtime.sendMessage({ type: 'VFS_BACKUP_REGISTRY', data: json });
+      } catch(e) { console.error('[VFS] Backup to chrome.storage.local failed:', e); }
+      return len;
+    }
+
+    window.vfs = {
+      resolve: async function(name) {
+        const reg = await vfsReadRegistry();
+        const s = reg.slots[name];
+        return s ? s.id : null;
+      },
+
+      ls: async function() {
+        const reg = await vfsReadRegistry();
+        return Object.keys(reg.slots).map(function(k) {
+          const s = reg.slots[k];
+          return { name: k, id: s.id, desc: s.desc || '', created: s.created || '' };
+        });
+      },
+
+      mount: async function(name, desc) {
+        const reg = await vfsReadRegistry();
+        if (reg.slots[name]) return { error: 'exists', id: reg.slots[name].id };
+        const id = await createSlot(name);
+        if (!id) return { error: 'create_failed' };
+        reg.slots[name] = { id: id, created: new Date().toISOString(), desc: desc || '' };
+        await vfsSaveRegistry(reg);
+        return { ok: true, name: name, id: id };
+      },
+
+      unmount: async function(name) {
+        const reg = await vfsReadRegistry();
+        if (!reg.slots[name]) return { error: 'not_found' };
+        if (name === 'registry') return { error: 'cannot_unmount_registry' };
+        const id = reg.slots[name].id;
+        delete reg.slots[name];
+        await vfsSaveRegistry(reg);
+        await writeSlot(id, '');
+        return { ok: true, name: name, freed: id };
+      },
+
+      read: async function(name) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        return readSlot(id);
+      },
+
+      write: async function(name, content) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const len = await writeSlot(id, content);
+        return { ok: true, name: name, length: len };
+      },
+
+      append: async function(name, content) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const existing = await readSlot(id);
+        const len = await writeSlot(id, existing + content);
+        return { ok: true, name: name, length: len, appended: content.length };
+      },
+
+      snapshot: async function(name) {
+        const prevName = name + '._prev';
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const content = await readSlot(id);
+        if (!content) return { ok: true, skipped: 'empty' };
+        const reg = await vfsReadRegistry();
+        let prevId;
+        if (reg.slots[prevName]) {
+          prevId = reg.slots[prevName].id;
+        } else {
+          prevId = await createSlot(prevName);
+          reg.slots[prevName] = { id: prevId, created: new Date().toISOString(), desc: 'auto-backup of ' + name };
+          await vfsSaveRegistry(reg);
+        }
+        const len = await writeSlot(prevId, content);
+        return { ok: true, name: prevName, length: len };
+      },
+
+      safeWrite: async function(name, content) {
+        await window.vfs.snapshot(name);
+        return window.vfs.write(name, content);
+      },
+
+      backup: async function() {
+        const list = await window.vfs.ls();
+        const slots = {};
+        for (const s of list) {
+          const content = await readSlot(s.id);
+          slots[s.name] = { name: s.name, id: s.id, desc: s.desc, created: s.created, content: content };
+        }
+        const snap = {
+          meta: { version: 1, timestamp: new Date().toISOString(), slot_count: list.length },
+          slots: slots
+        };
+        const json = JSON.stringify(snap);
+        window.__vfs_snapshot = json;
+        // Also try to POST to agent server for persistence
+        try {
+          fetch('http://localhost:8766/upload-payload', {
+            method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: json
+          }).catch(function() {});
+        } catch(e) {}
+        return { ok: true, size: json.length, slot_count: list.length, hint: 'snapshot in window.__vfs_snapshot' };
+      },
+
+      restoreFrom: async function(snapshotJson) {
+        const snap = JSON.parse(snapshotJson);
+        const names = Object.keys(snap.slots);
+        const results = [];
+        for (const name of names) {
+          const s = snap.slots[name];
+          const len = await writeSlot(s.id, s.content);
+          results.push(name + ':' + len);
+        }
+        return { ok: true, restored: results };
+      }
+    };
+
+    // ── VFS cross-world event listeners ──
+    // Listen for MAIN world's sse-hook.js registry save events
+    window.addEventListener('__vfs_registry_saved__', function(e) {
+      if (e.detail) {
+        try {
+          chrome.runtime.sendMessage({ type: 'VFS_BACKUP_REGISTRY', data: e.detail });
+        } catch(err) { console.error('[VFS] Cross-world backup relay failed:', err); }
+      }
+    });
+
+    // Listen for MAIN world's recovery request
+    window.addEventListener('__vfs_recovery_needed__', function() {
+      console.log('[VFS] MAIN world requested registry recovery');
+      chrome.runtime.sendMessage({ type: 'VFS_RECOVER_REGISTRY' }, function(backup) {
+        if (backup && backup.ok && backup.data) {
+          writeSlot(VFS_REGISTRY_ID, backup.data).then(function() {
+            console.log('[VFS] Registry restored to cloud from local backup');
+            addLog('🔄 VFS registry restored from local backup (MAIN world trigger)', 'warning');
+          });
+        }
+      });
+    });
+
+    console.log('[Content] VFS functions + backup listeners registered in ISOLATED world');
+
     // autoCompress: eval_js 可调用，全自动压缩（跳过模态框和 confirm）
     window.autoCompress = async function(customSummary) {
       const btn = document.getElementById('agent-compress');
@@ -3207,7 +3410,7 @@ ${conversationText}
               project_id: projectId,
               messages: [{ id: crypto.randomUUID(), role: 'user', content: summarizePrompt }],
               user_s_input: '生成压缩总结',
-              is_private: true, push_token
+              is_private: true, push_token: ''
             })
           });
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -5144,56 +5347,52 @@ ${conversationText}
       if (owHeaderEnd === -1 || owHeaderEnd > owEndIdx) continue;
       var owHeader = text.substring(owStartIdx, owHeaderEnd);
       var owContent = text.substring(owHeaderEnd + 1, owEndIdx);
-      // Extract slot ID from header if present
+      // Parse modifiers from header: :slot=UUID, :name=xxx, :append
       var owSlotId = null;
+      var owSlotName = null;
+      var owAppend = false;
       var slotMatch = owHeader.match(/:slot=([a-f0-9-]{36})/i);
       if (slotMatch) owSlotId = slotMatch[1];
+      var nameMatch = owHeader.match(/:name=([a-zA-Z0-9_.\-]+)/);
+      if (nameMatch) owSlotName = nameMatch[1];
+      if (owHeader.indexOf(':append') !== -1) owAppend = true;
       sseState.processedCommands.add(owSig);
-      addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + (owSlotId ? " (slot:" + owSlotId.substring(0,8) + ")" : ""), "tool");
-      log("SSE " + owp.label + " captured:", owContent.length, "chars, slot:", owSlotId || "default");
-      // Write to specified slot or default code storage
-      if (owSlotId) {
-        // Write to arbitrary slot via project update API
-        (function(slotId, content, label) {
-          // DEBUG: log what we're about to write
-          console.log('[ΩDATA-DEBUG] Writing to slot', slotId, 'content len:', content.length, 'preview:', content.substring(0, 80));
-          var debugDiv = document.getElementById('__omega_debug__') || (function() {
-            var d = document.createElement('div'); d.id = '__omega_debug__'; d.style.display = 'none'; document.body.appendChild(d); return d;
-          })();
-          debugDiv.setAttribute('data-write-content', content.substring(0, 200));
-          debugDiv.setAttribute('data-write-slot', slotId);
-          debugDiv.setAttribute('data-write-len', content.length);
-          fetch("/api/project/update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ id: slotId, name: content, request_not_update_permission: true })
-          }).then(function(r) { return r.json(); })
-            .then(function(d) {
-              var len = d.data && d.data.name ? d.data.name.length : 0;
-              debugDiv.setAttribute('data-response', JSON.stringify(d).substring(0, 500));
-              debugDiv.setAttribute('data-response-len', len);
-              addLog("\u2705 " + label + " stored " + len + " chars to slot " + slotId.substring(0,8), "success");
-              log(label + " stored:", len, "chars to slot", slotId);
-              // DEBUG: read back immediately to verify
-              fetch("/api/project/update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ id: slotId, request_not_update_permission: true })
-              }).then(function(r2) { return r2.json(); }).then(function(d2) {
-                  var readback = d2.data ? (d2.data.name || '') : '';
-                  debugDiv.setAttribute('data-readback', readback.substring(0, 200));
-                  debugDiv.setAttribute('data-readback-len', readback.length);
-                  console.log('[ΩDATA-DEBUG] Readback len:', readback.length, 'match:', readback.length === content.length);
-                  addLog("🔍 readback: " + readback.length + " chars, match=" + (readback === content), "info");
-                });
-            })
-            .catch(function(e) {
-              debugDiv.setAttribute('data-error', e.message);
-              addLog("\u274C " + label + " write failed: " + e.message, "error");
+      var modStr = (owSlotId ? ' slot:' + owSlotId.substring(0,8) : '') + (owSlotName ? ' name:' + owSlotName : '') + (owAppend ? ' APPEND' : '');
+      addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + modStr, "tool");
+      log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
+      // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
+      if (owSlotName && typeof window.vfs === 'object') {
+        // VFS name-based write (with optional append)
+        (function(vfsName, content, label, append) {
+          var op = append ? window.vfs.append(vfsName, content) : window.vfs.write(vfsName, content);
+          op.then(function(result) {
+            if (result && result.error) {
+              addLog("\u274C " + label + " VFS " + vfsName + ": " + result.error, "error");
+            } else {
+              addLog("\u2705 " + label + " " + (append ? "appended" : "stored") + " " + (result.length || content.length) + " chars to vfs:" + vfsName, "success");
+            }
+          }).catch(function(e) {
+            addLog("\u274C " + label + " VFS write failed: " + e.message, "error");
+          });
+        })(owSlotName, owContent, owp.label, owAppend);
+      } else if (owSlotId) {
+        // Direct slot ID write (with optional append)
+        (function(slotId, content, label, append) {
+          var writePromise;
+          if (append) {
+            writePromise = window.readSlot(slotId).then(function(existing) {
+              return window.writeSlot(slotId, (existing || '') + content);
             });
-        })(owSlotId, owContent, owp.label);
+          } else {
+            writePromise = window.writeSlot(slotId, content);
+          }
+          writePromise.then(function(len) {
+            addLog("\u2705 " + label + " " + (append ? "appended" : "stored") + " " + len + " chars to slot " + slotId.substring(0,8), "success");
+            log(label + (append ? " appended:" : " stored:"), len, "chars to slot", slotId);
+          }).catch(function(e) {
+            addLog("\u274C " + label + " write failed: " + e.message, "error");
+          });
+        })(owSlotId, owContent, owp.label, owAppend);
       } else if (typeof window.writeCodeStorage === "function") {
         window.writeCodeStorage(owContent).then(function(len) {
           addLog("\u2705 " + owp.label + " stored " + len + " chars", "success");

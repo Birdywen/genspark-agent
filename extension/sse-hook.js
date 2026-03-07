@@ -275,5 +275,175 @@
     return 'no button';
   };
 
-  console.log('[SSE-Hook] Context + Code storage functions registered in MAIN world');
+  // ── VFS (Virtual File System) ──
+  var VFS_REGISTRY_ID = '9045a811-9a4c-4d33-ad79-31c12cebd911';
+  window.__VFS_REGISTRY_ID = VFS_REGISTRY_ID;
+
+  function vfsReadRegistry() {
+    return window.readSlot(VFS_REGISTRY_ID).then(function(data) {
+      if (data) {
+        try { return JSON.parse(data); } catch(e) { /* fall through */ }
+      }
+      // Notify content.js to attempt recovery
+      window.dispatchEvent(new CustomEvent('__vfs_recovery_needed__'));
+      return { __meta: { version: 1 }, slots: {} };
+    });
+  }
+
+  function vfsSaveRegistry(reg) {
+    var json = JSON.stringify(reg);
+    return window.writeSlot(VFS_REGISTRY_ID, json).then(function(len) {
+      // Notify content.js to backup registry to chrome.storage.local
+      window.dispatchEvent(new CustomEvent('__vfs_registry_saved__', { detail: json }));
+      return len;
+    });
+  }
+
+  window.vfs = {
+    resolve: function(name) {
+      return vfsReadRegistry().then(function(reg) {
+        var s = reg.slots[name];
+        return s ? s.id : null;
+      });
+    },
+
+    ls: function() {
+      return vfsReadRegistry().then(function(reg) {
+        return Object.keys(reg.slots).map(function(k) {
+          var s = reg.slots[k];
+          return { name: k, id: s.id, desc: s.desc || '', created: s.created || '' };
+        });
+      });
+    },
+
+    mount: function(name, desc) {
+      return vfsReadRegistry().then(function(reg) {
+        if (reg.slots[name]) return { error: 'exists', id: reg.slots[name].id };
+        return window.createSlot(name).then(function(id) {
+          if (!id) return { error: 'create_failed' };
+          reg.slots[name] = { id: id, created: new Date().toISOString(), desc: desc || '' };
+          return vfsSaveRegistry(reg).then(function() {
+            return { ok: true, name: name, id: id };
+          });
+        });
+      });
+    },
+
+    unmount: function(name) {
+      return vfsReadRegistry().then(function(reg) {
+        if (!reg.slots[name]) return { error: 'not_found' };
+        if (name === 'registry') return { error: 'cannot_unmount_registry' };
+        var id = reg.slots[name].id;
+        delete reg.slots[name];
+        return vfsSaveRegistry(reg).then(function() {
+          return window.writeSlot(id, '').then(function() {
+            return { ok: true, name: name, freed: id };
+          });
+        });
+      });
+    },
+
+    read: function(name) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlot(id);
+      });
+    },
+
+    write: function(name, content) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.writeSlot(id, content).then(function(len) {
+          return { ok: true, name: name, length: len };
+        });
+      });
+    },
+
+    append: function(name, content) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlot(id).then(function(existing) {
+          return window.writeSlot(id, existing + content).then(function(len) {
+            return { ok: true, name: name, length: len, appended: content.length };
+          });
+        });
+      });
+    },
+
+    snapshot: function(name) {
+      var prevName = name + '._prev';
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlot(id).then(function(content) {
+          if (!content) return { ok: true, skipped: 'empty' };
+          return vfsReadRegistry().then(function(reg) {
+            var saveTo;
+            if (reg.slots[prevName]) {
+              saveTo = Promise.resolve(reg.slots[prevName].id);
+            } else {
+              saveTo = window.createSlot(prevName).then(function(newId) {
+                reg.slots[prevName] = { id: newId, created: new Date().toISOString(), desc: 'auto-backup of ' + name };
+                return vfsSaveRegistry(reg).then(function() { return newId; });
+              });
+            }
+            return saveTo.then(function(prevId) {
+              return window.writeSlot(prevId, content).then(function(len) {
+                return { ok: true, name: prevName, length: len };
+              });
+            });
+          });
+        });
+      });
+    },
+
+    safeWrite: function(name, content) {
+      return window.vfs.snapshot(name).then(function() {
+        return window.vfs.write(name, content);
+      });
+    },
+
+    backup: function() {
+      return window.vfs.ls().then(function(list) {
+        var promises = list.map(function(s) {
+          return window.readSlot(s.id).then(function(content) {
+            return { name: s.name, id: s.id, desc: s.desc, created: s.created, content: content };
+          });
+        });
+        return Promise.all(promises).then(function(slots) {
+          var snap = {
+            meta: { version: 1, timestamp: new Date().toISOString(), slot_count: slots.length },
+            slots: {}
+          };
+          slots.forEach(function(s) { snap.slots[s.name] = s; });
+          var json = JSON.stringify(snap);
+          window.__vfs_snapshot = json;
+          // Also try to POST to agent server for persistence
+          fetch('http://localhost:8766/upload-payload', {
+            method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: json
+          }).catch(function() {});
+          return { ok: true, size: json.length, slot_count: slots.length, hint: 'snapshot in window.__vfs_snapshot' };
+        });
+      });
+    },
+
+    restoreFrom: function(snapshotJson) {
+      var snap = JSON.parse(snapshotJson);
+      var names = Object.keys(snap.slots);
+      var chain = Promise.resolve();
+      var results = [];
+      names.forEach(function(name) {
+        chain = chain.then(function() {
+          var s = snap.slots[name];
+          return window.writeSlot(s.id, s.content).then(function(len) {
+            results.push(name + ':' + len);
+          });
+        });
+      });
+      return chain.then(function() {
+        return { ok: true, restored: results };
+      });
+    }
+  };
+
+  console.log('[SSE-Hook] VFS + Context + Code storage functions registered in MAIN world');
 })();
