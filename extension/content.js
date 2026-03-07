@@ -3332,6 +3332,19 @@ ${tip}${contextInfo}
         return { ok: true, size: json.length, slot_count: list.length, hint: 'snapshot in window.__vfs_snapshot' };
       },
 
+      exec: async function(name, args) {
+        const code = await window.vfs.read(name);
+        if (!code || code.error) return { error: 'slot_empty_or_not_found: ' + name };
+        try {
+          const fn = new Function('args', code);
+          let result = fn(args);
+          if (result && typeof result.then === 'function') result = await result;
+          return { ok: true, result: result };
+        } catch(e) {
+          return { error: e.message, stack: e.stack };
+        }
+      },
+
       restoreFrom: async function(snapshotJson) {
         const snap = JSON.parse(snapshotJson);
         const names = Object.keys(snap.slots);

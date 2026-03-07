@@ -426,6 +426,23 @@
       });
     },
 
+    exec: function(name, args) {
+      return window.vfs.read(name).then(function(code) {
+        if (!code || code.error) return { error: 'slot_empty_or_not_found: ' + name };
+        try {
+          var fn = new Function('args', code);
+          var result = fn(args);
+          // Handle async results
+          if (result && typeof result.then === 'function') {
+            return result.then(function(r) { return { ok: true, result: r }; });
+          }
+          return { ok: true, result: result };
+        } catch(e) {
+          return { error: e.message, stack: e.stack };
+        }
+      });
+    },
+
     restoreFrom: function(snapshotJson) {
       var snap = JSON.parse(snapshotJson);
       var names = Object.keys(snap.slots);
