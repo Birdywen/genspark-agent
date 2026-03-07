@@ -3064,6 +3064,38 @@ ${tip}${contextInfo}
       } catch(e) { console.error('readContextStorage failed:', e); return ''; }
     }
 
+    // ── 代码存储 (独立对话，与上下文存储隔离) ──
+    const CODE_STORAGE_ID = '731a7c05-a990-4dc2-9b42-25f58b9e454e';
+
+    async function writeCodeStorage(text) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: CODE_STORAGE_ID, name: text, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data && d.data.name ? d.data.name.length : 0;
+      } catch(e) { console.error('writeCodeStorage failed:', e); return 0; }
+    }
+
+    async function readCodeStorage() {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: CODE_STORAGE_ID, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data ? (d.data.name || '') : '';
+      } catch(e) { console.error('readCodeStorage failed:', e); return ''; }
+    }
+
+    window.writeCodeStorage = writeCodeStorage;
+    window.readCodeStorage = readCodeStorage;
+
     // autoCompress: eval_js 可调用，全自动压缩（跳过模态框和 confirm）
     window.autoCompress = async function(customSummary) {
       const btn = document.getElementById('agent-compress');
@@ -5038,8 +5070,8 @@ ${conversationText}
         var codeContent = text.substring(codeStartIdx + codeStartMarker.length, codeEndIdx);
         addLog("\u26A1 OMEGACODE captured " + codeContent.length + " chars", "tool");
         log("SSE OMEGACODE captured:", codeContent.length, "chars");
-        if (typeof window.writeContextStorage === "function") {
-          window.writeContextStorage(codeContent).then(function(len) {
+        if (typeof window.writeCodeStorage === "function") {
+          window.writeCodeStorage(codeContent).then(function(len) {
             addLog("\u2705 OMEGACODE stored " + len + " chars", "success");
             log("OMEGACODE stored:", len, "chars");
           });
