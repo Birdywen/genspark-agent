@@ -645,6 +645,12 @@ const processManager = new ProcessManager();
 // 工具别名映射
 const TOOL_ALIASES = {
   'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.stdinFile && { stdinFile: p.stdinFile }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) },
+  'screenshot': { target: 'take_screenshot', transform: (p) => p },
+  'browser_navigate': { target: 'navigate', transform: (p) => p },
+  'browser_eval': { target: 'eval_js', transform: (p) => p },
+  'reload_tools': { target: 'list_tools', transform: () => ({}) },
+  'run': { target: 'run_process', transform: (p) => p },
+  'read_text_file': { target: 'read_file', transform: (p) => p },
   'bg_run': null,
   'bg_status': null,
   'bg_kill': null
