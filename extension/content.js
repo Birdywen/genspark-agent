@@ -498,6 +498,33 @@ bash /Users/yay/workspace/genspark-agent/env_check.sh
 
 **已注册槽位：** context（上下文压缩）、code（ΩCODE默认）、test（测试）、registry（VFS注册表）
 
+## 启动自检流程 (Boot Sequence)
+
+每次新对话开始时，执行以下启动流程：
+
+1. **读取 VFS 注册表**: \`return window.vfs.ls()\`
+   - 成功 → 报告槽位数量，继续
+   - 失败/空 → 自动从 chrome.storage.local 恢复（内置机制），等 3 秒后重试
+   - 仍然失败 → 报告用户，需要从猛兽服务器手动恢复
+
+2. **加载上下文记忆**: \`return window.vfs.read('context')\`
+   - 读取上次压缩保存的上下文摘要，了解之前在做什么
+
+3. **健康检查**: 确认关键槽位可读
+   - context、code、registry 三个核心槽位必须存在
+
+4. **报告状态**: 向用户简要汇报 VFS 状态和已恢复的上下文
+
+**三级容灾恢复：**
+- L1: Genspark API（默认，实时）
+- L2: chrome.storage.local（自动，注册表每次变更同步备份）
+- L3: 猛兽服务器 /home/ubuntu/vfs-backups/（手动，AI 通过 ssh-oracle 读取最新快照后调用 vfs.restoreFrom）
+
+**好习惯：**
+- 写了有价值的工具函数 → \`vfs.safeWrite\` 或 \`vfs.append\` 存入 toolkit
+- 重要修改前 → \`vfs.snapshot('name')\` 手动备份
+- 长时间工作后 → \`vfs.backup()\` 全量快照，AI 将快照 scp 到猛兽
+
 ---
 
 ⚠️ **每次回复前自检：工具调用是否在代码块内？是否在回复最后？格式是否为 ΩHERE？**
