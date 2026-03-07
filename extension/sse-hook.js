@@ -235,6 +235,40 @@
       .catch(function(e) { console.error('readCodeStorage failed:', e); return ''; });
   };
 
+  // ── 通用槽位读写 (MAIN world) ──
+  window.writeSlot = function(slotId, text) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, name: text, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data && d.data.name ? d.data.name.length : 0; })
+      .catch(function(e) { console.error('writeSlot failed:', e); return 0; });
+  };
+
+  window.readSlot = function(slotId) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
+      .catch(function(e) { console.error('readSlot failed:', e); return ''; });
+  };
+
+  window.createSlot = function(name) {
+    return fetch('/api/project/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ session_state: {steps: [], messages: []}, name: name || '', type: 'ai_chat' })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data ? d.data.id : null; })
+      .catch(function(e) { console.error('createSlot failed:', e); return null; });
+  };
+
   window.autoCompress = function() {
     var btn = document.getElementById('agent-compress');
     if (btn) { btn.click(); return 'triggered'; }
