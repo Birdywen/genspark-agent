@@ -61,3 +61,15 @@ skills/newzik-omr/songs/
 # SOS experimental scripts
 scripts/sos-ask2.*
 .cookies
+
+# Old experimental extension
+extension-atxp/
+
+# News video pipeline (standalone scripts, not core agent)
+news-video-pipeline*.js
+scripts/news-video-pipeline*.js
+scripts/news-script-*.md
+scripts/pipeline-flowchart.html
+
+# Backup files (extended - catch .bak_xxx patterns)
+*.bak_*
