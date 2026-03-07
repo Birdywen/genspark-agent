@@ -3096,6 +3096,50 @@ ${tip}${contextInfo}
     window.writeCodeStorage = writeCodeStorage;
     window.readCodeStorage = readCodeStorage;
 
+    // ── 通用槽位读写 (虚拟文件系统基础) ──
+    async function writeSlot(slotId, text) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: slotId, name: text, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data && d.data.name ? d.data.name.length : 0;
+      } catch(e) { console.error('writeSlot failed:', e); return 0; }
+    }
+
+    async function readSlot(slotId) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data ? (d.data.name || '') : '';
+      } catch(e) { console.error('readSlot failed:', e); return ''; }
+    }
+
+    async function createSlot(name) {
+      try {
+        const r = await fetch('/api/project/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ session_state: {steps: [], messages: []}, name: name || '', type: 'ai_chat' })
+        });
+        const d = await r.json();
+        return d.data ? d.data.id : null;
+      } catch(e) { console.error('createSlot failed:', e); return null; }
+    }
+
+    window.writeSlot = writeSlot;
+    window.readSlot = readSlot;
+    window.createSlot = createSlot;
+
     // autoCompress: eval_js 可调用，全自动压缩（跳过模态框和 confirm）
     window.autoCompress = async function(customSummary) {
       const btn = document.getElementById('agent-compress');
@@ -5058,27 +5102,63 @@ ${conversationText}
     const text = sseState.currentText;
     if (!text) return;
 
-    // -- OMEGACODE: zero-escape code transport channel --
-    var codeStartMarker = "\u03A9CODE\n";
-    var codeEndMarker = "\n\u03A9CODEEND";
-    var codeStartIdx = text.indexOf(codeStartMarker);
-    var codeEndIdx = text.indexOf(codeEndMarker);
-    if (codeStartIdx !== -1 && codeEndIdx !== -1 && codeEndIdx > codeStartIdx) {
-      var codeSig = "sse:omegacode:" + codeStartIdx;
-      if (!sseState.processedCommands.has(codeSig)) {
-        sseState.processedCommands.add(codeSig);
-        var codeContent = text.substring(codeStartIdx + codeStartMarker.length, codeEndIdx);
-        addLog("\u26A1 OMEGACODE captured " + codeContent.length + " chars", "tool");
-        log("SSE OMEGACODE captured:", codeContent.length, "chars");
-        if (typeof window.writeCodeStorage === "function") {
-          window.writeCodeStorage(codeContent).then(function(len) {
-            addLog("\u2705 OMEGACODE stored " + len + " chars", "success");
-            log("OMEGACODE stored:", len, "chars");
-          });
-        } else {
-          window.__OMEGA_CODE = codeContent;
-          addLog("\u26A0 OMEGACODE saved to window.__OMEGA_CODE (storage unavailable)", "warning");
-        }
+    // -- OMEGA WRITE: zero-escape data transport channel --
+    // Supports: \u03A9CODE, \u03A9DATA, with optional :slot=ID modifier
+    // Format: \u03A9CODE[:slot=conversationId]\n...content...\n\u03A9CODEEND
+    //         \u03A9DATA[:slot=conversationId]\n...content...\n\u03A9DATAEND
+    var omegaWritePatterns = [
+      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" },
+      { prefix: "\u03A9DATA", endTag: "\u03A9DATAEND", label: "OMEGADATA" }
+    ];
+    for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
+      var owp = omegaWritePatterns[owi];
+      // Find start marker: prefix optionally followed by :slot=ID, then newline
+      var owStartIdx = text.indexOf(owp.prefix);
+      if (owStartIdx === -1) continue;
+      var owEndMarker = "\n" + owp.endTag;
+      var owEndIdx = text.indexOf(owEndMarker, owStartIdx);
+      if (owEndIdx === -1 || owEndIdx <= owStartIdx) continue;
+      var owSig = "sse:omegawrite:" + owp.label + ":" + owStartIdx;
+      if (sseState.processedCommands.has(owSig)) continue;
+      // Parse the header line (from prefix to first newline)
+      var owHeaderEnd = text.indexOf("\n", owStartIdx);
+      if (owHeaderEnd === -1 || owHeaderEnd > owEndIdx) continue;
+      var owHeader = text.substring(owStartIdx, owHeaderEnd);
+      var owContent = text.substring(owHeaderEnd + 1, owEndIdx);
+      // Extract slot ID from header if present
+      var owSlotId = null;
+      var slotMatch = owHeader.match(/:slot=([a-f0-9-]{36})/i);
+      if (slotMatch) owSlotId = slotMatch[1];
+      sseState.processedCommands.add(owSig);
+      addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + (owSlotId ? " (slot:" + owSlotId.substring(0,8) + ")" : ""), "tool");
+      log("SSE " + owp.label + " captured:", owContent.length, "chars, slot:", owSlotId || "default");
+      // Write to specified slot or default code storage
+      if (owSlotId) {
+        // Write to arbitrary slot via project update API
+        (function(slotId, content, label) {
+          fetch("/api/project/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ id: slotId, name: content, request_not_update_permission: true })
+          }).then(function(r) { return r.json(); })
+            .then(function(d) {
+              var len = d.data && d.data.name ? d.data.name.length : 0;
+              addLog("\u2705 " + label + " stored " + len + " chars to slot " + slotId.substring(0,8), "success");
+              log(label + " stored:", len, "chars to slot", slotId);
+            })
+            .catch(function(e) {
+              addLog("\u274C " + label + " write failed: " + e.message, "error");
+            });
+        })(owSlotId, owContent, owp.label);
+      } else if (typeof window.writeCodeStorage === "function") {
+        window.writeCodeStorage(owContent).then(function(len) {
+          addLog("\u2705 " + owp.label + " stored " + len + " chars", "success");
+          log(owp.label + " stored:", len, "chars");
+        });
+      } else {
+        window.__OMEGA_CODE = owContent;
+        addLog("\u26A0 " + owp.label + " saved to window.__OMEGA_CODE (storage unavailable)", "warning");
       }
     }
 
