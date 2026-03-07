@@ -5113,8 +5113,26 @@ ${conversationText}
     ];
     for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
       var owp = omegaWritePatterns[owi];
-      // Find start marker: prefix optionally followed by :slot=ID, then newline
-      var owStartIdx = text.indexOf(owp.prefix);
+      // Find start marker: prefix must be at line start (preceded by \n or text start)
+      // and followed immediately by \n or :slot= (not arbitrary text like "ΩDATA 回复")
+      var owStartIdx = -1;
+      var owSearchFrom = 0;
+      while (owSearchFrom < text.length) {
+        var candidateIdx = text.indexOf(owp.prefix, owSearchFrom);
+        if (candidateIdx === -1) break;
+        // Check: must be at start of line (pos 0 or preceded by \n)
+        if (candidateIdx > 0 && text[candidateIdx - 1] !== "\n") {
+          owSearchFrom = candidateIdx + owp.prefix.length;
+          continue;
+        }
+        // Check: after prefix must be \n (bare marker) or : (for :slot=)
+        var afterPrefix = text[candidateIdx + owp.prefix.length];
+        if (afterPrefix === "\n" || afterPrefix === ":") {
+          owStartIdx = candidateIdx;
+          break;
+        }
+        owSearchFrom = candidateIdx + owp.prefix.length;
+      }
       if (owStartIdx === -1) continue;
       var owEndMarker = "\n" + owp.endTag;
       var owEndIdx = text.indexOf(owEndMarker, owStartIdx);
@@ -5137,6 +5155,14 @@ ${conversationText}
       if (owSlotId) {
         // Write to arbitrary slot via project update API
         (function(slotId, content, label) {
+          // DEBUG: log what we're about to write
+          console.log('[ΩDATA-DEBUG] Writing to slot', slotId, 'content len:', content.length, 'preview:', content.substring(0, 80));
+          var debugDiv = document.getElementById('__omega_debug__') || (function() {
+            var d = document.createElement('div'); d.id = '__omega_debug__'; d.style.display = 'none'; document.body.appendChild(d); return d;
+          })();
+          debugDiv.setAttribute('data-write-content', content.substring(0, 200));
+          debugDiv.setAttribute('data-write-slot', slotId);
+          debugDiv.setAttribute('data-write-len', content.length);
           fetch("/api/project/update", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -5145,10 +5171,26 @@ ${conversationText}
           }).then(function(r) { return r.json(); })
             .then(function(d) {
               var len = d.data && d.data.name ? d.data.name.length : 0;
+              debugDiv.setAttribute('data-response', JSON.stringify(d).substring(0, 500));
+              debugDiv.setAttribute('data-response-len', len);
               addLog("\u2705 " + label + " stored " + len + " chars to slot " + slotId.substring(0,8), "success");
               log(label + " stored:", len, "chars to slot", slotId);
+              // DEBUG: read back immediately to verify
+              fetch("/api/project/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+              }).then(function(r2) { return r2.json(); }).then(function(d2) {
+                  var readback = d2.data ? (d2.data.name || '') : '';
+                  debugDiv.setAttribute('data-readback', readback.substring(0, 200));
+                  debugDiv.setAttribute('data-readback-len', readback.length);
+                  console.log('[ΩDATA-DEBUG] Readback len:', readback.length, 'match:', readback.length === content.length);
+                  addLog("🔍 readback: " + readback.length + " chars, match=" + (readback === content), "info");
+                });
             })
             .catch(function(e) {
+              debugDiv.setAttribute('data-error', e.message);
               addLog("\u274C " + label + " write failed: " + e.message, "error");
             });
         })(owSlotId, owContent, owp.label);
