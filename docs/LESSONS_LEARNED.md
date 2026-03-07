@@ -956,3 +956,27 @@ DELIMITER
 2. server index.js: 防御性校验——run_command 无 stdin 但 command 含空格时拒绝执行
 3. HEREDOC 和 BATCH 的 SSE 执行保留（它们的解析更可靠），只对 JSON 格式加强校验
 **关键**: SSE 通道是主执行通道（拿到原始数据），DOM 是备选（渲染后可能损坏）。加强 SSE 解析可靠性而非禁用它。
+
+## 2026-03-07 eval_js 复杂脚本安全执行（base64 中转）
+
+### eval_js 多层转义导致复杂脚本损坏
+**问题**: eval_js 的 code 参数经过 JSON → JS 多层转义，复杂脚本（含正则、引号嵌套、模板字符串、特殊字符）几乎必出错
+**解决**: write_file 写脚本到本地（零转义）→ base64 编码 → eval_js 中 atob 解码 → new Function 执行
+
+**标准流程（3步）:**
+1. `write_file` 写脚本到 `/private/tmp/_exec.js`（内容任意复杂，零转义）
+2. `run_command` 执行 `base64 -i /private/tmp/_exec.js | tr -d '\n'` 得到单行 base64
+3. `eval_js` 执行: `var code=atob('BASE64字符串'); var fn=new Function(code); return fn();`
+
+**原理**: base64 只含 A-Za-z0-9+/= 安全字符，不会被任何层转义搞坏。atob 在浏览器端解码恢复原始代码，new Function 执行。
+
+**对比方案（不推荐）:**
+- AI Drive 中转: 上传 ~1.3s + 下载 ~400ms + 删除 ~600ms，延迟太高
+- 临时存储(project name): 可行但会覆盖现有存储内容
+- 直接在 eval_js 参数里写代码: 简单脚本可以，复杂脚本必出转义问题
+
+**适用场景**: eval_js 中需要执行的脚本超过 3 行、含正则、含引号嵌套、含 JSON 字符串、含模板字面量时，一律走此方案
+
+### writeContextStorage 写后读回验证
+**问题**: 压缩时 writeContextStorage 可能因 tabId 错误等原因写入失败，但返回值看起来正常，导致旧内容未被更新，压缩后总结跳到旧日期
+**解决**: writeContextStorage 写入后立即 readContextStorage 读回，比对前100字符，不一致时自动重试一次并记录日志
