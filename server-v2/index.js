@@ -978,7 +978,50 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       callTimeout = 120000;
     }
     const callOptions = callTimeout ? { timeout: callTimeout } : {};
+
+    // ── write_file 保护: 检测内容截断 ──
+    if (tool === 'write_file' && params.content !== undefined) {
+      const contentLines = (params.content.match(/\n/g) || []).length + 1;
+      const contentLen = params.content.length;
+      // 警告: content 只有 1 行但非常短，可能被截断
+      if (contentLines <= 1 && contentLen < 50) {
+        logger.warning(`[WriteProtect] ⚠️ write_file 内容疑似截断: ${contentLen} chars, ${contentLines} 行 → ${params.path}`);
+      }
+      // 记录写入前的信息，用于写入后验证（存到闭包变量，不污染 params）
+    }
+    const _writeProtectInfo = (tool === 'write_file' && params.content !== undefined)
+      ? { expectedLen: params.content.length, expectedLines: (params.content.match(/\n/g) || []).length + 1, path: params.path }
+      : null;
+
+    // ── edit_file 保护: 记录 edits 信息用于诊断 ──
+    if (tool === 'edit_file' && params.edits && Array.isArray(params.edits)) {
+      for (let ei = 0; ei < params.edits.length; ei++) {
+        const edit = params.edits[ei];
+        if (edit.oldText && edit.oldText.length < 5) {
+          logger.warning(`[EditProtect] ⚠️ edit_file edits[${ei}].oldText 过短 (${edit.oldText.length} chars)，可能匹配错误`);
+        }
+      }
+    }
+
     const r = await hub.call(tool, params, callOptions);
+
+    // ── write_file 写入后验证 ──
+    if (_writeProtectInfo) {
+      try {
+        const wp = _writeProtectInfo;
+        const validPath = wp.path.startsWith('/') ? wp.path : path.resolve(wp.path);
+        const actualContent = readFileSync(validPath, 'utf-8');
+        const actualLen = actualContent.length;
+        const actualLines = (actualContent.match(/\n/g) || []).length + 1;
+        if (actualLen !== wp.expectedLen) {
+          logger.error(`[WriteProtect] ❌ write_file 验证失败! 期望 ${wp.expectedLen} chars / ${wp.expectedLines} 行, 实际 ${actualLen} chars / ${actualLines} 行 → ${wp.path}`);
+        } else {
+          logger.info(`[WriteProtect] ✅ write_file 验证通过: ${actualLen} chars, ${actualLines} 行 → ${wp.path}`);
+        }
+      } catch(wpErr) {
+        logger.warning(`[WriteProtect] 验证跳过: ${wpErr.message}`);
+      }
+    }
     let result = r;
     
     if (r && r.content && Array.isArray(r.content)) {

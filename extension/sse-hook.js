@@ -160,3 +160,38 @@
 
   console.log('[SSE-Hook] EventSource + ReadableStream hooks installed at document_start');
 })();
+
+// ── 跨压缩记忆存储 (MAIN world) ──
+(function() {
+  window.__CONTEXT_STORAGE_ID = '59cdb9cb-b175-4cdd-af44-e8927d7b006a';
+
+  window.writeContextStorage = function(text) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data && d.data.name ? d.data.name.length : 0; })
+      .catch(function(e) { console.error('writeContextStorage failed:', e); return 0; });
+  };
+
+  window.readContextStorage = function() {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
+      .catch(function(e) { console.error('readContextStorage failed:', e); return ''; });
+  };
+
+  window.autoCompress = function() {
+    var btn = document.getElementById('agent-compress');
+    if (btn) { btn.click(); return 'triggered'; }
+    return 'no button';
+  };
+
+  console.log('[SSE-Hook] Context storage functions registered in MAIN world');
+})();

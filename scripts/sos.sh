@@ -443,6 +443,106 @@ except Exception as e:
     print("Error:",e,file=sys.stderr)
 '
         ;;
+  # === 一键重试最后一条命令 ===
+  replay|rp)
+    HISTORY_FILE="$AGENT_DIR/server-v2/command-history.json"
+    if [ ! -f "$HISTORY_FILE" ]; then
+      echo "❌ 找不到命令历史文件"
+      exit 1
+    fi
+    # 可选参数: sos replay [ID]
+    TARGET_ID="${2:-}"
+    
+    SCRIPT_CONTENT=$(python3 -c "
+import json, sys, os, tempfile
+hf = '$HISTORY_FILE'
+target = '${TARGET_ID}'
+with open(hf) as f:
+    data = json.load(f)
+history = data.get('history', [])
+if not history:
+    print('ERROR:历史为空', file=sys.stderr)
+    sys.exit(1)
+
+if target:
+    entry = next((h for h in history if str(h['id']) == target), None)
+    if not entry:
+        print(f'ERROR:找不到 #{target}', file=sys.stderr)
+        # 显示最近5条
+        print('最近命令:', file=sys.stderr)
+        for h in history[-5:]:
+            tool = h.get('tool','?')
+            preview = (h.get('resultPreview','') or '')[:60]
+            status = '✅' if h.get('success') else '❌'
+            print(f'  #{h[\"id\"]} {status} {tool} | {preview}', file=sys.stderr)
+        sys.exit(1)
+else:
+    # 取最后一条 run_process / bg_run 命令（跳过 replay 自身和 bg_status 等查询命令）
+    skip_tools = {'bg_status', 'bg_kill', 'replay', 'delay_run'}
+    candidates = [h for h in history if h.get('tool') not in skip_tools]
+    if not candidates:
+        print('ERROR:没有可重放的命令', file=sys.stderr)
+        sys.exit(1)
+    entry = candidates[-1]
+
+tool = entry.get('tool', '')
+params = entry.get('params', {})
+eid = entry['id']
+
+# 还原 bash 脚本
+if tool == 'run_process' and params.get('stdin'):
+    print(f'ID:{eid}')
+    print(f'TOOL:{tool}')
+    print('STDIN:' + params['stdin'])
+elif tool in ('bg_run',) and params.get('command'):
+    print(f'ID:{eid}')
+    print(f'TOOL:{tool}')
+    print('CMD:' + params['command'])
+else:
+    print(f'ERROR:不支持重放 {tool}', file=sys.stderr)
+    sys.exit(1)
+")
+    
+    if [ $? -ne 0 ]; then
+      echo "$SCRIPT_CONTENT"
+      exit 1
+    fi
+    
+    REPLAY_ID=$(echo "$SCRIPT_CONTENT" | head -1 | sed 's/^ID://')
+    REPLAY_TOOL=$(echo "$SCRIPT_CONTENT" | sed -n '2p' | sed 's/^TOOL://')
+    
+    echo "🔄 重放命令 #$REPLAY_ID ($REPLAY_TOOL)"
+    
+    if echo "$SCRIPT_CONTENT" | grep -q "^STDIN:"; then
+      # 有 stdin 的命令，提取脚本内容执行
+      BASH_SCRIPT=$(echo "$SCRIPT_CONTENT" | sed -n '/^STDIN:/,$p' | sed '1s/^STDIN://')
+      echo "━━━ 脚本内容 ━━━"
+      echo "$BASH_SCRIPT" | head -5
+      LINES=$(echo "$BASH_SCRIPT" | wc -l | tr -d ' ')
+      [ "$LINES" -gt 5 ] && echo "... (共 $LINES 行)"
+      echo "━━━━━━━━━━━━━━━"
+      read -p "执行? [Y/n] " confirm
+      confirm=${confirm:-Y}
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        echo "$BASH_SCRIPT" | bash
+      else
+        echo "已取消"
+      fi
+    elif echo "$SCRIPT_CONTENT" | grep -q "^CMD:"; then
+      CMD_LINE=$(echo "$SCRIPT_CONTENT" | sed -n '/^CMD:/,$p' | sed '1s/^CMD://')
+      echo "━━━ 命令 ━━━"
+      echo "$CMD_LINE"
+      echo "━━━━━━━━━━━"
+      read -p "执行? [Y/n] " confirm
+      confirm=${confirm:-Y}
+      if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        eval "$CMD_LINE"
+      else
+        echo "已取消"
+      fi
+    fi
+    ;;
+
   *)
     show_help
     ;;

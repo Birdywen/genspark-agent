@@ -2997,6 +2997,190 @@ ${tip}${contextInfo}
       editor.focus();
     }
 
+    // ── 跨压缩记忆存储 ──
+    const CONTEXT_STORAGE_ID = '59cdb9cb-b175-4cdd-af44-e8927d7b006a';
+
+    async function writeContextStorage(text) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data && d.data.name ? d.data.name.length : 0;
+      } catch(e) { console.error('writeContextStorage failed:', e); return 0; }
+    }
+
+    async function readContextStorage() {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: CONTEXT_STORAGE_ID, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data ? (d.data.name || '') : '';
+      } catch(e) { console.error('readContextStorage failed:', e); return ''; }
+    }
+
+    // autoCompress: eval_js 可调用，全自动压缩（跳过模态框和 confirm）
+    window.autoCompress = async function(customSummary) {
+      const btn = document.getElementById('agent-compress');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+      
+      let summary = customSummary;
+      
+      if (!summary) {
+        // 自动提取对话内容，调用 AI 生成摘要
+        addLog('🤖 autoCompress: 提取对话内容...', 'info');
+        
+        const msgs = document.querySelectorAll('.conversation-statement');
+        const lines = [];
+        let totalLen = 0;
+        for (const msg of msgs) {
+          if (totalLen > 80000) { lines.push('...(省略)'); break; }
+          const isUser = msg.classList.contains('user');
+          const el = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
+          let text = (el ? el.innerText : msg.innerText) || '';
+          text = text.replace(/\[执行结果\][\s\S]{300,}/g, m => m.substring(0, 300) + '...(截断)');
+          if (text.length > 2000) text = text.substring(0, 2000) + '...(截断)';
+          lines.push((isUser ? '【用户】' : '【AI】') + text);
+          totalLen += text.length;
+        }
+        const conversationText = lines.join('\n\n');
+        const projectId = new URLSearchParams(location.search).get('id');
+        
+        if (!projectId) {
+          if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
+          return 'failed: no projectId';
+        }
+        
+        const summarizePrompt = `你是一个上下文压缩专家。请根据以下对话内容生成一份结构化的压缩总结。
+
+要求：
+1. 第一行必须是: [上下文压缩总结 - ${new Date().toISOString().split('T')[0]}]
+2. 包含: ## 项目/任务、## 环境、## 已完成、## 关键发现、## TODO、## 关键信息
+3. 保留硬信息：路径、端口、IP，敏感值用 [REDACTED]
+4. 总长度 2K-5K 字符
+5. 最后必须包含以下段落（原样保留）：
+
+## 临时上下文存储
+AI 可通过 eval_js 在 genspark.ai 标签页中读写临时上下文（需先 list_tabs 找到 genspark.ai 的 tabId）：
+- 存储对话 ID: 59cdb9cb-b175-4cdd-af44-e8927d7b006a
+- 写入: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',name:'要存的内容',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return 'saved:'+d.data.name.length})
+- 读取: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return d.data.name})
+
+=== 对话内容 ===
+${conversationText}
+
+请直接输出压缩总结。`;
+        
+        addLog('📡 autoCompress: 调用 AI 生成摘要...', 'info');
+        try {
+          const r = await fetch('/api/agent/ask_proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              ai_chat_model: 'claude-opus-4-6',
+              ai_chat_enable_search: false,
+              ai_chat_disable_personalization: true,
+              use_moa_proxy: false, moa_models: [],
+              writingContent: null, type: 'ai_chat',
+              project_id: projectId,
+              messages: [{ id: crypto.randomUUID(), role: 'user', content: summarizePrompt }],
+              user_s_input: '生成压缩总结',
+              is_private: true, push_token
+            })
+          });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const reader = r.body.getReader();
+          const decoder = new TextDecoder();
+          summary = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(value, { stream: true });
+            for (const line of text.split('\n')) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.substring(6));
+                  if (data.type === 'message_field_delta' && data.field_name === 'content') summary += data.delta;
+                } catch(e) {}
+              }
+            }
+          }
+          if (!summary || summary.length < 100) {
+            if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
+            return 'failed: summary too short (' + (summary||'').length + ')';
+          }
+          addLog('✅ autoCompress: 摘要 ' + summary.length + ' 字符', 'success');
+        } catch(e) {
+          if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
+          return 'failed: ' + e.message;
+        }
+      }
+      
+      // 备份到跨会话存储
+      addLog('💾 autoCompress: 备份到存储...', 'info');
+      const savedLen = await writeContextStorage(summary);
+      addLog('💾 autoCompress: 已备份 ' + savedLen + ' 字符', 'success');
+      // 压缩（重写 messages）
+      const projectId2 = new URLSearchParams(location.search).get('id');
+      const firstUserBubble = document.querySelector('.conversation-statement.user .bubble');
+      if (!firstUserBubble || !projectId2) {
+        if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
+        return 'failed: missing projectId or first message';
+      }
+      const firstMsg = firstUserBubble.innerText;
+      
+      addLog('🗜️ autoCompress: 执行压缩...', 'info');
+      try {
+        const r = await fetch('/api/agent/ask_proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ai_chat_model: 'claude-opus-4-6',
+            ai_chat_enable_search: false,
+            ai_chat_disable_personalization: true,
+            use_moa_proxy: false, moa_models: [],
+            writingContent: null, type: 'ai_chat',
+            project_id: projectId2,
+            messages: [
+              { id: projectId2, role: 'user', content: firstMsg },
+              { id: crypto.randomUUID(), role: 'assistant', content: '**[执行结果]** `run_process` ✓ 成功:\n```\nhello\n```' },
+              { id: crypto.randomUUID(), role: 'user', content: summary }
+            ],
+            user_s_input: summary.substring(0, 200),
+            is_private: true, push_token: ''
+          })
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        // 读完流
+        const reader = r.body.getReader();
+        while (true) {
+          const { done } = await reader.read();
+          if (done) break;
+        }
+        addLog('✅ autoCompress: 压缩完成，2秒后刷新', 'success');
+        setTimeout(() => location.reload(), 2000);
+        return 'ok: compressed ' + summary.length + ' chars, backed up ' + savedLen + ' chars';
+      } catch(e) {
+        if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
+        return 'failed: compress ' + e.message;
+      }
+    };
+
+    // 暴露给 eval_js 调用（content script world）
+    window.writeContextStorage = writeContextStorage;
+    window.readContextStorage = readContextStorage;
+
+    // NOTE: writeContextStorage/readContextStorage/autoCompress 已通过 sse-hook.js 注入 MAIN world
+
     document.getElementById('agent-compress').onclick = () => {
       let summary = window.__COMPRESS_SUMMARY || localStorage.getItem('__COMPRESS_SUMMARY');
       
@@ -3087,6 +3271,13 @@ ${tip}${contextInfo}
 4. 简洁但完整，总长度控制在 2K-5K 字符
 5. TODO 要从对话中提取用户提到的待办事项
 6. 关键发现要包含踩坑经验和重要技术决策
+7. 最后必须包含以下段落（原样保留，不要修改）：
+
+## 临时上下文存储
+AI 可通过 eval_js 在 genspark.ai 标签页中读写临时上下文（需先 list_tabs 找到 genspark.ai 的 tabId）：
+- 存储对话 ID: 59cdb9cb-b175-4cdd-af44-e8927d7b006a
+- 写入: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',name:'要存的内容',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return 'saved:'+d.data.name.length})
+- 读取: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return d.data.name})
 
 === 命令历史摘要 ===
 ${historyInfo}
@@ -3136,8 +3327,14 @@ ${conversationText}
                   
                   addLog('✅ AI 总结已生成 (' + aiSummary.length + ' 字符)', 'success');
                   
+                  // Step 35: 自动备份摘要到跨会话存储
+                  const cleanSummary = redactSecretsForCompress(aiSummary.trim());
+                  writeContextStorage(cleanSummary).then(len => {
+                    addLog('💾 已备份 ' + len + ' 字符到跨会话存储', 'success');
+                  });
+                  
                   // Step 4: 全屏模态框让用户查看和编辑总结
-                  showCompressModal(redactSecretsForCompress(aiSummary.trim()));
+                  showCompressModal(cleanSummary);
                    return;
                 }
                 const text = decoder.decode(result.value, { stream: true });
@@ -3184,6 +3381,12 @@ ${conversationText}
       }
 
       addLog('🗜️ 开始压缩...', 'info');
+      
+      // 备份摘要到跨会话存储
+      writeContextStorage(summary).then(len => {
+        addLog('💾 已备份 ' + len + ' 字符到跨会话存储', 'success');
+      });
+      
       const btn = document.getElementById('agent-compress');
       btn.disabled = true;
       btn.textContent = '⏳';
@@ -4698,9 +4901,14 @@ ${conversationText}
     var p = call.params;
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
-    if (paramLen > 100) {
+    // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file');
+    if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
+    }
+    if (sseAllowLarge && paramLen > 100) {
+      log("SSE allow-large: " + call.name + " (" + paramLen + " chars) - SSE 直传避免 DOM 截断");
     }
     // eval_js / async_task: JS 语法检查
     if ((call.name === 'eval_js' || call.name === 'async_task') && p.code) {
