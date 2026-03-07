@@ -858,6 +858,13 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       /\bdemucs\b/,
       /\bwhisper\b/,
       /\bbasic[_-]pitch\b/,
+      /\bnohup\b/,
+      /\bnpx\s+next\s+(dev|build|start)\b/,
+      /\bnext\s+(dev|build|start)\b/,
+      /\bscp\s+-/,
+      /\brsync\b/,
+      /\bwrangler\s+(deploy|publish)\b/,
+      /\bcurl\b.*(-o|--output).*\.(mp[34]|zip|tar|gz|iso)\b/,
     ];
     const isLong = longPatterns.some(p => p.test(cmd));
     // 检测 sleep 命令也走 bg_run（sleep 在普通执行模式下必定 timeout）
@@ -991,9 +998,12 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
 
     // 支持灵活 timeout: 从原始 message 中提取
     let callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
-    // SSH 工具默认给 120s timeout（SSH 连接可能需要重连）
+    // SSH 工具默认给 120s timeout，长命令自动延长
     if (!callTimeout && tool.startsWith('ssh-')) {
-      callTimeout = 120000;
+      const sshCmd = (params.command || '').toLowerCase();
+      const isLongSSH = /nohup|pipeline|--test|npms+install|pip3?s+install|gits+clone|dockers+(build|pull)|demucs|whisper|ffmpeg/.test(sshCmd);
+      callTimeout = isLongSSH ? 600000 : 120000; // 10min for long, 2min default
+      if (isLongSSH) logger.info('[SSH] 检测到长时间命令，超时延长至 600s: ' + sshCmd.substring(0, 80));
     }
     const callOptions = callTimeout ? { timeout: callTimeout } : {};
 
