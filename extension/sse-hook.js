@@ -172,7 +172,28 @@
       credentials: 'include',
       body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
     }).then(function(r) { return r.json(); })
-      .then(function(d) { return d.data && d.data.name ? d.data.name.length : 0; })
+      .then(function(d) {
+        var savedLen = d.data && d.data.name ? d.data.name.length : 0;
+        if (savedLen > 0) {
+          // 写后读回验证
+          return window.readContextStorage().then(function(readBack) {
+            var expectedPrefix = text.substring(0, 100);
+            var actualPrefix = readBack.substring(0, 100);
+            if (actualPrefix !== expectedPrefix) {
+              console.warn('writeContextStorage: verify mismatch! retrying...');
+              return fetch('/api/project/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
+              }).then(function(r2) { return r2.json(); })
+                .then(function(d2) { return d2.data && d2.data.name ? d2.data.name.length : 0; });
+            }
+            return savedLen;
+          });
+        }
+        return savedLen;
+      })
       .catch(function(e) { console.error('writeContextStorage failed:', e); return 0; });
   };
 

@@ -3009,7 +3009,28 @@ ${tip}${contextInfo}
           body: JSON.stringify({ id: CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
         });
         const d = await r.json();
-        return d.data && d.data.name ? d.data.name.length : 0;
+        const savedLen = d.data && d.data.name ? d.data.name.length : 0;
+        // 写后读回验证
+        if (savedLen > 0) {
+          const readBack = await readContextStorage();
+          const expectedPrefix = text.substring(0, 100);
+          const actualPrefix = readBack.substring(0, 100);
+          if (actualPrefix !== expectedPrefix) {
+            console.warn('writeContextStorage: verify mismatch! retrying...', { expectedPrefix, actualPrefix });
+            addLog('⚠️ 存储写入验证不一致，重试...', 'warning');
+            const r2 = await fetch('/api/project/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ id: CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
+            });
+            const d2 = await r2.json();
+            const retryLen = d2.data && d2.data.name ? d2.data.name.length : 0;
+            addLog(retryLen > 0 ? '✅ 重试写入成功 (' + retryLen + ' 字符)' : '❌ 重试写入失败', retryLen > 0 ? 'success' : 'error');
+            return retryLen;
+          }
+        }
+        return savedLen;
       } catch(e) { console.error('writeContextStorage failed:', e); return 0; }
     }
 
