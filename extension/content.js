@@ -2500,21 +2500,28 @@ ${toolSummary}
       const allMsgs = document.querySelectorAll('.conversation-statement');
       const totalMsgs = allMsgs.length;
       let totalChars = 0;
-      allMsgs.forEach(function(m) { totalChars += m.textContent.length; });
+      
+      // 如果有服务端真实数据（compress-chat后更新），优先使用
+      if (window.__serverMsgChars > 0) {
+        totalChars = window.__serverMsgChars;
+      } else {
+        allMsgs.forEach(function(m) { totalChars += m.textContent.length; });
+      }
       const charsK = Math.round(totalChars / 1000);
       
       // 加上注入prompt长度（AI实际看到的总量）
       const injectedSize = window.__injectedPromptSize || 0;
       const effectiveChars = totalChars + injectedSize;
       const effectiveK = Math.round(effectiveChars / 1000);
+      const source = window.__serverMsgChars > 0 ? '服务端' : '本地';
       
       // 主要靠字符数判断，消息数辅助
       if (effectiveChars > 700000 || totalMsgs > 300) {
-        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K字符(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，建议执行上下文压缩]`;
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，执行 compress-chat 压缩]`;
       } else if (effectiveChars > 500000 || totalMsgs > 200) {
-        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K字符(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
       } else {
-        contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K字符]`;
+        contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K${source}]`;
       }
     } catch(e) {}
     
