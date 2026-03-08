@@ -601,6 +601,7 @@
         return buildDynamicContent().then(function(dynamicContent) {
           if (dynamicContent) {
             body.messages[0].content = firstMsg.content + dynamicContent;
+            window.__injectedPromptSize = dynamicContent.length;
             console.log('[SSE-Hook] Dynamic content appended: +' + dynamicContent.length + ' chars');
           }
           var newOpts = {};
@@ -626,10 +627,12 @@
           if (dynamicContent) fullPrompt += dynamicContent;
           // Prefix system prompt to first message content
           body.messages[0].content = fullPrompt + '\n\n---\n\n# User Message\n\n' + firstMsg.content;
+          window.__injectedPromptSize = fullPrompt.length;
           console.log('[SSE-Hook] Full system prompt auto-injected as prefix: ' + fullPrompt.length + ' chars');
         } else if (dynamicContent) {
           // Fallback: no system prompt in VFS, just append dynamic
           body.messages[0].content = firstMsg.content + dynamicContent;
+          window.__injectedPromptSize = dynamicContent.length;
           console.log('[SSE-Hook] Fallback: dynamic content appended: +' + dynamicContent.length + ' chars');
         }
 
@@ -679,6 +682,41 @@
     };
   };
 
-  console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append modes)');
+  // ── Reverse Channel: 浏览器→AI 异步结果传递 ──
+  // 浏览器端写入: window.__reverseChannel.push({key, data, ts})
+  // AI端读取: eval_js return window.__reverseChannel.read()
+  // 也会持久化到 VFS (如果可用)
+  window.__reverseChannel = {
+    _queue: [],
+    push: function(entry) {
+      if (!entry.key) entry.key = 'unnamed';
+      entry.ts = Date.now();
+      this._queue.push(entry);
+      console.log('[ReverseChannel] pushed: ' + entry.key + ' (' + JSON.stringify(entry.data).length + ' chars)');
+      // 持久化到 VFS
+      if (typeof window.vfs === 'object' && typeof window.vfs.append === 'function') {
+        var line = '\n[' + new Date(entry.ts).toISOString() + '] ' + entry.key + ': ' + JSON.stringify(entry.data);
+        window.vfs.append('context', line).catch(function() {});
+      }
+    },
+    read: function(key) {
+      if (key) {
+        var filtered = this._queue.filter(function(e) { return e.key === key; });
+        this._queue = this._queue.filter(function(e) { return e.key !== key; });
+        return filtered;
+      }
+      var all = this._queue.slice();
+      this._queue = [];
+      return all;
+    },
+    peek: function() {
+      return this._queue.slice();
+    },
+    size: function() {
+      return this._queue.length;
+    }
+  };
+
+  console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
 

@@ -2503,13 +2503,18 @@ ${toolSummary}
       allMsgs.forEach(function(m) { totalChars += m.textContent.length; });
       const charsK = Math.round(totalChars / 1000);
       
+      // 加上注入prompt长度（AI实际看到的总量）
+      const injectedSize = window.__injectedPromptSize || 0;
+      const effectiveChars = totalChars + injectedSize;
+      const effectiveK = Math.round(effectiveChars / 1000);
+      
       // 主要靠字符数判断，消息数辅助
-      if (totalChars > 700000 || totalMsgs > 300) {
-        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${charsK}K字符 — 已超过压缩阈值，建议执行上下文压缩]`;
-      } else if (totalChars > 500000 || totalMsgs > 200) {
-        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${charsK}K字符 — 接近压缩阈值]`;
+      if (effectiveChars > 700000 || totalMsgs > 300) {
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K字符(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，建议执行上下文压缩]`;
+      } else if (effectiveChars > 500000 || totalMsgs > 200) {
+        contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K字符(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
       } else {
-        contextInfo = `\n[对话状态: ${totalMsgs}条/${charsK}K字符]`;
+        contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K字符]`;
       }
     } catch(e) {}
     
@@ -3316,10 +3321,19 @@ ${conversationText}
         }
       }
       
-      // 备份到跨会话存储
+      // 备份到跨会话存储 + VFS context 槽位
       addLog('💾 autoCompress: 备份到存储...', 'info');
       const savedLen = await writeContextStorage(summary);
-      addLog('💾 autoCompress: 已备份 ' + savedLen + ' 字符', 'success');
+      addLog('💾 autoCompress: 已备份 ' + savedLen + ' 字符到跨会话存储', 'success');
+      // 同步写入 VFS context 槽位（供下次对话注入）
+      try {
+        if (typeof window.vfs === 'object' && typeof window.vfs.write === 'function') {
+          await window.vfs.write('context', summary);
+          addLog('💾 autoCompress: 已同步到 VFS context 槽位', 'success');
+        }
+      } catch(vfsErr) {
+        addLog('⚠️ autoCompress: VFS 写入失败: ' + vfsErr.message, 'error');
+      }
       // 压缩（重写 messages）
       const projectId2 = new URLSearchParams(location.search).get('id');
       const firstUserBubble = document.querySelector('.conversation-statement.user .bubble');
@@ -3519,11 +3533,16 @@ ${conversationText}
                   
                   addLog('✅ AI 总结已生成 (' + aiSummary.length + ' 字符)', 'success');
                   
-                  // Step 35: 自动备份摘要到跨会话存储
+                  // Step 35: 自动备份摘要到跨会话存储 + VFS
                   const cleanSummary = redactSecretsForCompress(aiSummary.trim());
                   writeContextStorage(cleanSummary).then(len => {
                     addLog('💾 已备份 ' + len + ' 字符到跨会话存储', 'success');
                   });
+                  if (typeof window.vfs === 'object' && typeof window.vfs.write === 'function') {
+                    window.vfs.write('context', cleanSummary).then(() => {
+                      addLog('💾 已同步到 VFS context 槽位', 'success');
+                    }).catch(() => {});
+                  }
                   
                   // Step 4: 全屏模态框让用户查看和编辑总结
                   showCompressModal(cleanSummary);
@@ -3574,10 +3593,17 @@ ${conversationText}
 
       addLog('🗜️ 开始压缩...', 'info');
       
-      // 备份摘要到跨会话存储
+      // 备份摘要到跨会话存储 + VFS context 槽位
       writeContextStorage(summary).then(len => {
         addLog('💾 已备份 ' + len + ' 字符到跨会话存储', 'success');
       });
+      if (typeof window.vfs === 'object' && typeof window.vfs.write === 'function') {
+        window.vfs.write('context', summary).then(() => {
+          addLog('💾 已同步到 VFS context 槽位', 'success');
+        }).catch(e => {
+          addLog('⚠️ VFS 写入失败: ' + e.message, 'error');
+        });
+      }
       
       const btn = document.getElementById('agent-compress');
       btn.disabled = true;
@@ -3660,8 +3686,10 @@ ${conversationText}
         const totalMsgs = allMsgs.length;
         let totalChars = 0;
         allMsgs.forEach(m => { totalChars += m.textContent.length; });
-        overThreshold = totalChars > 700000 || totalMsgs > 300;
-        nearThreshold = totalChars > 500000 || totalMsgs > 200;
+        const injSize = window.__injectedPromptSize || 0;
+        const effChars = totalChars + injSize;
+        overThreshold = effChars > 700000 || totalMsgs > 300;
+        nearThreshold = effChars > 500000 || totalMsgs > 200;
       } catch(e) {}
       
       // 优先级: ready(总结就绪) > warning(超阈值) > 正常
