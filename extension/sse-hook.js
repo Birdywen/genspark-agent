@@ -676,6 +676,23 @@
           });
         });
       });
+    },
+
+    // ── Phase 5: Executable Command Library ──
+    execMsg: function(slot, key, args) {
+      return window.vfs.readMsg(slot, key).then(function(code) {
+        if (!code) return { error: 'not_found: ' + slot + '/' + key };
+        try {
+          var fn = new Function('args', code);
+          var result = fn(args);
+          if (result && typeof result.then === 'function') {
+            return result.then(function(r) { return { ok: true, key: key, result: r }; });
+          }
+          return { ok: true, key: key, result: result };
+        } catch(e) {
+          return { error: e.message, key: key, stack: e.stack };
+        }
+      });
     }
   };
 

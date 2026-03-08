@@ -3401,6 +3401,20 @@ ${tip}${contextInfo}
         var result = await resp.json();
         var finalCount = result.data && result.data.session_state && result.data.session_state.messages ? result.data.session_state.messages.length : -1;
         return { ok: true, from: fromId, to: toId, cloned: srcMsgs.length, totalMessages: finalCount };
+      },
+
+      // ── Phase 5: Executable Command Library ──
+      execMsg: async function(slot, key, args) {
+        var code = await window.vfs.readMsg(slot, key);
+        if (!code) return { error: 'not_found: ' + slot + '/' + key };
+        try {
+          var fn = new Function('args', code);
+          var result = fn(args);
+          if (result && typeof result.then === 'function') result = await result;
+          return { ok: true, key: key, result: result };
+        } catch(e) {
+          return { error: e.message, key: key, stack: e.stack };
+        }
       }
 
     };
