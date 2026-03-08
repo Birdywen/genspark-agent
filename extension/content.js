@@ -3161,6 +3161,7 @@ ${tip}${contextInfo}
         const id = await window.vfs.resolve(name);
         if (!id) return { error: 'not_found: ' + name };
         const len = await writeSlot(id, content);
+        if (name.indexOf("._prev") === -1) { window.vfs._logChange(name, "write", "name", len, content).catch(function(){}); }
         return { ok: true, name: name, length: len };
       },
 
@@ -3286,6 +3287,7 @@ ${tip}${contextInfo}
           msgs.push({ id: key, role: 'user', content: value });
         }
         const count = await writeSlotMessages(id, msgs);
+        if (key.indexOf("_h:") !== 0) { window.vfs._logChange(name, "writeMsg:" + key, "messages", (value || "").length, value).catch(function(){}); }
         return { ok: true, name: name, key: key, totalMessages: count };
       },
 
@@ -3422,6 +3424,87 @@ ${tip}${contextInfo}
         } catch(e) {
           return { error: e.message, key: key, stack: e.stack };
         }
+      },
+
+      // ── Phase 6: Version History ──
+      _historyPrefix: '_h:',
+      _historyMax: 20,
+
+      _logChange: async function(name, op, channel, size, preview) {
+        try {
+          var id = await window.vfs.resolve(name);
+          if (!id) return;
+          var ts = new Date().toISOString();
+          var key = '_h:' + ts;
+          var pv = (preview || '').substring(0, 200);
+          var entry = JSON.stringify({op: op, ch: channel, size: size, pv: pv, ts: ts});
+          var msgs = await readSlotMessages(id);
+          msgs.push({id: key, role: 'user', content: entry});
+          var hMsgs = msgs.filter(function(m) {
+            return m.id && m.id.indexOf('_h:') === 0;
+          });
+          if (hMsgs.length > window.vfs._historyMax) {
+            var cut = hMsgs.length - window.vfs._historyMax;
+            var rIds = {};
+            for (var i = 0; i < cut; i++) {
+              rIds[hMsgs[i].id] = true;
+            }
+            msgs = msgs.filter(function(m) {
+              return !rIds[m.id];
+            });
+          }
+          await writeSlotMessages(id, msgs);
+        } catch(e) {
+          console.error('[VFS] _logChange failed:', e);
+        }
+      },
+
+      history: async function(name) {
+        var id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        var msgs = await readSlotMessages(id);
+        var entries = [];
+        for (var i = 0; i < msgs.length; i++) {
+          var mid = msgs[i].id;
+          if (mid && mid.indexOf('_h:') === 0) {
+            try {
+              var e = JSON.parse(msgs[i].content);
+              entries.push(e);
+            } catch(err) {}
+          }
+        }
+        entries.sort(function(a, b) {
+          return a.ts > b.ts ? -1 : 1;
+        });
+        return { name: name, count: entries.length, entries: entries };
+      },
+
+      rollback: async function(name, version) {
+        var id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        var msgs = await readSlotMessages(id);
+        var target = null;
+        for (var i = 0; i < msgs.length; i++) {
+          if (msgs[i].id === '_h:' + version) {
+            try {
+              target = JSON.parse(msgs[i].content);
+            } catch(e) {}
+            break;
+          }
+        }
+        if (!target) {
+          return { error: 'version_not_found: ' + version };
+        }
+        if (!target.snapshot) {
+          return { error: 'no_snapshot (only safeWrite creates snapshots)' };
+        }
+        var len = await writeSlot(id, target.snapshot);
+        var logP = window.vfs._logChange(
+          name, 'rollback', 'name', len,
+          'rolled back to ' + version
+        );
+        await logP;
+        return { ok: true, name: name, rolledBackTo: version, length: len };
       }
 
     };

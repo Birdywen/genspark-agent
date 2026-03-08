@@ -390,6 +390,7 @@
       return window.vfs.resolve(name).then(function(id) {
         if (!id) return { error: 'not_found: ' + name };
         return window.writeSlot(id, content).then(function(len) {
+          if (name.indexOf("._prev") === -1 && window.vfs._logChange) { window.vfs._logChange(name, "write", "name", len, content); }
           return { ok: true, name: name, length: len };
         });
       });
@@ -547,6 +548,7 @@
           }
           if (!found) msgs.push({ id: key, role: 'user', content: value });
           return window.writeSlotMessages(id, msgs).then(function(count) {
+            if (key.indexOf("_h:") !== 0 && window.vfs._logChange) { window.vfs._logChange(name, "writeMsg:" + key, "messages", (value || "").length, value); }
             return { ok: true, name: name, key: key, totalMessages: count };
           });
         });
@@ -692,6 +694,92 @@
         } catch(e) {
           return { error: e.message, key: key, stack: e.stack };
         }
+      });
+    },
+
+    // ── Phase 6: Version History ──
+    _historyPrefix: '_h:',
+    _historyMax: 20,
+
+    _logChange: function(name, op, channel, size, preview) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return;
+        var ts = new Date().toISOString();
+        var key = '_h:' + ts;
+        var pv = (preview || '').substring(0, 200);
+        var entry = JSON.stringify({op: op, ch: channel, size: size, pv: pv, ts: ts});
+        return window.readSlotMessages(id).then(function(msgs) {
+          msgs.push({id: key, role: 'user', content: entry});
+          var hMsgs = msgs.filter(function(m) {
+            return m.id && m.id.indexOf('_h:') === 0;
+          });
+          if (hMsgs.length > window.vfs._historyMax) {
+            var cut = hMsgs.length - window.vfs._historyMax;
+            var rIds = {};
+            for (var i = 0; i < cut; i++) {
+              rIds[hMsgs[i].id] = true;
+            }
+            msgs = msgs.filter(function(m) {
+              return !rIds[m.id];
+            });
+          }
+          return window.writeSlotMessages(id, msgs);
+        });
+      }).catch(function(e) {
+        console.error('[VFS] _logChange failed:', e);
+      });
+    },
+
+    history: function(name) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var entries = [];
+          for (var i = 0; i < msgs.length; i++) {
+            var mid = msgs[i].id;
+            if (mid && mid.indexOf('_h:') === 0) {
+              try {
+                var e = JSON.parse(msgs[i].content);
+                entries.push(e);
+              } catch(err) {}
+            }
+          }
+          entries.sort(function(a, b) {
+            return a.ts > b.ts ? -1 : 1;
+          });
+          return { name: name, count: entries.length, entries: entries };
+        });
+      });
+    },
+
+    rollback: function(name, version) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var target = null;
+          for (var i = 0; i < msgs.length; i++) {
+            if (msgs[i].id === '_h:' + version) {
+              try {
+                target = JSON.parse(msgs[i].content);
+              } catch(e) {}
+              break;
+            }
+          }
+          if (!target) {
+            return { error: 'version_not_found: ' + version };
+          }
+          if (!target.snapshot) {
+            return { error: 'no_snapshot (only safeWrite creates snapshots)' };
+          }
+          return window.writeSlot(id, target.snapshot).then(function(len) {
+            return window.vfs._logChange(
+              name, 'rollback', 'name', len,
+              'rolled back to ' + version
+            ).then(function() {
+              return { ok: true, name: name, rolledBackTo: version, length: len };
+            });
+          });
+        });
       });
     }
   };
