@@ -3505,8 +3505,79 @@ ${tip}${contextInfo}
         );
         await logP;
         return { ok: true, name: name, rolledBackTo: version, length: len };
-      }
+      },
 
+      // ── Phase 7: Structured Query ──
+      query: async function(slot, opts) {
+        var o = opts || {};
+        var id = await window.vfs.resolve(slot);
+        if (!id) return { error: 'not_found: ' + slot };
+        var msgs = await readSlotMessages(id);
+        var results = [];
+        for (var i = 0; i < msgs.length; i++) {
+          var m = msgs[i];
+          var key = m.id || '';
+          var content = m.content || '';
+          var size = content.length;
+          if (o.prefix && key.indexOf(o.prefix) !== 0) continue;
+          if (o.exclude && key.indexOf(o.exclude) === 0) continue;
+          if (o.contains && content.indexOf(o.contains) === -1) continue;
+          if (o.role && m.role !== o.role) continue;
+          if (o.minSize && size < o.minSize) continue;
+          if (o.maxSize && size > o.maxSize) continue;
+          if (o.after || o.before) {
+            try {
+              var entry = JSON.parse(content);
+              var ts = entry.ts || '';
+              if (o.after && ts < o.after) continue;
+              if (o.before && ts > o.before) continue;
+            } catch(e) {
+              if (o.after || o.before) continue;
+            }
+          }
+          results.push({
+            key: key,
+            role: m.role,
+            size: size,
+            preview: content.substring(0, 150)
+          });
+          if (o.limit && results.length >= o.limit) break;
+        }
+        return { slot: slot, total: results.length, results: results };
+      },
+
+      search: async function(keyword) {
+        var list = await window.vfs.ls();
+        var found = [];
+        for (var s = 0; s < list.length; s++) {
+          var slot = list[s];
+          var id = slot.id;
+          var nameContent = await readSlot(id);
+          if (nameContent && nameContent.indexOf(keyword) > -1) {
+            var idx = nameContent.indexOf(keyword);
+            found.push({
+              slot: slot.name,
+              channel: 'name',
+              pos: idx,
+              context: nameContent.substring(Math.max(0, idx - 40), idx + keyword.length + 40)
+            });
+          }
+          var msgs = await readSlotMessages(id);
+          for (var i = 0; i < msgs.length; i++) {
+            var c = msgs[i].content || '';
+            var mIdx = c.indexOf(keyword);
+            if (mIdx > -1) {
+              found.push({
+                slot: slot.name,
+                channel: 'msg:' + (msgs[i].id || i),
+                pos: mIdx,
+                context: c.substring(Math.max(0, mIdx - 40), mIdx + keyword.length + 40)
+              });
+            }
+          }
+        }
+        return { keyword: keyword, total: found.length, results: found };
+      }
     };
 
     // ── VFS cross-world event listeners ──
