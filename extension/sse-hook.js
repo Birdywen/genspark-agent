@@ -329,7 +329,7 @@
       });
     },
 
-    unmount: function(name) {
+    unmount: function(name, opts) {
       return vfsReadRegistry().then(function(reg) {
         if (!reg.slots[name]) return { error: 'not_found' };
         if (name === 'registry') return { error: 'cannot_unmount_registry' };
@@ -337,7 +337,11 @@
         delete reg.slots[name];
         return vfsSaveRegistry(reg).then(function() {
           return window.writeSlot(id, '').then(function() {
-            return { ok: true, name: name, freed: id };
+            // Permanently delete the underlying Genspark project
+            if (!opts || opts.keep !== true) {
+              fetch('/api/project/delete?project_id=' + id, { credentials: 'include' }).catch(function() {});
+            }
+            return { ok: true, name: name, freed: id, deleted: !opts || opts.keep !== true };
           });
         });
       });
