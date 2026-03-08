@@ -3189,26 +3189,35 @@ ${tip}${contextInfo}
         return window.vfs.write(name, content);
       },
 
-      backup: async function() {
+      backup: async function(options) {
+        // VFS 2.0 backup: name + messages dual-channel
+        const opts = options || {};
+        const includeMessages = opts.messages !== false; // default true
         const list = await window.vfs.ls();
         const slots = {};
         for (const s of list) {
-          const content = await readSlot(s.id);
-          slots[s.name] = { name: s.name, id: s.id, desc: s.desc, created: s.created, content: content };
+          const slotData = { name: s.name, id: s.id, desc: s.desc, created: s.created };
+          slotData.content = await readSlot(s.id);
+          if (includeMessages) {
+            try {
+              slotData.messages = await readSlotMessages(s.id);
+            } catch(e) { slotData.messages = []; }
+          }
+          slots[s.name] = slotData;
         }
         const snap = {
-          meta: { version: 1, timestamp: new Date().toISOString(), slot_count: list.length },
+          meta: { version: 2, timestamp: new Date().toISOString(), slot_count: list.length, includesMessages: includeMessages },
           slots: slots
         };
         const json = JSON.stringify(snap);
         window.__vfs_snapshot = json;
-        // Also try to POST to agent server for persistence
+        // POST to agent server for persistence
         try {
           fetch('http://localhost:8766/upload-payload', {
             method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: json
           }).catch(function() {});
         } catch(e) {}
-        return { ok: true, size: json.length, slot_count: list.length, hint: 'snapshot in window.__vfs_snapshot' };
+        return { ok: true, size: json.length, slot_count: list.length, version: 2, includesMessages: includeMessages };
       },
 
       exec: async function(name, args) {
@@ -3224,16 +3233,27 @@ ${tip}${contextInfo}
         }
       },
 
-      restoreFrom: async function(snapshotJson) {
-        const snap = JSON.parse(snapshotJson);
+      restoreFrom: async function(snapshotJson, options) {
+        // VFS 2.0 restore: name + messages dual-channel
+        const opts = options || {};
+        const snap = typeof snapshotJson === 'string' ? JSON.parse(snapshotJson) : snapshotJson;
+        const version = snap.meta && snap.meta.version || 1;
         const names = Object.keys(snap.slots);
         const results = [];
         for (const name of names) {
           const s = snap.slots[name];
-          const len = await writeSlot(s.id, s.content);
-          results.push(name + ':' + len);
+          // Restore name channel
+          const len = await writeSlot(s.id, s.content || '');
+          var msgCount = 0;
+          // Restore messages channel (v2+)
+          if (version >= 2 && s.messages && s.messages.length > 0 && opts.skipMessages !== true) {
+            try {
+              msgCount = await writeSlotMessages(s.id, s.messages);
+            } catch(e) { msgCount = -1; }
+          }
+          results.push(name + ':name=' + len + ',msgs=' + msgCount);
         }
-        return { ok: true, restored: results };
+        return { ok: true, version: version, restored: results };
       },
 
       // ── Messages Channel (VFS 2.0) ──

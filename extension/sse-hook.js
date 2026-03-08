@@ -438,26 +438,40 @@
       });
     },
 
-    backup: function() {
+    backup: function(options) {
+      var opts = options || {};
+      var includeMessages = opts.messages !== false;
       return window.vfs.ls().then(function(list) {
-        var promises = list.map(function(s) {
-          return window.readSlot(s.id).then(function(content) {
-            return { name: s.name, id: s.id, desc: s.desc, created: s.created, content: content };
+        var chain = Promise.resolve();
+        var slotResults = [];
+        list.forEach(function(s) {
+          chain = chain.then(function() {
+            return window.readSlot(s.id).then(function(nameContent) {
+              var slotData = { name: s.name, id: s.id, desc: s.desc, created: s.created, content: nameContent };
+              if (includeMessages) {
+                return window.readSlotMessages(s.id).then(function(msgs) {
+                  slotData.messages = msgs;
+                  slotResults.push(slotData);
+                }).catch(function() { slotData.messages = []; slotResults.push(slotData); });
+              } else {
+                slotResults.push(slotData);
+                return Promise.resolve();
+              }
+            });
           });
         });
-        return Promise.all(promises).then(function(slots) {
+        return chain.then(function() {
           var snap = {
-            meta: { version: 1, timestamp: new Date().toISOString(), slot_count: slots.length },
+            meta: { version: 2, timestamp: new Date().toISOString(), slot_count: slotResults.length, includesMessages: includeMessages },
             slots: {}
           };
-          slots.forEach(function(s) { snap.slots[s.name] = s; });
+          slotResults.forEach(function(s) { snap.slots[s.name] = s; });
           var json = JSON.stringify(snap);
           window.__vfs_snapshot = json;
-          // Also try to POST to agent server for persistence
           fetch('http://localhost:8766/upload-payload', {
             method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: json
           }).catch(function() {});
-          return { ok: true, size: json.length, slot_count: slots.length, hint: 'snapshot in window.__vfs_snapshot' };
+          return { ok: true, size: json.length, slot_count: slotResults.length, version: 2, includesMessages: includeMessages };
         });
       });
     },
@@ -479,21 +493,31 @@
       });
     },
 
-    restoreFrom: function(snapshotJson) {
-      var snap = JSON.parse(snapshotJson);
+    restoreFrom: function(snapshotJson, options) {
+      var opts = options || {};
+      var snap = typeof snapshotJson === 'string' ? JSON.parse(snapshotJson) : snapshotJson;
+      var version = snap.meta && snap.meta.version || 1;
       var names = Object.keys(snap.slots);
       var chain = Promise.resolve();
       var results = [];
       names.forEach(function(name) {
         chain = chain.then(function() {
           var s = snap.slots[name];
-          return window.writeSlot(s.id, s.content).then(function(len) {
-            results.push(name + ':' + len);
+          return window.writeSlot(s.id, s.content || '').then(function(len) {
+            var entry = name + ':name=' + len;
+            if (version >= 2 && s.messages && s.messages.length > 0 && opts.skipMessages !== true) {
+              return window.writeSlotMessages(s.id, s.messages).then(function(msgCount) {
+                results.push(entry + ',msgs=' + msgCount);
+              }).catch(function() { results.push(entry + ',msgs=-1'); });
+            } else {
+              results.push(entry + ',msgs=0');
+              return Promise.resolve();
+            }
           });
         });
       });
       return chain.then(function() {
-        return { ok: true, restored: results };
+        return { ok: true, version: version, restored: results };
       });
     },
 
