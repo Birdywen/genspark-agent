@@ -846,6 +846,7 @@
   };
 
   console.log('[SSE-Hook] VFS + Context + Code storage functions registered in MAIN world');
+  setTimeout(function() { if (window.vfs && window.vfs.loadExtensions) window.vfs.loadExtensions().then(function(r) { console.log("[VFS] Extensions loaded:", r.loaded); }).catch(function(){}); }, 1000);
 })();
 
 

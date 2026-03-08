@@ -3580,6 +3580,9 @@ ${tip}${contextInfo}
       }
     };
 
+    // ── Auto-load VFS extensions from fn messages ──
+    setTimeout(function() { if (window.vfs && window.vfs.loadExtensions) window.vfs.loadExtensions().then(function(r) { console.log("[VFS] Extensions loaded:", r.loaded); }).catch(function(){}); }, 1000);
+
     // ── VFS cross-world event listeners ──
     // Listen for MAIN world's sse-hook.js registry save events
     window.addEventListener('__vfs_registry_saved__', function(e) {
