@@ -3290,7 +3290,99 @@ ${tip}${contextInfo}
           messages: msgsArr.length,
           keys: Object.keys(data)
         };
+      },
+
+      // ── Phase 3: Conversation History Management ──
+
+      cleanup: async function(name, filterFn) {
+        // Clean up messages in a VFS slot. filterFn(msg) returns true to KEEP.
+        // Without filterFn, removes messages with empty content.
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const msgs = await readSlotMessages(id);
+        var before = msgs.length;
+        var kept;
+        if (filterFn) {
+          kept = msgs.filter(filterFn);
+        } else {
+          kept = msgs.filter(function(m) { return m.content && m.content.trim().length > 0; });
+        }
+        var removed = before - kept.length;
+        if (removed === 0) return { ok: true, name: name, removed: 0, remaining: before };
+        var count = await writeSlotMessages(id, kept);
+        return { ok: true, name: name, removed: removed, remaining: count };
+      },
+
+      inject: async function(conversationId, messages) {
+        // Inject messages into any conversation's session_state.messages[]
+        // messages: array of {role, content} or {id, role, content}
+        if (!conversationId) return { error: 'no_conversation_id' };
+        if (!messages || !messages.length) return { error: 'no_messages' };
+        var data = await readSlotFull(conversationId);
+        if (!data) return { error: 'read_failed' };
+        var ss = data.session_state || { messages: [] };
+        if (!ss.messages) ss.messages = [];
+        var injected = 0;
+        for (var i = 0; i < messages.length; i++) {
+          var m = messages[i];
+          ss.messages.unshift({
+            id: m.id || ('injected-' + Date.now() + '-' + i),
+            role: m.role || 'user',
+            content: m.content || ''
+          });
+          injected++;
+        }
+        var resp = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: conversationId, session_state: ss, request_not_update_permission: true })
+        });
+        var result = await resp.json();
+        var finalCount = result.data && result.data.session_state && result.data.session_state.messages ? result.data.session_state.messages.length : -1;
+        return { ok: true, injected: injected, totalMessages: finalCount };
+      },
+
+      export: async function(conversationId) {
+        // Export full conversation data as JSON
+        if (!conversationId) return { error: 'no_conversation_id' };
+        var data = await readSlotFull(conversationId);
+        if (!data) return { error: 'read_failed' };
+        return {
+          ok: true,
+          id: data.id,
+          name: data.name,
+          type: data.type,
+          ctime: data.ctime,
+          mtime: data.mtime,
+          messages: data.session_state && data.session_state.messages ? data.session_state.messages.map(function(m) {
+            return { id: m.id, role: m.role, content: m.content, ctime: m.ctime };
+          }) : [],
+          session_state_keys: data.session_state ? Object.keys(data.session_state) : []
+        };
+      },
+
+      clone: async function(fromId, toId) {
+        // Clone messages from one conversation to another
+        if (!fromId || !toId) return { error: 'need_both_fromId_and_toId' };
+        var srcData = await readSlotFull(fromId);
+        if (!srcData) return { error: 'source_read_failed' };
+        var srcMsgs = srcData.session_state && srcData.session_state.messages ? srcData.session_state.messages : [];
+        if (srcMsgs.length === 0) return { error: 'source_empty' };
+        var dstData = await readSlotFull(toId);
+        if (!dstData) return { error: 'dest_read_failed' };
+        var dstSs = { messages: srcMsgs.map(function(m) { return { id: m.id, role: m.role, content: m.content }; }) };
+        var resp = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: toId, session_state: dstSs, request_not_update_permission: true })
+        });
+        var result = await resp.json();
+        var finalCount = result.data && result.data.session_state && result.data.session_state.messages ? result.data.session_state.messages.length : -1;
+        return { ok: true, from: fromId, to: toId, cloned: srcMsgs.length, totalMessages: finalCount };
       }
+
     };
 
     // ── VFS cross-world event listeners ──
