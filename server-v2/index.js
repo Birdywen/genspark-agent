@@ -254,6 +254,7 @@ const agentsData = loadAgents();
 
 // 存储连接的客户端
 const clients = new Set();
+const browserToolPending = new Map(); // 浏览器工具的 pending Promise 管理（模块级，供 handleToolCall 访问）
 
 // 广播消息
 function broadcast(message) {
@@ -841,6 +842,89 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }, delay);
     return;
   }
+
+  // ── vfs_write: 大内容直写 VFS messages[] 通道 ──
+  // AI 调用: ΩHERE vfs_write @slot=toolkit @key=xxx @content<<EOF ... EOF
+  // 也支持写 name通道: ΩHERE vfs_write @slot=toolkit @content<<EOF ... EOF (不传 key)
+  if (tool === 'vfs_write' || tool === 'vfs_read' || tool === 'vfs_delete') {
+    // payloadFile 解析：大内容通过 HTTP 上传后变成 contentFile，需要还原
+    if (params.contentFile && !params.content) {
+      try {
+        params.content = readFileSync(params.contentFile, 'utf-8');
+        logger.info(`[VFS] 从 payloadFile 加载 content: ${params.content.length} chars <- ${params.contentFile}`);
+        try { unlinkSync(params.contentFile); } catch(e) {}
+        delete params.contentFile;
+      } catch(e) {
+        logger.warning(`[VFS] payloadFile 读取失败: ${e.message}`);
+      }
+    }
+    logger.info(`[VFS] ${tool} 收到参数: slot=${params.slot} key=${params.key} contentLen=${params.content?.length} contentPreview=${JSON.stringify((params.content || '').substring(0, 100))}`);
+    const historyId = addToHistory(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
+    
+    // 需要浏览器执行（因为要用 Genspark cookie）
+    const vfsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    
+    let jsCode;
+    if (tool === 'vfs_write') {
+      if (!params.slot) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_write 需要 slot 参数' }));
+        return;
+      }
+      if (params.key) {
+        // 写入 messages[] 通道 (key-value)
+        const contentJson = JSON.stringify(params.content || '');
+        const keyJson = JSON.stringify(params.key);
+        jsCode = `return window.vfs.writeMsg(${JSON.stringify(params.slot)}, ${keyJson}, ${contentJson}).then(function(r) { return 'writeMsg ok: ' + JSON.stringify(r); })`;
+      } else {
+        // 写入 name 通道 (原始字符串)
+        const contentJson = JSON.stringify(params.content || '');
+        jsCode = `return window.vfs.write(${JSON.stringify(params.slot)}, ${contentJson}).then(function(r) { return 'write ok: ' + JSON.stringify(r); })`;
+      }
+    } else if (tool === 'vfs_read') {
+      if (!params.slot) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_read 需要 slot 参数' }));
+        return;
+      }
+      if (params.key) {
+        jsCode = `return window.vfs.readMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}).then(function(r) { return JSON.stringify(r); })`;
+      } else if (params.keys) {
+        jsCode = `return window.vfs.listMsg(${JSON.stringify(params.slot)}).then(function(r) { return JSON.stringify(r); })`;
+      } else {
+        jsCode = `return window.vfs.read(${JSON.stringify(params.slot)}).then(function(r) { return r; })`;
+      }
+    } else if (tool === 'vfs_delete') {
+      if (!params.slot || !params.key) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_delete 需要 slot 和 key 参数' }));
+        return;
+      }
+      jsCode = `return window.vfs.deleteMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}).then(function(r) { return 'deleteMsg ok: ' + JSON.stringify(r); })`;
+    }
+
+    // 委托浏览器执行
+    const vfsPromise = new Promise((resolve, reject) => {
+      const vfsTimeout = setTimeout(() => {
+        browserToolPending.delete(vfsCallId);
+        reject(new Error('vfs 操作超时 (30s)'));
+      }, 30000);
+      browserToolPending.set(vfsCallId, { resolve, reject, timeout: vfsTimeout });
+      // 广播给浏览器扩展
+      for (const client of clients) {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({ type: 'browser_tool_call', callId: vfsCallId, tool: 'eval_js', params: { code: jsCode } }));
+        }
+      }
+      logger.info(`[VFS] ${tool} 委托浏览器执行: ${vfsCallId} slot=${params.slot} key=${params.key || '(name)'}`);
+    });
+
+    try {
+      const vfsResult = await vfsPromise;
+      ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: true, result: typeof vfsResult === 'string' ? vfsResult : JSON.stringify(vfsResult) }));
+    } catch (vfsErr) {
+      ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: vfsErr.message }));
+    }
+    return;
+  }
+
   if (tool === 'run_command' && params.command) {
     const cmd = params.command.toLowerCase();
     const longPatterns = [
@@ -1268,9 +1352,6 @@ async function main() {
     port: config.server.port,
     host: config.server.host
   });
-
-  // 浏览器工具的 pending Promise 管理
-  const browserToolPending = new Map();
 
   wss.on('connection', ws => {
     clients.add(ws);

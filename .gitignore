@@ -73,3 +73,4 @@ scripts/pipeline-flowchart.html
 
 # Backup files (extended - catch .bak_xxx patterns)
 *.bak_*
+mydatabase.db
