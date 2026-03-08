@@ -583,6 +583,7 @@
       var firstMsg = body.messages[0];
       var hasSystemPrompt = firstMsg.content && firstMsg.content.indexOf(__SYSTEM_PROMPT_MARKER) !== -1;
       var hasVFSMarker = firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1;
+      var autoInjectEnabled = localStorage.getItem('agent_auto_prompt') !== 'false';
 
       if (hasVFSMarker) {
         // Already fully injected, skip
@@ -609,6 +610,9 @@
       }
 
       // Mode 2: No system prompt detected → auto-inject full prompt as prefix
+      if (!autoInjectEnabled) {
+        return targetFetch.apply(self, args);
+      }
       return Promise.all([loadSystemPrompt(), buildDynamicContent()]).then(function(results) {
         var sysPrompt = results[0];
         var dynamicContent = results[1];
