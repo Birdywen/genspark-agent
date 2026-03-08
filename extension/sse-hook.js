@@ -608,7 +608,7 @@
         });
       }
 
-      // Mode 2: No system prompt detected → auto-inject full prompt
+      // Mode 2: No system prompt detected → auto-inject full prompt as prefix
       return Promise.all([loadSystemPrompt(), buildDynamicContent()]).then(function(results) {
         var sysPrompt = results[0];
         var dynamicContent = results[1];
@@ -616,10 +616,9 @@
         if (sysPrompt) {
           var fullPrompt = sysPrompt;
           if (dynamicContent) fullPrompt += dynamicContent;
-          // Prepend system prompt as messages[0], shift existing messages
-          body.messages.unshift({ role: 'user', content: fullPrompt });
-          body.messages.splice(1, 0, { role: 'assistant', content: 'System prompt loaded. Ready to help.' });
-          console.log('[SSE-Hook] Full system prompt auto-injected: ' + fullPrompt.length + ' chars, messages shifted');
+          // Prefix system prompt to first message content
+          body.messages[0].content = fullPrompt + '\n\n---\n\n# User Message\n\n' + firstMsg.content;
+          console.log('[SSE-Hook] Full system prompt auto-injected as prefix: ' + fullPrompt.length + ' chars');
         } else if (dynamicContent) {
           // Fallback: no system prompt in VFS, just append dynamic
           body.messages[0].content = firstMsg.content + dynamicContent;
