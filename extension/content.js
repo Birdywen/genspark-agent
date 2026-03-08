@@ -3030,6 +3030,45 @@ ${tip}${contextInfo}
     window.readSlot = readSlot;
     window.createSlot = createSlot;
 
+    // ── Messages Channel (VFS 2.0) ──
+    async function readSlotFull(slotId) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        return d.data || null;
+      } catch(e) { console.error('readSlotFull failed:', e); return null; }
+    }
+
+    async function writeSlotMessages(slotId, messages) {
+      try {
+        const r = await fetch('/api/project/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id: slotId, session_state: { steps: [], messages: messages }, request_not_update_permission: true })
+        });
+        const d = await r.json();
+        const msgs = d.data && d.data.session_state ? d.data.session_state.messages : [];
+        return msgs.length;
+      } catch(e) { console.error('writeSlotMessages failed:', e); return 0; }
+    }
+
+    async function readSlotMessages(slotId) {
+      try {
+        const data = await readSlotFull(slotId);
+        return data && data.session_state ? (data.session_state.messages || []) : [];
+      } catch(e) { console.error('readSlotMessages failed:', e); return []; }
+    }
+
+    window.readSlotFull = readSlotFull;
+    window.writeSlotMessages = writeSlotMessages;
+    window.readSlotMessages = readSlotMessages;
+
     // ── VFS (Virtual File System) ──
     const VFS_REGISTRY_ID = '9045a811-9a4c-4d33-ad79-31c12cebd911';
     window.__VFS_REGISTRY_ID = VFS_REGISTRY_ID;
@@ -3195,6 +3234,62 @@ ${tip}${contextInfo}
           results.push(name + ':' + len);
         }
         return { ok: true, restored: results };
+      },
+
+      // ── Messages Channel (VFS 2.0) ──
+      readMsg: async function(name, key) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const msgs = await readSlotMessages(id);
+        if (key) {
+          const found = msgs.find(function(m) { return m.id === key; });
+          return found ? found.content : null;
+        }
+        return msgs.map(function(m) { return { key: m.id, size: (m.content || '').length }; });
+      },
+
+      writeMsg: async function(name, key, value) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const msgs = await readSlotMessages(id);
+        const idx = msgs.findIndex(function(m) { return m.id === key; });
+        if (idx >= 0) {
+          msgs[idx].content = value;
+        } else {
+          msgs.push({ id: key, role: 'user', content: value });
+        }
+        const count = await writeSlotMessages(id, msgs);
+        return { ok: true, name: name, key: key, totalMessages: count };
+      },
+
+      deleteMsg: async function(name, key) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const msgs = await readSlotMessages(id);
+        const filtered = msgs.filter(function(m) { return m.id !== key; });
+        if (filtered.length === msgs.length) return { error: 'key_not_found: ' + key };
+        const count = await writeSlotMessages(id, filtered);
+        return { ok: true, name: name, deleted: key, totalMessages: count };
+      },
+
+      listMsg: async function(name) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const msgs = await readSlotMessages(id);
+        return msgs.map(function(m) { return { key: m.id, role: m.role, size: (m.content || '').length }; });
+      },
+
+      full: async function(name) {
+        const id = await window.vfs.resolve(name);
+        if (!id) return { error: 'not_found: ' + name };
+        const data = await readSlotFull(id);
+        if (!data) return { error: 'read_failed' };
+        var msgsArr = data.session_state && data.session_state.messages ? data.session_state.messages : [];
+        return {
+          nameLen: data.name ? data.name.length : 0,
+          messages: msgsArr.length,
+          keys: Object.keys(data)
+        };
       }
     };
 

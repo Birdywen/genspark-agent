@@ -269,6 +269,38 @@
       .catch(function(e) { console.error('createSlot failed:', e); return null; });
   };
 
+  // ── Messages Channel (VFS 2.0) ──
+  window.readSlotFull = function(slotId) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data || null; })
+      .catch(function(e) { console.error('readSlotFull failed:', e); return null; });
+  };
+
+  window.writeSlotMessages = function(slotId, messages) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, session_state: { steps: [], messages: messages }, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) {
+        var msgs = d.data && d.data.session_state ? d.data.session_state.messages : [];
+        return msgs.length;
+      })
+      .catch(function(e) { console.error('writeSlotMessages failed:', e); return 0; });
+  };
+
+  window.readSlotMessages = function(slotId) {
+    return window.readSlotFull(slotId).then(function(data) {
+      return data && data.session_state ? (data.session_state.messages || []) : [];
+    }).catch(function(e) { console.error('readSlotMessages failed:', e); return []; });
+  };
+
   window.autoCompress = function() {
     var btn = document.getElementById('agent-compress');
     if (btn) { btn.click(); return 'triggered'; }
@@ -462,6 +494,71 @@
       });
       return chain.then(function() {
         return { ok: true, restored: results };
+      });
+    },
+
+    // ── Messages Channel (VFS 2.0) ──
+    readMsg: function(name, key) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          if (key) {
+            for (var i = 0; i < msgs.length; i++) {
+              if (msgs[i].id === key) return msgs[i].content;
+            }
+            return null;
+          }
+          return msgs.map(function(m) { return { key: m.id, size: (m.content || '').length }; });
+        });
+      });
+    },
+
+    writeMsg: function(name, key, value) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var found = false;
+          for (var i = 0; i < msgs.length; i++) {
+            if (msgs[i].id === key) { msgs[i].content = value; found = true; break; }
+          }
+          if (!found) msgs.push({ id: key, role: 'user', content: value });
+          return window.writeSlotMessages(id, msgs).then(function(count) {
+            return { ok: true, name: name, key: key, totalMessages: count };
+          });
+        });
+      });
+    },
+
+    deleteMsg: function(name, key) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var filtered = msgs.filter(function(m) { return m.id !== key; });
+          if (filtered.length === msgs.length) return { error: 'key_not_found: ' + key };
+          return window.writeSlotMessages(id, filtered).then(function(count) {
+            return { ok: true, name: name, deleted: key, totalMessages: count };
+          });
+        });
+      });
+    },
+
+    listMsg: function(name) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          return msgs.map(function(m) { return { key: m.id, role: m.role, size: (m.content || '').length }; });
+        });
+      });
+    },
+
+    full: function(name) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotFull(id).then(function(data) {
+          if (!data) return { error: 'read_failed' };
+          var msgsArr = data.session_state && data.session_state.messages ? data.session_state.messages : [];
+          return { nameLen: data.name ? data.name.length : 0, messages: msgsArr.length, keys: Object.keys(data) };
+        });
       });
     }
   };
