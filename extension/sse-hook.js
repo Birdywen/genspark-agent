@@ -465,22 +465,37 @@
   console.log('[SSE-Hook] VFS + Context + Code storage functions registered in MAIN world');
 })();
 
+
 // ── Hook 3: Fetch interceptor for dynamic prompt injection ──
-// Runs as a separate IIFE. Uses defineProperty setter trap on window.fetch
-// to survive Genspark's JS bundle overwriting fetch after document_start.
+// Supports two modes:
+// 1. Full injection: messages[0] has no system prompt → load from VFS and prepend
+// 2. Append injection: messages[0] already has system prompt → append dynamic content
 (function() {
   var __nativeFetch = window.fetch;
   var __DYNAMIC_PROMPT_MARKER = '\n\n---\n\n# \uD83E\uDDE0 VFS Dynamic Injection';
+  var __SYSTEM_PROMPT_MARKER = '\u6838\u5FC3\u884C\u4E3A\u51C6\u5219'; // 核心行为准则
   var __promptCache = { content: null, ts: 0, ttl: 30000 };
+  var __systemPromptCache = { content: null, ts: 0, ttl: 120000 }; // 2min TTL for system prompt
   var __thirdPartyFetch = null;
 
-  function buildDynamicPrompt() {
+  // Listen for skillsPrompt updates from content.js (isolated world → MAIN world bridge)
+  document.addEventListener('__agent_skills_update__', function(e) {
+    if (e.detail && e.detail.skillsPrompt) {
+      window.__agentSkillsPrompt = e.detail.skillsPrompt;
+      // Invalidate system cache so next request picks up new skills
+      __systemPromptCache.content = null;
+      __systemPromptCache.ts = 0;
+      console.log('[SSE-Hook] Skills prompt updated: ' + e.detail.skillsPrompt.length + ' chars');
+    }
+  });
+
+  function buildDynamicContent() {
+    if (typeof window.vfs !== 'object' || typeof window.vfs.ls !== 'function') {
+      return Promise.resolve(null);
+    }
     var now = Date.now();
     if (__promptCache.content && (now - __promptCache.ts) < __promptCache.ttl) {
       return Promise.resolve(__promptCache.content);
-    }
-    if (typeof window.vfs !== 'object' || typeof window.vfs.ls !== 'function') {
-      return Promise.resolve(null);
     }
     return window.vfs.ls().then(function(list) {
       var slotNames = list.map(function(s) { return s.name; });
@@ -519,6 +534,33 @@
     });
   }
 
+  function loadSystemPrompt() {
+    if (typeof window.vfs !== 'object') return Promise.resolve(null);
+    var now = Date.now();
+    if (__systemPromptCache.content && (now - __systemPromptCache.ts) < __systemPromptCache.ttl) {
+      return Promise.resolve(__systemPromptCache.content);
+    }
+    return window.vfs.read('system-prompt').then(function(template) {
+      if (!template || template.error || template.length < 100) return null;
+      // Replace placeholders with actual values
+      var toolSummary = '';
+      if (typeof window.__agentToolSummary === 'string') {
+        toolSummary = window.__agentToolSummary;
+      }
+      var skillsPrompt = '';
+      if (typeof window.__agentSkillsPrompt === 'string') {
+        skillsPrompt = window.__agentSkillsPrompt;
+      }
+      var prompt = template.replace('{{toolSummary}}', toolSummary).replace('{{skillsPrompt}}', skillsPrompt);
+      __systemPromptCache.content = prompt;
+      __systemPromptCache.ts = Date.now();
+      return prompt;
+    }).catch(function(e) {
+      console.error('[SSE-Hook] Failed to load system-prompt from VFS:', e);
+      return null;
+    });
+  }
+
   function hookFetch(targetFetch) {
     return function() {
       var args = Array.prototype.slice.call(arguments);
@@ -539,22 +581,57 @@
       }
 
       var firstMsg = body.messages[0];
-      if (firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1) {
+      var hasSystemPrompt = firstMsg.content && firstMsg.content.indexOf(__SYSTEM_PROMPT_MARKER) !== -1;
+      var hasVFSMarker = firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1;
+
+      if (hasVFSMarker) {
+        // Already fully injected, skip
         return targetFetch.apply(this, args);
       }
 
       var self = this;
-      return buildDynamicPrompt().then(function(dynamicContent) {
-        if (dynamicContent) {
+
+      if (hasSystemPrompt) {
+        // Mode 1: System prompt already present (manual paste), just append dynamic content
+        return buildDynamicContent().then(function(dynamicContent) {
+          if (dynamicContent) {
+            body.messages[0].content = firstMsg.content + dynamicContent;
+            console.log('[SSE-Hook] Dynamic content appended: +' + dynamicContent.length + ' chars');
+          }
+          var newOpts = {};
+          for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
+          newOpts.body = JSON.stringify(body);
+          return targetFetch.call(self, url, newOpts);
+        }).catch(function(e) {
+          console.error('[SSE-Hook] Append injection failed:', e);
+          return targetFetch.apply(self, args);
+        });
+      }
+
+      // Mode 2: No system prompt detected → auto-inject full prompt
+      return Promise.all([loadSystemPrompt(), buildDynamicContent()]).then(function(results) {
+        var sysPrompt = results[0];
+        var dynamicContent = results[1];
+
+        if (sysPrompt) {
+          var fullPrompt = sysPrompt;
+          if (dynamicContent) fullPrompt += dynamicContent;
+          // Prepend system prompt as messages[0], shift existing messages
+          body.messages.unshift({ role: 'user', content: fullPrompt });
+          body.messages.splice(1, 0, { role: 'assistant', content: 'System prompt loaded. Ready to help.' });
+          console.log('[SSE-Hook] Full system prompt auto-injected: ' + fullPrompt.length + ' chars, messages shifted');
+        } else if (dynamicContent) {
+          // Fallback: no system prompt in VFS, just append dynamic
           body.messages[0].content = firstMsg.content + dynamicContent;
-          console.log('[SSE-Hook] Dynamic prompt injected: +' + dynamicContent.length + ' chars');
+          console.log('[SSE-Hook] Fallback: dynamic content appended: +' + dynamicContent.length + ' chars');
         }
+
         var newOpts = {};
         for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
         newOpts.body = JSON.stringify(body);
         return targetFetch.call(self, url, newOpts);
       }).catch(function(e) {
-        console.error('[SSE-Hook] Dynamic prompt injection failed:', e);
+        console.error('[SSE-Hook] Full injection failed:', e);
         return targetFetch.apply(self, args);
       });
     };
@@ -572,8 +649,6 @@
     },
     set: function(newFetch) {
       if (newFetch === __currentHook) return;
-      // Genspark (or other code) is trying to overwrite fetch
-      // Capture their wrapper and re-hook on top of it
       __thirdPartyFetch = newFetch;
       __currentHook = hookFetch(newFetch);
       console.log('[SSE-Hook] Fetch re-hooked after third-party overwrite');
@@ -581,15 +656,22 @@
   });
 
   // Expose for debugging
-  window.__buildDynamicPrompt = buildDynamicPrompt;
-  window.__flushPromptCache = function() { __promptCache.content = null; __promptCache.ts = 0; };
+  window.__buildDynamicPrompt = buildDynamicContent;
+  window.__loadSystemPrompt = loadSystemPrompt;
+  window.__flushPromptCache = function() {
+    __promptCache.content = null; __promptCache.ts = 0;
+    __systemPromptCache.content = null; __systemPromptCache.ts = 0;
+  };
   window.__fetchHookInfo = function() {
     return {
       hasThirdParty: !!__thirdPartyFetch,
-      cacheAge: __promptCache.ts ? (Date.now() - __promptCache.ts) + 'ms' : 'empty',
-      cacheLen: __promptCache.content ? __promptCache.content.length : 0
+      dynamicCacheAge: __promptCache.ts ? (Date.now() - __promptCache.ts) + 'ms' : 'empty',
+      dynamicCacheLen: __promptCache.content ? __promptCache.content.length : 0,
+      sysCacheAge: __systemPromptCache.ts ? (Date.now() - __systemPromptCache.ts) + 'ms' : 'empty',
+      sysCacheLen: __systemPromptCache.content ? __systemPromptCache.content.length : 0
     };
   };
 
-  console.log('[SSE-Hook] Fetch prompt-injection hook installed with defineProperty trap');
+  console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append modes)');
 })();
+

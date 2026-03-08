@@ -4243,7 +4243,7 @@ ${conversationText}
         updateStatus();
         addLog('✓ 连接成功', 'success');
         if (msg.skills) { state.availableSkills = msg.skills; }
-        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; } try { document.dispatchEvent(new CustomEvent('__agent_skills_update__', { detail: { skillsPrompt: state.skillsPrompt } })); } catch(e) {}
         break;
 
       case 'update_tools':
@@ -4253,7 +4253,7 @@ ${conversationText}
           addLog(`📦 加载了 ${msg.tools.length} 个工具`, 'info');
         }
         if (msg.skills) { state.availableSkills = msg.skills; }
-        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; }
+        if (msg.skillsPrompt) { state.skillsPrompt = msg.skillsPrompt; } try { document.dispatchEvent(new CustomEvent('__agent_skills_update__', { detail: { skillsPrompt: state.skillsPrompt } })); } catch(e) {}
         break;
 
       case 'tools_updated':
@@ -5523,7 +5523,7 @@ ${conversationText}
             updateToolsDisplay();
           }
           if (resp.skills) { state.availableSkills = resp.skills; }
-          if (resp.skillsPrompt) { state.skillsPrompt = resp.skillsPrompt; }
+          if (resp.skillsPrompt) { state.skillsPrompt = resp.skillsPrompt; } try { document.dispatchEvent(new CustomEvent('__agent_skills_update__', { detail: { skillsPrompt: state.skillsPrompt } })); } catch(e) {}
           updateStatus();
         }
       });
