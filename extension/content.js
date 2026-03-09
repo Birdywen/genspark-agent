@@ -2497,23 +2497,21 @@ ${toolSummary}
     // 上下文计数：统计当前对话消息数，附加到结果末尾
     let contextInfo = '';
     try {
-      const allMsgs = document.querySelectorAll('.conversation-statement');
-      const totalMsgs = allMsgs.length;
+      // 优先使用服务端真实数据（auto-compress daemon 每45s更新）
+      const hasServerData = window.__serverMsgChars > 0;
+      const totalMsgs = window.__serverMsgCount > 0 ? window.__serverMsgCount : document.querySelectorAll('.conversation-statement').length;
       let totalChars = 0;
-      
-      // 如果有服务端真实数据（compress-chat后更新），优先使用
-      if (window.__serverMsgChars > 0) {
+      if (hasServerData) {
         totalChars = window.__serverMsgChars;
       } else {
-        allMsgs.forEach(function(m) { totalChars += m.textContent.length; });
+        document.querySelectorAll('.conversation-statement').forEach(function(m) { totalChars += m.textContent.length; });
       }
-      const charsK = Math.round(totalChars / 1000);
       
       // 加上注入prompt长度（AI实际看到的总量）
       const injectedSize = window.__injectedPromptSize || 0;
       const effectiveChars = totalChars + injectedSize;
       const effectiveK = Math.round(effectiveChars / 1000);
-      const source = window.__serverMsgChars > 0 ? '服务端' : '本地';
+      const source = hasServerData ? '服务端' : '本地';
       
       // 主要靠字符数判断，消息数辅助
       if (effectiveChars > 200000 || totalMsgs > 800) {
