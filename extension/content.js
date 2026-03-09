@@ -2497,12 +2497,15 @@ ${toolSummary}
     // 上下文计数：统计当前对话消息数，附加到结果末尾
     let contextInfo = '';
     try {
-      // 优先使用服务端真实数据（auto-compress daemon 每45s更新）
-      const hasServerData = window.__serverMsgChars > 0;
-      const totalMsgs = window.__serverMsgCount > 0 ? window.__serverMsgCount : document.querySelectorAll('.conversation-statement').length;
+      // 读取服务端真实数据（auto-compress daemon 通过 DOM dataset 桥接）
+      const _ds = document.documentElement.dataset;
+      const serverChars = parseInt(_ds.serverMsgChars) || 0;
+      const serverCount = parseInt(_ds.serverMsgCount) || 0;
+      const hasServerData = serverChars > 0;
+      const totalMsgs = serverCount > 0 ? serverCount : document.querySelectorAll('.conversation-statement').length;
       let totalChars = 0;
       if (hasServerData) {
-        totalChars = window.__serverMsgChars;
+        totalChars = serverChars;
       } else {
         document.querySelectorAll('.conversation-statement').forEach(function(m) { totalChars += m.textContent.length; });
       }
