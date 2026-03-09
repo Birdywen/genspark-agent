@@ -2516,9 +2516,9 @@ ${toolSummary}
       const source = window.__serverMsgChars > 0 ? '服务端' : '本地';
       
       // 主要靠字符数判断，消息数辅助
-      if (effectiveChars > 700000 || totalMsgs > 300) {
+      if (effectiveChars > 200000 || totalMsgs > 500) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，执行 compress-chat 压缩]`;
-      } else if (effectiveChars > 500000 || totalMsgs > 200) {
+      } else if (effectiveChars > 180000 || totalMsgs > 400) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
       } else {
         contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K${source}]`;

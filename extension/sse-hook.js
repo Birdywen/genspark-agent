@@ -1149,7 +1149,7 @@
 
   // ── Auto-Compress Daemon ──
   (function() {
-    var AC_THRESHOLD = 120000; // 120K chars
+    var AC_THRESHOLD = 200000; // 200K chars
     var AC_INTERVAL = 45000;   // check every 45s
     var AC_HEAD = 5, AC_TAIL = 10;
     var _acRunning = false;
@@ -1166,6 +1166,7 @@
       }).then(function(r) { return r.json(); }).then(function(d) {
         var msgs = d.data.session_state.messages;
         var totalChars = msgs.reduce(function(s, m) { return s + (m.content || "").length; }, 0);
+        window.__serverMsgChars = totalChars;
         if (totalChars < AC_THRESHOLD) return;
         
         _acRunning = true;
