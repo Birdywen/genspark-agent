@@ -311,20 +311,30 @@
   var VFS_REGISTRY_ID = '9045a811-9a4c-4d33-ad79-31c12cebd911';
   window.__VFS_REGISTRY_ID = VFS_REGISTRY_ID;
 
+  // Registry cache (30s TTL)
+  var _regCache = null, _regCacheTime = 0, _regPending = null, _regTTL = 30000;
+
   function vfsReadRegistry() {
-    return window.readSlot(VFS_REGISTRY_ID).then(function(data) {
+    var now = Date.now();
+    if (_regCache && (now - _regCacheTime) < _regTTL) return Promise.resolve(_regCache);
+    if (_regPending) return _regPending;
+    _regPending = window.readSlot(VFS_REGISTRY_ID).then(function(data) {
+      _regPending = null;
       if (data) {
-        try { return JSON.parse(data); } catch(e) { /* fall through */ }
+        try { _regCache = JSON.parse(data); _regCacheTime = Date.now(); return _regCache; } catch(e) { /* fall through */ }
       }
-      // Notify content.js to attempt recovery
       window.dispatchEvent(new CustomEvent('__vfs_recovery_needed__'));
       return { __meta: { version: 1 }, slots: {} };
-    });
+    }).catch(function(e) { _regPending = null; throw e; });
+    return _regPending;
   }
+
+  function vfsInvalidateCache() { _regCache = null; _regCacheTime = 0; }
 
   function vfsSaveRegistry(reg) {
     var json = JSON.stringify(reg);
-    return window.writeSlot(VFS_REGISTRY_ID, json).then(function(len) {
+    vfsInvalidateCache();
+      return window.writeSlot(VFS_REGISTRY_ID, json).then(function(len) {
       // Notify content.js to backup registry to chrome.storage.local
       window.dispatchEvent(new CustomEvent('__vfs_registry_saved__', { detail: json }));
       return len;
@@ -681,6 +691,42 @@
     },
 
     // ── Phase 5: Executable Command Library ──
+
+    // === Performance API (Cache + Batch + Lazy) ===
+    batch: function(names) {
+      return vfsReadRegistry().then(function(reg) {
+        return Promise.all(names.map(function(n) {
+          var s = reg.slots[n];
+          if (!s) return { name: n, data: '', error: 'not_found' };
+          return window.readSlot(s.id).then(function(d) {
+            return { name: n, data: d };
+          }).catch(function(e) { return { name: n, data: '', error: e.message }; });
+        }));
+      });
+    },
+    lazy: function(names) {
+      var idx = 0; var regP = vfsReadRegistry();
+      return {
+        next: function() {
+          if (idx >= names.length) return Promise.resolve({ done: true });
+          var name = names[idx++];
+          return regP.then(function(reg) {
+            var s = reg.slots[name];
+            if (!s) return { done: false, value: { name: name, error: 'not_found' } };
+            return window.readSlot(s.id).then(function(d) {
+              return { done: false, value: { name: name, data: d } };
+            });
+          });
+        },
+        remaining: function() { return names.length - idx; },
+        reset: function() { idx = 0; regP = vfsReadRegistry(); }
+      };
+    },
+    warmup: function() { return vfsReadRegistry(); },
+    invalidateCache: vfsInvalidateCache,
+    cacheStats: function() {
+      return { cached: !!_regCache, age: _regCache ? (Date.now()-_regCacheTime)+'ms' : 'N/A', ttl: _regTTL+'ms', pending: !!_regPending, slots: _regCache ? Object.keys(_regCache.slots).length : 0 };
+    },
     execMsg: function(slot, key, args) {
       return window.vfs.readMsg(slot, key).then(function(code) {
         if (!code) return { error: 'not_found: ' + slot + '/' + key };
