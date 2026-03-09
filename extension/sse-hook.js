@@ -247,6 +247,61 @@
       .catch(function(e) { console.error('writeSlot failed:', e); return 0; });
   };
 
+  // ── Slot Content Cache ──
+  var _slotCache = {};
+  var _slotTTL = 10000; // 10s content cache
+  var _origReadSlot = function(slotId) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
+      .catch(function(e) { console.error('readSlot failed:', e); return ''; });
+  };
+  var _origWriteSlot = function(slotId, text) {
+    return fetch('/api/project/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ id: slotId, name: text, request_not_update_permission: true })
+    }).then(function(r) { return r.json(); })
+      .then(function(d) { return d.data && d.data.name ? d.data.name.length : 0; })
+      .catch(function(e) { console.error('writeSlot failed:', e); return 0; });
+  };
+
+  window.readSlot = function(slotId) {
+    var now = Date.now();
+    var cached = _slotCache[slotId];
+    if (cached && (now - cached.time) < _slotTTL) return Promise.resolve(cached.data);
+    return _origReadSlot(slotId).then(function(data) {
+      _slotCache[slotId] = { data: data, time: Date.now() };
+      return data;
+    });
+  };
+
+  window.writeSlot = function(slotId, text) {
+    delete _slotCache[slotId];
+    return _origWriteSlot(slotId, text).then(function(result) {
+      _slotCache[slotId] = { data: text, time: Date.now() };
+      return result;
+    });
+  };
+
+  window.__slotCache = {
+    stats: function() {
+      var keys = Object.keys(_slotCache);
+      var entries = keys.map(function(k) {
+        return { id: k.substring(0,8)+"...", age: (Date.now()-_slotCache[k].time)+"ms", size: (_slotCache[k].data||"").length };
+      });
+      return { count: keys.length, ttl: _slotTTL+"ms", entries: entries };
+    },
+    setTTL: function(ms) { _slotTTL = ms; },
+    invalidate: function(id) { if (id) delete _slotCache[id]; else _slotCache = {}; },
+    warmSlot: function(id, data) { _slotCache[id] = { data: data, time: Date.now() }; }
+  };
+
   window.readSlot = function(slotId) {
     return fetch('/api/project/update', {
       method: 'POST',
