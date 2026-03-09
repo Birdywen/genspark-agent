@@ -1146,3 +1146,46 @@
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
 
+
+  // ── Auto-Compress Daemon ──
+  (function() {
+    var AC_THRESHOLD = 120000; // 120K chars
+    var AC_INTERVAL = 45000;   // check every 45s
+    var AC_HEAD = 5, AC_TAIL = 10;
+    var _acRunning = false;
+    
+    function autoCompress() {
+      if (_acRunning) return;
+      var params = new URLSearchParams(window.location.search);
+      var convId = params.get("id");
+      if (!convId) return;
+      
+      fetch("/api/project/update", {
+        method: "POST", headers: {"Content-Type": "application/json"}, credentials: "include",
+        body: JSON.stringify({id: convId, request_not_update_permission: true})
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        var msgs = d.data.session_state.messages;
+        var totalChars = msgs.reduce(function(s, m) { return s + (m.content || "").length; }, 0);
+        if (totalChars < AC_THRESHOLD) return;
+        
+        _acRunning = true;
+        console.log("[auto-compress] triggered: " + (totalChars/1024).toFixed(1) + "K > " + (AC_THRESHOLD/1024) + "K");
+        
+        // execute compress-chat via toolkit
+        if (window.vfs && window.vfs.execMsg) {
+          window.vfs.execMsg("toolkit", "compress-chat", {convId: convId, headN: AC_HEAD, tailN: AC_TAIL}).then(function(r) {
+            console.log("[auto-compress] done:", JSON.stringify(r));
+            _acRunning = false;
+          }).catch(function(e) {
+            console.log("[auto-compress] error:", e);
+            _acRunning = false;
+          });
+        } else {
+          _acRunning = false;
+        }
+      }).catch(function() { _acRunning = false; });
+    }
+    
+    setInterval(autoCompress, AC_INTERVAL);
+    console.log("[auto-compress] daemon started: threshold=" + (AC_THRESHOLD/1024) + "K, interval=" + (AC_INTERVAL/1000) + "s");
+  })();

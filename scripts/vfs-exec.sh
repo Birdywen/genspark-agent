@@ -1,7 +1,7 @@
 #!/bin/bash
 # vfs-exec: 本地文件 → 浏览器直接执行（零转义跨世界传输）
 # 用法: vfs-exec <file.js> [timeout_ms]
-# 代码中用 return 返回结果
+# 代码中用 return 返回结果（自带语法验证）
 
 FILE="$1"
 TIMEOUT="${2:-15000}"
@@ -9,6 +9,14 @@ TIMEOUT="${2:-15000}"
 if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
   echo "Usage: vfs-exec <file.js> [timeout_ms]"
   exit 1
+fi
+
+# 语法验证（包装成函数体检查）
+node -e "new Function(require('fs').readFileSync('$FILE','utf8'))" 2>/dev/null
+if [ $? -ne 0 ]; then
+  echo "SYNTAX ERROR in $FILE:"
+  node -e "try{new Function(require('fs').readFileSync('$FILE','utf8'))}catch(e){console.error(e.message)}"
+  exit 2
 fi
 
 node -e "
