@@ -386,6 +386,15 @@
       });
     },
 
+    listMsg: function(name) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return [];
+        return window.readSlotMessages(id).then(function(msgs) {
+          return msgs.map(function(m) { return { key: m.id, role: m.role, size: (m.content || '').length }; });
+        });
+      });
+    },
+
     // ── Stub: methods loaded by fn/vfs-* extensions ──
     // write, append, snapshot, safeWrite → vfs-crud
     // backup, exec, restoreFrom → vfs-backup
@@ -402,7 +411,24 @@
   window.__vfsCache = { get reg() { return _regCache; }, get time() { return _regCacheTime; }, get ttl() { return _regTTL; }, get pending() { return _regPending; } };
 
   console.log('[SSE-Hook] VFS + Context + Code storage functions registered in MAIN world');
-  setTimeout(function() { if (window.vfs && window.vfs.loadExtensions) window.vfs.loadExtensions().then(function(r) { console.log("[VFS] Extensions loaded:", r.loaded); }).catch(function(){}); }, 1000);
+  // Self-contained extension loader (no dependency on fn modules)
+  setTimeout(function() {
+    if (!window.vfs || !window.vfs.readMsg) return;
+    window.vfs.readMsg('fn').then(function(list) {
+      if (!Array.isArray(list)) return;
+      var chain = Promise.resolve(), loaded = [];
+      list.forEach(function(m) {
+        if (m.key.indexOf('vfs-') === 0) {
+          chain = chain.then(function() {
+            return window.vfs.readMsg('fn', m.key).then(function(code) {
+              try { var fn = new Function(code); fn(); loaded.push(m.key); } catch(e) { console.error('[VFS] Load fail ' + m.key + ':', e); }
+            });
+          });
+        }
+      });
+      chain.then(function() { console.log('[VFS] Extensions loaded:', loaded); });
+    }).catch(function(e) { console.error('[VFS] Extension load error:', e); });
+  }, 3000);
 })();
 
 
