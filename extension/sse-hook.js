@@ -418,7 +418,7 @@
       if (!Array.isArray(list)) return;
       var chain = Promise.resolve(), loaded = [];
       list.forEach(function(m) {
-        if (m.key.indexOf('vfs-') === 0) {
+        if (m.key.indexOf('_') !== 0) {
           chain = chain.then(function() {
             return window.vfs.readMsg('fn', m.key).then(function(code) {
               try { var fn = new Function(code); fn(); loaded.push(m.key); } catch(e) { console.error('[VFS] Load fail ' + m.key + ':', e); }
