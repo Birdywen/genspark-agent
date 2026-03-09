@@ -90,6 +90,25 @@ case "$1" in
   evolve-log)
     CODE='return new Promise(function(r){vfs.readMsg("fn","_evolve_memory").then(function(v){r(v||"null")}).catch(function(e){r("ERROR:"+e.message)})});'
     ;;
+
+  demands)
+    CODE='return new Promise(function(r){vfs.demand.list().then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r("ERROR:"+e.message)})});'
+    ;;
+  demand-add)
+    shift
+    DESC="$*"
+    ESCAPED=$(python3 -c "import json,sys;print(json.dumps(sys.argv[1]))" "$DESC")
+    CODE="return new Promise(function(r){vfs.demand.add($ESCAPED,{source:'user',priority:'normal'}).then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r('ERROR:'+e.message)})});"
+    ;;
+  demand-stats)
+    CODE='return new Promise(function(r){vfs.demand.stats().then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r("ERROR:"+e.message)})});'
+    ;;
+  prs)
+    CODE='return new Promise(function(r){vfs.pr.list().then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r("ERROR:"+e.message)})});'
+    ;;
+  pr-stats)
+    CODE='return new Promise(function(r){vfs.pr.stats().then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r("ERROR:"+e.message)})});'
+    ;;
   compress)
     TIMEOUT=90000
     CODE='return new Promise(function(r){vfs.execMsg("toolkit","compress-chat").then(function(v){r(JSON.stringify(v,null,2))}).catch(function(e){r("ERROR:"+e.message)})});'
@@ -110,7 +129,12 @@ case "$1" in
     echo "  ask-opus   - Ask AI (claude-opus-4-6)"
     echo "  ask-kimi   - Ask AI (moonshot)"
     echo "  read <key> - Read fn module by key"
-    echo "  evolve-log - Show evolve memory"
+    echo "  evolve-log - Show evolve memory
+  demands    - List all demands
+  demand-add - Add user demand
+  demand-stats - Demand statistics
+  prs        - List all PRs
+  pr-stats   - PR statistics"
     echo "  compress   - Compress chat"
     echo "  chat-size  - Check chat size"
     echo ""
