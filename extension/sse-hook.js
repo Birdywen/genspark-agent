@@ -165,76 +165,6 @@
 (function() {
   window.__CONTEXT_STORAGE_ID = '59cdb9cb-b175-4cdd-af44-e8927d7b006a';
   window.__CODE_STORAGE_ID = '731a7c05-a990-4dc2-9b42-25f58b9e454e';
-
-  window.writeContextStorage = function(text) {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) {
-        var savedLen = d.data && d.data.name ? d.data.name.length : 0;
-        if (savedLen > 0) {
-          // 写后读回验证
-          return window.readContextStorage().then(function(readBack) {
-            var expectedPrefix = text.substring(0, 100);
-            var actualPrefix = readBack.substring(0, 100);
-            if (actualPrefix !== expectedPrefix) {
-              console.warn('writeContextStorage: verify mismatch! retrying...');
-              return fetch('/api/project/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, name: text, request_not_update_permission: true })
-              }).then(function(r2) { return r2.json(); })
-                .then(function(d2) { return d2.data && d2.data.name ? d2.data.name.length : 0; });
-            }
-            return savedLen;
-          });
-        }
-        return savedLen;
-      })
-      .catch(function(e) { console.error('writeContextStorage failed:', e); return 0; });
-  };
-
-  window.readContextStorage = function() {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: window.__CONTEXT_STORAGE_ID, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
-      .catch(function(e) { console.error('readContextStorage failed:', e); return ''; });
-  };
-
-  // ── 代码存储 (独立对话) ──
-  window.writeCodeStorage = function(text) {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: window.__CODE_STORAGE_ID, name: text, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) {
-        var savedLen = d.data && d.data.name ? d.data.name.length : 0;
-        return savedLen;
-      })
-      .catch(function(e) { console.error('writeCodeStorage failed:', e); return 0; });
-  };
-
-  window.readCodeStorage = function() {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: window.__CODE_STORAGE_ID, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
-      .catch(function(e) { console.error('readCodeStorage failed:', e); return ''; });
-  };
-
   // ── 通用槽位读写 (MAIN world) ──
   window.writeSlot = function(slotId, text) {
     return fetch('/api/project/update', {
@@ -354,12 +284,6 @@
     return window.readSlotFull(slotId).then(function(data) {
       return data && data.session_state ? (data.session_state.messages || []) : [];
     }).catch(function(e) { console.error('readSlotMessages failed:', e); return []; });
-  };
-
-  window.autoCompress = function() {
-    var btn = document.getElementById('agent-compress');
-    if (btn) { btn.click(); return 'triggered'; }
-    return 'no button';
   };
 
   // ── VFS (Virtual File System) ──
@@ -716,85 +640,6 @@
     };
   };
 
-  // ── Reverse Channel: 浏览器→AI 异步结果传递 ──
-  // 浏览器端写入: window.__reverseChannel.push({key, data, ts})
-  // AI端读取: eval_js return window.__reverseChannel.read()
-  // 也会持久化到 VFS (如果可用)
-  window.__reverseChannel = {
-    _queue: [],
-    push: function(entry) {
-      if (!entry.key) entry.key = 'unnamed';
-      entry.ts = Date.now();
-      this._queue.push(entry);
-      console.log('[ReverseChannel] pushed: ' + entry.key + ' (' + JSON.stringify(entry.data).length + ' chars)');
-      // 持久化到 VFS
-      if (typeof window.vfs === 'object' && typeof window.vfs.append === 'function') {
-        var line = '\n[' + new Date(entry.ts).toISOString() + '] ' + entry.key + ': ' + JSON.stringify(entry.data);
-        window.vfs.append('context', line).catch(function() {});
-      }
-    },
-    read: function(key) {
-      if (key) {
-        var filtered = this._queue.filter(function(e) { return e.key === key; });
-        this._queue = this._queue.filter(function(e) { return e.key !== key; });
-        return filtered;
-      }
-      var all = this._queue.slice();
-      this._queue = [];
-      return all;
-    },
-    peek: function() {
-      return this._queue.slice();
-    },
-    size: function() {
-      return this._queue.length;
-    }
-  };
 
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
-
-
-  // ── Auto-Compress Daemon ──
-  (function() {
-    var AC_THRESHOLD = 200000; // 200K chars
-    var AC_INTERVAL = 45000;   // check every 45s
-    var AC_HEAD = 5, AC_TAIL = 10;
-    var _acRunning = false;
-    
-    function autoCompress() {
-      if (_acRunning) return;
-      var params = new URLSearchParams(window.location.search);
-      var convId = params.get("id");
-      if (!convId) return;
-      
-      fetch("/api/project/update", {
-        method: "POST", headers: {"Content-Type": "application/json"}, credentials: "include",
-        body: JSON.stringify({id: convId, request_not_update_permission: true})
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        var msgs = d.data.session_state.messages;
-        var totalChars = msgs.reduce(function(s, m) { return s + (m.content || "").length; }, 0);
-        window.__serverMsgChars = totalChars;
-        if (totalChars < AC_THRESHOLD) return;
-        
-        _acRunning = true;
-        console.log("[auto-compress] triggered: " + (totalChars/1024).toFixed(1) + "K > " + (AC_THRESHOLD/1024) + "K");
-        
-        // execute compress-chat via toolkit
-        if (window.vfs && window.vfs.execMsg) {
-          window.vfs.execMsg("toolkit", "compress-chat", {convId: convId, headN: AC_HEAD, tailN: AC_TAIL}).then(function(r) {
-            console.log("[auto-compress] done:", JSON.stringify(r));
-            _acRunning = false;
-          }).catch(function(e) {
-            console.log("[auto-compress] error:", e);
-            _acRunning = false;
-          });
-        } else {
-          _acRunning = false;
-        }
-      }).catch(function() { _acRunning = false; });
-    }
-    
-    setInterval(autoCompress, AC_INTERVAL);
-    console.log("[auto-compress] daemon started: threshold=" + (AC_THRESHOLD/1024) + "K, interval=" + (AC_INTERVAL/1000) + "s");
-  })();
