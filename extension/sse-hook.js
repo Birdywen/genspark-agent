@@ -165,18 +165,6 @@
 (function() {
   window.__CONTEXT_STORAGE_ID = '59cdb9cb-b175-4cdd-af44-e8927d7b006a';
   window.__CODE_STORAGE_ID = '731a7c05-a990-4dc2-9b42-25f58b9e454e';
-  // ── 通用槽位读写 (MAIN world) ──
-  window.writeSlot = function(slotId, text) {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: slotId, name: text, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) { return d.data && d.data.name ? d.data.name.length : 0; })
-      .catch(function(e) { console.error('writeSlot failed:', e); return 0; });
-  };
-
   // ── Slot Content Cache ──
   var _slotCache = {};
   var _slotTTL = 10000; // 10s content cache
@@ -232,16 +220,6 @@
     warmSlot: function(id, data) { _slotCache[id] = { data: data, time: Date.now() }; }
   };
 
-  window.readSlot = function(slotId) {
-    return fetch('/api/project/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ id: slotId, request_not_update_permission: true })
-    }).then(function(r) { return r.json(); })
-      .then(function(d) { return d.data ? (d.data.name || '') : ''; })
-      .catch(function(e) { console.error('readSlot failed:', e); return ''; });
-  };
 
   window.createSlot = function(name) {
     return fetch('/api/project/create', {
