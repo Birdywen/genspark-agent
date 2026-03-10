@@ -3814,25 +3814,46 @@ ${conversationText}
         }
 
         // ── Step 2: 构造精简 messages ──
-        const HEAD_KEEP = 0;    // 系统提示词由 VFS 动态注入，不需要保留
+        const HEAD_KEEP = 4;    // 保留开头4条（system prompt + 初始化）
         const TAIL_KEEP = 30;   // 保留最近30条
         
-        let headMsgs = allMsgs.slice(0, HEAD_KEEP);
+        const headMsgs = allMsgs.slice(0, HEAD_KEEP);
         const tailMsgs = allMsgs.slice(-TAIL_KEEP);
-        
-        // 清理 head 里的旧摘要，避免套娃
-        headMsgs = headMsgs.filter(m => {
-          const c = typeof m.content === 'string' ? m.content : '';
-          return !c.startsWith('[Physical Compress');
-        });
-        // 确保至少保留2条 head（system prompt + first response）
-        if (headMsgs.length < 2) headMsgs = allMsgs.slice(0, 2);
         const midMsgs = allMsgs.slice(HEAD_KEEP, allMsgs.length - TAIL_KEEP);
 
-        // 精简摘要：只保留压缩头 + VFS context（最新session summary）
-        const midSize = Math.round(midMsgs.reduce((s,m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0)/1024);
+        // 从中间消息提取摘要
+        const completed = [];
+        const errors = [];
+        const files = [];
+        
+        midMsgs.forEach(m => {
+          const c = m.content || '';
+          // 提取完成的任务
+          if (c.includes('✅') || c.includes('成功') || c.includes('完成') || c.includes('DONE')) {
+            const lines = c.split('\n').filter(l => l.match(/[✅成功完成DONE]/)).slice(0, 3);
+            lines.forEach(l => {
+              const clean = l.replace(/^[\s\-\*#]+/, '').substring(0, 120);
+              if (clean.length > 10 && !completed.includes(clean)) completed.push(clean);
+            });
+          }
+          // 提取错误
+          if (c.includes('❌') || c.includes('ERROR') || c.includes('失败')) {
+            const lines = c.split('\n').filter(l => l.match(/[❌ERROR失败]/)).slice(0, 2);
+            lines.forEach(l => {
+              const clean = l.replace(/^[\s\-\*#]+/, '').substring(0, 120);
+              if (clean.length > 10 && !errors.includes(clean)) errors.push(clean);
+            });
+          }
+          // 提取文件路径
+          const pathMatches = c.match(/\/[\w\-\.\/]+\.\w{1,10}/g);
+          if (pathMatches) pathMatches.forEach(p => { if (!files.includes(p)) files.push(p); });
+        });
+
         const summaryParts = ['[Physical Compress - ' + new Date().toISOString().split('T')[0] + ']',
-          'Compressed ' + midMsgs.length + ' messages (' + midSize + 'KB) into summary.', ''];
+          'Compressed ' + midMsgs.length + ' messages (' + Math.round(midMsgs.reduce((s,m) => s + (m.content||'').length, 0)/1024) + 'KB) into summary.', ''];
+        if (completed.length) summaryParts.push('## Completed', ...completed.map(c => '- ' + c), '');
+        if (errors.length) summaryParts.push('## Errors Encountered', ...errors.map(e => '- ' + e), '');
+        if (files.length) summaryParts.push('## Files Touched', ...files.slice(0, 30).map(f => '- ' + f), '');
         
         // 加入 VFS context
         let vfsContext = '';
@@ -3842,20 +3863,7 @@ ${conversationText}
             vfs.read('context').then(c => { clearTimeout(t); resolve(c || ''); }).catch(() => { clearTimeout(t); resolve(''); });
           });
         } catch(e) {}
-        if (vfsContext) {
-          // 只保留最新一层 context，去掉嵌套的旧 session
-          var ctxLines = vfsContext.split('\n');
-          var lastSessionIdx = -1;
-          for (var ci = ctxLines.length - 1; ci >= 0; ci--) {
-            if (ctxLines[ci].match(/^## Session \d+ Summary/) || ctxLines[ci].match(/^\[Session \d+/) || ctxLines[ci].match(/^\[Physical Compress/)) {
-              lastSessionIdx = ci;
-              break;
-            }
-          }
-          var trimmedCtx = lastSessionIdx > 0 ? ctxLines.slice(lastSessionIdx).join('\n') : vfsContext;
-          if (trimmedCtx.length > 2000) trimmedCtx = trimmedCtx.substring(0, 2000) + '\n...(truncated)';
-          summaryParts.push('## VFS Context (Session Memory)', trimmedCtx);
-        }
+        if (vfsContext) summaryParts.push('## VFS Context (Session Memory)', vfsContext);
         
         const summary = summaryParts.join('\n');
 
@@ -3864,7 +3872,7 @@ ${conversationText}
         
         // Head: 保留原始 role 和 content，生成新连续 id
         headMsgs.forEach(m => {
-          newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
+          newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: m.content });
         });
         
         // Summary: 插入压缩摘要
@@ -3873,23 +3881,15 @@ ${conversationText}
         
         // Tail: 保留原始 role 和 content，生成新连续 id
         tailMsgs.forEach(m => {
-          newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
+          newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: m.content });
         });
 
         addLog('🔨 新对话: ' + newMsgs.length + ' 条 (head:' + HEAD_KEEP + ' + summary:2 + tail:' + TAIL_KEEP + ')', 'info');
         addLog('📝 摘要: ' + summary.length + ' chars', 'info');
 
         // ── Step 3: 弹出编辑器让用户确认摘要 ──
-        // 确保 modal overlay 已创建
-        if (!document.getElementById('compress-modal-overlay')) {
-          const ov = document.createElement('div');
-          ov.id = 'compress-modal-overlay';
-          ov.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;justify-content:center;align-items:center;';
-          ov.innerHTML = '<div id="compress-modal" style="background:#1a1a2e;border-radius:12px;padding:20px;width:80vw;max-width:800px;max-height:80vh;display:flex;flex-direction:column;"><div style="margin-bottom:10px;color:#fff;">编辑压缩摘要 <span id="compress-modal-chars"></span></div><textarea id="compress-modal-editor" style="flex:1;min-height:300px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:8px;padding:10px;font-size:13px;resize:none;"></textarea><div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end;"><button id="compress-modal-cancel" style="padding:8px 16px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">取消</button><button id="compress-modal-confirm" style="padding:8px 16px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;">确认压缩</button></div></div>';
-          document.body.appendChild(ov);
-        }
-        const modal = document.getElementById('compress-modal-overlay');
-        const editor = document.getElementById('compress-modal-editor');
+        const modal = document.getElementById('compress-modal');
+        const editor = document.getElementById('compress-editor');
         if (modal && editor) {
           editor.value = summary;
           modal.style.display = 'flex';
@@ -3931,96 +3931,14 @@ ${conversationText}
           addLog('💾 摘要已备份到 VFS context', 'success');
         } catch(e) {}
 
-        // ── Step 4.5: 注入记忆模板 (直接 fetch，不依赖 vfs) ──
-        addLog('🔍 开始 Step 4.5 经验对话注入...', 'info');
-        try {
-          const TOOLKIT_ID = '6034da7a-cf5d-4f6d-b9ae-2985508ba0c5';
-          const tplResp = await fetch('/api/project/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ id: TOOLKIT_ID, request_not_update_permission: true })
-          });
-          const tplData = await tplResp.json();
-          const allMsgs = tplData.data.session_state.messages || [];
-          
-          const injectMsgs = [];
-          let totalSize = 0;
-          const SIZE_LIMIT = 12000;
-          
-          // Source 1: 伪造经验对话 (JSON数组 [{role,content},...])
-          for (const m of allMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.startsWith('[{"role"')) continue;
-            try {
-              const dialogues = JSON.parse(c);
-              if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
-                for (const d of dialogues) {
-                  if (totalSize + (d.content || '').length > SIZE_LIMIT) break;
-                  totalSize += (d.content || '').length;
-                  injectMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
-                }
-                addLog('🧬 经验对话: ' + dialogues.length + ' 条', 'info');
-              }
-            } catch(e) {}
-          }
-          
-          // Source 2: _tpl:* 场景模板 → 独立展开，不受 SIZE_LIMIT
-          const scenarioMsgs = [];
-          for (const m of allMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.startsWith('{"name"')) continue;
-            try {
-              const parsed = JSON.parse(c);
-              if (parsed.name && parsed.messages && Array.isArray(parsed.messages)) {
-                for (const tm of parsed.messages) {
-                  scenarioMsgs.push({ id: crypto.randomUUID(), role: tm.role, content: tm.content });
-                }
-                addLog('🎯 场景 ' + parsed.name + ': ' + parsed.messages.length + ' 条', 'info');
-              }
-            } catch(e) {}
-          }
-          
-          // 先插入 forged 核心对话
-          let insertIdx = HEAD_KEEP;
-          if (injectMsgs.length > 0) {
-            for (let i = 0; i < injectMsgs.length; i++) {
-              newMsgs.splice(insertIdx + i, 0, injectMsgs[i]);
-            }
-            insertIdx += injectMsgs.length;
-            addLog('✅ 注入 ' + injectMsgs.length + ' 条核心经验 (' + Math.round(totalSize/1024) + 'K)', 'success');
-          }
-          // 再插入场景模板（独立轮次，不限大小）
-          if (scenarioMsgs.length > 0) {
-            for (let i = 0; i < scenarioMsgs.length; i++) {
-              newMsgs.splice(insertIdx + i, 0, scenarioMsgs[i]);
-            }
-            addLog('🎯 注入 ' + scenarioMsgs.length + ' 条场景对话', 'success');
-          }
-          if (injectMsgs.length === 0 && scenarioMsgs.length === 0) {
-            addLog('ℹ️ 未找到经验模板', 'info');
-          }
-        } catch(e) {
-          addLog('⚠️ 模板注入失败: ' + e.message, 'error');
-        }
-
         // ── Step 5: 创建新对话 ──
-        // 读取旧对话 name，生成新名字
-        const oldName = readData.data.name || '';
-        const dateStr = new Date().toISOString().split('T')[0];
-        const baseName = oldName.replace(/^\[Fork(?:\s*\d+)?\]\s*/, '');
-        const forkNum = (oldName.match(/^\[Fork(?:\s*(\d+))?\]/) || [])[1];
-        const nextNum = forkNum ? parseInt(forkNum) + 1 : (oldName.startsWith('[Fork') ? 2 : 1);
-        const newName = '[Fork ' + nextNum + '] ' + (baseName || 'Agent Session') + ' - ' + dateStr;
-        
-        addLog('🚀 创建新对话: ' + newName, 'info');
+        addLog('🚀 创建新对话...', 'info');
         
         const createResp = await fetch('/api/project/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            name: newName,
             session_state: { messages: newMsgs },
             type: 'ai_chat'
           })
@@ -4035,16 +3953,7 @@ ${conversationText}
         addLog('✅ 新对话创建成功: ' + newConvId.substring(0, 8) + '...', 'success');
         addLog('📊 ' + allMsgs.length + ' → ' + newMsgs.length + ' 条消息', 'success');
 
-        // ── Step 6: 删除旧对话 ──
-        addLog('🗑️ 删除旧对话...', 'info');
-        try {
-          await fetch('/api/project/delete?project_id=' + convId, { credentials: 'include' });
-          addLog('✅ 旧对话已删除', 'success');
-        } catch(e) {
-          addLog('⚠️ 旧对话删除失败: ' + e.message, 'error');
-        }
-
-        // ── Step 7: 跳转到新对话 ──
+        // ── Step 6: 跳转到新对话 ──
         addLog('🔄 2秒后跳转到新对话...', 'info');
         setTimeout(() => {
           window.location.href = '/agents?id=' + newConvId;

@@ -562,32 +562,9 @@ class MCPHub {
     logger.success(`MCP Hub 就绪, 总工具数: ${this.tools.length} (${elapsed}s)`);
   }
 
-  // 工具名别名映射 - 修复AI幻觉导致的工具未找到错误
-  static toolAliases = {
-    'navigate': 'browser_navigate',
-    'browser_nav': 'browser_navigate',
-    'screenshot': 'take_screenshot',
-    'crawler': 'read_file',
-    'browser_eval': 'eval_js',
-    'list_tabs': 'browser_list_tabs',
-    'broadcast': 'eval_js',
-    'run': 'run_process',
-    '_command': 'run_process',
-    '_file': 'write_file',
-  };
-
   findConn(tool) {
-    // 先尝试原名
     for (const [, c] of this.conns) {
       if (c.tools.some(t => t.name === tool)) return c;
-    }
-    // 别名 fallback
-    const alias = this.constructor.toolAliases[tool];
-    if (alias) {
-      logger.warn(`工具名映射: ${tool} → ${alias}`);
-      for (const [, c] of this.conns) {
-        if (c.tools.some(t => t.name === alias)) return c;
-      }
     }
     return null;
   }
@@ -780,15 +757,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
 
   if (tool === 'run_command' && params.command && !params.stdin && !params.stdinFile) {
     const cmd = params.command.trim();
-    // 尝试自动修复 SSE 参数损坏
-    // 模式1: "bash /path/to/script.sh" 或 "python3 /path/to/script.py" → 直接执行
-    const execMatch = cmd.match(/^(bash|sh|python3?|node)\s+(\/\S+)$/);
-    if (execMatch) {
-      logger.info(`[自动修复] run_command 无stdin，但命令可执行: ${cmd}`);
-      params.command = cmd; // 保持原样，让 run_process 处理
-    } else if (cmd.includes(' ') && !cmd.startsWith('/') && !cmd.startsWith('./')) {
-      // 模式2: 真正的损坏 - "bashecho hello" 等无法修复的情况
-      logger.warning(`[防御] run_command 参数异常: command="${cmd}" 无 stdin，疑似 SSE 传输损坏`);
+    // 正常的 command 应该是 "bash", "python3", "/usr/bin/env" 等
+    // 如果没有 stdin 但 command 包含空格且不像路径，说明参数被损坏
+    if (cmd.includes(' ') && !cmd.startsWith('/') && !cmd.startsWith('./')) {
+      logger.warning(`[防御] run_command 参数异常: command="${cmd}" 无 stdin，疑似参数拼接损跳过执行`);
       const historyId = addToHistory(tool, params, false, null, '参数损坏: command 和 stdin 被拼接');
       ws.send(JSON.stringify({
         type: 'tool_result', id, historyId, tool,
@@ -977,7 +949,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       /\brsync\b/,
       /\bwrangler\s+(deploy|publish)\b/,
       /\bcurl\b.*(-o|--output).*\.(mp[34]|zip|tar|gz|iso)\b/,
-      /\bnpm\s+run\s+(dev|build|start)\b/,
     ];
     const isLong = longPatterns.some(p => p.test(cmd));
     // 检测 sleep 命令也走 bg_run（sleep 在普通执行模式下必定 timeout）
@@ -1118,17 +1089,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       callTimeout = isLongSSH ? 600000 : 120000; // 10min for long, 2min default
       if (isLongSSH) logger.info('[SSH] 检测到长时间命令，超时延长至 600s: ' + sshCmd.substring(0, 80));
     }
-    // vfs-exec.sh / vx.sh 命令自动延长超时（这些命令需要返回值，不能走 bg_run）
-    if (!callTimeout && tool === 'run_process') {
-      const cmd = (params.command_line || '') + ' ' + (params.stdin || '');
-      if (/vfs-exec\.sh|vx\.sh/.test(cmd)) {
-        // 从命令中提取超时参数，如 "vfs-exec.sh /tmp/x.js 120000" → 120000+30000 缓冲
-        const timeoutMatch = cmd.match(/vfs-exec\.sh\s+\S+\s+(\d+)/);
-        const scriptTimeout = timeoutMatch ? parseInt(timeoutMatch[1]) : 90000;
-        callTimeout = scriptTimeout + 30000; // 脚本超时 + 30s 缓冲
-        logger.info('[VFS-EXEC] 自动延长超时至 ' + (callTimeout/1000) + 's');
-      }
-    }
     const callOptions = callTimeout ? { timeout: callTimeout } : {};
 
     // ── write_file 保护: 检测内容截断 ──
@@ -1228,7 +1188,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     logger.tool(tool, params, resultStr.slice(0, 200));
     
     // 如果有活跃录制，记录此步骤
-    for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
+    for (const [recId, rec] of (recorder.activeRecordings || [])) {
       if (rec.status === 'recording') {
         recorder.recordStep(recId, {
           tool,
@@ -1332,7 +1292,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
     
     // 如果有活跃录制，记录失败步骤
-    for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
+    for (const [recId, rec] of (recorder.activeRecordings || [])) {
       if (rec.status === 'recording') {
         recorder.recordStep(recId, {
           tool,

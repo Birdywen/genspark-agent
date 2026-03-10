@@ -441,6 +441,7 @@
   var __DYNAMIC_PROMPT_MARKER = '\n\n---\n\n# \uD83E\uDDE0 VFS Dynamic Injection';
   var __SYSTEM_PROMPT_MARKER = '\u6838\u5FC3\u884C\u4E3A\u51C6\u5219'; // 核心行为准则
   var __promptCache = { content: null, ts: 0, ttl: 30000 };
+
   var __systemPromptCache = { content: null, ts: 0, ttl: 120000 }; // 2min TTL for system prompt
   var __thirdPartyFetch = null;
 

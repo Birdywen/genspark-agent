@@ -1,10 +1,10 @@
-// State Manager - 任务状态机管理模块
+// State Manager v2 - 增强版状态机
+// 新增: 表达式条件引擎, 分支逻辑支持, forEach/while 循环状态管理
 
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import VariableResolver from './variable-resolver.js';
 
-// 任务状态枚举
 const TaskState = {
   PENDING: 'pending',
   RUNNING: 'running',
@@ -19,14 +19,11 @@ class StateManager {
   constructor(logger, storagePath = null) {
     this.logger = logger;
     this.storagePath = storagePath;
-    // 当前活跃任务: taskId -> TaskState
     this.tasks = new Map();
-    // 任务变量存储: taskId -> { varName: value }
     this.variables = new Map();
     this.resolver = new VariableResolver(logger);
   }
 
-  // 创建新任务
   createTask(taskId, steps = [], options = {}) {
     const task = {
       id: taskId,
@@ -39,6 +36,7 @@ class StateManager {
       options: {
         stopOnError: true,
         timeout: 120000,
+        maxLoopIterations: 50,
         ...options
       },
       createdAt: Date.now(),
@@ -48,17 +46,14 @@ class StateManager {
     
     this.tasks.set(taskId, task);
     this.variables.set(taskId, {});
-    
     this.logger.info(`[StateManager] 创建任务: ${taskId}, ${steps.length} 步`);
     return task;
   }
 
-  // 获取任务
   getTask(taskId) {
     return this.tasks.get(taskId);
   }
 
-  // 更新任务状态
   updateState(taskId, newState, extra = {}) {
     const task = this.tasks.get(taskId);
     if (!task) return null;
@@ -72,7 +67,6 @@ class StateManager {
     return task;
   }
 
-  // 记录步骤结果
   recordStepResult(taskId, stepIndex, result) {
     const task = this.tasks.get(taskId);
     if (!task) return null;
@@ -84,27 +78,20 @@ class StateManager {
     task.currentStep = stepIndex + 1;
     task.updatedAt = Date.now();
     
-    // 如果步骤有 saveAs，保存到变量
     const step = task.steps[stepIndex];
     if (step?.saveAs && result.success) {
-      // 直接保存结果值，尝试解析 JSON
       let value = result.result;
       if (typeof value === 'string') {
-        value = value.trim(); // 自动去除首尾空白和换行
-        try {
-          value = JSON.parse(value);
-        } catch (e) {
-          // 保持字符串
-        }
+        value = value.trim();
+        try { value = JSON.parse(value); } catch (e) {}
       }
       this.setVariable(taskId, step.saveAs, value);
-      this.logger.info(`[StateManager] 💾 保存变量: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : value}`);
+      this.logger.info(`[StateManager] 💾 保存变量: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : String(value).substring(0,100)}`);
     }
     
     return task;
   }
 
-  // 创建检查点
   createCheckpoint(taskId) {
     const task = this.tasks.get(taskId);
     if (!task) return null;
@@ -113,17 +100,15 @@ class StateManager {
       step: task.currentStep,
       state: task.state,
       results: [...task.results],
-      variables: { ...this.variables.get(taskId) },
+      variables: JSON.parse(JSON.stringify(this.variables.get(taskId) || {})),
       timestamp: Date.now()
     };
     
     task.checkpoints.push(checkpoint);
     this.logger.info(`[StateManager] 任务 ${taskId}: 创建检查点 @ step ${checkpoint.step}`);
-    
     return checkpoint;
   }
 
-  // 从检查点恢复
   restoreFromCheckpoint(taskId, checkpointIndex = -1) {
     const task = this.tasks.get(taskId);
     if (!task || task.checkpoints.length === 0) return null;
@@ -135,34 +120,46 @@ class StateManager {
     task.currentStep = checkpoint.step;
     task.state = TaskState.PAUSED;
     task.results = [...checkpoint.results];
-    this.variables.set(taskId, { ...checkpoint.variables });
+    this.variables.set(taskId, JSON.parse(JSON.stringify(checkpoint.variables)));
     task.updatedAt = Date.now();
     
     this.logger.info(`[StateManager] 任务 ${taskId}: 从检查点 ${idx} 恢复到 step ${checkpoint.step}`);
     return task;
   }
 
-  // 设置变量
   setVariable(taskId, name, value) {
     const vars = this.variables.get(taskId);
     if (vars) {
-      vars[name] = value;
+      // 支持深度设置: "result.status" -> vars.result.status
+      if (name.includes('.')) {
+        const parts = name.split('.');
+        let obj = vars;
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!obj[parts[i]] || typeof obj[parts[i]] !== 'object') {
+            obj[parts[i]] = {};
+          }
+          obj = obj[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = value;
+      } else {
+        vars[name] = value;
+      }
     }
   }
 
-  // 获取变量
   getVariable(taskId, name) {
-    const vars = this.variables.get(taskId);
-    return vars ? vars[name] : undefined;
+    const vars = this.variables.get(taskId) || {};
+    return this.resolver._accessValue(name, vars);
   }
 
-  // 获取所有变量
   getAllVariables(taskId) {
     return this.variables.get(taskId) || {};
   }
 
-  // 模板替换: 将 {{var.field}} 替换为实际值
-resolveTemplate(taskId, template) {
+  /**
+   * 模板替换 - v2: 递归处理对象和数组
+   */
+  resolveTemplate(taskId, template) {
     try {
       const vars = this.variables.get(taskId) || {};
       return this.resolver.resolve(template, vars);
@@ -172,57 +169,61 @@ resolveTemplate(taskId, template) {
     }
   }
 
+  /**
+   * 条件评估 v2 - 支持旧格式 + 新表达式格式
+   */
   evaluateCondition(taskId, condition) {
     this.logger.info('[StateManager] 🔍 评估条件:', JSON.stringify(condition));
     if (!condition) return true;
     
     const vars = this.variables.get(taskId) || {};
     
-    // 简单字符串条件
-    if (condition === 'success') {
-      // 检查上一步是否成功
-      const task = this.tasks.get(taskId);
-      if (!task || task.results.length === 0) return false;
-      const lastResult = task.results[task.results.length - 1];
-      return lastResult?.success === true;
-    }
-    
-    // 对象条件
-    if (typeof condition === 'object') {
-      const { var: varName, success, contains, regex, equals, exists } = condition;
-      const varValue = vars[varName];
-      
-      if (exists !== undefined) {
-        return exists ? !!varValue : !varValue;
+    // === 新格式: 字符串表达式 ===
+    if (typeof condition === 'string') {
+      // 兼容旧格式 'success'
+      if (condition === 'success') {
+        const task = this.tasks.get(taskId);
+        if (!task || task.results.length === 0) return false;
+        const lastResult = task.results[task.results.length - 1];
+        return lastResult?.success === true;
       }
       
+      // 新: 表达式求值
+      try {
+        return this.resolver.evaluateExpression(condition, vars);
+      } catch (e) {
+        this.logger.error('[StateManager] 表达式求值失败:', condition, e.message);
+        return false;
+      }
+    }
+    
+    // === 旧格式: 对象条件（完全兼容） ===
+    if (typeof condition === 'object') {
+      const { var: varName, success, contains, regex, equals, exists, expr } = condition;
+      
+      // 新: expr 字段支持表达式
+      if (expr) {
+        try {
+          return this.resolver.evaluateExpression(expr, vars);
+        } catch (e) {
+          this.logger.error('[StateManager] expr 求值失败:', expr, e.message);
+          return false;
+        }
+      }
+      
+      const varValue = varName ? this.resolver._accessValue(varName, vars) : undefined;
+      
+      if (exists !== undefined) {
+        return exists ? varValue !== undefined && varValue !== null : varValue === undefined || varValue === null;
+      }
       
       if (equals !== undefined) {
-        this.logger.info('[StateManager] 检查 equals: varName=' + varName + ', equals=' + equals + ', varValue=', varValue);
-        // 支持深度访问如 apiResult.status
-        if (varName.includes('.')) {
-          const parts = varName.split('.');
-          this.logger.info('[StateManager] 深度访问: parts=', parts, ', vars=', Object.keys(vars));
-          let value = vars[parts[0]]; // 先获取根变量
-          for (let i = 1; i < parts.length; i++) {
-            value = value?.[parts[i]];
-          }
-          return value === equals;
-        }
-        return varValue === equals;
+        return varValue == equals;
       }
       
       if (success !== undefined) {
-        // success 条件：检查该变量对应的步骤是否执行成功
-        // 如果变量存在，说明步骤成功（因为只有成功才会 saveAs）
-        if (success === true) {
-          return varValue !== undefined;
-        }
-        // 如果需要检查失败
-        if (success === false) {
-          return varValue === undefined;
-        }
-        // 兼容旧格式：如果 varValue 是对象且有 success 属性
+        if (success === true) return varValue !== undefined;
+        if (success === false) return varValue === undefined;
         if (typeof varValue === 'object' && varValue !== null && 'success' in varValue) {
           return varValue.success === success;
         }
@@ -230,20 +231,14 @@ resolveTemplate(taskId, template) {
       }
       
       if (contains) {
-        // varValue 就是结果字符串本身，不是 {result: ...} 对象
         if (varValue === undefined) return false;
-        const resultStr = typeof varValue === 'string' 
-          ? varValue 
-          : JSON.stringify(varValue);
+        const resultStr = typeof varValue === 'string' ? varValue : JSON.stringify(varValue);
         return resultStr.includes(contains);
       }
       
       if (regex) {
-        // varValue 就是结果字符串本身
         if (varValue === undefined) return false;
-        const resultStr = typeof varValue === 'string' 
-          ? varValue 
-          : JSON.stringify(varValue);
+        const resultStr = typeof varValue === 'string' ? varValue : JSON.stringify(varValue);
         return new RegExp(regex).test(resultStr);
       }
     }
@@ -251,7 +246,6 @@ resolveTemplate(taskId, template) {
     return true;
   }
 
-  // 完成任务
   completeTask(taskId, success, error = null) {
     const task = this.tasks.get(taskId);
     if (!task) return null;
@@ -263,7 +257,6 @@ resolveTemplate(taskId, template) {
     
     this.logger.info(`[StateManager] 任务 ${taskId}: 完成 (${task.state})`);
     
-    // 保存到文件（可选）
     if (this.storagePath) {
       this.saveTask(taskId);
     }
@@ -271,10 +264,8 @@ resolveTemplate(taskId, template) {
     return task;
   }
 
-  // 保存任务到文件
   saveTask(taskId) {
     if (!this.storagePath) return;
-    
     const task = this.tasks.get(taskId);
     if (!task) return;
     
@@ -282,23 +273,19 @@ resolveTemplate(taskId, template) {
       if (!existsSync(this.storagePath)) {
         mkdirSync(this.storagePath, { recursive: true });
       }
-      
       const filePath = path.join(this.storagePath, `task-${taskId}.json`);
       writeFileSync(filePath, JSON.stringify({
         task,
         variables: this.variables.get(taskId)
       }, null, 2));
-      
       this.logger.info(`[StateManager] 任务 ${taskId} 已保存`);
     } catch (e) {
       this.logger.error(`[StateManager] 保存任务失败: ${e.message}`);
     }
   }
 
-  // 从文件加载任务
   loadTask(taskId) {
     if (!this.storagePath) return null;
-    
     const filePath = path.join(this.storagePath, `task-${taskId}.json`);
     if (!existsSync(filePath)) return null;
     
@@ -306,7 +293,6 @@ resolveTemplate(taskId, template) {
       const data = JSON.parse(readFileSync(filePath, 'utf-8'));
       this.tasks.set(taskId, data.task);
       this.variables.set(taskId, data.variables || {});
-      
       this.logger.info(`[StateManager] 任务 ${taskId} 已加载`);
       return data.task;
     } catch (e) {
@@ -315,11 +301,9 @@ resolveTemplate(taskId, template) {
     }
   }
 
-  // 清理已完成的任务
   cleanup(maxAge = 30 * 60 * 1000) {
     const now = Date.now();
     let cleaned = 0;
-    
     for (const [taskId, task] of this.tasks) {
       if (task.state === TaskState.SUCCESS || task.state === TaskState.FAILED) {
         if (now - task.updatedAt > maxAge) {
@@ -329,26 +313,21 @@ resolveTemplate(taskId, template) {
         }
       }
     }
-    
     if (cleaned > 0) {
       this.logger.info(`[StateManager] 清理了 ${cleaned} 个过期任务`);
     }
   }
 
-  // 获取任务摘要
   getTaskSummary(taskId) {
     const task = this.tasks.get(taskId);
     if (!task) return null;
-    
     return {
       id: task.id,
       state: task.state,
       progress: `${task.currentStep}/${task.totalSteps}`,
       successSteps: task.results.filter(r => r?.success).length,
       failedSteps: task.results.filter(r => r && !r.success).length,
-      duration: task.completedAt 
-        ? task.completedAt - task.createdAt 
-        : Date.now() - task.createdAt,
+      duration: task.completedAt ? task.completedAt - task.createdAt : Date.now() - task.createdAt,
       error: task.error
     };
   }
