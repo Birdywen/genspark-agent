@@ -28,6 +28,7 @@ import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
 import Router from "./core/router.js";
 import Metrics from "./core/metrics.js";
+import { resolvePayloadFiles, decodeBase64Fields, parseParams, autoScript, resolveTimeout, parseResult, sendSuccess, sendError } from './core/pipeline.js';
 import { resolve as resolveAlias } from "./core/alias.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1084,29 +1085,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     params = _aliasResult.params;
   }
   
-  // ── payload file 解析 (intercept 前) ──
-  const fileRefFields = [['contentFile', 'content'], ['stdinFile', 'stdin'], ['codeFile', 'code']];
-  for (const [fileField, targetField] of fileRefFields) {
-    if (params[fileField] && typeof params[fileField] === 'string') {
-      try {
-        const fileContent = readFileSync(params[fileField], 'utf-8');
-        params[targetField] = fileContent;
-        const _tmpFile = params[fileField];
-        delete params[fileField];
-        logger.info('[PayloadFile-Pre] loaded ' + targetField + ': ' + fileContent.length + ' chars <- ' + _tmpFile);
-        try { unlinkSync(_tmpFile); } catch(e) {}
-      } catch (e) {
-        logger.warning('[PayloadFile-Pre] failed ' + fileField + ': ' + e.message);
-      }
-    }
-  }
-
-    // ── JSON string params 自动解析 ──
-  for (const key of ['edits', 'urls', 'paths']) {
-    if (params[key] && typeof params[key] === 'string') {
-      try { params[key] = JSON.parse(params[key]); logger.info('[ParamsParse] ' + key + ' string -> array'); } catch(e) {}
-    }
-  }
+  // ── Pipeline 预处理 ──
+  params = resolvePayloadFiles(params, logger);
+  params = decodeBase64Fields(params, logger);
+  params = parseParams(params, logger);
   // ── Router Phase 3: 灰度切流量 ──
   const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell').split(',');
   let _routerHandled = false;
@@ -1114,34 +1096,39 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     const driver = router.handlers.get(tool);
     if (driver && ROUTER_INTERCEPT.includes(driver.name)) {
       logger.info('[Router] INTERCEPT: ' + tool + ' -> ' + driver.name);
+      // 安全检查
+      const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);
+      if (!safetyCheck.allowed) {
+        const historyId = addToHistory(tool, params, false, null, safetyCheck.reason);
+        sendError(ws, { id, historyId, tool, error: safetyCheck.reason });
+        return;
+      }
+      // 自动脚本化
+      params = autoScript(tool, params, logger);
       try {
         const r = await router.dispatch(tool, params, ws, message);
         if (r && r.delegate) {
-          // delegate 型 driver (vfs/browser): 只做 trace, fall through 到老代码
-          logger.info('[Router] DELEGATE: ' + tool + ' -> ' + driver.name + ' (fallthrough)');
+          logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
         } else if (r && r.handled) {
-          // driver 自己处理了 ws.send (如 shell driver)
+          // driver 自己处理了 ws.send (如 shell)
           _routerHandled = true;
+          addToHistory(tool, params, true, JSON.stringify(r).slice(0, 500));
           logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
         } else {
-          // hub.call 返回 { content: [...], isError } 格式
           _routerHandled = true;
-          let result = r;
-          if (r && r.content && Array.isArray(r.content)) {
-            result = r.content.map(c => c.type === 'text' ? c.text : '').join('\n').trim();
-          }
+          const { result, images } = parseResult(r);
           const success = !(r && r.isError);
-          const historyId = addToHistory({ tool, params, result, success });
+          const historyId = addToHistory(tool, params, success, (result || '').slice(0, 500), success ? null : result);
           if (success) {
-            ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: true, result }));
+            sendSuccess(ws, { id, historyId, tool, result, images });
           } else {
-            ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: result }));
+            sendError(ws, { id, historyId, tool, error: result });
           }
         }
       } catch(e) {
         _routerHandled = true;
-        const historyId = addToHistory({ tool, params, error: e.message, success: false });
-        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: e.message }));
+        const historyId = addToHistory(tool, params, false, null, e.message);
+        sendError(ws, { id, historyId, tool, error: e.message });
       }
       if (_routerHandled) return;
     }
