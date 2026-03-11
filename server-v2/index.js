@@ -1277,6 +1277,27 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
 }
 
 // ==================== 主函数 ====================
+
+// ── 浏览器工具转发 helper ──
+function forwardToBrowser(ws, clients, browserToolPending, logger, { msg, resultType, tool, params, timeout = 30000 }) {
+  const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const timer = setTimeout(() => {
+    browserToolPending.delete(callId);
+    ws.send(JSON.stringify({ type: resultType, id: msg.id, success: false, error: `超时 (${timeout/1000}s)` }));
+  }, timeout);
+  browserToolPending.set(callId, {
+    resolve: (result) => { clearTimeout(timer); ws.send(JSON.stringify({ type: resultType, id: msg.id, success: true, result })); },
+    reject: (err) => { clearTimeout(timer); ws.send(JSON.stringify({ type: resultType, id: msg.id, success: false, error: err.message || String(err) })); },
+    timeout: timer
+  });
+  for (const client of clients) {
+    if (client !== ws && client.readyState === 1) {
+      client.send(JSON.stringify({ type: 'browser_tool_call', callId, tool, params }));
+    }
+  }
+  logger.info(`[Browser] 转发 ${tool} 到浏览器: ${callId}`);
+}
+
 async function main() {
   // 加载历史记录
   history.init(logger);
@@ -1377,94 +1398,18 @@ async function main() {
             safety.handleConfirmation(msg.id, msg.approved);
             break;
 
-          case 'browser_eval': {
-            // 外部脚本(如 sos ask2)请求浏览器执行 eval_js
-            const beCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const beTimeout = setTimeout(() => {
-              browserToolPending.delete(beCallId);
-              ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: false, error: '浏览器执行超时 (90s)' }));
-            }, msg.timeout || 90000);
-
-            browserToolPending.set(beCallId, {
-              resolve: (result) => {
-                clearTimeout(beTimeout);
-                ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: true, result }));
-              },
-              reject: (err) => {
-                clearTimeout(beTimeout);
-                ws.send(JSON.stringify({ type: 'browser_eval_result', id: msg.id, success: false, error: err.message || String(err) }));
-              },
-              timeout: beTimeout
-            });
-
-            // 广播给所有客户端(浏览器扩展会拦截 browser_tool_call)
-            for (const client of clients) {
-              if (client !== ws && client.readyState === 1) {
-                client.send(JSON.stringify({ type: 'browser_tool_call', callId: beCallId, tool: 'eval_js', params: { code: msg.code, tabId: msg.tabId || null, allFrames: msg.allFrames || false } }));
-              }
-            }
-            logger.info(`[BrowserEval] 转发到浏览器: ${beCallId}`);
+          case 'browser_eval':
+            forwardToBrowser(ws, clients, browserToolPending, logger, { msg, resultType: 'browser_eval_result', tool: 'eval_js', params: { code: msg.code, tabId: msg.tabId || null, allFrames: msg.allFrames || false }, timeout: msg.timeout || 90000 });
             break;
-          }
             
 
-          case 'browser_screenshot': {
-            // runner.js 请求截图（通过扩展的 captureVisibleTab）
-            const bsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const bsTimeout = setTimeout(() => {
-              browserToolPending.delete(bsCallId);
-              ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: false, error: '截图超时 (30s)' }));
-            }, 30000);
-
-            browserToolPending.set(bsCallId, {
-              resolve: (result) => {
-                clearTimeout(bsTimeout);
-                ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: true, result }));
-              },
-              reject: (err) => {
-                clearTimeout(bsTimeout);
-                ws.send(JSON.stringify({ type: 'browser_screenshot_result', id: msg.id, success: false, error: err.message || String(err) }));
-              },
-              timeout: bsTimeout
-            });
-
-            for (const client of clients) {
-              if (client !== ws && client.readyState === 1) {
-                client.send(JSON.stringify({ type: 'browser_tool_call', callId: bsCallId, tool: 'screenshot', params: { tabId: msg.tabId || null } }));
-              }
-            }
-            logger.info(`[BrowserScreenshot] 转发到浏览器: ${bsCallId}`);
+          case 'browser_screenshot':
+            forwardToBrowser(ws, clients, browserToolPending, logger, { msg, resultType: 'browser_screenshot_result', tool: 'screenshot', params: { tabId: msg.tabId || null } });
             break;
-          }
 
-          case 'browser_list_tabs': {
-            // runner.js 请求获取 tab 列表
-            const ltCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-            const ltTimeout = setTimeout(() => {
-              browserToolPending.delete(ltCallId);
-              ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: false, error: '超时 (30s)' }));
-            }, 30000);
-
-            browserToolPending.set(ltCallId, {
-              resolve: (result) => {
-                clearTimeout(ltTimeout);
-                ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: true, result }));
-              },
-              reject: (err) => {
-                clearTimeout(ltTimeout);
-                ws.send(JSON.stringify({ type: 'browser_list_tabs_result', id: msg.id, success: false, error: err.message || String(err) }));
-              },
-              timeout: ltTimeout
-            });
-
-            for (const client of clients) {
-              if (client !== ws && client.readyState === 1) {
-                client.send(JSON.stringify({ type: 'browser_tool_call', callId: ltCallId, tool: 'list_tabs', params: {} }));
-              }
-            }
-            logger.info(`[BrowserListTabs] 转发到浏览器: ${ltCallId}`);
+          case 'browser_list_tabs':
+            forwardToBrowser(ws, clients, browserToolPending, logger, { msg, resultType: 'browser_list_tabs_result', tool: 'list_tabs', params: {} });
             break;
-          }
 
           case 'ping':
             ws.send('{"type":"pong"}');
