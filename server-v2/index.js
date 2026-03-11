@@ -50,63 +50,10 @@ const errorClassifier = new ErrorClassifier();
 
 // ==================== 跨扩展通信 ====================
 // agentId -> { ws, site, lastSeen }
-const registeredAgents = new Map();
-
-function registerAgent(ws, agentId, site) {
-  // 如果已有同名 agent，先移除旧的
-  if (registeredAgents.has(agentId)) {
-    const old = registeredAgents.get(agentId);
-    if (old.ws !== ws) {
-      logger.info(`Agent ${agentId} 重新注册 (旧: ${old.site} -> 新: ${site})`);
-    }
-  }
-  registeredAgents.set(agentId, { ws, site, lastSeen: Date.now() });
-  logger.info(`注册 Agent: ${agentId} @ ${site}, 当前总数: ${registeredAgents.size}`);
-}
-
-function unregisterAgent(ws) {
-  for (const [agentId, info] of registeredAgents) {
-    if (info.ws === ws) {
-      registeredAgents.delete(agentId);
-      logger.info(`注销 Agent: ${agentId}`);
-      return agentId;
-    }
-  }
-  return null;
-}
-
-function sendCrossExtensionMessage(fromAgent, toAgent, message) {
-  const target = registeredAgents.get(toAgent);
-  if (!target) {
-    return { success: false, error: `Agent "${toAgent}" 不在线` };
-  }
-  
-  try {
-    target.ws.send(JSON.stringify({
-      type: 'cross_extension_message',
-      from: fromAgent,
-      to: toAgent,
-      message: message,
-      timestamp: Date.now()
-    }));
-    logger.info(`跨扩展消息: ${fromAgent} -> ${toAgent}`);
-    return { success: true };
-  } catch (e) {
-    logger.error(`发送跨扩展消息失败: ${e.message}`);
-    return { success: false, error: e.message };
-  }
-}
-
-function getOnlineAgents() {
-  const agents = [];
-  for (const [agentId, info] of registeredAgents) {
-    agents.push({ agentId, site: info.site, lastSeen: info.lastSeen });
-  }
-  return agents;
-}
 
 // ==================== 命令历史管理 ====================
 import history from "./core/history.js";
+import agents from './core/agents.js';
 // 命令历史管理已提取到 core/history.js
 
 // ==================== Agents 注册表 ====================
@@ -808,6 +755,7 @@ function forwardToBrowser(ws, clients, browserToolPending, logger, { msg, result
 async function main() {
   // 加载历史记录
   history.init(logger);
+  agents.init(logger);
   
   await hub.start();
 
@@ -1421,7 +1369,7 @@ async function main() {
           // ===== 跨扩展通信 =====
           case 'register_agent':
             if (msg.agentId) {
-              registerAgent(ws, msg.agentId, msg.site || 'unknown');
+              agents.register(ws, msg.agentId, msg.site || 'unknown');
               ws.send(JSON.stringify({
                 type: 'agent_registered',
                 agentId: msg.agentId,
@@ -1433,7 +1381,7 @@ async function main() {
           case 'cross_extension_send':
             if (msg.to && msg.message) {
               const fromAgent = msg.from || 'unknown';
-              const result = sendCrossExtensionMessage(fromAgent, msg.to, msg.message);
+              const result = agents.sendMessage(fromAgent, msg.to, msg.message);
               ws.send(JSON.stringify({
                 type: 'cross_extension_result',
                 ...result,
@@ -1445,7 +1393,7 @@ async function main() {
           case 'list_online_agents':
             ws.send(JSON.stringify({
               type: 'online_agents',
-              agents: getOnlineAgents()
+              agents: agents.getOnline()
             }));
             break;
 
@@ -1483,7 +1431,7 @@ async function main() {
     ws.on('close', () => {
       clients.delete(ws);
       // 注销该连接关联的 agent
-      const agentId = unregisterAgent(ws);
+      const agentId = agents.unregister(ws);
       logger.info(`客户端断开, 当前连接数: ${clients.size}${agentId ? `, 已注销 Agent: ${agentId}` : ''}`);
     });
 
