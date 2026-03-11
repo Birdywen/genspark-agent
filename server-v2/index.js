@@ -672,19 +672,7 @@ const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));
 const processManager = new ProcessManager();
 
 // ==================== 工具调用处理（含历史记录）====================
-// 工具别名映射
-const TOOL_ALIASES = {
-  'run_command': { target: 'run_process', transform: (p) => ({ command_line: p.command, mode: 'shell', ...(p.stdin && { stdin: p.stdin }), ...(p.stdinFile && { stdinFile: p.stdinFile }), ...(p.timeout && { timeout_ms: p.timeout * 1000 }), ...(p.cwd && { cwd: p.cwd }) }) },
-  'screenshot': { target: 'take_screenshot', transform: (p) => p },
-  'browser_navigate': { target: 'navigate', transform: (p) => p },
-  'browser_eval': { target: 'eval_js', transform: (p) => p },
-  'reload_tools': { target: 'list_tools', transform: () => ({}) },
-  'run': { target: 'run_process', transform: (p) => p },
-  'read_text_file': { target: 'read_file', transform: (p) => p },
-  'bg_run': null,
-  'bg_status': null,
-  'bg_kill': null
-};
+// 工具别名映射 → 已迁移到 core/alias.js
 
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
@@ -1135,27 +1123,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
 
-  // ── 复杂命令自动脚本化：防止转义问题 ──
-  // 策略：检测到复杂命令时，将原始命令写入临时脚本文件再执行
-  // 这样即使上游 SSE 传输已丢字符，至少 server→shell 这段不会二次损坏
-  if (tool === 'run_process' && params.command_line && !params._noAutoScript) {
-    const cmd = params.command_line;
-    const hasHighRiskChars = /['"`$\\|&;(){}\[\]]/.test(cmd);
-    const isLong = cmd.length > 200;
-    const hasNestedQuotes = (cmd.match(/'/g) || []).length >= 2 && (cmd.match(/"/g) || []).length >= 2;
-    const hasPipe = cmd.includes(' | ');
-    
-    if ((isLong && hasHighRiskChars) || hasNestedQuotes || (isLong && hasPipe)) {
-      try {
-        const scriptPath = `/private/tmp/cmd_${Date.now()}.sh`;
-        writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
-        logger.info(`[AutoScript] 复杂命令写入脚本: ${scriptPath} (${cmd.length} chars)`);
-        params = { ...params, command_line: `bash ${scriptPath}`, _noAutoScript: true };
-      } catch (e) {
-        logger.warn(`[AutoScript] 写入脚本失败: ${e.message}`);
-      }
-    }
-  }
+  // [已迁移到 pipeline.autoScript + Router]
 
   logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);
 
@@ -1180,53 +1148,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   try {
-    // ── payload file 引用解析：从临时文件读取大段内容 ──
-    const fileRefFields = [['contentFile', 'content'], ['stdinFile', 'stdin'], ['codeFile', 'code']];
-    for (const [fileField, targetField] of fileRefFields) {
-      if (params[fileField] && typeof params[fileField] === 'string') {
-        try {
-          const fileContent = readFileSync(params[fileField], 'utf-8');
-          params[targetField] = fileContent;
-          const _tmpFile = params[fileField];
-          delete params[fileField];
-          logger.info('[PayloadFile] 从文件加载 ' + targetField + ': ' + fileContent.length + ' chars <- ' + _tmpFile);
-          // 清理临时文件
-          try { unlinkSync(_tmpFile); } catch(e) {}
-        } catch (e) {
-          logger.warning('[PayloadFile] 读取失败 ' + fileField + ': ' + e.message);
-        }
-      }
-    }
-
-    // ── base64 内容解码：彻底解决 SSE 传输转义损坏 ──
-    // 当 content/stdin/code 字段以 'base64:' 前缀开头时，自动解码
-    const BASE64_PREFIX = 'base64:';
-    const base64Fields = ['content', 'stdin', 'code'];
-    for (const field of base64Fields) {
-      if (params[field] && typeof params[field] === 'string' && params[field].startsWith(BASE64_PREFIX)) {
-        try {
-          params[field] = Buffer.from(params[field].slice(BASE64_PREFIX.length), 'base64').toString('utf-8');
-          logger.info(`[Base64Decode] 解码字段 ${field}: ${params[field].length} chars`);
-        } catch (e) {
-          logger.warning(`[Base64Decode] 解码失败 ${field}: ${e.message}`);
-        }
-      }
-    }
-    // edits 数组中的 oldText/newText 也支持 base64
-    if (params.edits && Array.isArray(params.edits)) {
-      for (const edit of params.edits) {
-        for (const ef of ['oldText', 'newText']) {
-          if (edit[ef] && typeof edit[ef] === 'string' && edit[ef].startsWith(BASE64_PREFIX)) {
-            try {
-              edit[ef] = Buffer.from(edit[ef].slice(BASE64_PREFIX.length), 'base64').toString('utf-8');
-            } catch (e) {
-              logger.warning(`[Base64Decode] edits.${ef} 解码失败: ${e.message}`);
-            }
-          }
-        }
-      }
-    }
-
+    // [已迁移到 pipeline.resolvePayloadFiles + decodeBase64Fields]
     // 支持灵活 timeout: 从原始 message 中提取
     let callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
     // SSH 工具默认给 120s timeout，长命令自动延长
