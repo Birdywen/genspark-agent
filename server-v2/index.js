@@ -885,17 +885,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   // AI 调用: ΩHERE vfs_write @slot=toolkit @key=xxx @content<<EOF ... EOF
   // 也支持写 name通道: ΩHERE vfs_write @slot=toolkit @content<<EOF ... EOF (不传 key)
   if (tool === 'vfs_write' || tool === 'vfs_read' || tool === 'vfs_delete' || tool === 'vfs_list' || tool === 'vfs_query' || tool === 'vfs_search' || tool === 'vfs_exec' || tool === 'vfs_backup') {
-    // payloadFile 解析：大内容通过 HTTP 上传后变成 contentFile，需要还原
-    if (params.contentFile && !params.content) {
-      try {
-        params.content = readFileSync(params.contentFile, 'utf-8');
-        logger.info(`[VFS] 从 payloadFile 加载 content: ${params.content.length} chars <- ${params.contentFile}`);
-        try { unlinkSync(params.contentFile); } catch(e) {}
-        delete params.contentFile;
-      } catch(e) {
-        logger.warning(`[VFS] payloadFile 读取失败: ${e.message}`);
-      }
-    }
+    // [payloadFile 已在 pipeline.resolvePayloadFiles 统一处理]
     logger.info(`[VFS] ${tool} 收到参数: slot=${params.slot} key=${params.key} contentLen=${params.content?.length} contentPreview=${JSON.stringify((params.content || '').substring(0, 100))}`);
     const historyId = addToHistory(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
     
