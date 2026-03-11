@@ -765,7 +765,12 @@ ${toolSummary}
         }
         idx++;
       }
-      var noParamTools = ['list_tabs', 'health_check', 'reload_tools'];
+      // Collect unmatched lines as freeText (used as 'code' for eval_js/async_task)
+      var freeLines = blines.filter(function(l) { return l.trim() !== '' && !l.match(/^@\w+=/) && !l.match(/^@\w+<</) && l.trim() !== '@edits'; });
+      if (freeLines.length > 0 && !params.code) {
+        params.code = freeLines.join('\n');
+      }
+      var noParamTools = ['list_tabs', 'health_check', 'reload_tools', 'vfs_list', 'vfs_backup'];
       if (Object.keys(params).length > 0 || noParamTools.indexOf(toolName) !== -1) {
         calls.push({
           name: toolName,

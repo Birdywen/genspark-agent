@@ -874,7 +874,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   // ── vfs_write: 大内容直写 VFS messages[] 通道 ──
   // AI 调用: ΩHERE vfs_write @slot=toolkit @key=xxx @content<<EOF ... EOF
   // 也支持写 name通道: ΩHERE vfs_write @slot=toolkit @content<<EOF ... EOF (不传 key)
-  if (tool === 'vfs_write' || tool === 'vfs_read' || tool === 'vfs_delete') {
+  if (tool === 'vfs_write' || tool === 'vfs_read' || tool === 'vfs_delete' || tool === 'vfs_list' || tool === 'vfs_query' || tool === 'vfs_search' || tool === 'vfs_exec' || tool === 'vfs_backup') {
     // payloadFile 解析：大内容通过 HTTP 上传后变成 contentFile，需要还原
     if (params.contentFile && !params.content) {
       try {
@@ -926,6 +926,54 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         return;
       }
       jsCode = `return window.vfs.deleteMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}).then(function(r) { return 'deleteMsg ok: ' + JSON.stringify(r); })`;
+
+    // ── vfs_list: 列出 slots 或某 slot 的 messages keys ──
+    } else if (tool === 'vfs_list') {
+      if (params.slot) {
+        jsCode = `return window.vfs.listMsg(${JSON.stringify(params.slot)}).then(function(r) { return JSON.stringify(r); })`;
+      } else {
+        jsCode = `return window.vfs.ls().then(function(r) { return JSON.stringify(r); })`;
+      }
+
+    // ── vfs_query: 按条件查询 messages ──
+    } else if (tool === 'vfs_query') {
+      if (!params.slot) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_query 需要 slot 参数' }));
+        return;
+      }
+      const qOpts = {};
+      if (params.prefix) qOpts.prefix = params.prefix;
+      if (params.exclude) qOpts.exclude = params.exclude;
+      if (params.contains) qOpts.contains = params.contains;
+      if (params.limit) qOpts.limit = parseInt(params.limit);
+      jsCode = `return window.vfs.query(${JSON.stringify(params.slot)}, ${JSON.stringify(qOpts)}).then(function(r) { return JSON.stringify(r); })`;
+
+    // ── vfs_search: 全局关键词搜索 ──
+    } else if (tool === 'vfs_search') {
+      if (!params.keyword) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_search 需要 keyword 参数' }));
+        return;
+      }
+      jsCode = `return window.vfs.search(${JSON.stringify(params.keyword)}).then(function(r) { return JSON.stringify(r); })`;
+
+    // ── vfs_exec: 执行 VFS slot 中的代码 ──
+    } else if (tool === 'vfs_exec') {
+      if (!params.slot) {
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: 'vfs_exec 需要 slot 参数' }));
+        return;
+      }
+      const execArgs = params.args ? JSON.stringify(params.args) : 'undefined';
+      if (params.key) {
+        jsCode = `return window.vfs.execMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}, ${execArgs}).then(function(r) { return JSON.stringify(r); })`;
+      } else {
+        jsCode = `return window.vfs.exec(${JSON.stringify(params.slot)}, ${execArgs}).then(function(r) { return JSON.stringify(r); })`;
+      }
+
+    // ── vfs_backup: 一键备份 ──
+    } else if (tool === 'vfs_backup') {
+      const bkOpts = {};
+      if (params.messages === 'false' || params.messages === false) bkOpts.messages = false;
+      jsCode = `return window.vfs.backup(${JSON.stringify(bkOpts)}).then(function(r) { return JSON.stringify(r); })`;
     }
 
     // 委托浏览器执行
@@ -1552,6 +1600,7 @@ async function main() {
           }
 
           case 'browser_tool_result': {
+            logger.info(`[BrowserTool] 收到result callId=${msg.callId} pendingKeys=[${Array.from(browserToolPending.keys()).join(',')}] success=${msg.success}`);
             const pending = browserToolPending.get(msg.callId);
             if (pending) {
               clearTimeout(pending.timeout);
