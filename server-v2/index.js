@@ -19,8 +19,6 @@ import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
 import http from "http";
-// [已删除] ResultCache, ContextCompressor (未使用)
-// [已删除] TaskPlanner, WorkflowTemplate, CheckpointManager (未使用)
 import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
 import Router from "./core/router.js";
@@ -54,6 +52,7 @@ const errorClassifier = new ErrorClassifier();
 // ==================== 命令历史管理 ====================
 import history from "./core/history.js";
 import agents from './core/agents.js';
+import { createHandlers } from './core/ws-handlers.js';
 // 命令历史管理已提取到 core/history.js
 
 // ==================== Agents 注册表 ====================
@@ -460,8 +459,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
 
-  // [已迁移到 pipeline.autoScript + Router]
-
   logger.info(`${isRetry ? '[重试] ' : ''}工具调用: ${tool}`, params);
 
   // 安全检查
@@ -485,7 +482,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
 
   try {
-    // [已迁移到 pipeline.resolvePayloadFiles + decodeBase64Fields]
     // 支持灵活 timeout: 从原始 message 中提取
     let callTimeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
     // SSH 工具默认给 120s timeout，长命令自动延长
@@ -775,10 +771,8 @@ async function main() {
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
   const asyncExecutor = new AsyncExecutor(logger);
   autoHealer = new AutoHealer(logger, hub);
-  // [已删除] resultCache, contextCompressor
   
   // 第三阶段模块: 智能任务规划、工作流模板、断点续传
-  // [已删除] taskPlanner, checkpointManager, workflowTemplate 初始化
   logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer 已初始化');
 
   // 启动时运行健康检查
@@ -828,6 +822,10 @@ async function main() {
       agents: agentsData.agents || {},
       historySupport: true  // 告知客户端支持历史重试
     }));
+
+
+    // 创建消息处理器
+    const wsHandlers = createHandlers({ ws, logger, recorder, goalManager, selfValidator, asyncExecutor, taskEngine, history, skillsManager, agents, clients, handleToolCall });
 
     ws.on('message', async data => {
       try {
@@ -1086,332 +1084,16 @@ async function main() {
             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
             break;
           
-          case 'create_goal':
-            {
-              const goal = goalManager.createGoal(
-                msg.goalId || `goal-${Date.now()}`,
-                msg.definition
-              );
-              ws.send(JSON.stringify({ type: 'goal_created', goal }));
-            }
-            break;
-          
-          case 'execute_goal':
-            {
-              logger.info(`[WS] 执行目标: ${msg.goalId}`);
-              const result = await goalManager.executeGoal(
-                msg.goalId,
-                (progress) => {
-                  ws.send(JSON.stringify({ type: 'goal_progress', ...progress }));
-                }
-              );
-              ws.send(JSON.stringify({ type: 'goal_complete', ...result }));
-            }
-            break;
-          
-          case 'goal_status':
-            {
-              const status = goalManager.getGoalStatus(msg.goalId);
-              ws.send(JSON.stringify({ type: 'goal_status_result', ...status }));
-            }
-            break;
-          
-          case 'list_goals':
-            {
-              const goals = goalManager.listGoals();
-              ws.send(JSON.stringify({ type: 'goals_list', ...goals }));
-            }
-            break;
-          
-          case 'validated_execute':
-            {
-              // 带验证的单工具执行
-              logger.info(`[WS] 验证执行: ${msg.tool}`);
-              const result = await selfValidator.executeWithValidation(
-                msg.tool,
-                msg.params,
-                msg.options || {}
-              );
-              ws.send(JSON.stringify({ 
-                type: 'validated_result', 
-                tool: msg.tool,
-                ...result 
-              }));
-            }
-            break;
-
-          // ===== 异步命令执行 =====
-          case 'async_execute':
-            {
-              // 异步执行命令（自动后台+日志监控）
-              logger.info(`[WS] 异步执行: ${msg.command?.slice(0, 50)}...`);
-              const result = await asyncExecutor.execute(
-                msg.command,
-                {
-                  forceAsync: msg.forceAsync || false,
-                  timeout: msg.timeout || 30000,
-                  onOutput: (output) => {
-                    // 实时发送输出
-                    ws.send(JSON.stringify({
-                      type: 'async_output',
-                      processId: result?.processId,
-                      output
-                    }));
-                  }
-                }
-              );
-              ws.send(JSON.stringify({
-                type: 'async_result',
-                ...result
-              }));
-            }
-            break;
-
-          case 'async_status':
-            {
-              // 获取异步进程状态
-              const status = asyncExecutor.getProcessStatus(msg.processId);
-              ws.send(JSON.stringify({
-                type: 'async_status_result',
-                ...status
-              }));
-            }
-            break;
-
-          case 'async_stop':
-            {
-              // 停止异步进程
-              const result = asyncExecutor.stopProcess(msg.processId);
-              ws.send(JSON.stringify({
-                type: 'async_stop_result',
-                processId: msg.processId,
-                ...result
-              }));
-            }
-            break;
-
-          case 'async_log':
-            {
-              // 读取异步进程日志
-              const result = asyncExecutor.readLog(msg.processId, msg.tail || 100);
-              ws.send(JSON.stringify({
-                type: 'async_log_result',
-                processId: msg.processId,
-                ...result
-              }));
-            }
-            break;
-
-
-          
-          // ===== 录制相关 =====
-          case 'start_recording':
-            {
-              const result = recorder.startRecording(
-                msg.name || msg.recordingId || `rec-${Date.now()}`,
-                msg.name
-              );
-              ws.send(JSON.stringify({ type: 'recording_started', ...result }));
-            }
-            break;
-          
-          case 'stop_recording':
-            {
-              const result = recorder.stopRecording(msg.recordingId);
-              ws.send(JSON.stringify({ type: 'recording_stopped', ...result }));
-            }
-            break;
-          
-          case 'list_recordings':
-            {
-              const recordings = recorder.listRecordings();
-              ws.send(JSON.stringify({ type: 'recordings_list', recordings }));
-            }
-            break;
-          
-          case 'load_recording':
-            {
-              const result = recorder.loadRecording(msg.recordingId);
-              ws.send(JSON.stringify({ type: 'recording_loaded', ...result }));
-            }
-            break;
-          
-          case 'replay_recording':
-            {
-              const loadResult = recorder.loadRecording(msg.recordingId);
-              if (!loadResult.success) {
-                ws.send(JSON.stringify({ type: 'replay_error', error: loadResult.error }));
-                break;
-              }
-              
-              // 转换为 tool_batch 格式并执行 (支持参数化和循环)
-              const replayOptions = {
-                variables: msg.variables || {},
-                foreach: msg.foreach || null,
-                foreachVar: msg.foreachVar || 'item',
-                stopOnError: msg.stopOnError !== false
-              };
-              const batch = recorder.toToolBatch(loadResult.recording, replayOptions);
-              
-              const paramInfo = Object.keys(replayOptions.variables).length > 0 
-                ? `, 参数: ${JSON.stringify(replayOptions.variables)}` : '';
-              const loopInfo = replayOptions.foreach 
-                ? `, 循环: ${replayOptions.foreach.length} 次` : '';
-              logger.info(`[WS] 回放录制: ${msg.recordingId}, ${batch.steps.length} 步${paramInfo}${loopInfo}`);
-              
-              const result = await taskEngine.executeBatch(
-                batch.id,
-                batch.steps,
-                batch.options,
-                (stepResult) => {
-                  ws.send(JSON.stringify({
-                    type: 'replay_step_result',
-                    recordingId: msg.recordingId,
-                    ...stepResult
-                  }));
-                }
-              );
-              
-              ws.send(JSON.stringify({
-                type: 'replay_complete',
-                recordingId: msg.recordingId,
-                ...result
-              }));
-            }
-            break;
-          
-          case 'delete_recording':
-            {
-              const result = recorder.deleteRecording(msg.recordingId);
-              ws.send(JSON.stringify({ type: 'recording_deleted', ...result }));
-            }
-            break;
-          
-          // ===== 新增: 历史记录相关 =====
-          case 'list_history':
-            const count = msg.count || 20;
-            const history = history.get(count);
-            ws.send(JSON.stringify({ 
-              type: 'history_list', 
-              history: history.map(h => ({
-                id: h.id,
-                timestamp: h.timestamp,
-                tool: h.tool,
-                params: h.params,
-                success: h.success,
-                error: h.error,
-                preview: h.resultPreview?.substring(0, 100)
-              }))
-            }));
-            break;
-            
-          case 'retry':
-            const entry = history.getById(msg.historyId);
-            if (!entry) {
-              ws.send(JSON.stringify({
-                type: 'tool_result',
-                id: msg.id,
-                success: false,
-                error: `找不到历史记录 #${msg.historyId}`
-              }));
+          // ── 委托 ws-handlers 处理 ──
+          default: {
+            if (wsHandlers[msg.type]) {
+              await wsHandlers[msg.type](msg);
             } else {
-              logger.info(`重试历史命令 #${entry.id}: ${entry.tool}`);
-              await handleToolCall(ws, {
-                tool: entry.tool,
-                params: entry.params,
-                id: msg.id
-              }, true, entry.id);
+              logger.warning(`未知消息类型: ${msg.type}`);
             }
             break;
+          }
             
-          case 'get_history_detail':
-            const detail = history.getById(msg.historyId);
-            ws.send(JSON.stringify({
-              type: 'history_detail',
-              entry: detail || null
-            }));
-            break;
-          
-          // Skills 相关
-          case 'list_skills':
-            ws.send(JSON.stringify({ 
-              type: 'skills_list', 
-              skills: skillsManager.getSkillsList() 
-            }));
-            break;
-            
-          case 'get_skills_prompt':
-            ws.send(JSON.stringify({ 
-              type: 'skills_prompt', 
-              prompt: skillsManager.getSystemPrompt() 
-            }));
-            break;
-            
-          case 'get_skill_reference':
-            const ref = skillsManager.getReference(msg.skill, msg.reference);
-            ws.send(JSON.stringify({ 
-              type: 'skill_reference', 
-              skill: msg.skill,
-              reference: msg.reference,
-              content: ref 
-            }));
-            break;
-            
-          case 'list_skill_references':
-            const refs = skillsManager.listReferences(msg.skill);
-            ws.send(JSON.stringify({ 
-              type: 'skill_references_list', 
-              skill: msg.skill,
-              references: refs 
-            }));
-            break;
-          
-          // ===== 跨扩展通信 =====
-          case 'register_agent':
-            if (msg.agentId) {
-              agents.register(ws, msg.agentId, msg.site || 'unknown');
-              ws.send(JSON.stringify({
-                type: 'agent_registered',
-                agentId: msg.agentId,
-                success: true
-              }));
-            }
-            break;
-          
-          case 'cross_extension_send':
-            if (msg.to && msg.message) {
-              const fromAgent = msg.from || 'unknown';
-              const result = agents.sendMessage(fromAgent, msg.to, msg.message);
-              ws.send(JSON.stringify({
-                type: 'cross_extension_result',
-                ...result,
-                to: msg.to
-              }));
-            }
-            break;
-          
-          case 'list_online_agents':
-            ws.send(JSON.stringify({
-              type: 'online_agents',
-              agents: agents.getOnline()
-            }));
-            break;
-
-          case 'broadcast':
-            // 转发消息给所有其他客户端（用于 bridge -> background.js -> content.js）
-            if (msg.payload) {
-              logger.info("广播消息: " + (msg.payload.type || "unknown"));
-              for (const client of clients) {
-                if (client !== ws && client.readyState === 1) {
-                  client.send(JSON.stringify(msg.payload));
-                }
-              }
-              ws.send(JSON.stringify({ type: "broadcast_result", success: true }));
-            }
-            break;
-            
-          default:
-            logger.warning(`未知消息类型: ${msg.type}`);
         }
       } catch (e) {
         logger.error('处理消息失败', { error: e.message, data: data.toString().slice(0, 200) });
