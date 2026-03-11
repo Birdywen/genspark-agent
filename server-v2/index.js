@@ -1108,30 +1108,42 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
   // ── Router Phase 3: 灰度切流量 ──
-  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem').split(',');
+  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell').split(',');
+  let _routerHandled = false;
   if (router) {
     const driver = router.handlers.get(tool);
     if (driver && ROUTER_INTERCEPT.includes(driver.name)) {
       logger.info('[Router] INTERCEPT: ' + tool + ' -> ' + driver.name);
       try {
         const r = await router.dispatch(tool, params, ws, message);
-        // hub.call 返回 { content: [...], isError } 格式
-        let result = r;
-        if (r && r.content && Array.isArray(r.content)) {
-          result = r.content.map(c => c.type === 'text' ? c.text : '').join('\n').trim();
-        }
-        const success = !(r && r.isError);
-        const historyId = addToHistory({ tool, params, result, success });
-        if (success) {
-          ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: true, result }));
+        if (r && r.delegate) {
+          // delegate 型 driver (vfs/browser): 只做 trace, fall through 到老代码
+          logger.info('[Router] DELEGATE: ' + tool + ' -> ' + driver.name + ' (fallthrough)');
+        } else if (r && r.handled) {
+          // driver 自己处理了 ws.send (如 shell driver)
+          _routerHandled = true;
+          logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
         } else {
-          ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: result }));
+          // hub.call 返回 { content: [...], isError } 格式
+          _routerHandled = true;
+          let result = r;
+          if (r && r.content && Array.isArray(r.content)) {
+            result = r.content.map(c => c.type === 'text' ? c.text : '').join('\n').trim();
+          }
+          const success = !(r && r.isError);
+          const historyId = addToHistory({ tool, params, result, success });
+          if (success) {
+            ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: true, result }));
+          } else {
+            ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: result }));
+          }
         }
       } catch(e) {
+        _routerHandled = true;
         const historyId = addToHistory({ tool, params, error: e.message, success: false });
         ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: e.message }));
       }
-      return;
+      if (_routerHandled) return;
     }
   }
 

@@ -3,7 +3,7 @@
 // Phase 2: 逐步把 index.js 里的 shell 逻辑迁移过来
 
 import { spawn } from 'child_process';
-import { writeFileSync } from 'fs';
+import { writeFileSync, readFileSync } from 'fs';
 
 let _processManager = null;
 let _logger = null;
@@ -11,7 +11,7 @@ let _addToHistory = null;
 
 export default {
   name: 'shell',
-  tools: ['run_command', 'bg_run', 'bg_status', 'bg_kill'],
+  tools: ['run_process', 'bg_run', 'bg_status', 'bg_kill'],
 
   async init(deps) {
     if (deps) {
@@ -21,20 +21,27 @@ export default {
     }
   },
 
-  async handle(tool, params, trace, ws, message) {
-    trace.span('shell', { action: 'start', tool, command: params.command || params.command_line });
+  async handle(tool, params, context) {
+    const { trace, ws, message } = context;
+    // 兼容 alias 转换: run_command{command,stdin} → run_process{command_line,mode,stdin}
+    if (params.command_line && !params.command) params.command = params.command_line;
+    if (params.timeout_ms && !params.timeout) params.timeout = params.timeout_ms;
+    trace.span('shell', { action: 'start', tool, command: params.command });
 
     const id = message.id;
 
+    let r;
     if (tool === 'bg_run') {
-      return this._handleBgRun(params, trace, ws, id);
+      r = await this._handleBgRun(params, trace, ws, id);
     } else if (tool === 'bg_status') {
-      return this._handleBgStatus(params, trace, ws, id);
+      r = await this._handleBgStatus(params, trace, ws, id);
     } else if (tool === 'bg_kill') {
-      return this._handleBgKill(params, trace, ws, id);
-    } else if (tool === 'run_command') {
-      return this._handleRunCommand(params, trace, ws, id, message);
+      r = await this._handleBgKill(params, trace, ws, id);
+    } else if (tool === 'run_command' || tool === 'run_process') {
+      r = await this._handleRunCommand(params, trace, ws, id, message);
     }
+
+    if (r) return { handled: true, ...r };
 
     trace.error('shell', new Error('Unknown shell tool: ' + tool));
     return { success: false, error: 'Unknown tool: ' + tool };
@@ -141,7 +148,7 @@ export default {
       if (params.stdin) proc.stdin.write(params.stdin);
       if (params.stdinFile) {
         try {
-          const content = require('fs').readFileSync(params.stdinFile, 'utf8');
+          const content = readFileSync(params.stdinFile, 'utf8');
           proc.stdin.write(content);
         } catch (e) {
           trace.error('shell', e);
@@ -155,11 +162,11 @@ export default {
       proc.on('close', code => {
         const output = (stdout + stderr).trim();
         const success = code === 0;
-        const historyId = _addToHistory('run_command', params, success, output.slice(0, 200));
+        const historyId = _addToHistory('run_process', params, success, output.slice(0, 200));
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
         ws.send(JSON.stringify({
-          type: 'tool_result', id, historyId, tool: 'run_command',
+          type: 'tool_result', id, historyId, tool: 'run_process',
           success, result: '[#' + historyId + '] ' + code + '\n' + output
         }));
         resolve({ success, result: output, exitCode: code });
@@ -167,9 +174,9 @@ export default {
 
       proc.on('error', e => {
         trace.error('shell', e);
-        const historyId = _addToHistory('run_command', params, false, null, e.message);
+        const historyId = _addToHistory('run_process', params, false, null, e.message);
         ws.send(JSON.stringify({
-          type: 'tool_result', id, historyId, tool: 'run_command',
+          type: 'tool_result', id, historyId, tool: 'run_process',
           success: false, error: e.message
         }));
         reject(e);
