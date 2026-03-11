@@ -177,5 +177,66 @@ export function createHandlers(ctx) {
         ws.send(JSON.stringify({ type: "broadcast_result", success: true }));
       }
     },
+
+    // ── Reload tools ──
+    reload_tools: async (msg) => {
+      try {
+        logger.info('[WS] 收到 reload_tools 请求');
+        const reloadResult = await ctx.hub.reload();
+        ws.send(JSON.stringify({ type: 'reload_tools_result', success: true, toolCount: reloadResult.toolCount, tools: ctx.hub.tools }));
+        ctx.broadcast({ type: 'tools_updated', tools: ctx.hub.tools, timestamp: Date.now() });
+        logger.success(`[WS] 工具刷新完成，已广播给 ${ctx.clients.size} 个客户端`);
+      } catch (e) {
+        logger.error('[WS] reload_tools 失败:', e.message);
+        ws.send(JSON.stringify({ type: 'reload_tools_result', success: false, error: e.message }));
+      }
+    },
+
+    // ── Restart server ──
+    health_check: async (msg) => {
+      try {
+        const status = await ctx.healthChecker.runAll(ctx.hub);
+        ws.send(JSON.stringify({ type: 'health_status', ...status }));
+      } catch (e) {
+        ws.send(JSON.stringify({ type: 'health_status', healthy: false, error: e.message }));
+      }
+    },
+
+    // ── Tool batch ──
+    tool_batch: async (msg) => {
+      if (!taskEngine) { ws.send(JSON.stringify({ type: 'batch_error', error: 'TaskEngine 未初始化' })); return; }
+      try {
+        const { id: batchId, steps, options } = msg;
+        logger.info(`[WS] 收到批量任务: ${batchId}, ${steps?.length || 0} 步`);
+        const result = await taskEngine.executeBatch(batchId || `batch-${Date.now()}`, steps || [], options || {}, (stepResult) => {
+          ws.send(JSON.stringify({ type: 'batch_step_result', batchId, ...stepResult }));
+        });
+        ws.send(JSON.stringify({ type: 'batch_complete', ...result }));
+        logger.success(`[WS] 批量任务完成: ${result.stepsCompleted}/${result.totalSteps} 成功`);
+      } catch (e) {
+        logger.error('[WS] 批量任务失败:', e.message);
+        ws.send(JSON.stringify({ type: 'batch_error', error: e.message }));
+      }
+    },
+
+    // ── Resume task ──
+    resume_task: async (msg) => {
+      if (!taskEngine) { ws.send(JSON.stringify({ type: 'resume_error', error: 'TaskEngine 未初始化' })); return; }
+      try {
+        const result = await taskEngine.resumeTask(msg.taskId, (stepResult) => {
+          ws.send(JSON.stringify({ type: 'batch_step_result', taskId: msg.taskId, ...stepResult }));
+        });
+        ws.send(JSON.stringify({ type: 'resume_complete', ...result }));
+      } catch (e) {
+        ws.send(JSON.stringify({ type: 'resume_error', error: e.message }));
+      }
+    },
+
+    // ── Task status ──
+    task_status: async (msg) => {
+      if (!taskEngine) { ws.send(JSON.stringify({ type: 'task_status_result', error: 'TaskEngine 未初始化' })); return; }
+      const status = taskEngine.getTaskStatus(msg.taskId);
+      ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
+    },
   };
 }
