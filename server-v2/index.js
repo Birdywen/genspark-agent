@@ -3,7 +3,7 @@
 
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import Logger from './logger.js';
@@ -26,6 +26,9 @@ import WorkflowTemplate from './workflow-template.js';
 import CheckpointManager from './checkpoint-manager.js';
 import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
+import Router from "./core/router.js";
+import Metrics from "./core/metrics.js";
+import { resolve as resolveAlias } from "./core/alias.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -658,6 +661,8 @@ const retryManager = new RetryManager(logger, errorClassifier);
 // TaskEngine 将在 main() 中 hub.start() 后初始化
 let taskEngine = null;
 let autoHealer = null;
+let router = null;
+let metrics = null;
 
 // 初始化录制器
 const recorder = new Recorder(logger, path.join(__dirname, 'recordings'));
@@ -682,6 +687,22 @@ const TOOL_ALIASES = {
 
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
+
+  // ── metrics 查询快捷入口 ──
+  if (tool === '_metrics') {
+    const summary = metrics ? metrics.getSummary() : {};
+    const top = metrics ? metrics.getTopTools() : [];
+    ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: true, result: JSON.stringify({ summary, top }, null, 2) }));
+    return;
+  }
+
+  // ── Router Phase 2: trace 观察模式 ──
+  if (typeof router !== "undefined" && router) {
+    const driver = router.handlers.get(tool);
+    if (driver) {
+      const _routerStart = Date.now(); logger.info("[Router] trace: " + tool + " -> " + driver.name);
+    }
+  }
   
   // 后台进程管理器 - 直接处理，不走 MCP
   if (tool === 'bg_run' || tool === 'bg_status' || tool === 'bg_kill') {
@@ -1055,16 +1076,66 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
 
-  // 别名映射
-  if (TOOL_ALIASES[tool]) {
-    const alias = TOOL_ALIASES[tool];
-    if (alias) {
-      logger.info(`工具别名: ${tool} → ${alias.target}`);
-      params = alias.transform ? alias.transform(params) : params;
-      tool = alias.target;
-    }
+  // 别名映射 (via core/alias.js)
+  const _aliasResult = resolveAlias(tool, params);
+  if (_aliasResult.aliased) {
+    logger.info('工具别名: ' + tool + ' → ' + _aliasResult.tool);
+    tool = _aliasResult.tool;
+    params = _aliasResult.params;
   }
   
+  // ── payload file 解析 (intercept 前) ──
+  const fileRefFields = [['contentFile', 'content'], ['stdinFile', 'stdin'], ['codeFile', 'code']];
+  for (const [fileField, targetField] of fileRefFields) {
+    if (params[fileField] && typeof params[fileField] === 'string') {
+      try {
+        const fileContent = readFileSync(params[fileField], 'utf-8');
+        params[targetField] = fileContent;
+        const _tmpFile = params[fileField];
+        delete params[fileField];
+        logger.info('[PayloadFile-Pre] loaded ' + targetField + ': ' + fileContent.length + ' chars <- ' + _tmpFile);
+        try { unlinkSync(_tmpFile); } catch(e) {}
+      } catch (e) {
+        logger.warning('[PayloadFile-Pre] failed ' + fileField + ': ' + e.message);
+      }
+    }
+  }
+
+    // ── JSON string params 自动解析 ──
+  for (const key of ['edits', 'urls', 'paths']) {
+    if (params[key] && typeof params[key] === 'string') {
+      try { params[key] = JSON.parse(params[key]); logger.info('[ParamsParse] ' + key + ' string -> array'); } catch(e) {}
+    }
+  }
+  // ── Router Phase 3: 灰度切流量 ──
+  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem').split(',');
+  if (router) {
+    const driver = router.handlers.get(tool);
+    if (driver && ROUTER_INTERCEPT.includes(driver.name)) {
+      logger.info('[Router] INTERCEPT: ' + tool + ' -> ' + driver.name);
+      try {
+        const r = await router.dispatch(tool, params, ws, message);
+        // hub.call 返回 { content: [...], isError } 格式
+        let result = r;
+        if (r && r.content && Array.isArray(r.content)) {
+          result = r.content.map(c => c.type === 'text' ? c.text : '').join('\n').trim();
+        }
+        const success = !(r && r.isError);
+        const historyId = addToHistory({ tool, params, result, success });
+        if (success) {
+          ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: true, result }));
+        } else {
+          ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: result }));
+        }
+      } catch(e) {
+        const historyId = addToHistory({ tool, params, error: e.message, success: false });
+        ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: e.message }));
+      }
+      return;
+    }
+  }
+
+
   // ── 复杂命令自动脚本化：防止转义问题 ──
   // 策略：检测到复杂命令时，将原始命令写入临时脚本文件再执行
   // 这样即使上游 SSE 传输已丢字符，至少 server→shell 这段不会二次损坏
@@ -1416,6 +1487,13 @@ async function main() {
   taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);
   logger.info('[Main] TaskEngine 已初始化');
 
+  // ── 工具路由器 (Phase 1 灰度) ──
+  router = new Router(logger);
+  metrics = new Metrics(logger);
+  router.setFallback(handleToolCall);
+  await router.loadDrivers({ processManager, logger, addToHistory, hub });
+  logger.info("[Router] 工具路由器已初始化, tools: " + JSON.stringify(router.listTools()));
+
   // 初始化自验证器和目标管理器
   const selfValidator = new SelfValidator(logger, hub);
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
@@ -1483,9 +1561,20 @@ async function main() {
         const msg = JSON.parse(data.toString());
         
         switch (msg.type) {
-          case 'tool_call':
-            await handleToolCall(ws, msg);
+          case 'tool_call': {
+            const _mStart = Date.now();
+            let _mOk = true;
+            try {
+              await handleToolCall(ws, msg);
+            } catch(_mErr) { _mOk = false; throw _mErr; }
+            finally {
+              if (metrics && msg.tool) {
+                const driverName = router ? ((router.handlers.get(msg.tool) || {}).name || 'fallback') : 'legacy';
+                metrics.record(msg.tool, driverName, Date.now() - _mStart, _mOk);
+              }
+            }
             break;
+          }
             
           case 'confirm_result':
             safety.handleConfirmation(msg.id, msg.approved);
