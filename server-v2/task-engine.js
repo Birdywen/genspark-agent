@@ -376,11 +376,12 @@ class TaskEngine {
       this.logger.info(`[TaskEngine] 执行步骤 ${stepIndex}: ${step.tool}`);
 
       const isBrowserTool = TaskEngine.BROWSER_TOOLS.includes(step.tool);
+      const resolved = this.resolveAlias(step.tool, resolvedParams);
       let result;
+      // NOTE: BATCH 中 eval_js 走 browserCallHandler（60s 超时），不受 content.js 10s 限制
       if (isBrowserTool && this.browserCallHandler) {
         result = await this.browserCallHandler(step.tool, resolvedParams);
       } else {
-        const resolved = this.resolveAlias(step.tool, resolvedParams);
         result = await this.hub.call(resolved.tool, resolved.params);
       }
 
