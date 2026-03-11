@@ -19,8 +19,7 @@ import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
 import http from "http";
-import ResultCache from './result-cache.js';
-import ContextCompressor from './context-compressor.js';
+// [已删除] ResultCache, ContextCompressor (未使用)
 // [已删除] TaskPlanner, WorkflowTemplate, CheckpointManager (未使用)
 import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
@@ -1300,12 +1299,11 @@ async function main() {
   const goalManager = new GoalManager(logger, selfValidator, taskEngine.stateManager);
   const asyncExecutor = new AsyncExecutor(logger);
   autoHealer = new AutoHealer(logger, hub);
-  const resultCache = new ResultCache(logger);
-  const contextCompressor = new ContextCompressor(logger);
+  // [已删除] resultCache, contextCompressor
   
   // 第三阶段模块: 智能任务规划、工作流模板、断点续传
   // [已删除] taskPlanner, checkpointManager, workflowTemplate 初始化
-  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer, ResultCache, ContextCompressor 已初始化');
+  logger.info('[Main] SelfValidator, GoalManager, AsyncExecutor, AutoHealer 已初始化');
 
   // 启动时运行健康检查
   const healthStatus = await healthChecker.runAll(hub);
@@ -1804,134 +1802,7 @@ async function main() {
             }
             break;
 
-          // ===== 自动修复执行 =====
-          case 'healed_execute':
-            {
-              logger.info(`[WS] 自修复执行: ${msg.tool}`);
-              const result = await autoHealer.executeWithHealing(
-                msg.tool,
-                msg.params,
-                msg.options || {}
-              );
-              ws.send(JSON.stringify({
-                type: 'healed_result',
-                tool: msg.tool,
-                ...result
-              }));
-            }
-            break;
 
-          // ===== 缓存相关 =====
-          case 'cached_execute':
-            {
-              // 先检查缓存
-              const cached = resultCache.get(msg.tool, msg.params);
-              if (cached) {
-                logger.info(`[WS] 缓存命中: ${msg.tool}`);
-                ws.send(JSON.stringify({
-                  type: 'cached_result',
-                  tool: msg.tool,
-                  ...cached
-                }));
-              } else {
-                // 执行并缓存
-                logger.info(`[WS] 执行并缓存: ${msg.tool}`);
-                const result = await hub.callTool(msg.tool, msg.params);
-                resultCache.set(msg.tool, msg.params, { success: true, result });
-                ws.send(JSON.stringify({
-                  type: 'cached_result',
-                  tool: msg.tool,
-                  success: true,
-                  result,
-                  cached: false
-                }));
-              }
-            }
-            break;
-
-          case 'cache_stats':
-            {
-              const stats = resultCache.getStats();
-              ws.send(JSON.stringify({
-                type: 'cache_stats_result',
-                ...stats
-              }));
-            }
-            break;
-
-          case 'cache_clear':
-            {
-              const cleared = resultCache.clear();
-              ws.send(JSON.stringify({
-                type: 'cache_clear_result',
-                cleared
-              }));
-            }
-            break;
-
-          case 'cache_invalidate':
-            {
-              const invalidated = resultCache.invalidate(msg.pattern);
-              ws.send(JSON.stringify({
-                type: 'cache_invalidate_result',
-                pattern: msg.pattern,
-                invalidated
-              }));
-            }
-            break;
-
-          // ===== 工作流模板 =====
-          // ===== 断点续传 =====
-          case 'compress_context':
-            {
-              logger.info(`[WS] 压缩上下文: ${msg.messages?.length || 0} 条消息`);
-              const result = contextCompressor.compress(msg.messages || []);
-              ws.send(JSON.stringify({
-                type: 'compress_result',
-                ...result
-              }));
-            }
-            break;
-
-          case 'compress_message':
-            {
-              const compressed = contextCompressor.compressMessage(
-                msg.content,
-                msg.maxLength || 2000
-              );
-              ws.send(JSON.stringify({
-                type: 'compress_message_result',
-                original: msg.content?.length || 0,
-                compressed: compressed.length,
-                content: compressed
-              }));
-            }
-            break;
-
-          case 'summarize_result':
-            {
-              const summary = contextCompressor.summarizeToolResult(
-                msg.result,
-                msg.toolName
-              );
-              ws.send(JSON.stringify({
-                type: 'summarize_result_result',
-                original: msg.result?.length || 0,
-                summarized: summary.length,
-                content: summary
-              }));
-            }
-            break;
-
-          case 'context_stats':
-            {
-              const stats = contextCompressor.getStats(msg.messages || []);
-              ws.send(JSON.stringify({
-                type: 'context_stats_result',
-                ...stats
-              }));
-            }
-            break;
           
           // ===== 录制相关 =====
           case 'start_recording':
