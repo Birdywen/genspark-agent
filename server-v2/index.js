@@ -123,112 +123,8 @@ function getOnlineAgents() {
 }
 
 // ==================== 命令历史管理 ====================
-const HISTORY_FILE = path.join(__dirname, 'command-history.json');
-const ARCHIVE_DIR = path.join(__dirname, 'history-archives');
-const MAX_HISTORY = 500;  // 保留更多历史供上下文恢复
-const ARCHIVE_THRESHOLD = 400;  // 超过此数量时归档旧记录
-
-let commandHistory = [];
-let historyIdCounter = 1;
-
-function loadHistory() {
-  try {
-    if (existsSync(HISTORY_FILE)) {
-      const data = JSON.parse(readFileSync(HISTORY_FILE, 'utf-8'));
-      commandHistory = data.history || [];
-      historyIdCounter = data.nextId || 1;
-      logger.info(`加载了 ${commandHistory.length} 条历史记录`);
-    }
-  } catch (e) {
-    logger.warning('加载历史记录失败: ' + e.message);
-    commandHistory = [];
-    historyIdCounter = 1;
-  }
-}
-
-function saveHistory() {
-  try {
-    writeFileSync(HISTORY_FILE, JSON.stringify({
-      history: commandHistory,
-      nextId: historyIdCounter
-    }, null, 2));
-  } catch (e) {
-    logger.warning('保存历史记录失败: ' + e.message);
-  }
-}
-
-// 归档旧历史记录
-function archiveOldHistory() {
-  try {
-    // 确保归档目录存在
-    if (!existsSync(ARCHIVE_DIR)) {
-      mkdirSync(ARCHIVE_DIR, { recursive: true });
-    }
-    
-    // 计算要归档的数量（保留最近 ARCHIVE_THRESHOLD 条）
-    const toArchive = commandHistory.slice(0, commandHistory.length - ARCHIVE_THRESHOLD);
-    commandHistory = commandHistory.slice(-ARCHIVE_THRESHOLD);
-    
-    if (toArchive.length === 0) return;
-    
-    // 生成归档文件名（按日期）
-    const date = new Date().toISOString().split('T')[0];
-    const archiveFile = path.join(ARCHIVE_DIR, `archive-${date}.json`);
-    
-    // 如果当天已有归档，追加；否则新建
-    let archiveData = { archived: [], meta: {} };
-    if (existsSync(archiveFile)) {
-      archiveData = JSON.parse(readFileSync(archiveFile, 'utf-8'));
-    }
-    
-    archiveData.archived.push(...toArchive);
-    archiveData.meta.lastUpdate = new Date().toISOString();
-    archiveData.meta.count = archiveData.archived.length;
-    archiveData.meta.idRange = {
-      from: archiveData.archived[0]?.id,
-      to: archiveData.archived[archiveData.archived.length - 1]?.id
-    };
-    
-    writeFileSync(archiveFile, JSON.stringify(archiveData, null, 2));
-    logger.info(`归档了 ${toArchive.length} 条历史记录到 ${archiveFile}`);
-  } catch (e) {
-    logger.warning('归档历史记录失败: ' + e.message);
-    // 归档失败时，简单截断
-    commandHistory = commandHistory.slice(-MAX_HISTORY);
-  }
-}
-
-function addToHistory(tool, params, success, resultPreview, error = null) {
-  const entry = {
-    id: historyIdCounter++,
-    timestamp: new Date().toISOString(),
-    tool,
-    params,
-    success,
-    resultPreview: (resultPreview || '').substring(0, 500),
-    error: error || null
-  };
-  
-  commandHistory.push(entry);
-  
-  // 自动归档：当超过阈值时，归档旧记录
-  if (commandHistory.length > MAX_HISTORY) {
-    archiveOldHistory();
-  }
-  
-  saveHistory();
-  
-  
-  return entry.id;
-}
-
-function getHistory(count = 20) {
-  return commandHistory.slice(-count).reverse();
-}
-
-function getHistoryById(id) {
-  return commandHistory.find(h => h.id === id);
-}
+import history from "./core/history.js";
+// 命令历史管理已提取到 core/history.js
 
 // ==================== Agents 注册表 ====================
 function loadAgents() {
@@ -693,7 +589,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   
   // 后台进程管理器 - 直接处理，不走 MCP
   if (tool === 'bg_run' || tool === 'bg_status' || tool === 'bg_kill') {
-    const historyId = addToHistory(tool, params, true, null, null);
+    const historyId = history.add(tool, params, true, null, null);
     let result;
     if (tool === 'bg_run') {
       // stdin/stdinFile fix: stdinFile is a temp file already containing the stdin content
@@ -763,11 +659,11 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       const targetId = sosMatch[2] ? parseInt(sosMatch[2]) : null;
       let entry;
       if (targetId) {
-        entry = getHistoryById(targetId);
+        entry = history.getById(targetId);
       } else {
         // 取最后一条可重放命令
         const skipTools = new Set(['bg_status', 'bg_kill', 'replay', 'delay_run']);
-        const candidates = commandHistory.filter(h => !skipTools.has(h.tool));
+        const candidates = history.getRaw().filter(h => !skipTools.has(h.tool));
         entry = candidates.length ? candidates[candidates.length - 1] : null;
       }
       if (!entry) {
@@ -797,7 +693,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     } else if (cmd.includes(' ') && !cmd.startsWith('/') && !cmd.startsWith('./')) {
       // 模式2: 真正的损坏 - "bashecho hello" 等无法修复的情况
       logger.warning(`[防御] run_command 参数异常: command="${cmd}" 无 stdin，疑似 SSE 传输损坏`);
-      const historyId = addToHistory(tool, params, false, null, '参数损坏: command 和 stdin 被拼接');
+      const historyId = history.add(tool, params, false, null, '参数损坏: command 和 stdin 被拼接');
       ws.send(JSON.stringify({
         type: 'tool_result', id, historyId, tool,
         success: false,
@@ -814,7 +710,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: 'replay 需要 id 参数（历史命令 ID）' }));
       return;
     }
-    const entry = getHistoryById(targetId);
+    const entry = history.getById(targetId);
     if (!entry) {
       ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: `找不到历史命令 #${targetId}` }));
       return;
@@ -844,7 +740,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: '延迟不能超过 600 秒' }));
       return;
     }
-    const historyId = addToHistory('delay_run', params, true, null, null);
+    const historyId = history.add('delay_run', params, true, null, null);
     logger.info(`[delay_run] ${delay/1000}s 后执行: ${command.substring(0, 100)}`);
     
     // 立即返回确认
@@ -885,7 +781,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   if (tool === 'vfs_write' || tool === 'vfs_read' || tool === 'vfs_delete' || tool === 'vfs_list' || tool === 'vfs_query' || tool === 'vfs_search' || tool === 'vfs_exec' || tool === 'vfs_backup') {
     // [payloadFile 已在 pipeline.resolvePayloadFiles 统一处理]
     logger.info(`[VFS] ${tool} 收到参数: slot=${params.slot} key=${params.key} contentLen=${params.content?.length} contentPreview=${JSON.stringify((params.content || '').substring(0, 100))}`);
-    const historyId = addToHistory(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
+    const historyId = history.add(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
     
     // 需要浏览器执行（因为要用 Genspark cookie）
     const vfsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1031,7 +927,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     const shouldBgRun = isLong || hasSleep;
     if (shouldBgRun && !params._noAutoRoute) {
       logger.info(`[智能路由] run_command → bg_run (${hasSleep ? '检测到sleep' : '检测到长时间命令'})`);
-      const historyId = addToHistory('bg_run', params, true, null, null);
+      const historyId = history.add('bg_run', params, true, null, null);
       // 如果有 stdin，写成临时脚本文件再执行（processManager.run 不支持 stdin pipe）
       let bgCommand = params.command;
       if (params.stdin) {
@@ -1075,7 +971,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       // 安全检查
       const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);
       if (!safetyCheck.allowed) {
-        const historyId = addToHistory(tool, params, false, null, safetyCheck.reason);
+        const historyId = history.add(tool, params, false, null, safetyCheck.reason);
         sendError(ws, { id, historyId, tool, error: safetyCheck.reason });
         return;
       }
@@ -1088,13 +984,13 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         } else if (r && r.handled) {
           // driver 自己处理了 ws.send (如 shell)
           _routerHandled = true;
-          addToHistory(tool, params, true, JSON.stringify(r).slice(0, 500));
+          history.add(tool, params, true, JSON.stringify(r).slice(0, 500));
           logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
         } else {
           _routerHandled = true;
           const { result, images } = parseResult(r);
           const success = !(r && r.isError);
-          const historyId = addToHistory(tool, params, success, (result || '').slice(0, 500), success ? null : result);
+          const historyId = history.add(tool, params, success, (result || '').slice(0, 500), success ? null : result);
           if (success) {
             sendSuccess(ws, { id, historyId, tool, result, images });
           } else {
@@ -1103,7 +999,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         }
       } catch(e) {
         _routerHandled = true;
-        const historyId = addToHistory(tool, params, false, null, e.message);
+        const historyId = history.add(tool, params, false, null, e.message);
         sendError(ws, { id, historyId, tool, error: e.message });
       }
       if (_routerHandled) return;
@@ -1122,7 +1018,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     logger.warning(`安全检查未通过: ${safetyCheck.reason}`);
     
     // 记录失败的调用
-    const historyId = addToHistory(tool, params, false, null, safetyCheck.reason);
+    const historyId = history.add(tool, params, false, null, safetyCheck.reason);
     
     ws.send(JSON.stringify({
       type: 'tool_result',
@@ -1239,18 +1135,16 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
     
     // 记录成功的调用
-    const historyId = isRetry ? originalId : addToHistory(tool, params, true, resultStr);
+    const historyId = isRetry ? originalId : history.add(tool, params, true, resultStr);
     
     // 如果是重试，更新原记录
     if (isRetry && originalId) {
-      const entry = getHistoryById(originalId);
-      if (entry) {
-        entry.success = true;
-        entry.resultPreview = resultStr.substring(0, 500);
-        entry.retriedAt = new Date().toISOString();
-        entry.error = null;
-        saveHistory();
-      }
+      history.updateById(originalId, {
+        success: true,
+        resultPreview: resultStr.substring(0, 500),
+        retriedAt: new Date().toISOString(),
+        error: null
+      });
     }
     
     logger.tool(tool, params, resultStr.slice(0, 200));
@@ -1319,7 +1213,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
               result = r.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
             }
             let resultStr = typeof result === 'string' ? result : JSON.stringify(result);
-            const historyId = addToHistory(retryTool, retryParams, true, resultStr);
+            const historyId = history.add(retryTool, retryParams, true, resultStr);
             logger.info(`[AutoHealer] 重试成功: ${retryTool}`);
             
             ws.send(JSON.stringify({
@@ -1347,16 +1241,14 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
 
     // ── 正常失败流程 ──
-    const historyId = isRetry ? originalId : addToHistory(tool, params, false, null, e.message);
+    const historyId = isRetry ? originalId : history.add(tool, params, false, null, e.message);
     
     if (isRetry && originalId) {
-      const entry = getHistoryById(originalId);
-      if (entry) {
-        entry.retriedAt = new Date().toISOString();
-        entry.error = e.message;
-        entry.errorType = classified.errorType;
-        saveHistory();
-      }
+      history.updateById(originalId, {
+        retriedAt: new Date().toISOString(),
+        error: e.message,
+        errorType: classified.errorType
+      });
     }
     
     // 如果有活跃录制，记录失败步骤
@@ -1388,7 +1280,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
 // ==================== 主函数 ====================
 async function main() {
   // 加载历史记录
-  loadHistory();
+  history.init(logger);
   
   await hub.start();
 
@@ -1400,7 +1292,7 @@ async function main() {
   router = new Router(logger);
   metrics = new Metrics(logger);
   router.setFallback(handleToolCall);
-  await router.loadDrivers({ processManager, logger, addToHistory, hub });
+  await router.loadDrivers({ processManager, logger, addToHistory: history.add, hub });
   logger.info("[Router] 工具路由器已初始化, tools: " + JSON.stringify(router.listTools()));
 
   // 初始化自验证器和目标管理器
@@ -2127,7 +2019,7 @@ async function main() {
           // ===== 新增: 历史记录相关 =====
           case 'list_history':
             const count = msg.count || 20;
-            const history = getHistory(count);
+            const history = history.get(count);
             ws.send(JSON.stringify({ 
               type: 'history_list', 
               history: history.map(h => ({
@@ -2143,7 +2035,7 @@ async function main() {
             break;
             
           case 'retry':
-            const entry = getHistoryById(msg.historyId);
+            const entry = history.getById(msg.historyId);
             if (!entry) {
               ws.send(JSON.stringify({
                 type: 'tool_result',
@@ -2162,7 +2054,7 @@ async function main() {
             break;
             
           case 'get_history_detail':
-            const detail = getHistoryById(msg.historyId);
+            const detail = history.getById(msg.historyId);
             ws.send(JSON.stringify({
               type: 'history_detail',
               entry: detail || null
