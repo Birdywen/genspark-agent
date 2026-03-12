@@ -429,8 +429,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       }
       // 自动脚本化
       params = autoScript(tool, params, logger);
+      // 超时策略
+      const callOptions = resolveTimeout(tool, params, message);
       try {
-        const r = await router.dispatch(tool, params, ws, message);
+        const r = await router.dispatch(tool, params, ws, message, callOptions);
         if (r && r.delegate) {
           logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
         } else if (r && r.handled) {
@@ -440,19 +442,89 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
         } else {
           _routerHandled = true;
-          const { result, images } = parseResult(r);
+          let { result, images } = parseResult(r);
           const success = !(r && r.isError);
-          const historyId = history.add(tool, params, success, (result || '').slice(0, 500), success ? null : result);
+          // take_snapshot 截断
+          if (tool === 'take_snapshot' && result && result.length > 3000) {
+            const lines = result.split('\n');
+            const maxLines = (params && params.maxElements) || 150;
+            if (lines.length > maxLines) {
+              result = lines.slice(0, maxLines).join('\n') + '\n\n... (截断，共 ' + lines.length + ' 行，显示前 ' + maxLines + ' 行)';
+            }
+          }
+          // 图片保存
+          if (images && images.length > 0) {
+            const { writeFileSync } = await import('fs');
+            const savedPaths = [];
+            for (let i = 0; i < images.length; i++) {
+              const img = images[i];
+              const ext = img.mimeType === 'image/jpeg' ? 'jpg' : 'png';
+              const imgPath = '/private/tmp/media-' + id + '-' + i + '.' + ext;
+              try { writeFileSync(imgPath, Buffer.from(img.data, 'base64')); savedPaths.push(imgPath); } catch(ie) { logger.error('[Router] 图片保存失败: ' + ie.message); }
+            }
+            if (savedPaths.length > 0) result = (result || '') + '\n图片已保存: ' + savedPaths.join(', ');
+          }
+          // 重试更新
+          if (isRetry && originalId) {
+            history.updateById(originalId, { success: true, resultPreview: (result || '').substring(0, 500), retriedAt: new Date().toISOString(), error: null });
+          }
+          const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 500), success ? null : result);
+          // recorder
+          for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
+            if (rec.status === 'recording') {
+              recorder.recordStep(recId, { tool, params, result: { success, result: (result || '').slice(0, 500) }, duration: Date.now() - (message.startTime || Date.now()) });
+            }
+          }
           if (success) {
-            sendSuccess(ws, { id, historyId, tool, result, images });
+            sendSuccess(ws, { id, historyId, tool, result: isRetry ? '[重试 #' + historyId + '] ' + result : result, images });
           } else {
             sendError(ws, { id, historyId, tool, error: result });
           }
         }
       } catch(e) {
         _routerHandled = true;
-        const historyId = history.add(tool, params, false, null, e.message);
-        sendError(ws, { id, historyId, tool, error: e.message });
+        const classified = errorClassifier.wrapError(e, tool);
+        logger.error('[Router] ' + tool + ' failed [' + classified.errorType + ']: ' + e.message);
+
+        // AutoHealer: 尝试自愈
+        if (autoHealer && !isRetry) {
+          try {
+            const healResult = await autoHealer.tryHeal(e.message || String(e), tool, params);
+            if (healResult.healed && healResult.retry) {
+              const retryTool = healResult.modifiedTool || tool;
+              const retryParams = healResult.modifiedParams || params;
+              logger.info('[AutoHealer] 自愈: ' + healResult.message + ', 重试 ' + retryTool);
+              try {
+                const retryCallOptions = resolveTimeout(retryTool, retryParams, message);
+                const rr = await router.dispatch(retryTool, retryParams, ws, message, retryCallOptions);
+                const { result: retryResult, images: retryImages } = parseResult(rr);
+                const retryHistoryId = history.add(retryTool, retryParams, true, (retryResult || '').slice(0, 500));
+                sendSuccess(ws, { id, historyId: retryHistoryId, tool: retryTool, result: '[自愈: ' + healResult.message + '] ' + retryResult, images: retryImages });
+                return;
+              } catch (retryErr) {
+                logger.warning('[AutoHealer] 重试失败: ' + retryErr.message);
+              }
+            }
+            if (healResult.suggestion) {
+              classified.suggestion = (classified.suggestion || '') + ' [AutoHealer] ' + healResult.suggestion;
+            }
+          } catch (healErr) {
+            logger.warning('[AutoHealer] 异常: ' + healErr.message);
+          }
+        }
+
+        // 正常失败流程
+        const historyId = isRetry ? originalId : history.add(tool, params, false, null, e.message);
+        if (isRetry && originalId) {
+          history.updateById(originalId, { retriedAt: new Date().toISOString(), error: e.message, errorType: classified.errorType });
+        }
+        // recorder
+        for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
+          if (rec.status === 'recording') {
+            recorder.recordStep(recId, { tool, params, result: { success: false, error: e.message, errorType: classified.errorType }, duration: Date.now() - (message.startTime || Date.now()) });
+          }
+        }
+        sendError(ws, { id, historyId, tool, error: e.message, errorType: classified.errorType, recoverable: classified.recoverable, suggestion: classified.suggestion });
       }
       if (_routerHandled) return;
     }

@@ -37,14 +37,14 @@ class Router {
     this.fallback = fn;
   }
 
-  async dispatch(tool, params, ws, message) {
+  async dispatch(tool, params, ws, message, callOptions) {
     const trace = createTrace(tool, params);
     trace.span('Router', { action: 'dispatch', tool });
     const driver = this.handlers.get(tool);
     if (driver) {
       trace.span('Router', { action: 'found_driver', driver: driver.name });
       try {
-        const ctx = { trace, ws, message, callOptions: {} };
+        const ctx = { trace, ws, message, callOptions: callOptions || {} };
         const result = await driver.handle(tool, params, ctx);
         trace.span('Router', { action: 'complete', success: true, duration: trace.duration });
         trace.flush();
