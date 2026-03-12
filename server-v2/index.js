@@ -124,66 +124,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   }
   
   // 后台进程管理器 - 直接处理，不走 MCP
-  if (tool === 'bg_run' || tool === 'bg_status' || tool === 'bg_kill') {
-    const historyId = history.add(tool, params, true, null, null);
-    let result;
-    if (tool === 'bg_run') {
-      // stdin/stdinFile fix: stdinFile is a temp file already containing the stdin content
-      logger.info('[bg_run] params keys: ' + JSON.stringify(Object.keys(params)));
-      let bgCommand = params.command;
-      if (params.stdinFile) {
-        bgCommand = (params.command || 'bash') + ' ' + params.stdinFile;
-        logger.info('[bg_run] using stdinFile: ' + params.stdinFile);
-      } else if (params.stdin) {
-        const tmpScript = '/private/tmp/bg_run_' + Date.now() + '.sh';
-        writeFileSync(tmpScript, params.stdin, { mode: 0o755 });
-        bgCommand = (params.command || 'bash') + ' ' + tmpScript;
-        logger.info('[bg_run] stdin -> tmpScript: ' + tmpScript);
-      }
-      result = processManager.run(bgCommand, { cwd: params.cwd, shell: params.shell }, (completedSlot) => {
-        // 进程完成时自动通知前端
-        try {
-          ws.send(JSON.stringify({
-            type: 'bg_complete',
-            tool: 'bg_run',
-            slotId: completedSlot.slotId,
-            exitCode: completedSlot.exitCode,
-            elapsed: completedSlot.elapsed,
-            lastOutput: completedSlot.lastOutput,
-            success: completedSlot.exitCode === 0
-          }));
-          logger.info("[bg_complete] 准备推送到手机, slot=" + completedSlot.slotId);
-          // 自动推送到手机
-          try {
-            const pStatus = completedSlot.exitCode === 0 ? "✅" : "❌";
-            const pMsg = pStatus + " bg_run slot " + completedSlot.slotId + " 完成 (" + (completedSlot.elapsed ? Math.round(completedSlot.elapsed/1000) : "?") + "s) exit=" + completedSlot.exitCode;
-            const pData = JSON.stringify({text: pMsg});
-            const pReq = http.request({hostname:"localhost",port:8769,path:"/reply",method:"POST",headers:{"Content-Type":"application/json","Content-Length":Buffer.byteLength(pData)}}, () => {});
-            pReq.write(pData);
-            pReq.end();
-            logger.info("[bg_complete] 推送请求已发送");
-          } catch(pe) { logger.error("[bg_complete] 推送异常: " + pe.message); }
-        } catch (e) {
-
-          logger.error(`[bg_complete] 通知发送失败: ${e.message}`);
-        }
-      });
-    } else if (tool === 'bg_status') {
-      result = processManager.status(params.slotId, { lastN: params.lastN });
-    } else {
-      result = processManager.kill(params.slotId);
-    }
-    ws.send(JSON.stringify({
-      type: 'tool_result',
-      id,
-      historyId,
-      tool,
-      success: result.success,
-      result: JSON.stringify(result, null, 2),
-      error: result.success ? undefined : result.error
-    }));
-    return;
-  }
 
   // 智能路由: 识别长时间命令自动走 bg_run
   // 防御性校验: run_command 的 command 不应包含空格（除非是路径）
@@ -306,7 +246,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   params = decodeBase64Fields(params, logger);
   params = parseParams(params, logger);
   // ── Router Phase 3: 灰度切流量 ──
-  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility').split(',');
+  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility,bg').split(',');
   let _routerHandled = false;
   if (router) {
     const driver = router.handlers.get(tool);
