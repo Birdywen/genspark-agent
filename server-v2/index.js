@@ -362,8 +362,6 @@ async function main() {
   await hub.start();
 
   // 初始化任务引擎
-  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier);
-  logger.info('[Main] TaskEngine 已初始化');
 
   // ── 工具路由器 (Phase 1 灰度) ──
   router = new Router(logger);
@@ -371,6 +369,10 @@ async function main() {
   router.setFallback(handleToolCall);
   await router.loadDrivers({ processManager, logger, addToHistory: history.add, hub, metrics, history, handleToolCall });
   logger.info("[Router] 工具路由器已初始化, tools: " + JSON.stringify(router.listTools()));
+
+  // 初始化任务引擎（需要在 router 之后）
+  taskEngine = new TaskEngine(logger, hub, safety, errorClassifier, router);
+  logger.info('[Main] TaskEngine 已初始化');
 
   // 初始化自验证器和目标管理器
   const selfValidator = new SelfValidator(logger, hub);

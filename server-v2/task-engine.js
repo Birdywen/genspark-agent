@@ -4,11 +4,12 @@
 import StateManager, { TaskState } from './state-manager.js';
 
 class TaskEngine {
-  constructor(logger, hub, safety, errorClassifier) {
+  constructor(logger, hub, safety, errorClassifier, router) {
     this.logger = logger;
     this.hub = hub;
     this.safety = safety;
     this.errorClassifier = errorClassifier;
+    this.router = router;
     this.stateManager = new StateManager(logger);
     this.browserCallHandler = null;
   }
@@ -382,7 +383,17 @@ class TaskEngine {
       if (isBrowserTool && this.browserCallHandler) {
         result = await this.browserCallHandler(step.tool, resolvedParams);
       } else {
-        result = await this.hub.call(resolved.tool, resolved.params);
+        // 优先走 Router（内部 driver），fallback 到 hub（MCP）
+        if (this.router && this.router.handlers && this.router.handlers.has(resolved.tool)) {
+          const driver = this.router.handlers.get(resolved.tool);
+          result = await driver.handle(resolved.tool, resolved.params, { trace: { span(){}, error(){}, flush(){}, duration: 0 } });
+        } else {
+          result = await this.hub.call(resolved.tool, resolved.params);
+        }
+      }
+      // hub.call 返回 browserEval 时，转发给浏览器执行
+      if (result && result.browserEval && this.browserCallHandler) {
+        result = await this.browserCallHandler('eval_js', { code: result.browserEval });
       }
 
       let resultStr = result;
