@@ -3831,7 +3831,7 @@ ${conversationText}
           return !c.startsWith('[Physical Compress');
         });
         // 确保至少保留2条 head（system prompt + first response）
-        if (headMsgs.length < 2) headMsgs = allMsgs.slice(0, 2);
+        // headMsgs 保持空 — 全靠 Step 4.5 注入 forged 经验，避免套娃
         const midMsgs = allMsgs.slice(HEAD_KEEP, allMsgs.length - TAIL_KEEP);
 
         // 精简摘要：只保留压缩头 + VFS context（最新session summary）
