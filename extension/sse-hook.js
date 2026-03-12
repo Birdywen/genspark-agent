@@ -395,6 +395,35 @@
       });
     },
 
+
+
+    writeMsg: function(name, key, value) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var idx = -1;
+          for (var i = 0; i < msgs.length; i++) { if (msgs[i].id === key) { idx = i; break; } }
+          if (idx >= 0) { msgs[idx].content = value; } else { msgs.push({ id: key, role: 'user', content: value }); }
+          return window.writeSlotMessages(id, msgs).then(function(count) {
+            return { ok: true, name: name, key: key, totalMessages: count };
+          });
+        });
+      });
+    },
+
+    deleteMsg: function(name, key) {
+      return window.vfs.resolve(name).then(function(id) {
+        if (!id) return { error: 'not_found: ' + name };
+        return window.readSlotMessages(id).then(function(msgs) {
+          var filtered = msgs.filter(function(m) { return m.id !== key; });
+          if (filtered.length === msgs.length) return { error: 'key_not_found: ' + key };
+          return window.writeSlotMessages(id, filtered).then(function(count) {
+            return { ok: true, name: name, deleted: key, totalMessages: count };
+          });
+        });
+      });
+    },
+
     // ── Stub: methods loaded by fn/vfs-* extensions ──
     // write, append, snapshot, safeWrite → vfs-crud
     // backup, exec, restoreFrom → vfs-backup

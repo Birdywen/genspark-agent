@@ -98,4 +98,3 @@ export default {
   init,
   handle
 };
-EOF
