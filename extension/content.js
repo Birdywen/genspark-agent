@@ -3931,7 +3931,7 @@ ${conversationText}
         try {
           await new Promise((resolve, reject) => {
             const t = setTimeout(() => resolve(), 5000);
-            vfs.write('context', newMsgs[HEAD_KEEP].content).then(() => { clearTimeout(t); resolve(); }).catch(() => { clearTimeout(t); resolve(); });
+            vfs.write('context', (newMsgs[HEAD_KEEP].content.replace(/^.*## VFS Context \(Session Memory\)\n/s, '') || newMsgs[HEAD_KEEP].content)).then(() => { clearTimeout(t); resolve(); }).catch(() => { clearTimeout(t); resolve(); });
           });
           addLog('💾 摘要已备份到 VFS context', 'success');
         } catch(e) {}
