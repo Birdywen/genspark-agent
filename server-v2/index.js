@@ -115,13 +115,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
 
   // ── metrics 查询快捷入口 ──
-  if (tool === '_metrics') {
-    const summary = metrics ? metrics.getSummary() : {};
-    const top = metrics ? metrics.getTopTools() : [];
-    ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: true, result: JSON.stringify({ summary, top }, null, 2) }));
-    return;
-  }
-
   // ── Router Phase 2: trace 观察模式 ──
   if (typeof router !== "undefined" && router) {
     const driver = router.handlers.get(tool);
@@ -246,79 +239,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
 
-  // ── replay: 一键重试历史命令 ──
-  if (tool === 'replay') {
-    const targetId = parseInt(params.id || params.historyId);
-    if (!targetId) {
-      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: 'replay 需要 id 参数（历史命令 ID）' }));
-      return;
-    }
-    const entry = history.getById(targetId);
-    if (!entry) {
-      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: `找不到历史命令 #${targetId}` }));
-      return;
-    }
-    logger.info(`[replay] 重放历史命令 #${targetId}: ${entry.tool}`);
-    // 还原原始 tool 和 params，走正常流程
-    const replayMsg = { type: 'tool_call', id, tool: entry.tool, params: { ...entry.params } };
-    // 如果原始是 run_process（由 run_command 别名转换来的），还原成 run_command
-    if (entry.tool === 'run_process' && entry.params.command_line === 'bash' && entry.params.stdin) {
-      replayMsg.tool = 'run_command';
-      replayMsg.params = { command: 'bash', stdin: entry.params.stdin };
-      if (entry.params.cwd) replayMsg.params.cwd = entry.params.cwd;
-    }
-    await handleToolCall(ws, replayMsg, true, targetId);
-    return;
-  }
-
-  // ── delay_run: 延迟执行命令（替代 sleep，不阻塞消息通道） ──
-  if (tool === 'delay_run') {
-    const delay = parseInt(params.delay || params.seconds || 0) * 1000;
-    const command = params.command;
-    if (!command) {
-      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: 'delay_run 需要 command 参数' }));
-      return;
-    }
-    if (delay > 600000) {
-      ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: false, error: '延迟不能超过 600 秒' }));
-      return;
-    }
-    const historyId = history.add('delay_run', params, true, null, null);
-    logger.info(`[delay_run] ${delay/1000}s 后执行: ${command.substring(0, 100)}`);
-    
-    // 立即返回确认
-    ws.send(JSON.stringify({
-      type: 'tool_result', id, historyId, tool: 'delay_run',
-      success: true,
-      result: `[#${historyId}] 已安排 ${delay/1000}s 后执行，将以 bg_run 方式运行`
-    }));
-
-    // 延迟后启动
-    setTimeout(() => {
-      const result = processManager.run(command, { cwd: params.cwd }, (completedSlot) => {
-        try {
-          ws.send(JSON.stringify({
-            type: 'bg_complete', tool: 'delay_run',
-            slotId: completedSlot.slotId, exitCode: completedSlot.exitCode,
-            elapsed: completedSlot.elapsed, lastOutput: completedSlot.lastOutput,
-            success: completedSlot.exitCode === 0
-          }));
-        } catch (e) { logger.error('[delay_run] 完成通知失败: ' + e.message); }
-      });
-      logger.info(`[delay_run] 延迟 ${delay/1000}s 到期，bg_run 启动: slot=${result.slotId || '?'}`);
-      // 发通知告诉前端已开始
-      try {
-        ws.send(JSON.stringify({
-          type: 'tool_result', id: 'delay_run_started_' + historyId,
-          tool: 'delay_run', success: true,
-          result: `[delay_run #${historyId}] 延迟到期，已启动 bg_run: ${JSON.stringify(result)}`
-        }));
-      } catch(e) {}
-    }, delay);
-    return;
-  }
-
-  // ── VFS 工具: 委托 drivers/vfs.js 生成 jsCode, 浏览器执行 ──
   if (tool === "vfs_write" || tool === "vfs_read" || tool === "vfs_delete" || tool === "vfs_list" || tool === "vfs_query" || tool === "vfs_search" || tool === "vfs_exec" || tool === "vfs_backup") {
     const vfsDriver = await import("./drivers/vfs.js");
     const driverResult = await vfsDriver.default.handle(tool, params, { trace: { span: () => {} } });
@@ -414,7 +334,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   params = decodeBase64Fields(params, logger);
   params = parseParams(params, logger);
   // ── Router Phase 3: 灰度切流量 ──
-  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell').split(',');
+  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility').split(',');
   let _routerHandled = false;
   if (router) {
     const driver = router.handlers.get(tool);
@@ -570,7 +490,7 @@ async function main() {
   router = new Router(logger);
   metrics = new Metrics(logger);
   router.setFallback(handleToolCall);
-  await router.loadDrivers({ processManager, logger, addToHistory: history.add, hub });
+  await router.loadDrivers({ processManager, logger, addToHistory: history.add, hub, metrics, history, handleToolCall });
   logger.info("[Router] 工具路由器已初始化, tools: " + JSON.stringify(router.listTools()));
 
   // 初始化自验证器和目标管理器
