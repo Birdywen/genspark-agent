@@ -4028,7 +4028,7 @@ ${conversationText}
             name: newName,
             session_state: { messages: newMsgs },
             type: "ai_chat",
-            ai_chat_model: "claude-opus-4-6"
+            chat_model: "claude-opus-4-6"
           })
         });
         const createData = await createResp.json();
