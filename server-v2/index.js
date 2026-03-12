@@ -239,34 +239,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
 
-  if (tool === "vfs_write" || tool === "vfs_read" || tool === "vfs_delete" || tool === "vfs_list" || tool === "vfs_query" || tool === "vfs_search" || tool === "vfs_exec" || tool === "vfs_backup") {
-    const vfsDriver = await import("./drivers/vfs.js");
-    const driverResult = await vfsDriver.default.handle(tool, params, { trace: { span: () => {} } });
-    if (driverResult.error) {
-      ws.send(JSON.stringify({ type: "tool_result", id, historyId: history.add(tool, params, false, driverResult.error), tool, success: false, error: driverResult.error }));
-      return;
-    }
-    const historyId = history.add(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
-    const vfsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const vfsPromise = new Promise((resolve, reject) => {
-      const vfsTimeout = setTimeout(() => { browserToolPending.delete(vfsCallId); reject(new Error("vfs 操作超时 (30s)")); }, 30000);
-      browserToolPending.set(vfsCallId, { resolve, reject, timeout: vfsTimeout });
-      for (const client of clients) {
-        if (client.readyState === 1) {
-          client.send(JSON.stringify({ type: "browser_tool_call", callId: vfsCallId, tool: "eval_js", params: { code: driverResult.browserEval } }));
-        }
-      }
-      logger.info(`[VFS] ${tool} 委托浏览器: ${vfsCallId}`);
-    });
-    try {
-      const vfsResult = await vfsPromise;
-      ws.send(JSON.stringify({ type: "tool_result", id, historyId, tool, success: true, result: typeof vfsResult === "string" ? vfsResult : JSON.stringify(vfsResult) }));
-    } catch (vfsErr) {
-      ws.send(JSON.stringify({ type: "tool_result", id, historyId, tool, success: false, error: vfsErr.message }));
-    }
-    return;
-  }
-
   if (tool === 'run_command' && params.command) {
     const cmd = params.command.toLowerCase();
     const longPatterns = [
@@ -356,10 +328,31 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         if (r && r.delegate) {
           logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
         } else if (r && r.handled) {
-          // driver 自己处理了 ws.send (如 shell)
           _routerHandled = true;
           history.add(tool, params, true, JSON.stringify(r).slice(0, 500));
           logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
+          // driver 自己处理了 ws.send (如 shell)
+        } else if (r && r.browserEval) {
+          // VFS 等需要浏览器执行的工具
+          _routerHandled = true;
+          const historyId = history.add(tool, { slot: params.slot, key: params.key, contentLen: params.content?.length }, true, null, null);
+          const vfsCallId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const vfsPromise = new Promise((resolve, reject) => {
+            const vfsTimeout = setTimeout(() => { browserToolPending.delete(vfsCallId); reject(new Error("浏览器操作超时 (30s)")); }, 30000);
+            browserToolPending.set(vfsCallId, { resolve, reject, timeout: vfsTimeout });
+            for (const client of clients) {
+              if (client.readyState === 1) {
+                client.send(JSON.stringify({ type: "browser_tool_call", callId: vfsCallId, tool: "eval_js", params: { code: r.browserEval } }));
+              }
+            }
+            logger.info('[browserEval] ' + tool + ' 委托浏览器: ' + vfsCallId);
+          });
+          try {
+            const vfsResult = await vfsPromise;
+            sendSuccess(ws, { id, historyId, tool, result: typeof vfsResult === "string" ? vfsResult : JSON.stringify(vfsResult) });
+          } catch (vfsErr) {
+            sendError(ws, { id, historyId, tool, error: vfsErr.message });
+          }
         } else {
           _routerHandled = true;
           let { result, images } = parseResult(r);
