@@ -179,60 +179,6 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     }
   }
 
-  if (tool === 'run_command' && params.command) {
-    const cmd = params.command.toLowerCase();
-    const longPatterns = [
-      /\bpip3?\s+install\b/,
-      /\bnpm\s+install\b/,
-      /\bnpm\s+ci\b/,
-      /\byarn\s+(install|add)\b/,
-      /\bpnpm\s+(install|add)\b/,
-      /\bbrew\s+install\b/,
-      /\bcargo\s+build\b/,
-      /\bmake\b(?!dir)/,
-      /\bcmake\s+--build\b/,
-      /\bgit\s+clone\b/,
-      /\bdocker\s+(build|pull)\b/,
-      /\bdemucs\b/,
-      /\bwhisper\b/,
-      /\bbasic[_-]pitch\b/,
-      /\bnohup\b/,
-      /\bnpx\s+next\s+(dev|build|start)\b/,
-      /\bnext\s+(dev|build|start)\b/,
-      /\bscp\s+-/,
-      /\brsync\b/,
-      /\bwrangler\s+(deploy|publish)\b/,
-      /\bcurl\b.*(-o|--output).*\.(mp[34]|zip|tar|gz|iso)\b/,
-      /\bnpm\s+run\s+(dev|build|start)\b/,
-    ];
-    const isLong = longPatterns.some(p => p.test(cmd));
-    // 检测 sleep 命令也走 bg_run（sleep 在普通执行模式下必定 timeout）
-    const hasSleep = /\bsleep\s+\d/.test(cmd) || (params.stdin && /\bsleep\s+\d/.test(params.stdin));
-    const shouldBgRun = isLong || hasSleep;
-    if (shouldBgRun && !params._noAutoRoute) {
-      logger.info(`[智能路由] run_command → bg_run (${hasSleep ? '检测到sleep' : '检测到长时间命令'})`);
-      const historyId = history.add('bg_run', params, true, null, null);
-      // 如果有 stdin，写成临时脚本文件再执行（processManager.run 不支持 stdin pipe）
-      let bgCommand = params.command;
-      if (params.stdin) {
-        const tmpScript = '/private/tmp/bg_run_' + Date.now() + '.sh';
-        writeFileSync(tmpScript, params.stdin, { mode: 0o755 });
-        bgCommand = 'bash ' + tmpScript + ' ; rm -f ' + tmpScript;
-      }
-      const result = processManager.run(bgCommand, { cwd: params.cwd });
-      ws.send(JSON.stringify({
-        type: 'tool_result',
-        id,
-        historyId,
-        tool: 'bg_run (auto)',
-        success: result.success,
-        result: JSON.stringify(result, null, 2),
-        error: result.success ? undefined : result.error
-      }));
-      return;
-    }
-  }
-
   // 别名映射 (via core/alias.js)
   const _aliasResult = resolveAlias(tool, params);
   if (_aliasResult.aliased) {
