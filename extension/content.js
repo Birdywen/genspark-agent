@@ -4027,8 +4027,7 @@ ${conversationText}
           body: JSON.stringify({
             name: newName,
             session_state: { messages: newMsgs },
-            type: "ai_chat",
-            chat_model: "claude-opus-4-6"
+            type: "ai_chat"
           })
         });
         const createData = await createResp.json();
