@@ -1245,6 +1245,7 @@ ${conversationText}
     const freshBtn = origBtn.cloneNode(true);
     origBtn.parentNode.replaceChild(freshBtn, origBtn);
     freshBtn.addEventListener('click', async (evt) => {
+      document.title = 'FC_HANDLER_ENTERED|shift:' + evt.shiftKey;
       const dryRun = evt.shiftKey;
       const addLog = (msg, type='info') => {
         console.log('[fork-compress]', msg);
@@ -1375,22 +1376,26 @@ ${conversationText}
         if (dryRun) {
           const roles = newMsgs.map(m => m.role);
           const totalChars = newMsgs.reduce((s, m) => s + (m.content || '').length, 0);
-          addLog('🔍 [DRY RUN] 预览结果:', 'success');
-          addLog('📊 消息数: ' + newMsgs.length + ' (forged: ' + forgedCount + ', tail: ' + tailMsgs.length + ')', 'info');
-          addLog('📏 总字符: ' + Math.round(totalChars/1024) + 'K', 'info');
-          addLog('🎭 Role 序列: ' + roles.join(',').substring(0, 200), 'info');
-          addLog('--- 前 6 条 ---', 'info');
+          const lines = [
+            '🔍 [DRY RUN] 预览结果',
+            '📊 消息数: ' + newMsgs.length + ' (forged: ' + forgedCount + ', tail: ' + tailMsgs.length + ')',
+            '📏 总字符: ' + Math.round(totalChars/1024) + 'K',
+            '🎭 Roles: ' + roles.join(',').substring(0, 200),
+            '',
+            '--- 前 6 条 ---'
+          ];
           for (var di = 0; di < Math.min(newMsgs.length, 6); di++) {
-            addLog('  [' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 120), 'info');
+            lines.push('[' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 100));
           }
-          addLog('--- Context (assistant) ---', 'info');
+          lines.push('', '--- Context ---');
           var ctxIdx = forgedCount;
-          if (ctxIdx < newMsgs.length) addLog('  [' + ctxIdx + '] ' + newMsgs[ctxIdx].role + ': ' + (newMsgs[ctxIdx].content || '').substring(0, 300), 'info');
-          addLog('--- 最后 3 条 ---', 'info');
+          if (ctxIdx < newMsgs.length) lines.push('[' + ctxIdx + '] ' + newMsgs[ctxIdx].role + ': ' + (newMsgs[ctxIdx].content || '').substring(0, 200));
+          lines.push('', '--- 最后 3 条 ---');
           for (var di2 = Math.max(0, newMsgs.length - 3); di2 < newMsgs.length; di2++) {
-            addLog('  [' + di2 + '] ' + newMsgs[di2].role + ': ' + (newMsgs[di2].content || '').substring(0, 120), 'info');
+            lines.push('[' + di2 + '] ' + newMsgs[di2].role + ': ' + (newMsgs[di2].content || '').substring(0, 100));
           }
-          addLog('✅ [DRY RUN] Shift+点击 = 预览, 普通点击 = 执行', 'success');
+          lines.push('', '✅ Shift+点击 = 预览, 普通点击 = 执行');
+          alert(lines.join('\n'));
           btn.disabled = false;
           btn.textContent = '🗜️ 压缩';
           return;
