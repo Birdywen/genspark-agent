@@ -3813,15 +3813,18 @@ ${conversationText}
 
         const newMsgs = [];
 
-        // ── Section 1+2: Forged Prompt (从 VFS toolkit msg channel 加载) ──
-        addLog('🔍 Loading forged prompt...', 'info');
+        // ── Section 1+2: Forged Prompt (从 Supabase 加载) ──
+        const SB_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
+        const sbHeaders = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
+        
+        addLog('🔍 Loading forged prompt from Supabase...', 'info');
         let forgedCount = 0;
         let forgedSize = 0;
         try {
-          const forgedRaw = await new Promise((resolve, reject) => {
-            const t = setTimeout(() => resolve(''), 5000);
-            vfs.readMsg('toolkit', '_forged:experience-dialogues').then(c => { clearTimeout(t); resolve(c || ''); }).catch(() => { clearTimeout(t); resolve(''); });
-          });
+          const sbResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('toolkit:_forged:experience-dialogues') + '&select=content&limit=1', { headers: sbHeaders });
+          const sbRows = await sbResp.json();
+          const forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
           if (forgedRaw) {
             const dialogues = JSON.parse(forgedRaw);
             if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
@@ -3830,11 +3833,11 @@ ${conversationText}
                 forgedCount++;
                 forgedSize += (d.content || '').length;
               }
-              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded', 'success');
+              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded from Supabase', 'success');
             }
           }
           if (forgedCount === 0) {
-            addLog('⚠️ No forged prompt found in _forged:experience-dialogues', 'error');
+            addLog('⚠️ No forged prompt found in Supabase', 'error');
           }
         } catch(e) {
           addLog('⚠️ Forged load failed: ' + e.message, 'error');
@@ -3844,14 +3847,15 @@ ${conversationText}
         // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
         // 暂时跳过，不注入空消息
 
-        // ── Section 4: Context (VFS session summary) ──
+        // ── Section 4: Context (VFS session summary, 从 Supabase 加载) ──
         let vfsContext = '';
         try {
-          vfsContext = await new Promise((resolve, reject) => {
-            const t = setTimeout(() => resolve(''), 5000);
-            vfs.read('context').then(c => { clearTimeout(t); resolve(c || ''); }).catch(() => { clearTimeout(t); resolve(''); });
-          });
-        } catch(e) {}
+          const ctxResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('slot:context') + '&select=content&limit=1', { headers: sbHeaders });
+          const ctxRows = await ctxResp.json();
+          vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
+        } catch(e) {
+          addLog('⚠️ Context load failed: ' + e.message, 'error');
+        }
 
         // 构造压缩摘要
         const summaryParts = [
@@ -3954,16 +3958,29 @@ ${conversationText}
           if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
         }
 
-        // ── Step 4: 备份摘要到 VFS ──
+        // ── Step 4: 备份摘要到 Supabase ──
         try {
           const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2;
           const finalCtx = ctxMsgIdx >= 0 ? newMsgs[ctxMsgIdx].content : contextSummary;
-          await new Promise((resolve, reject) => {
-            const t = setTimeout(() => resolve(), 5000);
-            vfs.write('context', finalCtx).then(() => { clearTimeout(t); resolve(); }).catch(() => { clearTimeout(t); resolve(); });
-          });
-          addLog('💾 Context backed up to VFS', 'success');
-        } catch(e) {}
+          // upsert context to Supabase
+          const ctxName = 'slot:context';
+          const existResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent(ctxName) + '&select=id&limit=1', { headers: sbHeaders });
+          const existRows = await existResp.json();
+          if (existRows && existRows[0]) {
+            await fetch(SB_URL + '/rest/v1/agent_memory?id=eq.' + existRows[0].id, {
+              method: 'PATCH', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+              body: JSON.stringify({ content: finalCtx, updated_at: new Date().toISOString() })
+            });
+          } else {
+            await fetch(SB_URL + '/rest/v1/agent_memory', {
+              method: 'POST', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+              body: JSON.stringify({ type: 'slot', scene: 'context', name: ctxName, content: finalCtx, updated_at: new Date().toISOString() })
+            });
+          }
+          addLog('💾 Context backed up to Supabase', 'success');
+        } catch(e) {
+          addLog('⚠️ Context backup failed: ' + e.message, 'error');
+        }
 
         // ── Step 5: 创建新对话 ──
         // 读取旧对话 name，生成新名字
