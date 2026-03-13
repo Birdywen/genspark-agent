@@ -3801,28 +3801,113 @@ ${conversationText}
           return;
         }
 
-        // ── Step 2: 构造精简 messages ──
-        const HEAD_KEEP = 0;    // 系统提示词由 VFS 动态注入，不需要保留
-        const TAIL_KEEP = 30;   // 保留最近30条
-        
-        let headMsgs = allMsgs.slice(0, HEAD_KEEP);
+// ── Step 2: 构造精简 messages ──
+        const TAIL_KEEP = 30;
         const tailMsgs = allMsgs.slice(-TAIL_KEEP);
-        
-        // 清理 head 里的旧摘要，避免套娃
-        headMsgs = headMsgs.filter(m => {
-          const c = typeof m.content === 'string' ? m.content : '';
-          return !c.startsWith('[Physical Compress');
-        });
-        // 确保至少保留2条 head（system prompt + first response）
-        if (headMsgs.length < 2) headMsgs = allMsgs.slice(0, 2);
-        const midMsgs = allMsgs.slice(HEAD_KEEP, allMsgs.length - TAIL_KEEP);
+        const midCount = allMsgs.length - TAIL_KEEP;
+        const midSize = Math.round(allMsgs.slice(0, midCount).reduce((s,m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0)/1024);
 
-        // 精简摘要：只保留压缩头 + VFS context（最新session summary）
-        const midSize = Math.round(midMsgs.reduce((s,m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0)/1024);
-        const summaryParts = ['[Physical Compress - ' + new Date().toISOString().split('T')[0] + ']',
-          'Compressed ' + midMsgs.length + ' messages (' + midSize + 'KB) into summary.', ''];
-        
-        // 加入 VFS context
+        const newMsgs = [];
+
+        // ── Section 1: System Brief (固定头部) ──
+        const systemBrief = `Connected to genspark-agent v1.0.53+ on macOS arm64.
+
+Decision checklist (every action):
+- Parallel? 2+ independent → ΩBATCH
+- Which world? Local(bash) / Browser(eval_js,take_screenshot) / Remote(ssh-oracle)
+- Tool name exact? take_screenshot, run_command command=bash stdin=script
+- VFS? vfs_write/vfs_read/vfs_delete → server-v2 router → Supabase REST API
+- Encoding? Chinese/regex → ΩHERE heredoc, never eval_js
+- Long running? bg_run+bg_status, never sleep
+- Edit size? <20 lines edit_file, >20 write_file
+- Search? rg>grep, fd>find, find_text for code, context7 for docs
+- After modify? node -c / py_compile, server files backup first
+
+Architecture: AI→ΩHERE/ΩBATCH→content.js→Local(server-v2)/Browser(Chrome)/Remote(SSH)
+VFS: 7 slots in Supabase agent_memory. vfs_exec 已废弃.
+Tools: run_command|edit_file|write_file|read_file|read_media_file|eval_js|vfs_*|take_screenshot|ssh-oracle:|bg_*|find_text|get_symbols|find_usage|context7|github|memory|ΩBATCH
+14 Skills loaded. 默认中文.
+
+Five-World Map:
+AI ──SSE stream──▶ Browser(Chrome ext: sse-hook→content.js)
+Browser ──WebSocket:8765──▶ Local(server-v2: router→drivers)
+Browser ──fetch /api/project──▶ VFS(Supabase agent_memory, 7 slots)
+Local ──browserCallHandler callback──▶ Browser (vfs driver回调)
+Local ──MCP over SSH──▶ Remote(Oracle ARM, ssh-oracle driver)
+Browser ──inject result as user msg──▶ AI (闭环)
+
+Key: vfs driver lives in Local but executes via Browser callback.
+BATCH: TaskEngine→router.dispatch(internal) + browserCallHandler(browser tools)
+Supported: saveAs/when/forEach/if conditional flow.`;
+
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: systemBrief });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'System brief acknowledged. genspark-agent v1.0.53+, macOS arm64. Five worlds operational. Ready.' });
+        addLog('📋 Section 1: System Brief injected', 'success');
+
+        // ── Section 2: Forged Experiences (高密度经验，合并到一条 user 消息) ──
+        addLog('🔍 Loading forged experiences...', 'info');
+        let forgedContent = '';
+        try {
+          const TOOLKIT_ID = '6034da7a-cf5d-4f6d-b9ae-2985508ba0c5';
+          const tplResp = await fetch('/api/project/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ id: TOOLKIT_ID, request_not_update_permission: true })
+          });
+          const tplData = await tplResp.json();
+          const tkMsgs = tplData.data.session_state.messages || [];
+
+          const forgedParts = [];
+
+          // Source 1: JSON数组格式的 forged 对话 (以[开头)
+          for (const m of tkMsgs) {
+            const c = typeof m.content === 'string' ? m.content : '';
+            if (!c.trimStart().startsWith('[')) continue;
+            try {
+              const dialogues = JSON.parse(c);
+              if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
+                for (const d of dialogues) {
+                  forgedParts.push(d.content || '');
+                }
+                addLog('🧬 Forged dialogues: ' + dialogues.length + ' entries', 'info');
+              }
+            } catch(e) {}
+          }
+
+          // Source 2: _tpl:* 场景模板 (以{"name"开头)
+          for (const m of tkMsgs) {
+            const c = typeof m.content === 'string' ? m.content : '';
+            if (!c.startsWith('{"name"')) continue;
+            try {
+              const parsed = JSON.parse(c);
+              if (parsed.name && parsed.messages && Array.isArray(parsed.messages)) {
+                for (const tm of parsed.messages) {
+                  forgedParts.push(tm.content || '');
+                }
+                addLog('🎯 Template ' + parsed.name + ': ' + parsed.messages.length + ' entries', 'info');
+              }
+            } catch(e) {}
+          }
+
+          forgedContent = forgedParts.join('\n\n---\n\n');
+        } catch(e) {
+          addLog('⚠️ Forged load failed: ' + e.message, 'error');
+        }
+
+        if (forgedContent) {
+          newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: forgedContent });
+          newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Experience pack loaded. ' + Math.round(forgedContent.length/1024) + 'K of lessons, pitfalls, and patterns internalized.' });
+          addLog('✅ Section 2: Forged (' + Math.round(forgedContent.length/1024) + 'K)', 'success');
+        } else {
+          addLog('ℹ️ Section 2: No forged content found', 'info');
+        }
+
+        // ── Section 3: Skills (预留槽位，自动从已加载 skills 生成摘要) ──
+        // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
+        // 暂时跳过，不注入空消息
+
+        // ── Section 4: Context (VFS session summary) ──
         let vfsContext = '';
         try {
           vfsContext = await new Promise((resolve, reject) => {
@@ -3830,59 +3915,55 @@ ${conversationText}
             vfs.read('context').then(c => { clearTimeout(t); resolve(c || ''); }).catch(() => { clearTimeout(t); resolve(''); });
           });
         } catch(e) {}
+
+        // 构造压缩摘要
+        const summaryParts = [
+          '[Physical Compress - ' + new Date().toISOString().split('T')[0] + ']',
+          'Compressed ' + midCount + ' messages (' + midSize + 'KB) into summary.',
+          ''
+        ];
         if (vfsContext) {
-          // 只保留最新一层 context，去掉嵌套的旧 session
-          var ctxLines = vfsContext.split('\n');
-          var lastSessionIdx = -1;
-          for (var ci = ctxLines.length - 1; ci >= 0; ci--) {
+          // 只保留最新一层 context
+          const ctxLines = vfsContext.split('\n');
+          let lastSessionIdx = -1;
+          for (let ci = ctxLines.length - 1; ci >= 0; ci--) {
             if (ctxLines[ci].match(/^## Session \d+ Summary/) || ctxLines[ci].match(/^\[Session \d+/) || ctxLines[ci].match(/^\[Physical Compress/)) {
               lastSessionIdx = ci;
               break;
             }
           }
-          var trimmedCtx = lastSessionIdx > 0 ? ctxLines.slice(lastSessionIdx).join('\n') : vfsContext;
+          let trimmedCtx = lastSessionIdx > 0 ? ctxLines.slice(lastSessionIdx).join('\n') : vfsContext;
           if (trimmedCtx.length > 2000) trimmedCtx = trimmedCtx.substring(0, 2000) + '\n...(truncated)';
           summaryParts.push('## VFS Context (Session Memory)', trimmedCtx);
         }
-        
-        const summary = summaryParts.join('\n');
 
-        // 构造新消息数组：head + summary(user+assistant) + tail
-        const newMsgs = [];
-        
-        // Head: 保留原始 role 和 content，生成新连续 id
-        headMsgs.forEach(m => {
-          newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
-        });
-        
-        // Summary: 插入压缩摘要
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: summary });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Context restored. ' + midMsgs.length + ' messages compressed into summary. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
-        
-        // Tail: 保留原始 role 和 content，生成新连续 id
+        const contextSummary = summaryParts.join('\n');
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: contextSummary });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
+        addLog('📝 Section 4: Context (' + contextSummary.length + ' chars)', 'success');
+
+        // ── Tail: 保留最近 TAIL_KEEP 条原样 ──
         tailMsgs.forEach(m => {
           newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
         });
 
-        addLog('🔨 新对话: ' + newMsgs.length + ' 条 (head:' + HEAD_KEEP + ' + summary:2 + tail:' + TAIL_KEEP + ')', 'info');
-        addLog('📝 摘要: ' + summary.length + ' chars', 'info');
+        const sectionCount = 2 + (forgedContent ? 2 : 0) + 2; // system + forged? + context + summary pairs
+        addLog('🔨 新对话: ' + newMsgs.length + ' 条 (sections:' + sectionCount + ' + tail:' + TAIL_KEEP + ')', 'info');
 
-        // ── Step 3: 弹出编辑器让用户确认摘要 ──
-        // 确保 modal overlay 已创建
+        // ── Step 3: 弹出编辑器让用户确认 Context 摘要 ──
         if (!document.getElementById('compress-modal-overlay')) {
           const ov = document.createElement('div');
           ov.id = 'compress-modal-overlay';
           ov.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;justify-content:center;align-items:center;';
-          ov.innerHTML = '<div id="compress-modal" style="background:#1a1a2e;border-radius:12px;padding:20px;width:80vw;max-width:800px;max-height:80vh;display:flex;flex-direction:column;"><div style="margin-bottom:10px;color:#fff;">编辑压缩摘要 <span id="compress-modal-chars"></span></div><textarea id="compress-modal-editor" style="flex:1;min-height:300px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:8px;padding:10px;font-size:13px;resize:none;"></textarea><div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end;"><button id="compress-modal-cancel" style="padding:8px 16px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">取消</button><button id="compress-modal-confirm" style="padding:8px 16px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;">确认压缩</button></div></div>';
+          ov.innerHTML = '<div id="compress-modal" style="background:#1a1a2e;border-radius:12px;padding:20px;width:80vw;max-width:800px;max-height:80vh;display:flex;flex-direction:column;"><div style="margin-bottom:10px;color:#fff;">编辑 Context 摘要 <span id="compress-modal-chars"></span></div><textarea id="compress-modal-editor" style="flex:1;min-height:300px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:8px;padding:10px;font-size:13px;resize:none;"></textarea><div style="margin-top:10px;display:flex;gap:10px;justify-content:flex-end;"><button id="compress-modal-cancel" style="padding:8px 16px;background:#333;color:#fff;border:none;border-radius:6px;cursor:pointer;">取消</button><button id="compress-modal-confirm" style="padding:8px 16px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;">确认压缩</button></div></div>';
           document.body.appendChild(ov);
         }
         const modal = document.getElementById('compress-modal-overlay');
         const editor = document.getElementById('compress-modal-editor');
         if (modal && editor) {
-          editor.value = summary;
+          editor.value = contextSummary;
           modal.style.display = 'flex';
-          
-          // 等用户确认
+
           const confirmed = await new Promise(resolve => {
             document.getElementById('compress-modal-confirm').onclick = () => {
               const edited = editor.value.trim();
@@ -3906,95 +3987,21 @@ ${conversationText}
             return;
           }
 
-          // 更新 summary 到 newMsgs
-          newMsgs[HEAD_KEEP].content = confirmed;
+          // 更新 context summary 到 newMsgs (找到 Section 4 的 user 消息)
+          const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2; // context user msg index
+          if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
         }
 
         // ── Step 4: 备份摘要到 VFS ──
         try {
+          const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2;
+          const finalCtx = ctxMsgIdx >= 0 ? newMsgs[ctxMsgIdx].content : contextSummary;
           await new Promise((resolve, reject) => {
             const t = setTimeout(() => resolve(), 5000);
-            vfs.write('context', newMsgs[HEAD_KEEP].content).then(() => { clearTimeout(t); resolve(); }).catch(() => { clearTimeout(t); resolve(); });
+            vfs.write('context', finalCtx).then(() => { clearTimeout(t); resolve(); }).catch(() => { clearTimeout(t); resolve(); });
           });
-          addLog('💾 摘要已备份到 VFS context', 'success');
+          addLog('💾 Context backed up to VFS', 'success');
         } catch(e) {}
-
-        // ── Step 4.5: 注入记忆模板 (直接 fetch，不依赖 vfs) ──
-        addLog('🔍 开始 Step 4.5 经验对话注入...', 'info');
-        try {
-          const TOOLKIT_ID = '6034da7a-cf5d-4f6d-b9ae-2985508ba0c5';
-          const tplResp = await fetch('/api/project/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ id: TOOLKIT_ID, request_not_update_permission: true })
-          });
-          const tplData = await tplResp.json();
-          const allMsgs = tplData.data.session_state.messages || [];
-          
-          const injectMsgs = [];
-          let totalSize = 0;
-          // SIZE_LIMIT removed - inject all forged memories
-          
-          // Source 1: 伪造经验对话 (JSON数组 [{role,content},...])
-          for (const m of allMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            // Robust: parse first, then validate structure (不依赖格式前缀)
-            if (!c.trimStart().startsWith('[')) continue;
-            let dialogues;
-            try {
-              dialogues = JSON.parse(c);
-            } catch(e) { continue; }
-            try {
-              if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
-                for (const d of dialogues) {
-
-                  totalSize += (d.content || '').length;
-                  injectMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
-                }
-                addLog('🧬 经验对话: ' + dialogues.length + ' 条', 'info');
-              }
-            } catch(e) {}
-          }
-          
-          // Source 2: _tpl:* 场景模板 → 独立展开，不受 SIZE_LIMIT
-          const scenarioMsgs = [];
-          for (const m of allMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.startsWith('{"name"')) continue;
-            try {
-              const parsed = JSON.parse(c);
-              if (parsed.name && parsed.messages && Array.isArray(parsed.messages)) {
-                for (const tm of parsed.messages) {
-                  scenarioMsgs.push({ id: crypto.randomUUID(), role: tm.role, content: tm.content });
-                }
-                addLog('🎯 场景 ' + parsed.name + ': ' + parsed.messages.length + ' 条', 'info');
-              }
-            } catch(e) {}
-          }
-          
-          // 先插入 forged 核心对话
-          let insertIdx = HEAD_KEEP;
-          if (injectMsgs.length > 0) {
-            for (let i = 0; i < injectMsgs.length; i++) {
-              newMsgs.splice(insertIdx + i, 0, injectMsgs[i]);
-            }
-            insertIdx += injectMsgs.length;
-            addLog('✅ 注入 ' + injectMsgs.length + ' 条核心经验 (' + Math.round(totalSize/1024) + 'K)', 'success');
-          }
-          // 再插入场景模板（独立轮次，不限大小）
-          if (scenarioMsgs.length > 0) {
-            for (let i = 0; i < scenarioMsgs.length; i++) {
-              newMsgs.splice(insertIdx + i, 0, scenarioMsgs[i]);
-            }
-            addLog('🎯 注入 ' + scenarioMsgs.length + ' 条场景对话', 'success');
-          }
-          if (injectMsgs.length === 0 && scenarioMsgs.length === 0) {
-            addLog('ℹ️ 未找到经验模板', 'info');
-          }
-        } catch(e) {
-          addLog('⚠️ 模板注入失败: ' + e.message, 'error');
-        }
 
         // ── Step 5: 创建新对话 ──
         // 读取旧对话 name，生成新名字
