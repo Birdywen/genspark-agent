@@ -3934,7 +3934,7 @@ ${conversationText}
           
           const injectMsgs = [];
           let totalSize = 0;
-          const SIZE_LIMIT = 12000;
+          // SIZE_LIMIT removed - inject all forged memories
           
           // Source 1: 伪造经验对话 (JSON数组 [{role,content},...])
           for (const m of allMsgs) {
@@ -3948,7 +3948,7 @@ ${conversationText}
             try {
               if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
                 for (const d of dialogues) {
-                  if (totalSize + (d.content || '').length > SIZE_LIMIT) break;
+
                   totalSize += (d.content || '').length;
                   injectMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
                 }
