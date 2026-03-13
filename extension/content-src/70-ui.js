@@ -1288,93 +1288,31 @@ ${conversationText}
 
         const newMsgs = [];
 
-        // ── Section 1: System Brief (固定头部) ──
-        const systemBrief = 'Connected to genspark-agent v1.0.53+ on macOS arm64.\n\n' +
-        'Decision checklist (every action):\n' +
-        '- Parallel? 2+ independent \u2192 \u03A9BATCH\n' +
-        '- Which world? Local(bash) / Browser(eval_js,take_screenshot) / Remote(ssh-oracle)\n' +
-        '- Tool name exact? take_screenshot, run_command command=bash stdin=script\n' +
-        '- VFS? vfs_write/vfs_read/vfs_delete \u2192 server-v2 router \u2192 Supabase REST API\n' +
-        '- Encoding? Chinese/regex \u2192 \u03A9HERE heredoc, never eval_js\n' +
-        '- Long running? bg_run+bg_status, never sleep\n' +
-        '- Edit size? <20 lines edit_file, >20 write_file\n' +
-        '- Search? rg>grep, fd>find, find_text for code, context7 for docs\n' +
-        '- After modify? node -c / py_compile, server files backup first\n\n' +
-        'Architecture: AI\u2192\u03A9HERE/\u03A9BATCH\u2192content.js\u2192Local(server-v2)/Browser(Chrome)/Remote(SSH)\n' +
-        'VFS: 7 slots in Supabase agent_memory. vfs_exec \u5DF2\u5E9F\u5F03.\n' +
-        'Tools: run_command|edit_file|write_file|read_file|read_media_file|eval_js|vfs_*|take_screenshot|ssh-oracle:|bg_*|find_text|get_symbols|find_usage|context7|github|memory|\u03A9BATCH\n' +
-        '14 Skills loaded. \u9ED8\u8BA4\u4E2D\u6587.\n\n' +
-        'Five-World Map:\n' +
-        'AI \u2500\u2500SSE stream\u2500\u2500\u25B6 Browser(Chrome ext: sse-hook\u2192content.js)\n' +
-        'Browser \u2500\u2500WebSocket:8765\u2500\u2500\u25B6 Local(server-v2: router\u2192drivers)\n' +
-        'Browser \u2500\u2500fetch /api/project\u2500\u2500\u25B6 VFS(Supabase agent_memory, 7 slots)\n' +
-        'Local \u2500\u2500browserCallHandler callback\u2500\u2500\u25B6 Browser (vfs driver\u56DE\u8C03)\n' +
-        'Local \u2500\u2500MCP over SSH\u2500\u2500\u25B6 Remote(Oracle ARM, ssh-oracle driver)\n' +
-        'Browser \u2500\u2500inject result as user msg\u2500\u2500\u25B6 AI (\u95ED\u73AF)\n\n' +
-        'Key: vfs driver lives in Local but executes via Browser callback.\n' +
-        'BATCH: TaskEngine\u2192router.dispatch(internal) + browserCallHandler(browser tools)\n' +
-        'Supported: saveAs/when/forEach/if conditional flow.';
-
-        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: systemBrief });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Confirmed. Five worlds operational. Ready.' });
-        addLog('📋 Section 1: System Brief injected', 'success');
-
-        // ── Section 2: Forged Experiences (保留原始role结构，AI当作自己的记忆) ──
-        addLog('🔍 Loading forged experiences...', 'info');
+        // ── Section 1+2: Forged Prompt (从 VFS toolkit msg channel 加载) ──
+        addLog('🔍 Loading forged prompt...', 'info');
         let forgedCount = 0;
         let forgedSize = 0;
         try {
-          const TOOLKIT_ID = '6034da7a-cf5d-4f6d-b9ae-2985508ba0c5';
-          const tplResp = await fetch('/api/project/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ id: TOOLKIT_ID, request_not_update_permission: true })
+          const forgedRaw = await new Promise((resolve, reject) => {
+            const t = setTimeout(() => resolve(''), 5000);
+            vfs.readMsg('toolkit', '_forged:experience-dialogues').then(c => { clearTimeout(t); resolve(c || ''); }).catch(() => { clearTimeout(t); resolve(''); });
           });
-          const tplData = await tplResp.json();
-          const tkMsgs = tplData.data.session_state.messages || [];
-
-          // Source 1: JSON数组格式的 forged 对话 (以[开头) → 保留role结构
-          for (const m of tkMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.trimStart().startsWith('[')) continue;
-            try {
-              const dialogues = JSON.parse(c);
-              if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
-                for (const d of dialogues) {
-                  newMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
-                  forgedCount++;
-                  forgedSize += (d.content || '').length;
-                }
-                addLog('🧬 Forged dialogues: ' + dialogues.length + ' msgs (role preserved)', 'info');
+          if (forgedRaw) {
+            const dialogues = JSON.parse(forgedRaw);
+            if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
+              for (const d of dialogues) {
+                newMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
+                forgedCount++;
+                forgedSize += (d.content || '').length;
               }
-            } catch(e) {}
+              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded', 'success');
+            }
           }
-
-          // Source 2: _tpl:* 场景模板 (以{"name"开头) → 保留role结构
-          for (const m of tkMsgs) {
-            const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.startsWith('{"name"')) continue;
-            try {
-              const parsed = JSON.parse(c);
-              if (parsed.name && parsed.messages && Array.isArray(parsed.messages)) {
-                for (const tm of parsed.messages) {
-                  newMsgs.push({ id: crypto.randomUUID(), role: tm.role, content: tm.content });
-                  forgedCount++;
-                  forgedSize += (tm.content || '').length;
-                }
-                addLog('🎯 Template ' + parsed.name + ': ' + parsed.messages.length + ' msgs', 'info');
-              }
-            } catch(e) {}
+          if (forgedCount === 0) {
+            addLog('⚠️ No forged prompt found in _forged:experience-dialogues', 'error');
           }
         } catch(e) {
           addLog('⚠️ Forged load failed: ' + e.message, 'error');
-        }
-
-        if (forgedCount > 0) {
-          addLog('✅ Section 2: ' + forgedCount + ' forged msgs (' + Math.round(forgedSize/1024) + 'K) injected with original roles', 'success');
-        } else {
-          addLog('ℹ️ Section 2: No forged content found', 'info');
         }
 
         // ── Section 3: Skills (预留槽位，自动从已加载 skills 生成摘要) ──
@@ -1412,8 +1350,8 @@ ${conversationText}
         }
 
         const contextSummary = summaryParts.join('\n');
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: contextSummary });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: contextSummary });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
         addLog('📝 Section 4: Context (' + contextSummary.length + ' chars)', 'success');
 
         // ── Tail: 保留最近 TAIL_KEEP 条原样 ──
@@ -1461,7 +1399,7 @@ ${conversationText}
             return;
           }
 
-          // 更新 context summary 到 newMsgs (找到 Section 4 的 user 消息)
+          // 更新 context summary 到 newMsgs (找到 Section 4 的 assistant 消息)
           const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2; // context user msg index
           if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
         }
