@@ -1315,8 +1315,8 @@ ${conversationText}
         'BATCH: TaskEngine\u2192router.dispatch(internal) + browserCallHandler(browser tools)\n' +
         'Supported: saveAs/when/forEach/if conditional flow.';
 
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: systemBrief });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'System brief acknowledged. genspark-agent v1.0.53+, macOS arm64. Five worlds operational. Ready.' });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: systemBrief });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Confirmed. Five worlds operational. Ready.' });
         addLog('📋 Section 1: System Brief injected', 'success');
 
         // ── Section 2: Forged Experiences (保留原始role结构，AI当作自己的记忆) ──
