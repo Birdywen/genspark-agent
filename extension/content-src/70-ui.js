@@ -1320,9 +1320,10 @@ Supported: saveAs/when/forEach/if conditional flow.`;
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'System brief acknowledged. genspark-agent v1.0.53+, macOS arm64. Five worlds operational. Ready.' });
         addLog('📋 Section 1: System Brief injected', 'success');
 
-        // ── Section 2: Forged Experiences (高密度经验，合并到一条 user 消息) ──
+        // ── Section 2: Forged Experiences (保留原始role结构，AI当作自己的记忆) ──
         addLog('🔍 Loading forged experiences...', 'info');
-        let forgedContent = '';
+        let forgedCount = 0;
+        let forgedSize = 0;
         try {
           const TOOLKIT_ID = '6034da7a-cf5d-4f6d-b9ae-2985508ba0c5';
           const tplResp = await fetch('/api/project/update', {
@@ -1334,9 +1335,7 @@ Supported: saveAs/when/forEach/if conditional flow.`;
           const tplData = await tplResp.json();
           const tkMsgs = tplData.data.session_state.messages || [];
 
-          const forgedParts = [];
-
-          // Source 1: JSON数组格式的 forged 对话 (以[开头)
+          // Source 1: JSON数组格式的 forged 对话 (以[开头) → 保留role结构
           for (const m of tkMsgs) {
             const c = typeof m.content === 'string' ? m.content : '';
             if (!c.trimStart().startsWith('[')) continue;
@@ -1344,14 +1343,16 @@ Supported: saveAs/when/forEach/if conditional flow.`;
               const dialogues = JSON.parse(c);
               if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
                 for (const d of dialogues) {
-                  forgedParts.push(d.content || '');
+                  newMsgs.push({ id: crypto.randomUUID(), role: d.role, content: d.content });
+                  forgedCount++;
+                  forgedSize += (d.content || '').length;
                 }
-                addLog('🧬 Forged dialogues: ' + dialogues.length + ' entries', 'info');
+                addLog('🧬 Forged dialogues: ' + dialogues.length + ' msgs (role preserved)', 'info');
               }
             } catch(e) {}
           }
 
-          // Source 2: _tpl:* 场景模板 (以{"name"开头)
+          // Source 2: _tpl:* 场景模板 (以{"name"开头) → 保留role结构
           for (const m of tkMsgs) {
             const c = typeof m.content === 'string' ? m.content : '';
             if (!c.startsWith('{"name"')) continue;
@@ -1359,22 +1360,20 @@ Supported: saveAs/when/forEach/if conditional flow.`;
               const parsed = JSON.parse(c);
               if (parsed.name && parsed.messages && Array.isArray(parsed.messages)) {
                 for (const tm of parsed.messages) {
-                  forgedParts.push(tm.content || '');
+                  newMsgs.push({ id: crypto.randomUUID(), role: tm.role, content: tm.content });
+                  forgedCount++;
+                  forgedSize += (tm.content || '').length;
                 }
-                addLog('🎯 Template ' + parsed.name + ': ' + parsed.messages.length + ' entries', 'info');
+                addLog('🎯 Template ' + parsed.name + ': ' + parsed.messages.length + ' msgs', 'info');
               }
             } catch(e) {}
           }
-
-          forgedContent = forgedParts.join('\n\n---\n\n');
         } catch(e) {
           addLog('⚠️ Forged load failed: ' + e.message, 'error');
         }
 
-        if (forgedContent) {
-          newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: forgedContent });
-          newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'Experience pack loaded. ' + Math.round(forgedContent.length/1024) + 'K of lessons, pitfalls, and patterns internalized.' });
-          addLog('✅ Section 2: Forged (' + Math.round(forgedContent.length/1024) + 'K)', 'success');
+        if (forgedCount > 0) {
+          addLog('✅ Section 2: ' + forgedCount + ' forged msgs (' + Math.round(forgedSize/1024) + 'K) injected with original roles', 'success');
         } else {
           addLog('ℹ️ Section 2: No forged content found', 'info');
         }
