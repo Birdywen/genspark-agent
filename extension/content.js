@@ -3810,35 +3810,31 @@ ${conversationText}
         const newMsgs = [];
 
         // ── Section 1: System Brief (固定头部) ──
-        const systemBrief = `Connected to genspark-agent v1.0.53+ on macOS arm64.
-
-Decision checklist (every action):
-- Parallel? 2+ independent → ΩBATCH
-- Which world? Local(bash) / Browser(eval_js,take_screenshot) / Remote(ssh-oracle)
-- Tool name exact? take_screenshot, run_command command=bash stdin=script
-- VFS? vfs_write/vfs_read/vfs_delete → server-v2 router → Supabase REST API
-- Encoding? Chinese/regex → ΩHERE heredoc, never eval_js
-- Long running? bg_run+bg_status, never sleep
-- Edit size? <20 lines edit_file, >20 write_file
-- Search? rg>grep, fd>find, find_text for code, context7 for docs
-- After modify? node -c / py_compile, server files backup first
-
-Architecture: AI→ΩHERE/ΩBATCH→content.js→Local(server-v2)/Browser(Chrome)/Remote(SSH)
-VFS: 7 slots in Supabase agent_memory. vfs_exec 已废弃.
-Tools: run_command|edit_file|write_file|read_file|read_media_file|eval_js|vfs_*|take_screenshot|ssh-oracle:|bg_*|find_text|get_symbols|find_usage|context7|github|memory|ΩBATCH
-14 Skills loaded. 默认中文.
-
-Five-World Map:
-AI ──SSE stream──▶ Browser(Chrome ext: sse-hook→content.js)
-Browser ──WebSocket:8765──▶ Local(server-v2: router→drivers)
-Browser ──fetch /api/project──▶ VFS(Supabase agent_memory, 7 slots)
-Local ──browserCallHandler callback──▶ Browser (vfs driver回调)
-Local ──MCP over SSH──▶ Remote(Oracle ARM, ssh-oracle driver)
-Browser ──inject result as user msg──▶ AI (闭环)
-
-Key: vfs driver lives in Local but executes via Browser callback.
-BATCH: TaskEngine→router.dispatch(internal) + browserCallHandler(browser tools)
-Supported: saveAs/when/forEach/if conditional flow.`;
+        const systemBrief = 'Connected to genspark-agent v1.0.53+ on macOS arm64.\n\n' +
+        'Decision checklist (every action):\n' +
+        '- Parallel? 2+ independent \u2192 \u03A9BATCH\n' +
+        '- Which world? Local(bash) / Browser(eval_js,take_screenshot) / Remote(ssh-oracle)\n' +
+        '- Tool name exact? take_screenshot, run_command command=bash stdin=script\n' +
+        '- VFS? vfs_write/vfs_read/vfs_delete \u2192 server-v2 router \u2192 Supabase REST API\n' +
+        '- Encoding? Chinese/regex \u2192 \u03A9HERE heredoc, never eval_js\n' +
+        '- Long running? bg_run+bg_status, never sleep\n' +
+        '- Edit size? <20 lines edit_file, >20 write_file\n' +
+        '- Search? rg>grep, fd>find, find_text for code, context7 for docs\n' +
+        '- After modify? node -c / py_compile, server files backup first\n\n' +
+        'Architecture: AI\u2192\u03A9HERE/\u03A9BATCH\u2192content.js\u2192Local(server-v2)/Browser(Chrome)/Remote(SSH)\n' +
+        'VFS: 7 slots in Supabase agent_memory. vfs_exec \u5DF2\u5E9F\u5F03.\n' +
+        'Tools: run_command|edit_file|write_file|read_file|read_media_file|eval_js|vfs_*|take_screenshot|ssh-oracle:|bg_*|find_text|get_symbols|find_usage|context7|github|memory|\u03A9BATCH\n' +
+        '14 Skills loaded. \u9ED8\u8BA4\u4E2D\u6587.\n\n' +
+        'Five-World Map:\n' +
+        'AI \u2500\u2500SSE stream\u2500\u2500\u25B6 Browser(Chrome ext: sse-hook\u2192content.js)\n' +
+        'Browser \u2500\u2500WebSocket:8765\u2500\u2500\u25B6 Local(server-v2: router\u2192drivers)\n' +
+        'Browser \u2500\u2500fetch /api/project\u2500\u2500\u25B6 VFS(Supabase agent_memory, 7 slots)\n' +
+        'Local \u2500\u2500browserCallHandler callback\u2500\u2500\u25B6 Browser (vfs driver\u56DE\u8C03)\n' +
+        'Local \u2500\u2500MCP over SSH\u2500\u2500\u25B6 Remote(Oracle ARM, ssh-oracle driver)\n' +
+        'Browser \u2500\u2500inject result as user msg\u2500\u2500\u25B6 AI (\u95ED\u73AF)\n\n' +
+        'Key: vfs driver lives in Local but executes via Browser callback.\n' +
+        'BATCH: TaskEngine\u2192router.dispatch(internal) + browserCallHandler(browser tools)\n' +
+        'Supported: saveAs/when/forEach/if conditional flow.';
 
         newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: systemBrief });
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: 'System brief acknowledged. genspark-agent v1.0.53+, macOS arm64. Five worlds operational. Ready.' });
