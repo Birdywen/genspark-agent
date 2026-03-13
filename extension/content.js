@@ -3764,7 +3764,11 @@ ${conversationText}
     document.getElementById('agent-compress').setAttribute('data-checkpoint', 'reached-1239');
     console.log('[Content] About to bind fork-compress onclick...');
     try {
-    document.getElementById('agent-compress').addEventListener('click', async (evt) => {
+    // cloneNode to clear any pre-existing listeners that block execution
+    const origBtn = document.getElementById('agent-compress');
+    const freshBtn = origBtn.cloneNode(true);
+    origBtn.parentNode.replaceChild(freshBtn, origBtn);
+    freshBtn.addEventListener('click', async (evt) => {
       const dryRun = evt.shiftKey;
       const addLog = (msg, type='info') => {
         console.log('[fork-compress]', msg);
