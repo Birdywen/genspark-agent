@@ -3887,6 +3887,31 @@ ${conversationText}
         const sectionCount = newMsgs.length; // all injected sections so far
         addLog('🔨 新对话: ' + newMsgs.length + ' 条 (sections:' + sectionCount + ' + tail:' + TAIL_KEEP + ')', 'info');
 
+        // ── DryRun: 预览模式（跳过编辑器和创建） ──
+        if (dryRun) {
+          const roles = newMsgs.map(m => m.role);
+          const totalChars = newMsgs.reduce((s, m) => s + (m.content || '').length, 0);
+          addLog('🔍 [DRY RUN] 预览结果:', 'success');
+          addLog('📊 消息数: ' + newMsgs.length + ' (forged: ' + forgedCount + ', tail: ' + tailMsgs.length + ')', 'info');
+          addLog('📏 总字符: ' + Math.round(totalChars/1024) + 'K', 'info');
+          addLog('🎭 Role 序列: ' + roles.join(',').substring(0, 200), 'info');
+          addLog('--- 前 6 条 ---', 'info');
+          for (var di = 0; di < Math.min(newMsgs.length, 6); di++) {
+            addLog('  [' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 120), 'info');
+          }
+          addLog('--- Context (assistant) ---', 'info');
+          var ctxIdx = forgedCount;
+          if (ctxIdx < newMsgs.length) addLog('  [' + ctxIdx + '] ' + newMsgs[ctxIdx].role + ': ' + (newMsgs[ctxIdx].content || '').substring(0, 300), 'info');
+          addLog('--- 最后 3 条 ---', 'info');
+          for (var di2 = Math.max(0, newMsgs.length - 3); di2 < newMsgs.length; di2++) {
+            addLog('  [' + di2 + '] ' + newMsgs[di2].role + ': ' + (newMsgs[di2].content || '').substring(0, 120), 'info');
+          }
+          addLog('✅ [DRY RUN] Shift+点击 = 预览, 普通点击 = 执行', 'success');
+          btn.disabled = false;
+          btn.textContent = '🗜️ 压缩';
+          return;
+        }
+
         // ── Step 3: 弹出编辑器让用户确认 Context 摘要 ──
         if (!document.getElementById('compress-modal-overlay')) {
           const ov = document.createElement('div');
@@ -3939,28 +3964,6 @@ ${conversationText}
           });
           addLog('💾 Context backed up to VFS', 'success');
         } catch(e) {}
-
-        // ── DryRun: 预览模式 ──
-        if (dryRun) {
-          const roles = newMsgs.map(m => m.role);
-          const roleStr = roles.join(',');
-          const totalChars = newMsgs.reduce((s, m) => s + (m.content || '').length, 0);
-          addLog('🔍 [DRY RUN] 预览结果:', 'success');
-          addLog('📊 消息数: ' + newMsgs.length + ' (forged: ' + forgedCount + ', tail: ' + tailMsgs.length + ')', 'info');
-          addLog('📏 总字符: ' + Math.round(totalChars/1024) + 'K', 'info');
-          addLog('🎭 Role 序列: ' + roleStr.substring(0, 200), 'info');
-          for (var di = 0; di < Math.min(newMsgs.length, 6); di++) {
-            addLog('  [' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 80) + '...', 'info');
-          }
-          addLog('... 最后 3 条:', 'info');
-          for (var di2 = Math.max(0, newMsgs.length - 3); di2 < newMsgs.length; di2++) {
-            addLog('  [' + di2 + '] ' + newMsgs[di2].role + ': ' + (newMsgs[di2].content || '').substring(0, 80) + '...', 'info');
-          }
-          addLog('✅ [DRY RUN] Shift+点击 = 预览, 普通点击 = 执行', 'success');
-          btn.disabled = false;
-          btn.textContent = '🗜️ 压缩';
-          return;
-        }
 
         // ── Step 5: 创建新对话 ──
         // 读取旧对话 name，生成新名字
