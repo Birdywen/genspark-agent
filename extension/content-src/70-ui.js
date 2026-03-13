@@ -1239,7 +1239,7 @@ ${conversationText}
     // ── Fork Compress: 创建新对话，注入精简消息 ──
     console.log('[Content] About to bind fork-compress onclick...');
     try {
-    document.getElementById('agent-compress').onclick = async () => {
+    document.getElementById('agent-compress').addEventListener('click', async () => {
       const addLog = (msg, type='info') => {
         console.log('[fork-compress]', msg);
         const el = document.getElementById('agent-log');
@@ -1527,7 +1527,7 @@ ${conversationText}
         btn.disabled = false;
         btn.textContent = '🗜️';
       }
-    };
+    });
     console.log('[Content] Fork-compress onclick bound successfully');
     } catch(forkBindErr) {
       console.error('[Content] Fork-compress bind FAILED:', forkBindErr);
