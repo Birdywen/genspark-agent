@@ -1,6 +1,25 @@
 // Genspark Agent Server v2 - 整合版
 // MCP Hub + 安全检查 + 日志记录 + Skills 系统 + 命令重试
 
+
+// Load .env into process.env (no dotenv dependency)
+import { readFileSync as _readEnv } from 'fs';
+import { dirname as _dirEnv, join as _joinEnv } from 'path';
+import { fileURLToPath as _urlEnv } from 'url';
+try {
+  const _envPath = _joinEnv(_dirEnv(_urlEnv(import.meta.url)), '.env');
+  _readEnv(_envPath, 'utf-8').split('\n').forEach(line => {
+    line = line.trim();
+    if (!line || line.startsWith('#')) return;
+    const eq = line.indexOf('=');
+    if (eq > 0) {
+      const key = line.slice(0, eq).trim();
+      const val = line.slice(eq + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+  });
+} catch(e) { /* .env not found, skip */ }
+
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
@@ -163,7 +182,8 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     // 尝试自动修复 SSE 参数损坏
     // 模式1: "bash /path/to/script.sh" 或 "python3 /path/to/script.py" → 直接执行
     const execMatch = cmd.match(/^(bash|sh|python3?|node)\s+(\/\S+)$/);
-    if (execMatch) {
+    const shellCmdMatch = cmd.match(/^cd\s+\S+.*&&/) || cmd.match(/^(ls|pwd|cat|echo|grep|find|which|whoami|date|df|du|ps|top|kill|mkdir|rm|cp|mv|chmod|chown|head|tail|wc|sort|uniq|curl|wget|tar|zip|unzip|env|export|source|lsof|pkill|pgrep)\b/);
+    if (execMatch || shellCmdMatch) {
       logger.info(`[自动修复] run_command 无stdin，但命令可执行: ${cmd}`);
       params.command = cmd; // 保持原样，让 run_process 处理
     } else if (cmd.includes(' ') && !cmd.startsWith('/') && !cmd.startsWith('./')) {
@@ -192,7 +212,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   params = decodeBase64Fields(params, logger);
   params = parseParams(params, logger);
   // ── Router Phase 3: 灰度切流量 ──
-  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility,bg').split(',');
+  const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility,bg,memory,agent').split(',');
   let _routerHandled = false;
   if (router) {
     const driver = router.handlers.get(tool);
@@ -368,7 +388,16 @@ async function main() {
   metrics = new Metrics(logger);
   router.setFallback(handleToolCall);
   await router.loadDrivers({ processManager, logger, addToHistory: history.add, hub, metrics, history, handleToolCall });
-  logger.info("[Router] 工具路由器已初始化, tools: " + JSON.stringify(router.listTools()));
+  // 注入 browserTool 供 agent driver 等使用 (Promise 风格)
+  router._browserTool = function(browserToolName, browserParams, timeoutMs) {
+    return new Promise(function(resolve, reject) {
+      const callId = 'bt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      const timer = setTimeout(function() { browserToolPending.delete(callId); reject(new Error('browserTool timeout')); }, timeoutMs || 90000);
+      browserToolPending.set(callId, { resolve: function(r) { clearTimeout(timer); resolve(r); }, reject: function(e) { clearTimeout(timer); reject(e); }, timeout: timer });
+      for (const c of clients) { if (c.readyState === 1) c.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: browserToolName, params: browserParams })); }
+      logger.info('[browserTool] forwarded ' + browserToolName + ' callId=' + callId);
+    });
+  };
 
   // 初始化任务引擎（需要在 router 之后）
   taskEngine = new TaskEngine(logger, hub, safety, errorClassifier, router);
@@ -495,12 +524,20 @@ async function main() {
             logger.info(`[BrowserTool] 收到result callId=${msg.callId} pendingKeys=[${Array.from(browserToolPending.keys()).join(',')}] success=${msg.success}`);
             const pending = browserToolPending.get(msg.callId);
             if (pending) {
-              clearTimeout(pending.timeout);
-              browserToolPending.delete(msg.callId);
               if (msg.success) {
-                logger.info(`[BrowserTool] 结果返回: ${msg.callId}`);
+                const resultStr = typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
+                // 跳过空结果（多tab竞争：第一个tab可能没await Promise就返回空）
+                if (!resultStr || resultStr === '' || resultStr === '(undefined)') {
+                  logger.warning(`[BrowserTool] 跳过空结果: ${msg.callId} (等待其他tab返回实际内容)`);
+                  return; // 不删pending不清timer，等下一个tab的结果
+                }
+                clearTimeout(pending.timeout);
+                browserToolPending.delete(msg.callId);
+                logger.info(`[BrowserTool] 结果返回: ${msg.callId} result=${resultStr.substring(0,200)}`);
                 pending.resolve(msg.result);
               } else {
+                clearTimeout(pending.timeout);
+                browserToolPending.delete(msg.callId);
                 logger.error(`[BrowserTool] 执行失败: ${msg.callId} - ${msg.error}`);
                 pending.reject(new Error(msg.error));
               }

@@ -44,7 +44,7 @@ class Router {
     if (driver) {
       trace.span('Router', { action: 'found_driver', driver: driver.name });
       try {
-        const ctx = { trace, ws, message, callOptions: callOptions || {} };
+        const ctx = { trace, ws, message, callOptions: callOptions || {}, browserTool: this._browserTool || null };
         const result = await driver.handle(tool, params, ctx);
         trace.span('Router', { action: 'complete', success: true, duration: trace.duration });
         trace.flush();

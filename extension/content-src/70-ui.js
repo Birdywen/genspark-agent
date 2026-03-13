@@ -1415,9 +1415,13 @@ ${conversationText}
           // Source 1: 伪造经验对话 (JSON数组 [{role,content},...])
           for (const m of allMsgs) {
             const c = typeof m.content === 'string' ? m.content : '';
-            if (!c.startsWith('[{"role"')) continue;
+            // Robust: parse first, then validate structure (不依赖格式前缀)
+            if (!c.trimStart().startsWith('[')) continue;
+            let dialogues;
             try {
-              const dialogues = JSON.parse(c);
+              dialogues = JSON.parse(c);
+            } catch(e) { continue; }
+            try {
               if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
                 for (const d of dialogues) {
                   if (totalSize + (d.content || '').length > SIZE_LIMIT) break;

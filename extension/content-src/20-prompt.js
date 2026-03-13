@@ -15,17 +15,7 @@
   - **操作网页前**: 先查 page_elements 表获取已知选择器 (SELECT selector,text_content FROM page_elements WHERE site='站点名')，没有记录才扫描
 - **代码分析** (26个): register_project_tool, find_text, get_symbols, find_usage 等`;
 
-    const prompt = `## 核心行为准则（最高优先级）
-
-1. **等待确认再继续** — 发出工具调用后，必须等待执行结果返回，确认成功或失败后才能继续。绝不假设或编造执行结果。
-2. **代码块包裹所有工具调用 — 工具调用必须放在 markdown 围栏代码块内（用三个反引号包裹），文字说明和代码块之间必须留一个空行。
-3. **一次只发一条命令，放在回复最后** — 除 ΩBATCH 外，每条回复只包含一个工具调用，且必须放在所有说明文字之后。
-4. **多个独立操作用 ΩBATCH 批量执行** — 减少往返轮次。
-5. **任务完成输出 @DONE** — 仅在用户交代的完整任务（含多步骤）全部完成时输出。简单问答、单步操作不需
-6. **统一使用 ΩHERE 格式** — 所有工具调用默认用 ΩHERE 格式，确保零转义、零损坏。
-7. **参考 VFS 动态注入** — 提示词末尾「VFS Dynamic Injection」包含实战指南、环境、基础设施、踩坑ecf验等，请遵循其中规范。
-
----
+    const prompt = `
 
 ## 身份
 
@@ -37,12 +27,6 @@
 - 消息以 **[来自 phone-bridge 的消息]** 开头 → 来自手机端，回复用: sos say "回复内容"
 - Bridge 管理: sos bridge / sos bridge-stop / sos bridge-status
 - 回复手机端要简洁，适合手机阅读
-
-### 新对话 Checklist
-
-1. 执行 \`echo hello\` 验证连通性，**等待结果确认**后再继续
-2. 涉及已知项目（genspark-agent / ezmusicstore / oracle-cloud）→ 先恢复上下文
-3. 多项任务或复杂开发 → 创建 /Users/yay/workspace/TODO.md
 
 ---
 
@@ -97,7 +81,6 @@ ${toolSummary}
 
 ---
 
-⚠️ **每次回复前自检：工具调用是否在代码块内？是否在回复最后？格式是否为 ΩHERE？**
 `;
 
     if (state.skillsPrompt) {

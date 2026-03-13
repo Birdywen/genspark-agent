@@ -1,100 +1,184 @@
-// VFS Driver - Genspark VFS 操作 (jsCode 生成)
+// VFS Driver - Supabase-backed (migrated from IndexedDB)
 // Tools: vfs_read, vfs_write, vfs_delete, vfs_list, vfs_query, vfs_search, vfs_exec, vfs_backup
+
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_KEY;
 
 let _logger = null;
 
+function hdrs(extra) {
+  return Object.assign({
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json'
+  }, extra || {});
+}
+
+async function sb(path, opts = {}) {
+  const url = SB_URL + '/rest/v1/' + path;
+  const h = hdrs(opts.headers);
+  const fetchOpts = Object.assign({}, opts, { headers: h });
+  const res = await fetch(url, fetchOpts);
+  const text = await res.text();
+  try { return { status: res.status, data: JSON.parse(text) }; }
+  catch(e) { return { status: res.status, data: text }; }
+}
+
+// Map old VFS slot:key naming to Supabase name field
+function toName(slot, key) {
+  if (key) return slot + ':' + key;
+  return 'slot:' + slot;
+}
+
 async function init(deps) {
   _logger = deps.logger;
-  _logger.info('[VFS Driver] initialized');
+  if (!SB_URL || !SB_KEY) {
+    _logger.warning('[VFS] SUPABASE_URL/KEY not set, driver disabled');
+    return;
+  }
+  _logger.info('[VFS] Supabase-backed VFS driver ready');
 }
 
-function buildJsCode(tool, params) {
-  if (tool === 'vfs_write') {
-    if (!params.slot) return { isError: true, error: 'vfs_write 需要 slot 参数' };
-    if (params.key) {
-      const contentJson = JSON.stringify(params.content || '');
-      const keyJson = JSON.stringify(params.key);
-      return { code: `return window.vfs.writeMsg(${JSON.stringify(params.slot)}, ${keyJson}, ${contentJson}).then(function(r) { return 'writeMsg ok: ' + JSON.stringify(r); })` };
-    } else {
-      const contentJson = JSON.stringify(params.content || '');
-      return { code: `return window.vfs.write(${JSON.stringify(params.slot)}, ${contentJson}).then(function(r) { return 'write ok: ' + JSON.stringify(r); })` };
+async function handle(tool, params, ctx) {
+  const trace = ctx.trace || ctx; trace.span('vfs', { action: 'start', tool });
+  let result;
+
+  switch(tool) {
+    case 'vfs_write': {
+      if (!params.slot) { result = { isError: true, error: 'vfs_write needs slot' }; break; }
+      const name = toName(params.slot, params.key);
+      const contentStr = typeof params.content === 'string' ? params.content : JSON.stringify(params.content || '');
+      
+      // upsert: check existing
+      const eq = 'agent_memory?name=eq.' + encodeURIComponent(name) + '&limit=1';
+      const ex = await sb(eq, { method: 'GET' });
+      const row = {
+        type: params.key ? 'msg' : 'slot',
+        scene: params.slot,
+        name: name,
+        content: contentStr,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (ex.data && ex.data[0]) {
+        await sb('agent_memory?id=eq.' + ex.data[0].id, {
+          method: 'PATCH', headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(row)
+        });
+        result = 'writeMsg ok: updated ' + name;
+      } else {
+        await sb('agent_memory', {
+          method: 'POST', headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify(row)
+        });
+        result = 'writeMsg ok: created ' + name;
+      }
+      break;
     }
-  }
 
-  if (tool === 'vfs_read') {
-    if (!params.slot) return { isError: true, error: 'vfs_read 需要 slot 参数' };
-    if (params.key) {
-      return { code: `return window.vfs.readMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}).then(function(r) { return JSON.stringify(r); })` };
-    } else if (params.keys) {
-      return { code: `return window.vfs.listMsg(${JSON.stringify(params.slot)}).then(function(r) { return JSON.stringify(r); })` };
-    } else {
-      return { code: `return window.vfs.read(${JSON.stringify(params.slot)}).then(function(r) { return r; })` };
+    case 'vfs_read': {
+      if (!params.slot) { result = { isError: true, error: 'vfs_read needs slot' }; break; }
+      if (params.key) {
+        // read msg
+        const name = toName(params.slot, params.key);
+        const r = await sb('agent_memory?name=eq.' + encodeURIComponent(name) + '&select=content&limit=1', { method: 'GET' });
+        result = (r.data && r.data[0]) ? r.data[0].content : null;
+      } else if (params.keys) {
+        // list msg keys
+        const r = await sb('agent_memory?scene=eq.' + encodeURIComponent(params.slot) + '&type=eq.msg&select=name,updated_at&order=name', { method: 'GET' });
+        result = JSON.stringify((r.data || []).map(function(row) {
+          return { key: row.name.replace(params.slot + ':', ''), updated_at: row.updated_at };
+        }));
+      } else {
+        // read slot content
+        const name = 'slot:' + params.slot;
+        const r = await sb('agent_memory?name=eq.' + encodeURIComponent(name) + '&select=content&limit=1', { method: 'GET' });
+        result = (r.data && r.data[0]) ? r.data[0].content : null;
+      }
+      break;
     }
-  }
 
-  if (tool === 'vfs_delete') {
-    if (!params.slot || !params.key) return { isError: true, error: 'vfs_delete 需要 slot 和 key 参数' };
-    return { code: `return window.vfs.deleteMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}).then(function(r) { return 'deleteMsg ok: ' + JSON.stringify(r); })` };
-  }
-
-  if (tool === 'vfs_list') {
-    if (params.slot) {
-      return { code: `return window.vfs.listMsg(${JSON.stringify(params.slot)}).then(function(r) { return JSON.stringify(r); })` };
-    } else {
-      return { code: `return window.vfs.ls().then(function(r) { return JSON.stringify(r); })` };
+    case 'vfs_delete': {
+      if (!params.slot || !params.key) { result = { isError: true, error: 'vfs_delete needs slot and key' }; break; }
+      const name = toName(params.slot, params.key);
+      await sb('agent_memory?name=eq.' + encodeURIComponent(name), {
+        method: 'DELETE', headers: { 'Prefer': 'return=minimal' }
+      });
+      result = 'deleteMsg ok: ' + name;
+      break;
     }
-  }
 
-  if (tool === 'vfs_query') {
-    if (!params.slot) return { isError: true, error: 'vfs_query 需要 slot 参数' };
-    const qOpts = {};
-    if (params.prefix) qOpts.prefix = params.prefix;
-    if (params.exclude) qOpts.exclude = params.exclude;
-    if (params.contains) qOpts.contains = params.contains;
-    if (params.limit) qOpts.limit = parseInt(params.limit);
-    return { code: `return window.vfs.query(${JSON.stringify(params.slot)}, ${JSON.stringify(qOpts)}).then(function(r) { return JSON.stringify(r); })` };
-  }
-
-  if (tool === 'vfs_search') {
-    if (!params.keyword) return { isError: true, error: 'vfs_search 需要 keyword 参数' };
-    return { code: `return window.vfs.search(${JSON.stringify(params.keyword)}).then(function(r) { return JSON.stringify(r); })` };
-  }
-
-  if (tool === 'vfs_exec') {
-    if (!params.slot) return { isError: true, error: 'vfs_exec 需要 slot 参数' };
-    const execArgs = params.args ? JSON.stringify(params.args) : 'undefined';
-    if (params.key) {
-      return { code: `return window.vfs.execMsg(${JSON.stringify(params.slot)}, ${JSON.stringify(params.key)}, ${execArgs}).then(function(r) { return JSON.stringify(r); })` };
-    } else {
-      return { code: `return window.vfs.exec(${JSON.stringify(params.slot)}, ${execArgs}).then(function(r) { return JSON.stringify(r); })` };
+    case 'vfs_list': {
+      if (params.slot) {
+        // list msgs in slot
+        const r = await sb('agent_memory?scene=eq.' + encodeURIComponent(params.slot) + '&type=eq.msg&select=name,updated_at&order=name', { method: 'GET' });
+        result = JSON.stringify((r.data || []).map(function(row) {
+          const key = row.name.replace(params.slot + ':', '');
+          return { key: key, updated_at: row.updated_at };
+        }));
+      } else {
+        // list all slots
+        const r = await sb('agent_memory?type=eq.slot&select=name,updated_at&order=name', { method: 'GET' });
+        result = JSON.stringify((r.data || []).map(function(row) {
+          return { name: row.name.replace('slot:', ''), updated_at: row.updated_at };
+        }));
+      }
+      break;
     }
+
+    case 'vfs_query': {
+      if (!params.slot) { result = { isError: true, error: 'vfs_query needs slot' }; break; }
+      let q = 'agent_memory?scene=eq.' + encodeURIComponent(params.slot) + '&type=eq.msg&select=name,content,updated_at&order=name';
+      if (params.prefix) q += '&name=like.' + encodeURIComponent(params.slot + ':' + params.prefix + '*');
+      if (params.limit) q += '&limit=' + parseInt(params.limit);
+      const r = await sb(q, { method: 'GET' });
+      result = JSON.stringify((r.data || []).map(function(row) {
+        return { key: row.name.replace(params.slot + ':', ''), size: (row.content || '').length, updated_at: row.updated_at };
+      }));
+      break;
+    }
+
+    case 'vfs_search': {
+      if (!params.keyword) { result = { isError: true, error: 'vfs_search needs keyword' }; break; }
+      const r = await sb('agent_memory?content=ilike.*' + encodeURIComponent(params.keyword) + '*&select=name,type,scene&limit=20', { method: 'GET' });
+      result = JSON.stringify(r.data || []);
+      break;
+    }
+
+    case 'vfs_exec': {
+      // exec 不再支持（原来是在浏览器执行 JS）
+      result = { isError: true, error: 'vfs_exec is deprecated after Supabase migration. Use memory_* tools or direct vfs_read/vfs_write.' };
+      break;
+    }
+
+    case 'vfs_backup': {
+      // 导出所有数据
+      const r = await sb('agent_memory?select=type,name,scene,content,updated_at&order=type,name', { method: 'GET' });
+      result = JSON.stringify({ count: (r.data || []).length, exported_at: new Date().toISOString() });
+      break;
+    }
+
+    default:
+      result = { isError: true, error: 'unknown vfs tool: ' + tool };
   }
 
-  if (tool === 'vfs_backup') {
-    const bkOpts = {};
-    if (params.messages === 'false' || params.messages === false) bkOpts.messages = false;
-    return { code: `return window.vfs.backup(${JSON.stringify(bkOpts)}).then(function(r) { return JSON.stringify(r); })` };
-  }
-
-  return { isError: true, error: `未知 VFS 工具: ${tool}` };
+  trace.span('vfs', { action: 'done', tool });
+  return { success: true, result: typeof result === 'string' ? result : JSON.stringify(result) };
 }
 
-async function handle(tool, params, context) {
-  const { trace } = context;
-  trace.span('vfs', { tool, slot: params.slot });
-
-  _logger.info(`[VFS] ${tool} slot=${params.slot} key=${params.key || '(name)'} contentLen=${params.content?.length}`);
-
-  const result = buildJsCode(tool, params);
-  if (result.error) {
-    return { isError: true, error: result.error };
+async function healthCheck() {
+  if (!SB_URL) return { ok: false, reason: 'no SUPABASE_URL' };
+  try {
+    const r = await sb('agent_memory?type=eq.slot&select=name&limit=1', { method: 'GET' });
+    return { ok: r.status < 300, slots: (r.data || []).length };
+  } catch(e) {
+    return { ok: false, reason: e.message };
   }
-  return { browserEval: result.code };
 }
 
 export default {
   name: 'vfs',
   tools: ['vfs_read', 'vfs_write', 'vfs_delete', 'vfs_list', 'vfs_query', 'vfs_search', 'vfs_exec', 'vfs_backup'],
-  init,
-  handle
+  init, handle, healthCheck,
+  async shutdown() {}
 };
