@@ -3764,7 +3764,8 @@ ${conversationText}
     document.getElementById('agent-compress').setAttribute('data-checkpoint', 'reached-1239');
     console.log('[Content] About to bind fork-compress onclick...');
     try {
-    document.getElementById('agent-compress').addEventListener('click', async () => {
+    document.getElementById('agent-compress').addEventListener('click', async (evt) => {
+      const dryRun = evt.shiftKey;
       const addLog = (msg, type='info') => {
         console.log('[fork-compress]', msg);
         const el = document.getElementById('agent-log');
@@ -3938,6 +3939,28 @@ ${conversationText}
           });
           addLog('💾 Context backed up to VFS', 'success');
         } catch(e) {}
+
+        // ── DryRun: 预览模式 ──
+        if (dryRun) {
+          const roles = newMsgs.map(m => m.role);
+          const roleStr = roles.join(',');
+          const totalChars = newMsgs.reduce((s, m) => s + (m.content || '').length, 0);
+          addLog('🔍 [DRY RUN] 预览结果:', 'success');
+          addLog('📊 消息数: ' + newMsgs.length + ' (forged: ' + forgedCount + ', tail: ' + tailMsgs.length + ')', 'info');
+          addLog('📏 总字符: ' + Math.round(totalChars/1024) + 'K', 'info');
+          addLog('🎭 Role 序列: ' + roleStr.substring(0, 200), 'info');
+          for (var di = 0; di < Math.min(newMsgs.length, 6); di++) {
+            addLog('  [' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 80) + '...', 'info');
+          }
+          addLog('... 最后 3 条:', 'info');
+          for (var di2 = Math.max(0, newMsgs.length - 3); di2 < newMsgs.length; di2++) {
+            addLog('  [' + di2 + '] ' + newMsgs[di2].role + ': ' + (newMsgs[di2].content || '').substring(0, 80) + '...', 'info');
+          }
+          addLog('✅ [DRY RUN] Shift+点击 = 预览, 普通点击 = 执行', 'success');
+          btn.disabled = false;
+          btn.textContent = '🗜️ 压缩';
+          return;
+        }
 
         // ── Step 5: 创建新对话 ──
         // 读取旧对话 name，生成新名字
