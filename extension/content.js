@@ -3761,6 +3761,7 @@ ${conversationText}
     // NOTE: writeContextStorage/readContextStorage/autoCompress 已通过 sse-hook.js 注入 MAIN world
 
     // ── Fork Compress: 创建新对话，注入精简消息 ──
+    document.getElementById('agent-compress').setAttribute('data-checkpoint', 'reached-1239');
     console.log('[Content] About to bind fork-compress onclick...');
     try {
     document.getElementById('agent-compress').addEventListener('click', async () => {
@@ -3944,7 +3945,7 @@ ${conversationText}
           newMsgs.push({ id: crypto.randomUUID(), role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
         });
 
-        const sectionCount = 2 + (forgedContent ? 2 : 0) + 2; // system + forged? + context + summary pairs
+        const sectionCount = newMsgs.length; // all injected sections so far
         addLog('🔨 新对话: ' + newMsgs.length + ' 条 (sections:' + sectionCount + ' + tail:' + TAIL_KEEP + ')', 'info');
 
         // ── Step 3: 弹出编辑器让用户确认 Context 摘要 ──
@@ -4048,10 +4049,12 @@ ${conversationText}
 
       } catch(err) {
         addLog('❌ ' + err.message, 'error');
+        alert('Fork-compress ERROR: ' + err.message + '\n\nStack: ' + (err.stack || '').substring(0, 300));
         btn.disabled = false;
         btn.textContent = '🗜️';
       }
     });
+    document.getElementById('agent-compress').setAttribute('data-checkpoint', 'bound-ok');
     console.log('[Content] Fork-compress onclick bound successfully');
     } catch(forkBindErr) {
       console.error('[Content] Fork-compress bind FAILED:', forkBindErr);
