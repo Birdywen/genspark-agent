@@ -28,7 +28,8 @@ export default {
     if (params.timeout_ms && !params.timeout) params.timeout = params.timeout_ms;
     trace.span('shell', { action: 'start', tool, command: params.command });
 
-    const id = message.id;
+    // BATCH 模式下 message/ws 可能不存在
+    const id = message ? message.id : null;
 
     let r;
     if (tool === 'run_command' || tool === 'run_process') {
@@ -96,20 +97,24 @@ export default {
         const historyId = _addToHistory('run_process', params, success, output.slice(0, 200));
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
-        ws.send(JSON.stringify({
-          type: 'tool_result', id, historyId, tool: 'run_process',
-          success, result: '[#' + historyId + '] ' + code + '\n' + output
-        }));
+        if (ws && id) {
+          ws.send(JSON.stringify({
+            type: 'tool_result', id, historyId, tool: 'run_process',
+            success, result: '[#' + historyId + '] ' + code + '\n' + output
+          }));
+        }
         resolve({ success, result: output, exitCode: code });
       });
 
       proc.on('error', e => {
         trace.error('shell', e);
         const historyId = _addToHistory('run_process', params, false, null, e.message);
-        ws.send(JSON.stringify({
-          type: 'tool_result', id, historyId, tool: 'run_process',
-          success: false, error: e.message
-        }));
+        if (ws && id) {
+          ws.send(JSON.stringify({
+            type: 'tool_result', id, historyId, tool: 'run_process',
+            success: false, error: e.message
+          }));
+        }
         reject(e);
       });
     });

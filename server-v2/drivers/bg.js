@@ -33,7 +33,7 @@ async function handle(tool, params, context) {
     }
     result = _processManager.run(bgCommand, { cwd: params.cwd, shell: params.shell }, (completedSlot) => {
       try {
-        ws.send(JSON.stringify({
+        if (ws) ws.send(JSON.stringify({
           type: 'bg_complete',
           tool: 'bg_run',
           slotId: completedSlot.slotId,
@@ -62,18 +62,22 @@ async function handle(tool, params, context) {
     result = _processManager.kill(params.slotId);
   }
 
-  // handled 模式: driver 自己 ws.send
+  // handled 模式: driver 自己 ws.send (BATCH 模式下 ws/message 可能不存在)
   const historyId = _history.add(tool, params, result.success, JSON.stringify(result).slice(0, 500), result.success ? null : result.error);
-  ws.send(JSON.stringify({
-    type: 'tool_result',
-    id: context.message.id,
-    historyId,
-    tool,
-    success: result.success,
-    result: JSON.stringify(result, null, 2),
-    error: result.success ? undefined : result.error
-  }));
-  return { handled: true };
+  if (ws && context.message) {
+    ws.send(JSON.stringify({
+      type: 'tool_result',
+      id: context.message.id,
+      historyId,
+      tool,
+      success: result.success,
+      result: JSON.stringify(result, null, 2),
+      error: result.success ? undefined : result.error
+    }));
+    return { handled: true };
+  }
+  // BATCH 模式: 返回实际结果供 TaskEngine 使用
+  return { handled: true, success: result.success, result: JSON.stringify(result, null, 2) };
 }
 
 export default {
