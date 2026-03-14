@@ -28,7 +28,8 @@ ws.on('open', function() {
   ws.send(JSON.stringify({
     type: 'browser_eval',
     id: 'vfs-exec-' + Date.now(),
-    code: code
+    code: code,
+    timeout: parseInt(process.argv[2]) || 15000
   }));
 });
 ws.on('message', function(data) {

@@ -501,26 +501,8 @@
       lines.push('VFS \u5DF2\u6CE8\u518C\u69FD\u4F4D (' + list.length + '): ' + slotNames.join(', '));
       lines.push('');
       lines.push('\u52A8\u6001\u63D0\u793A\u8BCD\u6CE8\u5165\u65F6\u95F4: ' + new Date().toISOString());
-      return window.vfs.read('boot-prompt').then(function(bpContent) {
-        if (bpContent && !bpContent.error && bpContent.length > 0) {
-          try {
-            var fn = new Function('vfs', 'slotNames', bpContent);
-            var result = fn(window.vfs, slotNames);
-            if (result && typeof result.then === 'function') {
-              return result.then(function(r) {
-                if (typeof r === 'string' && r.length > 0) lines.push(r);
-                return lines.join('\n');
-              });
-            }
-            if (typeof result === 'string' && result.length > 0) lines.push(result);
-          } catch(e) {
-            lines.push('(boot-prompt exec error: ' + e.message + ')');
-          }
-        }
-        return lines.join('\n');
-      }).catch(function() {
-        return lines.join('\n');
-      });
+      // boot-prompt disabled — forged dialogues handle all injection
+      return Promise.resolve(lines.join('\n'));
     }).then(function(content) {
       __promptCache.content = content;
       __promptCache.ts = Date.now();
@@ -608,6 +590,11 @@
 
       // Mode 2: No system prompt detected → auto-inject full prompt as prefix
       if (!autoInjectEnabled) {
+        return targetFetch.apply(self, args);
+      }
+      // Forged dialogue detection: if first message is assistant, skip Mode 2 entirely
+      if (firstMsg.role === 'assistant') {
+        console.log('[SSE-Hook] Forged dialogue detected (assistant-first), skipping system prompt injection');
         return targetFetch.apply(self, args);
       }
       return Promise.all([loadSystemPrompt(), buildDynamicContent()]).then(function(results) {
