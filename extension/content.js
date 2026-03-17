@@ -61,7 +61,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 120000,
+    TIMEOUT_MS: 600000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,
@@ -710,6 +710,15 @@ ${toolSummary}
         var spm = line.match(/^@(\w+)=(.*)$/);
         if (spm) {
           var skey = spm[1], sval = spm[2];
+          // Multi-line support for content/code params: collect subsequent non-@ lines
+          if (skey === 'content' || skey === 'code' || skey === 'stdin') {
+            var mlBuf = [sval];
+            while (idx + 1 < blines.length && !blines[idx + 1].match(/^@\w+(=|<<)/)) {
+              idx++;
+              mlBuf.push(blines[idx]);
+            }
+            sval = mlBuf.join(NL);
+          }
           if (/^\d+$/.test(sval)) sval = parseInt(sval);
           else if (sval === "true") sval = true;
           else if (sval === "false") sval = false;
@@ -753,8 +762,7 @@ ${toolSummary}
       if (freeLines.length > 0 && !params.code) {
         params.code = freeLines.join('\n');
       }
-      var noParamTools = ['list_tabs', 'health_check', 'reload_tools', 'vfs_list', 'vfs_backup'];
-      if (Object.keys(params).length > 0 || noParamTools.indexOf(toolName) !== -1) {
+      if (true) { // Always push: empty-param tools are valid (agent_list, memory_list, etc.)
         calls.push({
           name: toolName,
           params: params,
@@ -1621,10 +1629,10 @@ ${toolSummary}
           state.agentRunning = false;
           hideExecutingIndicator();
           updateStatus();
-          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (60秒)' });
+          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (300秒)' });
           sendMessageSafe(resultText);
           addLog('❌ eval_js 超时', 'error');
-        }, 60000);
+        }, 300000);
         
         // 发送给 background 执行（支持跨 tab）
         const targetTabId = tool.params.tabId || null;

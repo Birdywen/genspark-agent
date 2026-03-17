@@ -559,68 +559,58 @@
       }
 
       var firstMsg = body.messages[0];
+      console.log('[SSE-Hook] messages[0] role=' + firstMsg.role + ' len=' + (firstMsg.content||'').length + ' first100=' + (firstMsg.content||'').substring(0,100));
+      console.log('[SSE-Hook] total messages=' + body.messages.length + ' roles=' + body.messages.map(function(m){return m.role}).join(','));
       var hasSystemPrompt = firstMsg.content && firstMsg.content.indexOf(__SYSTEM_PROMPT_MARKER) !== -1;
       var hasVFSMarker = firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1;
+      console.log('[SSE-Hook] hasSystemPrompt=' + hasSystemPrompt + ' hasVFSMarker=' + hasVFSMarker + ' autoInject=' + (localStorage.getItem('agent_auto_prompt') !== 'false'));
       var autoInjectEnabled = localStorage.getItem('agent_auto_prompt') !== 'false';
 
-      if (hasVFSMarker) {
-        // Already fully injected, skip
+      // Forged dialogue detection: any assistant before first user → already injected
+      var hasForged = false;
+      for (var fi = 0; fi < body.messages.length; fi++) {
+        if (body.messages[fi].role === 'user') break;
+        if (body.messages[fi].role === 'assistant') { hasForged = true; break; }
+      }
+      if (hasForged) {
+        console.log('[SSE-Hook] Forged already in history, passing through');
         return targetFetch.apply(this, args);
       }
 
+      // No forged in history → load from Supabase and prepend (no system prompt injection)
       var self = this;
-
-      if (hasSystemPrompt) {
-        // Mode 1: System prompt already present (manual paste), just append dynamic content
-        return buildDynamicContent().then(function(dynamicContent) {
-          if (dynamicContent) {
-            body.messages[0].content = firstMsg.content + dynamicContent;
-            window.__injectedPromptSize = dynamicContent.length;
-            console.log('[SSE-Hook] Dynamic content appended: +' + dynamicContent.length + ' chars');
+      var SB_FORGED_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co/rest/v1/agent_memory?name=eq.' + encodeURIComponent('toolkit:_forged:experience-dialogues') + '&select=content&limit=1';
+      var SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
+      return targetFetch.call(null, SB_FORGED_URL, {
+        headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + SB_ANON_KEY }
+      }).then(function(sbResp) {
+        return sbResp.json();
+      }).then(function(sbRows) {
+        var forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
+        if (forgedRaw) {
+          var dialogues = JSON.parse(forgedRaw);
+          if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
+            var forgedMsgs = [];
+            for (var fj = 0; fj < dialogues.length; fj++) {
+              forgedMsgs.push({ role: dialogues[fj].role, content: dialogues[fj].content });
+            }
+            // Remove system prompt if present as first message
+            if (body.messages[0] && body.messages[0].content && body.messages[0].content.indexOf('\u6838\u5FC3\u884C\u4E3A\u51C6\u5219') !== -1) {
+              body.messages.shift();
+              console.log('[SSE-Hook] Removed system prompt from messages');
+            }
+            body.messages = forgedMsgs.concat(body.messages);
+            console.log('[SSE-Hook] Injected ' + forgedMsgs.length + ' forged msgs from Supabase');
           }
-          var newOpts = {};
-          for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
-          newOpts.body = JSON.stringify(body);
-          return targetFetch.call(self, url, newOpts);
-        }).catch(function(e) {
-          console.error('[SSE-Hook] Append injection failed:', e);
-          return targetFetch.apply(self, args);
-        });
-      }
-
-      // Mode 2: No system prompt detected → auto-inject full prompt as prefix
-      if (!autoInjectEnabled) {
-        return targetFetch.apply(self, args);
-      }
-      // Forged dialogue detection: if first message is assistant, skip Mode 2 entirely
-      if (firstMsg.role === 'assistant') {
-        console.log('[SSE-Hook] Forged dialogue detected (assistant-first), skipping system prompt injection');
-        return targetFetch.apply(self, args);
-      }
-      return Promise.all([loadSystemPrompt(), buildDynamicContent()]).then(function(results) {
-        var sysPrompt = results[0];
-        var dynamicContent = results[1];
-
-        if (sysPrompt) {
-          var fullPrompt = sysPrompt;
-          if (dynamicContent) fullPrompt += dynamicContent;
-          // Prefix system prompt to first message content
-          body.messages[0].content = fullPrompt + '\n\n---\n\n# User Message\n\n' + firstMsg.content;
-          window.__injectedPromptSize = fullPrompt.length;
-          console.log('[SSE-Hook] Full system prompt auto-injected as prefix: ' + fullPrompt.length + ' chars');
-        } else if (dynamicContent) {
-          // Fallback: no system prompt in VFS, just append dynamic
-          body.messages[0].content = firstMsg.content + dynamicContent;
-          window.__injectedPromptSize = dynamicContent.length;
-          console.log('[SSE-Hook] Fallback: dynamic content appended: +' + dynamicContent.length + ' chars');
+        } else {
+          console.log('[SSE-Hook] No forged data in Supabase, passing through as-is');
         }
-
         var newOpts = {};
         for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
         newOpts.body = JSON.stringify(body);
         return targetFetch.call(self, url, newOpts);
       }).catch(function(e) {
-        console.error('[SSE-Hook] Full injection failed:', e);
+        console.error('[SSE-Hook] Forged injection failed:', e);
         return targetFetch.apply(self, args);
       });
     };

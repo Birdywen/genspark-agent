@@ -192,6 +192,28 @@ export function createHandlers(ctx) {
       }
     },
 
+    reload_driver: async (msg) => {
+      try {
+        var name = msg.name || 'all';
+        logger.info('[WS] reload_driver: ' + name);
+        if (!ctx.router) {
+          ws.send(JSON.stringify({ type: 'reload_driver_result', success: false, error: 'router not in ctx' }));
+          return;
+        }
+        var result;
+        if (name === 'all') {
+          result = await ctx.router.reloadAll();
+        } else {
+          result = await ctx.router.reloadDriver(name);
+        }
+        ws.send(JSON.stringify({ type: 'reload_driver_result', success: true, result: result }));
+        logger.success('[WS] reload_driver done: ' + name);
+      } catch (e) {
+        logger.error('[WS] reload_driver failed:', e.message);
+        ws.send(JSON.stringify({ type: 'reload_driver_result', success: false, error: e.message }));
+      }
+    },
+
     // ── Restart server ──
     health_check: async (msg) => {
       try {

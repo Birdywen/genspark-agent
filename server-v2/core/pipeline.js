@@ -92,6 +92,7 @@ export function autoScript(tool, params, logger) {
 // ── 超时策略 ──
 export function resolveTimeout(tool, params, message) {
   let timeout = message.params?.timeout ? parseInt(message.params.timeout) : undefined;
+  if (timeout && timeout < 10000) timeout = timeout * 1000; // <10000 视为秒，自动转毫秒
   if (!timeout && tool.startsWith('ssh-')) {
     const cmd = (params.command || '').toLowerCase();
     const isLong = /nohup|pipeline|--test|npm\s+install|pip3?\s+install|git\s+clone|docker\s+(build|pull)|demucs|whisper|ffmpeg/.test(cmd);
@@ -104,6 +105,12 @@ export function resolveTimeout(tool, params, message) {
       const scriptTimeout = match ? parseInt(match[1]) : 90000;
       timeout = scriptTimeout + 30000;
     }
+  }
+  if (!timeout && (tool === 'agent_pipeline')) {
+    timeout = 600000;
+  }
+  if (!timeout && (tool === 'agent_run')) {
+    timeout = 300000;
   }
   return timeout ? { timeout } : {};
 }

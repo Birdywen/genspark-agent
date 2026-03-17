@@ -404,10 +404,10 @@
           state.agentRunning = false;
           hideExecutingIndicator();
           updateStatus();
-          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (60秒)' });
+          const resultText = formatToolResult({ tool: 'eval_js', success: false, error: '执行超时 (300秒)' });
           sendMessageSafe(resultText);
           addLog('❌ eval_js 超时', 'error');
-        }, 60000);
+        }, 300000);
         
         // 发送给 background 执行（支持跨 tab）
         const targetTabId = tool.params.tabId || null;

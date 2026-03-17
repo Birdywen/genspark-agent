@@ -393,7 +393,7 @@ async function main() {
   router._browserTool = function(browserToolName, browserParams, timeoutMs) {
     return new Promise(function(resolve, reject) {
       const callId = 'bt-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-      const timer = setTimeout(function() { browserToolPending.delete(callId); reject(new Error('browserTool timeout')); }, timeoutMs || 90000);
+      const timer = setTimeout(function() { browserToolPending.delete(callId); reject(new Error('browserTool timeout')); }, timeoutMs || 300000);
       browserToolPending.set(callId, { resolve: function(r) { clearTimeout(timer); resolve(r); }, reject: function(e) { clearTimeout(timer); reject(e); }, timeout: timer });
       for (const c of clients) { if (c.readyState === 1) c.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: browserToolName, params: browserParams })); }
       logger.info('[browserTool] forwarded ' + browserToolName + ' callId=' + callId);
@@ -463,7 +463,7 @@ async function main() {
 
 
     // 创建消息处理器
-    const wsHandlers = createHandlers({ ws, logger, recorder, goalManager, selfValidator, asyncExecutor, taskEngine, history, skillsManager, agents, clients, handleToolCall });
+    const wsHandlers = createHandlers({ ws, logger, recorder, goalManager, selfValidator, asyncExecutor, taskEngine, history, skillsManager, agents, clients, handleToolCall, router });
 
     ws.on('message', async data => {
       try {
