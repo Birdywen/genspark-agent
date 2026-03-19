@@ -215,8 +215,8 @@ function connectWebSocket() {
           pendingCallsByTab.delete(data.id);
         } else {
           // 找不到对应 Tab，不广播，只记录警告
-          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- 丢弃结果，不广播');
-          // 禁用广播，避免结果发到错误的 tab
+          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- fallback 广播');
+          broadcastToAllTabs(data);
         }
       } else {
         // 其他消息（非 tool_result）广播给所有 Tab

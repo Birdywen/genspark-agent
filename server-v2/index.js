@@ -70,6 +70,7 @@ const errorClassifier = new ErrorClassifier();
 
 // ==================== 命令历史管理 ====================
 import history from "./core/history.js";
+import dbApi from './core/db.js';
 import agents from './core/agents.js';
 import { createHandlers } from './core/ws-handlers.js';
 import teamsAgent from './teams-agent.js';
@@ -133,6 +134,7 @@ const processManager = new ProcessManager();
 
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
+  logger.info("[DEBUG-HTC] tool:"+tool+" id:"+id+" params:"+JSON.stringify(params));
 
   // ── metrics 查询快捷入口 ──
   // ── Router Phase 2: trace 观察模式 ──
@@ -208,10 +210,12 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     params = _aliasResult.params;
   }
   
+  logger.info("[DEBUG-HTC] pre-pipeline, tool:"+tool);
   // ── Pipeline 预处理 ──
   params = resolvePayloadFiles(params, logger);
   params = decodeBase64Fields(params, logger);
   params = parseParams(params, logger);
+  logger.info("[DEBUG-HTC] post-pipeline, entering router check");
   // ── Router Phase 3: 灰度切流量 ──
   const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility,bg,memory,agent').split(',');
   let _routerHandled = false;
@@ -298,7 +302,29 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           if (success) {
             sendSuccess(ws, { id, historyId, tool, result: isRetry ? '[重试 #' + historyId + '] ' + result : result, images });
           } else {
-            sendError(ws, { id, historyId, tool, error: result });
+            // 失败时自动附加同名工具最近成功记录（关键词匹配）
+            let errorMsg = result;
+            try {
+              var keywords = [];
+              var ps = typeof params === 'string' ? params : JSON.stringify(params || {});
+              var paths = ps.match(/\/[\w\-\.\/]+/g);
+              if (paths) paths.forEach(p => { var base = p.split('/').pop(); if (base && base.length > 2) keywords.push(base); });
+              var recent = [];
+              if (keywords.length > 0) {
+                var where = keywords.map(k => "params LIKE '%" + k.replace(/'/g,"''") + "%'").join(' OR ');
+                recent = dbApi.query("SELECT id, substr(params,1,200) as params_preview, substr(result_preview,1,150) as result_preview, timestamp FROM commands WHERE tool='" + tool + "' AND success=1 AND (" + where + ") ORDER BY id DESC LIMIT 3");
+              }
+              if (recent.length < 3) {
+                var ids = recent.map(r => r.id);
+                var exclude = ids.length > 0 ? ' AND id NOT IN (' + ids.join(',') + ')' : '';
+                var more = dbApi.query("SELECT id, substr(params,1,200) as params_preview, substr(result_preview,1,150) as result_preview, timestamp FROM commands WHERE tool='" + tool + "' AND success=1" + exclude + " ORDER BY id DESC LIMIT " + (3 - recent.length));
+                recent = recent.concat(more);
+              }
+              if (recent.length > 0) {
+                errorMsg += '\n\n[历史成功记录 - ' + tool + (keywords.length ? ' (关键词: ' + keywords.join(',') + ')' : '') + ']\n' + recent.map(r => '#' + r.id + ' ' + r.timestamp + ' | params: ' + r.params_preview + ' | result: ' + (r.result_preview || '')).join('\n');
+              }
+            } catch(dbErr) { /* ignore db query errors */ }
+            sendError(ws, { id, historyId, tool, error: errorMsg });
           }
         }
       } catch(e) {
@@ -344,7 +370,29 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
             recorder.recordStep(recId, { tool, params, result: { success: false, error: e.message, errorType: classified.errorType }, duration: Date.now() - (message.startTime || Date.now()) });
           }
         }
-        sendError(ws, { id, historyId, tool, error: e.message, errorType: classified.errorType, recoverable: classified.recoverable, suggestion: classified.suggestion });
+        // 失败时自动附加同名工具最近成功记录（关键词匹配）
+        let catchErrorMsg = e.message;
+        try {
+          var kw = [];
+          var kps = typeof params === 'string' ? params : JSON.stringify(params || {});
+          var kpaths = kps.match(/\/[\w\-\.\/]+/g);
+          if (kpaths) kpaths.forEach(p => { var base = p.split('/').pop(); if (base && base.length > 2) kw.push(base); });
+          var recent2 = [];
+          if (kw.length > 0) {
+            var wh = kw.map(k => "params LIKE '%" + k.replace(/'/g,"''") + "%'").join(' OR ');
+            recent2 = dbApi.query("SELECT id, substr(params,1,200) as params_preview, substr(result_preview,1,150) as result_preview, timestamp FROM commands WHERE tool='" + tool + "' AND success=1 AND (" + wh + ") ORDER BY id DESC LIMIT 3");
+          }
+          if (recent2.length < 3) {
+            var eids = recent2.map(r => r.id);
+            var excl = eids.length > 0 ? ' AND id NOT IN (' + eids.join(',') + ')' : '';
+            var more2 = dbApi.query("SELECT id, substr(params,1,200) as params_preview, substr(result_preview,1,150) as result_preview, timestamp FROM commands WHERE tool='" + tool + "' AND success=1" + excl + " ORDER BY id DESC LIMIT " + (3 - recent2.length));
+            recent2 = recent2.concat(more2);
+          }
+          if (recent2.length > 0) {
+            catchErrorMsg += '\n\n[历史成功记录 - ' + tool + (kw.length ? ' (关键词: ' + kw.join(',') + ')' : '') + ']\n' + recent2.map(r => '#' + r.id + ' ' + r.timestamp + ' | params: ' + r.params_preview + ' | result: ' + (r.result_preview || '')).join('\n');
+          }
+        } catch(dbErr) { /* ignore */ }
+        sendError(ws, { id, historyId, tool, error: catchErrorMsg, errorType: classified.errorType, recoverable: classified.recoverable, suggestion: classified.suggestion });
       }
       if (_routerHandled) return;
     }
@@ -468,6 +516,7 @@ async function main() {
     ws.on('message', async data => {
       try {
         const msg = JSON.parse(data.toString());
+        logger.info("[WS-MSG] type:"+msg.type+" tool:"+(msg.tool||"N/A")+" id:"+(msg.id||"N/A"));
         
         switch (msg.type) {
           case 'tool_call': {

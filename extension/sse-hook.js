@@ -545,7 +545,7 @@
       var url = args[0];
       var opts = args[1];
 
-      if (typeof url !== 'string' || url.indexOf('/api/agent/ask_proxy') === -1 || !opts || !opts.body) {
+      if (typeof url !== 'string' || (url.indexOf('/api/agent/ask_proxy') === -1 && url.indexOf('/api/chat/') === -1) || !opts || !opts.body) {
         return targetFetch.apply(this, args);
       }
 
@@ -566,20 +566,18 @@
       console.log('[SSE-Hook] hasSystemPrompt=' + hasSystemPrompt + ' hasVFSMarker=' + hasVFSMarker + ' autoInject=' + (localStorage.getItem('agent_auto_prompt') !== 'false'));
       var autoInjectEnabled = localStorage.getItem('agent_auto_prompt') !== 'false';
 
-      // Forged dialogue detection: any assistant before first user → already injected
-      var hasForged = false;
-      for (var fi = 0; fi < body.messages.length; fi++) {
-        if (body.messages[fi].role === 'user') break;
-        if (body.messages[fi].role === 'assistant') { hasForged = true; break; }
-      }
-      if (hasForged) {
-        console.log('[SSE-Hook] Forged already in history, passing through');
-        return targetFetch.apply(this, args);
-      }
+      // [2026-03-18] Smart forged injection:
+      // 1. Check localStorage for per-conv agent override
+      // 2. If found → inject that agent's forged from Supabase
+      // 3. If not found → check if session_state already has assistant msg (UI forged) → pass through
+      // 4. Fallback: inject default experience-dialogues
+      var convId = new URLSearchParams(window.location.search).get('id') || '';
+      var agentOverride = localStorage.getItem('agent_forged_' + convId);
+      var sbName = agentOverride || 'toolkit:_forged:experience-dialogues';
+      console.log('[SSE-Hook] Forged injection: convId=' + convId + ' sbName=' + sbName);
 
-      // No forged in history → load from Supabase and prepend (no system prompt injection)
       var self = this;
-      var SB_FORGED_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co/rest/v1/agent_memory?name=eq.' + encodeURIComponent('toolkit:_forged:experience-dialogues') + '&select=content&limit=1';
+      var SB_FORGED_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co/rest/v1/agent_memory?name=eq.' + encodeURIComponent(sbName) + '&select=content&limit=1';
       var SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
       return targetFetch.call(null, SB_FORGED_URL, {
         headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + SB_ANON_KEY }
@@ -588,7 +586,8 @@
       }).then(function(sbRows) {
         var forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
         if (forgedRaw) {
-          var dialogues = JSON.parse(forgedRaw);
+          var parsed = JSON.parse(forgedRaw);
+          var dialogues = Array.isArray(parsed) ? parsed : (parsed.messages || []);
           if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
             var forgedMsgs = [];
             for (var fj = 0; fj < dialogues.length; fj++) {

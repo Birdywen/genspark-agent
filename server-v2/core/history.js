@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dbApi from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE_DIR = path.join(__dirname, '..');
@@ -17,6 +18,15 @@ let logger = { info: console.log, warning: console.warn };
 function init(loggerInstance) {
   logger = loggerInstance;
   load();
+  // 同步 SQLite 的最大 id，防止 INSERT OR IGNORE 因 id 冲突被跳过
+  try {
+    const row = dbApi.query('SELECT MAX(id) as maxId FROM commands');
+    const dbMaxId = (row && row[0] && row[0].maxId) || 0;
+    if (dbMaxId >= historyIdCounter) {
+      historyIdCounter = dbMaxId + 1;
+      logger.info('[History] 同步 SQLite maxId=' + dbMaxId + ', nextId=' + historyIdCounter);
+    }
+  } catch(e) { /* ignore */ }
 }
 
 function load() {
@@ -86,6 +96,8 @@ function add(tool, params, success, resultPreview, error = null) {
   commandHistory.push(entry);
   if (commandHistory.length > MAX_HISTORY) archiveOld();
   save();
+  // 同步写入 SQLite
+  try { dbApi.addCommand(entry); } catch(e) { /* ignore db write errors */ }
   return entry.id;
 }
 

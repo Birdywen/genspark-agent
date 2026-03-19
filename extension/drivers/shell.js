@@ -6,27 +6,40 @@ import { spawn } from 'child_process';
 import { writeFileSync, readFileSync } from 'fs';
 import dbApi from '../core/db.js';
 
-let _processManager = null;
-let _logger = null;
-let _addToHistory = null;
-
-function _getRecentSuccess(tool, limit, failedParams) {
+function getRecentSuccess(tool, limit, failedParams) {
   try {
+    // 从失败 params 提取关键词（文件路径、命令名等）
     var keywords = [];
-    var ps = typeof failedParams === 'string' ? failedParams : JSON.stringify(failedParams || {});
-    var paths = ps.match(/\/[\w\-\.\/]+/g);
-    if (paths) paths.forEach(function(p) { var base = p.split('/').pop(); if (base && base.length > 2) keywords.push(base); });
-    var cmds = ps.match(/(?:grep|sed|awk|find|ls|cat|head|tail|wc|diff|md5|curl|node|python3?)\b/g);
-    if (cmds) cmds.forEach(function(c) { if (keywords.indexOf(c) === -1) keywords.push(c); });
+    if (failedParams) {
+      var ps = typeof failedParams === 'string' ? failedParams : JSON.stringify(failedParams);
+      // 提取文件路径
+      var paths = ps.match(/\/[\w\-\.\/]+/g);
+      if (paths) paths.forEach(function(p) { var base = p.split('/').pop(); if (base && base.length > 2) keywords.push(base); });
+      // 提取命令名
+      var cmds = ps.match(/\b(cd|ls|grep|sed|cat|node|python3?|bash|npm|curl|sqlite3)\b/g);
+      if (cmds) cmds.forEach(function(c) { if (keywords.indexOf(c) === -1) keywords.push(c); });
+    }
+    // 优先查关键词匹配的成功记录
     var rows = [];
     if (keywords.length > 0) {
       var where = keywords.map(function(k) { return "params LIKE '%" + k.replace(/'/g,"''") + "%'"; }).join(' OR ');
-      rows = dbApi.query("SELECT id, timestamp, substr(params,1,200) as p, substr(result_preview,1,150) as r FROM commands WHERE tool='" + tool + "' AND success=1 AND (" + where + ") ORDER BY id DESC LIMIT " + (limit || 3));
+      rows = dbApi.query("SELECT id, substr(params,1,200) as p, substr(result_preview,1,150) as r, timestamp FROM commands WHERE tool='" + tool + "' AND success=1 AND (" + where + ") ORDER BY id DESC LIMIT " + limit);
     }
-    if (rows.length > 0) return '\n\n[历史成功记录 - ' + tool + ' (关键词: ' + keywords.join(',') + ')]\n' + rows.map(function(r) { return '#' + r.id + ' ' + r.timestamp + ' | params: ' + r.p + ' | result: ' + (r.r || ''); }).join('\n');
-  } catch(e) { /* ignore */ }
+    // 不够则补充最近成功记录
+    if (rows.length < limit) {
+      var ids = rows.map(function(r) { return r.id; });
+      var exclude = ids.length > 0 ? ' AND id NOT IN (' + ids.join(',') + ')' : '';
+      var more = dbApi.query("SELECT id, substr(params,1,200) as p, substr(result_preview,1,150) as r, timestamp FROM commands WHERE tool='" + tool + "' AND success=1" + exclude + " ORDER BY id DESC LIMIT " + (limit - rows.length));
+      rows = rows.concat(more);
+    }
+    if (rows.length > 0) return '\n\n[历史成功记录 - ' + tool + (keywords.length ? ' (关键词: ' + keywords.join(',') + ')' : '') + ']\n' + rows.map(function(r) { return '#' + r.id + ' ' + r.timestamp + ' | params: ' + r.p + ' | result: ' + (r.r || ''); }).join('\n');
+  } catch(e) {}
   return '';
 }
+
+let _processManager = null;
+let _logger = null;
+let _addToHistory = null;
 
 export default {
   name: 'shell',
@@ -117,19 +130,11 @@ export default {
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
         if (ws && id) {
-          const historyHint = !success ? _getRecentSuccess('run_process', 3, params) : '';
-          const resultMsg = '[#' + historyId + '] ' + code + '\n' + output + historyHint;
-          if (success) {
-            ws.send(JSON.stringify({
-              type: 'tool_result', id, historyId, tool: 'run_process',
-              success: true, result: resultMsg
-            }));
-          } else {
-            ws.send(JSON.stringify({
-              type: 'tool_result', id, historyId, tool: 'run_process',
-              success: false, error: resultMsg, result: resultMsg
-            }));
-          }
+          const resultMsg = '[#' + historyId + '] ' + code + '\n' + output + (!success ? getRecentSuccess('run_process', 3, params) : '');
+          ws.send(JSON.stringify({
+            type: 'tool_result', id, historyId, tool: 'run_process',
+            success, result: resultMsg
+          }));
         }
         resolve({ success, result: output, exitCode: code });
       });
@@ -140,7 +145,7 @@ export default {
         if (ws && id) {
           ws.send(JSON.stringify({
             type: 'tool_result', id, historyId, tool: 'run_process',
-            success: false, error: e.message + _getRecentSuccess('run_process', 3, params)
+            success: false, error: e.message + getRecentSuccess('run_process', 3, params)
           }));
         }
         reject(e);
