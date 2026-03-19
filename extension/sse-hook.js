@@ -576,6 +576,24 @@
       var sbName = agentOverride || 'toolkit:_forged:experience-dialogues';
       console.log('[SSE-Hook] Forged injection: convId=' + convId + ' sbName=' + sbName);
 
+      // 去重：检测 messages 里是否已包含 forged 内容
+      // 方式1：检查是否有 __FORGED__ 标记（注入时添加）
+      // 方式2：第一轮对话只有1条user消息，后续轮次messages>2说明已有历史
+      var alreadyInjected = false;
+      for (var fi = 0; fi < Math.min(body.messages.length, 10); fi++) {
+        if (body.messages[fi].content && body.messages[fi].content.indexOf('__FORGED__') !== -1) {
+          alreadyInjected = true;
+          break;
+        }
+      }
+      if (alreadyInjected) {
+        console.log('[SSE-Hook] Forged already in messages (found __FORGED__ marker), skipping injection');
+        var newOpts2 = {};
+        for (var k2 in opts) { if (opts.hasOwnProperty(k2)) newOpts2[k2] = opts[k2]; }
+        newOpts2.body = JSON.stringify(body);
+        return targetFetch.call(this, url, newOpts2);
+      }
+
       var self = this;
       var SB_FORGED_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co/rest/v1/agent_memory?name=eq.' + encodeURIComponent(sbName) + '&select=content&limit=1';
       var SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
@@ -591,7 +609,9 @@
           if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
             var forgedMsgs = [];
             for (var fj = 0; fj < dialogues.length; fj++) {
-              forgedMsgs.push({ role: dialogues[fj].role, content: dialogues[fj].content });
+              var fContent = dialogues[fj].content;
+              if (fj === 0) fContent = '<!-- __FORGED__ -->' + fContent;
+              forgedMsgs.push({ role: dialogues[fj].role, content: fContent });
             }
             // Remove system prompt if present as first message
             if (body.messages[0] && body.messages[0].content && body.messages[0].content.indexOf('\u6838\u5FC3\u884C\u4E3A\u51C6\u5219') !== -1) {
