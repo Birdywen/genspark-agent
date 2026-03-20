@@ -5,6 +5,7 @@
 import https from 'https';
 import http from 'http';
 import { execSync } from 'child_process';
+import fs from 'fs';
 
 const CONFIG = {
   ccBase: 'https://1670754dd7dd407a4.apiclient-us.cometchat.io/v3.0',
@@ -132,7 +133,6 @@ function callTool(tool, params) {
 
 // ============ RESULT WRITEBACK ============
 function writeResult(taskId, result) {
-  const fs = require("fs");
   const obj = {result: result, status: "done", timestamp: new Date().toISOString()};
   const val = JSON.stringify(obj).replace(/'/g, "''");
   const sql = "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', 'result-" + taskId + "', '" + val + "');";
@@ -146,7 +146,6 @@ function writeResult(taskId, result) {
 
 // ============ LOG TO DB ============
 function logToDB(taskId, entry) {
-  const fs = require("fs");
   const key = taskId ? "log-" + taskId : "log-latest";
   const val = JSON.stringify(entry).replace(/'/g, "''");
   let sql = "INSERT OR IGNORE INTO local_store (slot, key, content) VALUES ('birdy', '" + key + "', '[]');\n";
