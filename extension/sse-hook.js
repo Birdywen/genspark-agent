@@ -685,5 +685,40 @@
   };
 
 
+  // === SHORTCUTS (auto-registered) ===
+  window.__shortcuts = {
+    _cache: {},
+    _loadAndRun: function(key, args) {
+      var self = this;
+      if (self._cache[key]) {
+        return new Function("args", self._cache[key])(args);
+      }
+      return new Promise(function(resolve) {
+        var ws = new WebSocket("ws://localhost:8765");
+        ws.onmessage = function(e) {
+          var d = JSON.parse(e.data);
+          if (d.type === "connected") {
+            ws.send(JSON.stringify({type:"tool_call",tool:"vfs_read",id:"sc-"+key,params:{slot:"toolkit",key:key}}));
+          } else if (d.type === "tool_result") {
+            var raw = d.result;
+            var idx = raw.indexOf("{\"success\"");
+            var outer = JSON.parse(raw.substring(idx));
+            self._cache[key] = outer.result;
+            resolve(new Function("args", outer.result)(args));
+            ws.close();
+          }
+        };
+        setTimeout(function(){resolve("timeout")}, 8000);
+      });
+    },
+    compress: function(opts) {
+      return this._loadAndRun("compress-chat", opts || {headN:3, tailN:30});
+    },
+    recover: function(date) {
+      return this._loadAndRun("agent-recover", {date: date || new Date().toISOString().split("T")[0]});
+    }
+  };
+  console.log("[SSE-Hook] Shortcuts registered: compress, recover");
+
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
