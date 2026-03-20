@@ -21,7 +21,7 @@ try {
 } catch(e) { /* .env not found, skip */ }
 
 import { WebSocketServer } from 'ws';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -466,6 +466,38 @@ async function main() {
   if (!healthStatus.healthy) {
     logger.warning('⚠️  部分组件异常，请查看上方日志');
   }
+
+
+  // HTTP API for memory table (used by sse-hook.js for forged injection)
+  const httpApi = http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/memory' && req.method === 'GET') {
+      const slot = url.searchParams.get('slot') || '';
+      const key = url.searchParams.get('key') || '';
+      if (!slot || !key) {
+        res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify({error:'slot and key required'}));
+        return;
+      }
+      try {
+        // execSync imported at top
+        const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
+        const cmd = 'sqlite3 "' + dbPath + '" "SELECT content FROM memory WHERE slot=\'' + slot.replace(/'/g,"''") + '\' AND key=\'' + key.replace(/'/g,"''") + '\'"';
+        const result = execSync(cmd, {encoding:'utf8', timeout:5000}).trim();
+        res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify([{content: result}]));
+      } catch(e) {
+        res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify({error:e.message}));
+      }
+    } else {
+      res.writeHead(404);
+      res.end('not found');
+    }
+  });
+  httpApi.listen(8766, '127.0.0.1', () => {
+    logger.success('HTTP API listening on 127.0.0.1:8766');
+  });
 
   const wss = new WebSocketServer({
     port: config.server.port,

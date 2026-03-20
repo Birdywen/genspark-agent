@@ -608,11 +608,11 @@
       }
 
       var self = this;
-      var SB_FORGED_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co/rest/v1/agent_memory?name=eq.' + encodeURIComponent(sbName) + '&select=content&limit=1';
-      var SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
-      return targetFetch.call(null, SB_FORGED_URL, {
-        headers: { 'apikey': SB_ANON_KEY, 'Authorization': 'Bearer ' + SB_ANON_KEY }
-      }).then(function(sbResp) {
+      // sbName format: 'toolkit:_forged:experience-dialogues' -> slot='toolkit', key='_forged:experience-dialogues'
+      var sbParts = sbName.split(':'); var fSlot = sbParts[0]; var fKey = sbParts.slice(1).join(':');
+      var SB_FORGED_URL = 'http://127.0.0.1:8766/memory?slot=' + encodeURIComponent(fSlot) + '&key=' + encodeURIComponent(fKey);
+      // Local agent.db via server-v2 HTTP API - no auth needed
+      return targetFetch.call(null, SB_FORGED_URL).then(function(sbResp) {
         return sbResp.json();
       }).then(function(sbRows) {
         var forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
@@ -633,10 +633,10 @@
               console.log('[SSE-Hook] Removed system prompt from messages');
             }
             body.messages = forgedMsgs.concat(body.messages);
-            console.log('[SSE-Hook] Injected ' + forgedMsgs.length + ' forged msgs from Supabase');
+            console.log('[SSE-Hook] Injected ' + forgedMsgs.length + ' forged msgs from agent.db');
           }
         } else {
-          console.log('[SSE-Hook] No forged data in Supabase, passing through as-is');
+          console.log('[SSE-Hook] No forged data in agent.db, passing through as-is');
         }
         var newOpts = {};
         for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
