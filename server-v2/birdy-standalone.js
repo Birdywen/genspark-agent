@@ -132,37 +132,31 @@ function callTool(tool, params) {
 
 // ============ RESULT WRITEBACK ============
 function writeResult(taskId, result) {
-  const payload = JSON.stringify({
-    tool: 'run_process',
-    params: {
-      command_line: 'cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', 'result-' + taskId + '', '' + JSON.stringify({result: result, status: 'done', timestamp: new Date().toISOString()}).replace(/'/g, "''") + '')"',
-      mode: 'shell'
-    }
-  });
-  return new Promise((resolve, reject) => {
-    const req = http.request(CONFIG.toolApiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-    }, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => resolve(data));
-    });
-    req.on('error', reject);
-    req.write(payload);
-    req.end();
-  });
+  const fs = require("fs");
+  const obj = {result: result, status: "done", timestamp: new Date().toISOString()};
+  const val = JSON.stringify(obj).replace(/'/g, "''");
+  const sql = "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', 'result-" + taskId + "', '" + val + "');";
+  const tmpFile = "/tmp/birdy-wr-" + taskId + ".sql";
+  fs.writeFileSync(tmpFile, sql);
+  return callTool("run_process", {
+    command_line: "cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db < " + tmpFile,
+    mode: "shell"
+  }).catch(function(e) { log("writeResult error: " + e.message); });
 }
 
 // ============ LOG TO DB ============
 function logToDB(taskId, entry) {
-  // Append to birdy:log-{taskId} in local_store
-  const key = taskId ? 'log-' + taskId : 'log-latest';
-  const escaped = JSON.stringify(entry).replace(/'/g, "''");
-  return callTool('run_process', {
-    command_line: "cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', '" + key + "', COALESCE((SELECT content FROM local_store WHERE slot='birdy' AND key='" + key + "'), '[]') )" && sqlite3 data/agent.db "UPDATE local_store SET content = json_insert(content, '$[#]', '" + escaped + "') WHERE slot='birdy' AND key='" + key + "'"",
-    mode: 'shell'
-  }).catch(function(e) { log('logToDB error: ' + e.message); });
+  const fs = require("fs");
+  const key = taskId ? "log-" + taskId : "log-latest";
+  const val = JSON.stringify(entry).replace(/'/g, "''");
+  let sql = "INSERT OR IGNORE INTO local_store (slot, key, content) VALUES ('birdy', '" + key + "', '[]');\n";
+  sql += "UPDATE local_store SET content = json_insert(content, '$[#]', json('" + val + "')) WHERE slot='birdy' AND key='" + key + "';";
+  const tmpFile = "/tmp/birdy-log-" + (taskId || "latest") + ".sql";
+  fs.writeFileSync(tmpFile, sql);
+  return callTool("run_process", {
+    command_line: "cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db < " + tmpFile,
+    mode: "shell"
+  }).catch(function(e) { log("logToDB error: " + e.message); });
 }
 
 // ============ AI (Kimi / Moonshot) ============
