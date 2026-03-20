@@ -548,7 +548,6 @@
       if (typeof url !== 'string' || (url.indexOf('/api/agent/ask_proxy') === -1 && url.indexOf('/api/chat/') === -1) || !opts || !opts.body) {
         return targetFetch.apply(this, args);
       }
-      console.log('[SSE-Hook] INTERCEPTED: ' + url);
 
       var body;
       try { body = JSON.parse(opts.body); } catch(e) {
@@ -575,30 +574,18 @@
       var convId = new URLSearchParams(window.location.search).get('id') || '';
       var agentOverride = localStorage.getItem('agent_forged_' + convId);
       var sbName = agentOverride || 'toolkit:_forged:experience-dialogues';
-      console.log('[SSE-Hook] Forged injection: convId=' + convId + ' agent=' + sbName);
+      console.log('[SSE-Hook] Forged injection: convId=' + convId + ' sbName=' + sbName);
 
       // 去重：检测 messages 里是否已包含 forged 内容
       // 方式1：检查是否有 __FORGED__ 标记（注入时添加）
       // 方式2：第一轮对话只有1条user消息，后续轮次messages>2说明已有历史
       var alreadyInjected = false;
-      // 方式1: 检查 __FORGED__ 标记
       for (var fi = 0; fi < Math.min(body.messages.length, 10); fi++) {
         if (body.messages[fi].content && body.messages[fi].content.indexOf('__FORGED__') !== -1) {
           alreadyInjected = true;
           break;
         }
       }
-      // 方式2: 已禁用 — 会误杀第一轮注入
-      //       if (!alreadyInjected) {
-      //         var assistantCount = 0;
-      //         for (var ai = 0; ai < body.messages.length; ai++) {
-      //           if (body.messages[ai].role === 'assistant') assistantCount++;
-      //         }
-      //         if (assistantCount > 0) {
-      //           alreadyInjected = true;
-      //           console.log('[SSE-Hook] Forged dedup: found ' + assistantCount + ' assistant msgs, skipping injection');
-      //         }
-      //       }
       if (alreadyInjected) {
         console.log('[SSE-Hook] Forged already in messages (found __FORGED__ marker), skipping injection');
         var newOpts2 = {};
@@ -624,8 +611,7 @@
             for (var fj = 0; fj < dialogues.length; fj++) {
               var fContent = dialogues[fj].content;
               if (fj === 0) fContent = '<!-- __FORGED__ -->' + fContent;
-              var fid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-              forgedMsgs.push({ id: fid, role: dialogues[fj].role, content: fContent, action: null, recommend_actions: null, is_prompt: false, render_template: null, session_state: null, system_reminder: null, message_type: null, tool_calls: null, tool_call_id: null, project_id: null, thinking_blocks: null, response_id: null, reasoning_id: null, reasoning_encrypted_content: null, reasoning_content: null, cogen_id: null, ctime: null });
+              forgedMsgs.push({ role: dialogues[fj].role, content: fContent });
             }
             // Remove system prompt if present as first message
             if (body.messages[0] && body.messages[0].content && body.messages[0].content.indexOf('\u6838\u5FC3\u884C\u4E3A\u51C6\u5219') !== -1) {

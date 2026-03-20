@@ -11,8 +11,7 @@
 
   // Per-tab disable: check localStorage
   const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
-  // 默认关闭 — 只有明确设为 'false' 时才启用
-  const isDisabled = localStorage.getItem(DISABLED_KEY) !== 'false';
+  const isDisabled = localStorage.getItem(DISABLED_KEY) === 'true';
   
   // Create floating toggle button
   setTimeout(() => {
@@ -2068,7 +2067,6 @@ ${toolSummary}
         if (Object.keys(uploadedFields).length > 0) {
           addLog('📦 大内容已通过 HTTP 安全上传 (' + Object.keys(uploadedFields).join(', ') + ')', 'info');
         }
-        console.log("[DEBUG-EXEC] about to sendMessage, tool:"+tool.name+", callId:"+callId);
 
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
@@ -2079,7 +2077,6 @@ ${toolSummary}
             id: callId 
           }
         }, (response) => {
-        console.log("[DEBUG-EXEC] sendMessage callback fired, response:"+JSON.stringify(response)+", lastError:"+(chrome.runtime.lastError||"none"));
         if (chrome.runtime.lastError) {
           addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
           state.pendingCalls.delete(callId);
@@ -4033,14 +4030,14 @@ ${conversationText}
         addLog('✅ 新对话创建成功: ' + newConvId.substring(0, 8) + '...', 'success');
         addLog('📊 ' + allMsgs.length + ' → ' + newMsgs.length + ' 条消息', 'success');
 
-        // ── Step 6: 删除旧对话 (暂时禁用) ──
-        // addLog('🗑️ 删除旧对话...', 'info');
-        // try {
-        //   await fetch('/api/project/delete?project_id=' + convId, { credentials: 'include' });
-        //   addLog('✅ 旧对话已删除', 'success');
-        // } catch(e) {
-        //   addLog('⚠️ 旧对话删除失败: ' + e.message, 'error');
-        // }
+        // ── Step 6: 删除旧对话 ──
+        addLog('🗑️ 删除旧对话...', 'info');
+        try {
+          await fetch('/api/project/delete?project_id=' + convId, { credentials: 'include' });
+          addLog('✅ 旧对话已删除', 'success');
+        } catch(e) {
+          addLog('⚠️ 旧对话删除失败: ' + e.message, 'error');
+        }
 
         // ── Step 7: 跳转到新对话 ──
         addLog('🔄 2秒后跳转到新对话...', 'info');
@@ -5511,7 +5508,7 @@ ${conversationText}
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
     // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
-    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'run_command' || call.name === 'run_process' || call.name === 'vfs_save' || call.name === 'vfs_local_write' || call.name === 'vfs_local_read' || call.name === 'vfs_read' || call.name === 'local_write' || call.name === 'local_read' || call.name === 'local_list' || call.name === 'local_delete');
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;

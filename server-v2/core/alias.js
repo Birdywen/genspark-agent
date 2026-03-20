@@ -3,7 +3,7 @@
 
 const ALIASES = {
   'run_command': { target: 'run_process', transform: (p) => ({
-    command_line: p.command,
+    command_line: p.command || p.code,
     mode: 'shell',
     ...(p.stdin && { stdin: p.stdin }),
     ...(p.stdinFile && { stdinFile: p.stdinFile }),
