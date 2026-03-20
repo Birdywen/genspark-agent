@@ -529,6 +529,7 @@ async function main() {
       req.on('end', async () => {
         try {
           const { task } = JSON.parse(body);
+          const taskId = 'T' + Date.now().toString(36);
           if (!task) {
             res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
             res.end(JSON.stringify({error:'task required'}));
@@ -539,7 +540,7 @@ async function main() {
             receiver: '94abdf9e-04cd-40ce-883d-fdc8b445d132',
             receiverType: 'user',
             type: 'text',
-            data: { text: task }
+            data: { text: '[task:' + taskId + '] ' + task }
           });
           const ccReq = https.default.request({
             hostname: '1670754dd7dd407a4.apiclient-us.cometchat.io',
@@ -557,7 +558,7 @@ async function main() {
             ccRes.on('data', c => d += c);
             ccRes.on('end', () => {
               res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-              res.end(JSON.stringify({ok:true, task, cometchat: JSON.parse(d)}));
+              res.end(JSON.stringify({ok:true, taskId, task, cometchat: JSON.parse(d)}));
             });
           });
           ccReq.write(ccBody);

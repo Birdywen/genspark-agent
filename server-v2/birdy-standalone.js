@@ -130,6 +130,30 @@ function callTool(tool, params) {
   });
 }
 
+// ============ RESULT WRITEBACK ============
+function writeResult(taskId, result) {
+  const payload = JSON.stringify({
+    tool: 'run_process',
+    params: {
+      command_line: 'cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', 'result-' + taskId + '', '' + JSON.stringify({result: result, status: 'done', timestamp: new Date().toISOString()}).replace(/'/g, "''") + '')"',
+      mode: 'shell'
+    }
+  });
+  return new Promise((resolve, reject) => {
+    const req = http.request(CONFIG.toolApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
 // ============ AI (Kimi / Moonshot) ============
 function askAI(messages, model) {
   model = model || 'deepseek-chat';
@@ -179,11 +203,21 @@ function parseToolCall(text) {
 // ============ MESSAGE HANDLER ============
 async function handleMessage(senderUid, text) {
   log('From ' + senderUid + ': ' + text.substring(0, 80));
+  
+  // Extract taskId if present: [task:abc123] actual task text
+  let taskId = null;
+  let taskText = text;
+  const taskMatch = text.match(/^\[task:([^\]]+)\]\s*([\s\S]*)/);
+  if (taskMatch) {
+    taskId = taskMatch[1];
+    taskText = taskMatch[2];
+    log('Task ID: ' + taskId);
+  }
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     ...FORGED_MSGS,
-    { role: 'user', content: text },
+    { role: 'user', content: taskText },
   ];
 
   for (let loop = 0; loop < CONFIG.maxToolLoops; loop++) {
@@ -204,6 +238,10 @@ async function handleMessage(senderUid, text) {
       // No tool call - final answer
       const finalText = reply.replace(/TOOL_CALL[\s\S]*?END_TOOL_CALL/g, '').trim();
       if (finalText) await sendAsBirdy(senderUid, finalText);
+      if (taskId && finalText) {
+        await writeResult(taskId, finalText);
+        log('Result written for task: ' + taskId);
+      }
       return;
     }
 
