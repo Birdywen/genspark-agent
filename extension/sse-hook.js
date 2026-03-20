@@ -720,5 +720,43 @@
   };
   console.log("[SSE-Hook] Shortcuts registered: compress, recover");
 
+  // === DB MINING (auto-registered) ===
+window.__mine = {
+  how: function(keyword) {
+    return this._q("SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%"+keyword+"%' AND success=1 ORDER BY id DESC LIMIT 10");
+  },
+  fail: function(keyword) {
+    return this._q("SELECT id,timestamp,tool,substr(params,1,150) as p,substr(error,1,100) as err FROM commands WHERE params LIKE '%"+keyword+"%' AND success=0 ORDER BY id DESC LIMIT 10");
+  },
+  recent: function(n) {
+    return this._q("SELECT id,timestamp,tool,substr(params,1,150) as p,success FROM commands ORDER BY id DESC LIMIT "+(n||20));
+  },
+  today: function() {
+    return this._q("SELECT tool,COUNT(*) as cnt,SUM(success) as ok FROM commands WHERE date(timestamp)=date('now') GROUP BY tool ORDER BY cnt DESC");
+  },
+  file: function(filename) {
+    return this._q("SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%"+filename+"%' ORDER BY id DESC LIMIT 10");
+  },
+  sql: function(query) {
+    return this._q(query);
+  },
+  _q: function(sql) {
+    var ws = new WebSocket("ws://localhost:8765");
+    return new Promise(function(resolve){
+      ws.onmessage = function(e){
+        var d = JSON.parse(e.data);
+        if (d.type === "connected") {
+          ws.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"mine",params:{command:"sqlite3 -header -column /Users/yay/workspace/genspark-agent/server-v2/data/agent.db \""+sql+"\""}}));
+        } else if (d.type === "tool_result") {
+          resolve(d.result);
+          ws.close();
+        }
+      };
+      setTimeout(function(){resolve("timeout")}, 5000);
+    });
+  }
+};
+  console.log("[SSE-Hook] __mine registered: how, fail, recent, today, file, sql");
+
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
