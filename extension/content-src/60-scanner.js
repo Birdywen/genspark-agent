@@ -24,6 +24,28 @@
     
     if (index < 0 || !text) return;
     
+    // 刷新保护：页面加载后 3 秒内，跳过加载时已存在的消息
+    if (window.__agentLoadState) {
+      const elapsed = Date.now() - window.__agentLoadState.loadTime;
+      if (elapsed < 3000) return; // 冷却期内不扫描
+      if (elapsed < 5000 && !window.__agentLoadState.marked) {
+        // 5秒内首次扫描：把当前消息里所有工具调用标记为已执行
+        window.__agentLoadState.marked = true;
+        state.lastMessageText = text;
+        state.lastStableTime = Date.now();
+        const existingCalls = parseToolCalls(text);
+        for (const tool of existingCalls) {
+          const hash = index + ':' + tool.name + ':' + JSON.stringify(tool.params);
+          addExecutedCall(hash);
+        }
+        if (text.includes('@DONE') || text.includes('[[DONE]]')) {
+          addExecutedCall('done:' + index);
+        }
+        log('刷新保护：标记 ' + existingCalls.length + ' 个已有工具调用，跳过执行');
+        return;
+      }
+    }
+    
     // 检测到新消息，重置所有计时器
     if (state.lastMessageText !== text) {
       state.lastMessageText = text;

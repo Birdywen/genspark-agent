@@ -448,6 +448,10 @@
     // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();
 
+    // 页面加载后冷却期：跳过已存在的命令，只处理新产生的
+    const loadTime = Date.now();
+    const loadMessageCount = document.querySelectorAll('.agent-message, .conversation-statement').length;
+    window.__agentLoadState = { loadTime, loadMessageCount };
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 
     // Notification polling - 已移除，改用 WebSocket 实时通道
