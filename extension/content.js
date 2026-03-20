@@ -5537,7 +5537,7 @@ ${conversationText}
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
     // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
-    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write');
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
