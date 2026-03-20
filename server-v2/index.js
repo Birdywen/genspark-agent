@@ -523,6 +523,50 @@ async function main() {
           res.end(JSON.stringify({error: e.message}));
         }
       });
+    } else if (url.pathname === '/delegate' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const { task } = JSON.parse(body);
+          if (!task) {
+            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+            res.end(JSON.stringify({error:'task required'}));
+            return;
+          }
+          const https = await import('https');
+          const ccBody = JSON.stringify({
+            receiver: '94abdf9e-04cd-40ce-883d-fdc8b445d132',
+            receiverType: 'user',
+            type: 'text',
+            data: { text: task }
+          });
+          const ccReq = https.default.request({
+            hostname: '1670754dd7dd407a4.apiclient-us.cometchat.io',
+            path: '/v3.0/messages',
+            method: 'POST',
+            headers: {
+              'appId': '1670754dd7dd407a4',
+              'onBehalfOf': '180ee88d-516d-45e1-aa63-272c7ad3186d',
+              'authToken': '180ee88d-516d-45e1-aa63-272c7ad3186d_177187404381eed77145044b5996ac9c53bacd70',
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(ccBody),
+            }
+          }, (ccRes) => {
+            let d = '';
+            ccRes.on('data', c => d += c);
+            ccRes.on('end', () => {
+              res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+              res.end(JSON.stringify({ok:true, task, cometchat: JSON.parse(d)}));
+            });
+          });
+          ccReq.write(ccBody);
+          ccReq.end();
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error: e.message}));
+        }
+      });
     } else if (url.pathname === '/tool' && req.method === 'OPTIONS') {
       res.writeHead(200, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST','Access-Control-Allow-Headers':'Content-Type'});
       res.end();
