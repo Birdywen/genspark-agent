@@ -154,6 +154,17 @@ function writeResult(taskId, result) {
   });
 }
 
+// ============ LOG TO DB ============
+function logToDB(taskId, entry) {
+  // Append to birdy:log-{taskId} in local_store
+  const key = taskId ? 'log-' + taskId : 'log-latest';
+  const escaped = JSON.stringify(entry).replace(/'/g, "''");
+  return callTool('run_process', {
+    command_line: "cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "INSERT OR REPLACE INTO local_store (slot, key, content) VALUES ('birdy', '" + key + "', COALESCE((SELECT content FROM local_store WHERE slot='birdy' AND key='" + key + "'), '[]') )" && sqlite3 data/agent.db "UPDATE local_store SET content = json_insert(content, '$[#]', '" + escaped + "') WHERE slot='birdy' AND key='" + key + "'"",
+    mode: 'shell'
+  }).catch(function(e) { log('logToDB error: ' + e.message); });
+}
+
 // ============ AI (Kimi / Moonshot) ============
 function askAI(messages, model) {
   model = model || 'deepseek-chat';
@@ -232,6 +243,7 @@ async function handleMessage(senderUid, text) {
 
     log('AI reply (' + loop + '): ' + reply.substring(0, 100));
     messages.push({ role: 'assistant', content: reply });
+    logToDB(taskId, {type:'ai', loop:loop, content:reply.substring(0,500), ts:new Date().toISOString()});
 
     const toolCall = parseToolCall(reply);
     if (!toolCall) {
@@ -256,6 +268,7 @@ async function handleMessage(senderUid, text) {
     const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
     log('Result: ' + resultStr.substring(0, 100));
     messages.push({ role: 'user', content: 'Tool result:\n' + resultStr });
+    logToDB(taskId, {type:'tool', tool:toolCall.tool, result:resultStr.substring(0,500), ts:new Date().toISOString()});
   }
 
   await sendAsBirdy(senderUid, '(Max tool loops reached)');
