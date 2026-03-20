@@ -740,6 +740,40 @@ window.__mine = {
   sql: function(query) {
     return this._q(query);
   },
+  struggle: function(keyword, ctx) {
+    var c = ctx || 3;
+    var ws2 = new WebSocket("ws://localhost:8765");
+    return new Promise(function(resolve){
+      var step = 1;
+      ws2.onmessage = function(e){
+        var d = JSON.parse(e.data);
+        if (d.type === "connected") {
+          var findSql = "SELECT id FROM commands WHERE params LIKE '%" + keyword + "%' AND success=0 ORDER BY id DESC LIMIT 10";
+          ws2.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"s1",params:{command_line:"bash",mode:"shell",stdin:"cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 -json data/agent.db \"" + findSql + "\""}}));
+        } else if (d.type === "tool_result" && step === 1) {
+          step = 2;
+          try {
+            var raw = d.result;
+            var idx = raw.indexOf("[{");
+            if (idx === -1) { resolve("no failures found for: " + keyword); ws2.close(); return; }
+            var ids = JSON.parse(raw.substring(idx));
+            if (!ids.length) { resolve("no failures found for: " + keyword); ws2.close(); return; }
+            var ranges = ids.map(function(r){ return "id BETWEEN " + (r.id - c) + " AND " + (r.id + c); });
+            var emptyStr = String.fromCharCode(39) + String.fromCharCode(39);
+            var sql2 = "SELECT id,timestamp,tool,success,substr(params,1,100) as p,substr(COALESCE(error," + emptyStr + "),1,60) as err FROM commands WHERE (" + ranges.join(" OR ") + ") ORDER BY id ASC";
+            ws2.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"s2",params:{command_line:"bash",mode:"shell",stdin:"cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 -header -column data/agent.db \"" + sql2 + "\""}}));
+          } catch(e2) {
+            resolve("parse error: " + e2.message);
+            ws2.close();
+          }
+        } else if (d.type === "tool_result" && step === 2) {
+          resolve(d.result);
+          ws2.close();
+        }
+      };
+      setTimeout(function(){ resolve("timeout"); }, 8000);
+    });
+  },
   _q: function(sql) {
     var ws = new WebSocket("ws://localhost:8765");
     return new Promise(function(resolve){
@@ -756,7 +790,7 @@ window.__mine = {
     });
   }
 };
-  console.log("[SSE-Hook] __mine registered: how, fail, recent, today, file, sql");
+  console.log("[SSE-Hook] __mine registered: how, fail, recent, today, file, sql, struggle");
 
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
