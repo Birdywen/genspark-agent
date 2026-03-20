@@ -3,6 +3,7 @@
 // AI: Kimi (fast, no cookie needed) | CometChat: direct HTTPS
 
 import https from 'https';
+import { execSync } from 'child_process';
 
 const CONFIG = {
   // CometChat
@@ -19,7 +20,7 @@ const CONFIG = {
   
   // Agent
   pollInterval: 3000,
-  maxToolLoops: 5,
+  maxToolLoops: 10,
 };
 
 const SYSTEM_PROMPT = `You are Birdy, a helpful AI assistant in a team chat. You have access to tools. When you need to execute commands, read a tool call in this exact format:
@@ -57,6 +58,22 @@ function log(msg) {
   if (loggerRef) loggerRef.info(line);
   else console.log(line);
 }
+
+// Load forged experience from agent.db
+function loadForged() {
+  try {
+    const dbPath = new URL('./data/agent.db', import.meta.url).pathname;
+    const raw = execSync('sqlite3 "' + dbPath + '" "SELECT content FROM memory WHERE slot=\'toolkit\' AND key=\'_forged:birdy-experience\'"', {encoding:'utf8', timeout:5000}).trim();
+    if (!raw) return [];
+    const msgs = JSON.parse(raw);
+    return Array.isArray(msgs) ? msgs : [];
+  } catch(e) {
+    console.log('[Birdy] Failed to load forged:', e.message);
+    return [];
+  }
+}
+
+let FORGED_MSGS = loadForged();
 
 // ============ COMETCHAT API ============
 function ccRequest(method, path, body, token) {
@@ -234,8 +251,8 @@ function executeTool(tool, params) {
     
     // Timeout
     setTimeout(() => {
-      if (!resolved) { resolved = true; resolve('Tool timeout (30s)'); }
-    }, 30000);
+      if (!resolved) { resolved = true; resolve('Tool timeout (60s)'); }
+    }, 60000);
     
     handleToolCallFn(fakeWs, { id: callId, type: 'tool_call', tool, params })
       .catch(e => { if (!resolved) { resolved = true; resolve('Tool error: ' + e.message); } });
@@ -252,6 +269,7 @@ async function processMessage(text, senderUid) {
     
     const conversation = [
       { role: 'system', content: SYSTEM_PROMPT },
+      ...FORGED_MSGS,
       { role: 'user', content: text },
     ];
     
