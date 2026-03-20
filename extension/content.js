@@ -710,9 +710,24 @@ ${toolSummary}
         var spm = line.match(/^@(\w+)=(.*)$/);
         if (spm) {
           var skey = spm[1], sval = spm[2];
-          if (/^\d+$/.test(sval)) sval = parseInt(sval);
-          else if (sval === "true") sval = true;
-          else if (sval === "false") sval = false;
+          // Multi-line value: collect subsequent lines that don't start with @param
+          var multiLineKeys = ['content', 'code', 'stdin', 'command_line', 'text', 'message', 'body', 'sql'];
+          if (multiLineKeys.indexOf(skey) !== -1) {
+            var extraLines = [];
+            while (idx + 1 < blines.length) {
+              var nextLine = blines[idx + 1];
+              if (nextLine.match(/^@\w+=/) || nextLine.match(/^@\w+<</)) break;
+              extraLines.push(nextLine);
+              idx++;
+            }
+            if (extraLines.length > 0) {
+              sval = sval + NL + extraLines.join(NL);
+            }
+          } else {
+            if (/^\d+$/.test(sval)) sval = parseInt(sval);
+            else if (sval === "true") sval = true;
+            else if (sval === "false") sval = false;
+          }
           params[skey] = sval;
           idx++;
           continue;
