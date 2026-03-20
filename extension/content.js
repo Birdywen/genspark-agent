@@ -11,8 +11,7 @@
 
   // Per-tab disable: check localStorage
   const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
-  // 默认关闭 — 只有明确设为 'false' 时才启用
-  const isDisabled = localStorage.getItem(DISABLED_KEY) !== 'false';
+  const isDisabled = localStorage.getItem(DISABLED_KEY) === 'true';
   
   // Create floating toggle button
   setTimeout(() => {
@@ -62,7 +61,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 600000,
+    TIMEOUT_MS: 120000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,
@@ -711,15 +710,6 @@ ${toolSummary}
         var spm = line.match(/^@(\w+)=(.*)$/);
         if (spm) {
           var skey = spm[1], sval = spm[2];
-          // Multi-line support for content/code params: collect subsequent non-@ lines
-          if (skey === 'content' || skey === 'code' || skey === 'stdin') {
-            var mlBuf = [sval];
-            while (idx + 1 < blines.length && !blines[idx + 1].match(/^@\w+(=|<<)/)) {
-              idx++;
-              mlBuf.push(blines[idx]);
-            }
-            sval = mlBuf.join(NL);
-          }
           if (/^\d+$/.test(sval)) sval = parseInt(sval);
           else if (sval === "true") sval = true;
           else if (sval === "false") sval = false;
@@ -763,7 +753,8 @@ ${toolSummary}
       if (freeLines.length > 0 && !params.code) {
         params.code = freeLines.join('\n');
       }
-      if (true) { // Always push: empty-param tools are valid (agent_list, memory_list, etc.)
+      var noParamTools = ['list_tabs', 'health_check', 'reload_tools', 'vfs_list', 'vfs_backup'];
+      if (Object.keys(params).length > 0 || noParamTools.indexOf(toolName) !== -1) {
         calls.push({
           name: toolName,
           params: params,
@@ -2068,7 +2059,6 @@ ${toolSummary}
         if (Object.keys(uploadedFields).length > 0) {
           addLog('📦 大内容已通过 HTTP 安全上传 (' + Object.keys(uploadedFields).join(', ') + ')', 'info');
         }
-        console.log("[DEBUG-EXEC] about to sendMessage, tool:"+tool.name+", callId:"+callId);
 
         chrome.runtime.sendMessage({
           type: 'SEND_TO_SERVER',
@@ -2079,7 +2069,6 @@ ${toolSummary}
             id: callId 
           }
         }, (response) => {
-        console.log("[DEBUG-EXEC] sendMessage callback fired, response:"+JSON.stringify(response)+", lastError:"+(chrome.runtime.lastError||"none"));
         if (chrome.runtime.lastError) {
           addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
           state.pendingCalls.delete(callId);
@@ -2144,6 +2133,28 @@ ${toolSummary}
     const { text, index } = getLatestAIMessage();
     
     if (index < 0 || !text) return;
+    
+    // 刷新保护：页面加载后 3 秒内，跳过加载时已存在的消息
+    if (window.__agentLoadState) {
+      const elapsed = Date.now() - window.__agentLoadState.loadTime;
+      if (elapsed < 3000) return; // 冷却期内不扫描
+      if (elapsed < 5000 && !window.__agentLoadState.marked) {
+        // 5秒内首次扫描：把当前消息里所有工具调用标记为已执行
+        window.__agentLoadState.marked = true;
+        state.lastMessageText = text;
+        state.lastStableTime = Date.now();
+        const existingCalls = parseToolCalls(text);
+        for (const tool of existingCalls) {
+          const hash = index + ':' + tool.name + ':' + JSON.stringify(tool.params);
+          addExecutedCall(hash);
+        }
+        if (text.includes('@DONE') || text.includes('[[DONE]]')) {
+          addExecutedCall('done:' + index);
+        }
+        log('刷新保护：标记 ' + existingCalls.length + ' 个已有工具调用，跳过执行');
+        return;
+      }
+    }
     
     // 检测到新消息，重置所有计时器
     if (state.lastMessageText !== text) {
@@ -4033,14 +4044,14 @@ ${conversationText}
         addLog('✅ 新对话创建成功: ' + newConvId.substring(0, 8) + '...', 'success');
         addLog('📊 ' + allMsgs.length + ' → ' + newMsgs.length + ' 条消息', 'success');
 
-        // ── Step 6: 删除旧对话 (暂时禁用) ──
-        // addLog('🗑️ 删除旧对话...', 'info');
-        // try {
-        //   await fetch('/api/project/delete?project_id=' + convId, { credentials: 'include' });
-        //   addLog('✅ 旧对话已删除', 'success');
-        // } catch(e) {
-        //   addLog('⚠️ 旧对话删除失败: ' + e.message, 'error');
-        // }
+        // ── Step 6: 删除旧对话 ──
+        addLog('🗑️ 删除旧对话...', 'info');
+        try {
+          await fetch('/api/project/delete?project_id=' + convId, { credentials: 'include' });
+          addLog('✅ 旧对话已删除', 'success');
+        } catch(e) {
+          addLog('⚠️ 旧对话删除失败: ' + e.message, 'error');
+        }
 
         // ── Step 7: 跳转到新对话 ──
         addLog('🔄 2秒后跳转到新对话...', 'info');
@@ -5511,7 +5522,7 @@ ${conversationText}
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
     // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
-    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'run_command' || call.name === 'run_process' || call.name === 'vfs_save' || call.name === 'vfs_local_write' || call.name === 'vfs_local_read' || call.name === 'vfs_read' || call.name === 'local_write' || call.name === 'local_read' || call.name === 'local_list' || call.name === 'local_delete');
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
@@ -5891,6 +5902,10 @@ ${conversationText}
     // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();
 
+    // 页面加载后冷却期：跳过已存在的命令，只处理新产生的
+    const loadTime = Date.now();
+    const loadMessageCount = document.querySelectorAll('.agent-message, .conversation-statement').length;
+    window.__agentLoadState = { loadTime, loadMessageCount };
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 
     // Notification polling - 已移除，改用 WebSocket 实时通道
