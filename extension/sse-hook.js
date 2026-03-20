@@ -716,9 +716,19 @@
     },
     recover: function(date) {
       return this._loadAndRun("agent-recover", {date: date || new Date().toISOString().split("T")[0]});
-    }
+    },
+    playbook: function(keyword) {
+    var sql = keyword
+      ? "SELECT keyword,correct_method,wrong_method,query_count FROM playbook WHERE keyword LIKE '%" + keyword + "%' ORDER BY priority ASC"
+      : "SELECT keyword,correct_method,wrong_method,query_count FROM playbook ORDER BY priority ASC";
+    return window.__mine.sql(sql);
+  },
+  updatePlaybook: function() {
+    var sql = "INSERT OR REPLACE INTO playbook (keyword,query_count,correct_method,wrong_method,priority,last_updated) SELECT keyword, cnt, correct_method, wrong_method, ROW_NUMBER() OVER (ORDER BY cnt DESC), datetime('now') FROM (SELECT CASE WHEN params LIKE '%LIKE %' THEN substr(params, instr(params,'LIKE \'%')+6, instr(substr(params,instr(params,'LIKE \'%')+6),'%\'')-1) ELSE 'raw' END as keyword, COUNT(*) as cnt, COALESCE((SELECT correct_method FROM playbook p2 WHERE p2.keyword = keyword),'') as correct_method, COALESCE((SELECT wrong_method FROM playbook p2 WHERE p2.keyword = keyword),'') as wrong_method FROM commands WHERE tool='run_process' AND params LIKE '%agent.db%' AND params LIKE '%LIKE%' GROUP BY keyword ORDER BY cnt DESC LIMIT 20)";
+    return window.__mine.sql(sql);
+  }
   };
-  console.log("[SSE-Hook] Shortcuts registered: compress, recover");
+  console.log("[SSE-Hook] Shortcuts registered: compress, recover, playbook, updatePlaybook");
 
   // === DB MINING (auto-registered) ===
 window.__mine = {
