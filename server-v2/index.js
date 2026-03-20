@@ -490,6 +490,42 @@ async function main() {
         res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
         res.end(JSON.stringify({error:e.message}));
       }
+    } else if (url.pathname === '/tool' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const { tool, params } = JSON.parse(body);
+          if (!tool) {
+            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+            res.end(JSON.stringify({error:'tool required'}));
+            return;
+          }
+          const callId = 'http_' + Date.now();
+          const result = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('tool timeout 30s')), 30000);
+            const fakeWs = {
+              send: (data) => {
+                const msg = JSON.parse(data);
+                if (msg.type === 'tool_result' || msg.result !== undefined) {
+                  clearTimeout(timeout);
+                  resolve(msg);
+                }
+              },
+              readyState: 1
+            };
+            handleToolCall(fakeWs, { id: callId, type: 'tool_call', tool, params: params || {} });
+          });
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify(result));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error: e.message}));
+        }
+      });
+    } else if (url.pathname === '/tool' && req.method === 'OPTIONS') {
+      res.writeHead(200, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
     } else {
       res.writeHead(404);
       res.end('not found');
@@ -869,7 +905,7 @@ async function main() {
 
 // Teams Agent v3 - 启动 node 端 agent loop
 try {
-  teamsAgent.start({ handleToolCall, logger, clients, browserToolPending });
+  // teamsAgent.start({ handleToolCall, logger, clients, browserToolPending }); // DISABLED: using birdy-standalone.js
   logger.info("Teams Agent v3 已启动");
 } catch(e) {
   logger.warning("Teams Agent 启动失败: " + e.message);
