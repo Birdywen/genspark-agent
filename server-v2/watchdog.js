@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const PORT = 8766;
+const PORT = 8767;
 const TRIGGER_FILE = '/tmp/genspark-restart-trigger';
 const NOTIFY_FILE = '/tmp/genspark-agent-notify.json';
 const RESTART_COOLDOWN = 5000;
