@@ -5554,8 +5554,8 @@ ${conversationText}
           try {
             const skipParsed = safeJsonParse(skipExtracted.json);
             if (skipParsed && skipParsed.tool) {
-              addDedupKey(`dedup:${skipParsed.tool}:${JSON.stringify(skipParsed.params)}`);
-              addDedupKey(`exec:${skipParsed.tool}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
+              addDedupKey(`dedup:${skipParsed.tool}:${omegaIdx}:${JSON.stringify(skipParsed.params)}`);
+              addDedupKey(`exec:${skipParsed.tool}:${omegaIdx}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
               log('SSE SKIP (example keyword):', skipParsed.tool);
             }
           } catch(e) {}
@@ -5595,7 +5595,7 @@ ${conversationText}
         log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
         addExecutedCall(callHash);
-        addDedupKey(`dedup:${parsed.tool}:${JSON.stringify(parsed.params)}`);
+        addDedupKey(`dedup:${parsed.tool}:${omegaIdx}:${JSON.stringify(parsed.params)}`);
         sseState.executedInCurrentMessage = true;
         executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
