@@ -220,12 +220,12 @@
           if (owParsed.steps) {
             var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
             addExecutedCall(batchHash);
-            addDedupKey('dedup:__BATCH__:' + JSON.stringify(owParsed.steps).substring(0, 200));
+            addDedupKey('dedup:__BATCH__:' + owStartIdx + ':' + JSON.stringify(owParsed.steps).substring(0, 200));
             executeBatchCall(owParsed, batchHash);
           } else {
             var callHash = 'sse:' + sseState.messageId + ':omega_call:' + owStartIdx;
             addExecutedCall(callHash);
-            addDedupKey('dedup:' + owParsed.tool + ':' + JSON.stringify(owParsed.params || {}).substring(0, 150));
+            addDedupKey('dedup:' + owParsed.tool + ':' + owStartIdx + ':' + JSON.stringify(owParsed.params || {}).substring(0, 150));
             executeToolCall({name: owParsed.tool, params: owParsed.params || {}}, callHash);
           }
           continue;
