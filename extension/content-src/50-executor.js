@@ -92,7 +92,8 @@
     clearToolCallDetection();
 
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
-    const contentKey = `exec:__BATCH__:${JSON.stringify(batch).substring(0, 200)}`;
+    const batchStr = JSON.stringify(batch);
+    const contentKey = `exec:__BATCH__:${batchStr.length}:${Array.from(batchStr).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0).toString(36)}`;
     if (hasDedupKey(contentKey)) {
       log('跳过重复 BATCH 执行（内容级去重）');
       addExecutedCall(callHash);
@@ -321,7 +322,8 @@
     clearToolCallDetection();
     
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
-    const contentKey = `exec:${tool.name}:${JSON.stringify(tool.params).substring(0, 200)}`;
+    const paramStr = JSON.stringify(tool.params);
+    const contentKey = `exec:${tool.name}:${paramStr.length}:${Array.from(paramStr).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0).toString(36)}`;
     if (hasDedupKey(contentKey)) {
       log('跳过重复执行（内容级去重）:', tool.name);
       addExecutedCall(callHash);
