@@ -230,7 +230,7 @@
           }
           continue;
         }
-      } catch(e) { /* not JSON or no tool/steps, fall through to VFS write */ }
+      } catch(e) { addLog('\u26A0 ' + owp.label + ' JSON parse failed: ' + e.message + ' | content preview: ' + owContent.substring(0,80), 'warning'); log(owp.label + ' parse error:', e.message, 'content:', owContent.substring(0,120)); }
       // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
       if (owSlotName && typeof window.vfs === 'object') {
         // VFS name-based write (with optional append)

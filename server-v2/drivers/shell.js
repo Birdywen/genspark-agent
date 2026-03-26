@@ -72,14 +72,33 @@ export default {
       /\bgit\s+clone\b/, /\bdocker\s+(build|pull)\b/, /\bdemucs\b/,
       /\bwhisper\b/, /\bnohup\b/, /\bscp\s+-/, /\brsync\b/
     ];
-    const hasSleep = /\bsleep\s+\d/.test(cmd) || (params.stdin && /\bsleep\s+\d/.test(params.stdin));
     const isLong = longPatterns.some(p => p.test(cmd));
 
-    if ((isLong || hasSleep) && !params._noAutoRoute && !params.no_bg) {
-      trace.span('shell', { action: 'auto_route_to_bg_run', reason: hasSleep ? 'sleep' : 'long_command' });
+    if (isLong && !params._noAutoRoute && !params.no_bg) {
+      trace.span('shell', { action: 'auto_route_to_bg_run', reason: 'long_command' });
       params._noAutoRoute = true;
       const bgDriver = (await import('./bg.js')).default;
       return bgDriver.handle('bg_run', params, { trace, ws, message });
+    }
+
+    // 自动修复: node /private/tmp/xxx.js -> cp到cwd (require需要node_modules)
+    const cmdLine = params.command_line || params.command || '';
+    const tmpNodeMatch = cmdLine.match(/\bnode\s+(\/private\/tmp\/[\w._-]+\.(?:js|cjs|mjs))/);
+    if (tmpNodeMatch && cmdLine.includes('cd ')) {
+      const tmpPath = tmpNodeMatch[1];
+      const fileName = tmpPath.split('/').pop();
+      const cwdMatch = cmdLine.match(/cd\s+([^&;|]+)/);
+      if (cwdMatch) {
+        const targetDir = cwdMatch[1].trim().replace(/~/g, '/Users/yay');
+        const targetPath = targetDir + '/' + fileName;
+        try {
+          const fs = require('fs');
+          fs.copyFileSync(tmpPath, targetPath);
+          params.command_line = cmdLine.replace(tmpPath, targetPath) + ' ; rm -f ' + targetPath;
+          if (params.command) params.command = params.command_line;
+          trace.span('shell', { action: 'auto_cp_tmp_script', from: tmpPath, to: targetPath });
+        } catch(e) { /* ignore */ }
+      }
     }
 
     // 普通执行: spawn
@@ -114,7 +133,10 @@ export default {
 
       proc.on('close', code => {
         const output = (stdout + stderr).trim();
-        const success = code === 0;
+        // exit code 1 for grep/diff/head/tail = no match, not error
+        const cmd0 = (params.command_line || params.command || '').trim().split(/[|;&]/).pop().trim().split(/\s+/)[0].replace(/^.*\//, '');
+        const softFail1 = ['grep','egrep','fgrep','diff','head','tail','find','ls'].includes(cmd0);
+        const success = code === 0 || (code === 1 && softFail1);
         const historyId = _addToHistory('run_process', params, success, output.slice(0, 200));
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
