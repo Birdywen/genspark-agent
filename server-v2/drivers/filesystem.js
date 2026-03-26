@@ -42,6 +42,22 @@ async function handle(tool, params, context) {
   trace.span('filesystem', { tool, path: params.path || params.file });
 
   const result = await _hub.call(tool, params, callOptions);
+  // edit_file fail: attach file content
+  if (tool === "edit_file" && result && result.content) {
+    var txt = Array.isArray(result.content) ? result.content.map(function(c){return c.text||c;}).join("") : String(result.content);
+    if (txt.indexOf("exact match") !== -1) {
+      try {
+        var fp = params.path || params.file || "";
+        var validP = fp.startsWith("/") ? fp : require("path").resolve(fp);
+        var fc = require("fs").readFileSync(validP, "utf-8");
+        var ls = fc.split(NL);
+        var snip = ls.slice(0, 80).join(NL);
+        var hint = NL + "[AUTO-HINT] " + ls.length + " lines. First 80:" + NL + snip;
+        if (Array.isArray(result.content)) { result.content.push({type:"text",text:hint}); }
+      } catch(e) {}
+    }
+  }
+
 
   // ── write_file 写入后验证 ──
   if (writeProtectInfo) {

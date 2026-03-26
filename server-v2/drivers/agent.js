@@ -1,62 +1,90 @@
-// Agent Factory Driver - 从 Supabase 读 agent 场景，通过浏览器 ask_proxy 执行
-import { readFileSync } from 'fs';
+// Agent Factory Driver - 从 agent.db (SQLite) 读 agent 场景，通过浏览器 ask_proxy 执行
+import { readFileSync, existsSync } from 'fs';
+import { execSync } from 'child_process';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
-const SB_URL = process.env.SUPABASE_URL;
-const SB_KEY = process.env.SUPABASE_KEY;
+const __filename2 = fileURLToPath(import.meta.url);
+const __dirname2 = dirname(__filename2);
+const DBFILE = join(__dirname2, '..', 'dbfile.cjs');
 
-function hdrs(extra) {
-  return Object.assign({
-    'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + SB_KEY,
-    'Content-Type': 'application/json'
-  }, extra || {});
+function dbQuery(sql) {
+  try {
+    const result = execSync(`node ${DBFILE} query "${sql.replace(/"/g, '\"')}"`, {
+      cwd: join(__dirname2, '..'),
+      encoding: 'utf8',
+      timeout: 10000
+    }).trim();
+    return result ? JSON.parse(result) : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function dbRun(action, slot, key, value) {
+  try {
+    const args = value !== undefined
+      ? `${action} local_store ${slot} ${key}`
+      : `${action} local_store ${slot} ${key}`;
+    if (action === 'set' && value !== undefined) {
+      const escaped = value.replace(/"/g, '\"');
+      execSync(`node ${DBFILE} set local_store ${slot} ${key} "${escaped}"`, {
+        cwd: join(__dirname2, '..'),
+        encoding: 'utf8',
+        timeout: 10000
+      });
+      return true;
+    }
+    if (action === 'get') {
+      return execSync(`node ${DBFILE} get local_store ${slot} ${key}`, {
+        cwd: join(__dirname2, '..'),
+        encoding: 'utf8',
+        timeout: 10000
+      }).trim();
+    }
+    return null;
+  } catch(e) {
+    return null;
+  }
 }
 
 async function getAgent(name) {
-  const res = await fetch(
-    SB_URL + '/rest/v1/agent_memory?type=eq.agent&name=eq.' + encodeURIComponent(name) + '&limit=1',
-    { headers: hdrs() }
-  );
-  const rows = await res.json();
+  const rows = dbQuery("SELECT content FROM local_store WHERE slot='agent' AND key='" + name.replace(/'/g, "''") + "'");
   if (!rows.length) return null;
-  return JSON.parse(rows[0].content);
+  try { return JSON.parse(rows[0].content); } catch(e) { return null; }
 }
 
 async function listAgents() {
-  const res = await fetch(
-    SB_URL + '/rest/v1/agent_memory?type=eq.agent&select=id,name,content,created_at,updated_at&order=created_at.desc',
-    { headers: hdrs() }
-  );
-  const rows = await res.json();
+  const rows = dbQuery("SELECT key, content, updated_at FROM local_store WHERE slot='agent' ORDER BY updated_at DESC");
   return rows.map(function(r) {
     var meta = {};
     try { meta = JSON.parse(r.content); } catch(e) {}
     return {
-      id: r.id, name: r.name,
+      name: r.key,
       description: meta.description || '',
-      model: meta.model || 'gpt-5-4',
+      model: meta.model || 'claude-opus-4-6',
       version: meta.version || 1,
       capabilities: meta.capabilities || [],
-      created_at: r.created_at
+      updated_at: r.updated_at
     };
   });
 }
 
 async function saveAgent(name, agentData) {
-  const res = await fetch(SB_URL + '/rest/v1/agent_memory', {
-    method: 'POST',
-    headers: hdrs({ 'Prefer': 'return=representation' }),
-    body: JSON.stringify({ type: 'agent', scene: 'factory', name: name, content: JSON.stringify(agentData) })
-  });
-  return await res.json();
+  const content = JSON.stringify(agentData);
+  // Use dbfile.cjs set which handles upsert
+  const rows = dbQuery("SELECT key FROM local_store WHERE slot='agent' AND key='" + name.replace(/'/g, "''") + "'");
+  if (rows.length) {
+    dbQuery("UPDATE local_store SET content='" + content.replace(/'/g, "''") + "', updated_at=datetime('now') WHERE slot='agent' AND key='" + name.replace(/'/g, "''") + "'");
+  } else {
+    dbQuery("INSERT INTO local_store(slot,key,content,updated_at) VALUES('agent','" + name.replace(/'/g, "''") + "','" + content.replace(/'/g, "''") + "',datetime('now'))");
+  }
+  return { ok: true, name: name, size: content.length };
 }
 
 async function deleteAgent(name) {
-  const res = await fetch(
-    SB_URL + '/rest/v1/agent_memory?type=eq.agent&name=eq.' + encodeURIComponent(name),
-    { method: 'DELETE', headers: hdrs() }
-  );
-  return { ok: res.ok, status: res.status };
+  dbQuery("DELETE FROM local_store WHERE slot='agent' AND key='" + name.replace(/'/g, "''") + "'");
+  return { ok: true, deleted: name };
 }
 
 function buildMessages(agent, task, vars) {
@@ -114,7 +142,6 @@ const agent = {
   tools: ['agent_run', 'agent_pipeline', 'agent_list', 'agent_save', 'agent_delete', 'agent_generate'],
   
   async handle(tool, params, context) {
-  if (!SB_URL) return { ok: false, error: 'SUPABASE_URL not set' };
 
   if (tool === 'agent_list') {
     return { ok: true, agents: await listAgents() };
@@ -142,16 +169,40 @@ if (tool === 'agent_run') {
     var browserCode = buildBrowserExecCode(msgs, model, params.temperature || 0.3);
     if (context.browserTool) {
       var result = await context.browserTool('eval_js', { code: browserCode }, 300000);
-      // saveTo: 从结果中提取 HTML 并保存到本地文件
+      // saveTo: 从结果中提取代码块并保存到文件（支持 cjs/js/html/任意语言）
       if (params.saveTo && result && result.ok !== false) {
-        var content = typeof result === 'string' ? result : (result.result || result.data || '');
-        // 提取 ```html...``` 或 <!DOCTYPE...></html>
-        var htmlMatch = content.match(/```html\s*\n?([\s\S]*?)```/);
-        var html = htmlMatch ? htmlMatch[1].trim() : null;
-        if (!html) {
-          var dtMatch = content.match(/<!DOCTYPE[\s\S]*<\/html>/i);
-          html = dtMatch ? dtMatch[0].trim() : content;
+        var rawContent = typeof result === "string" ? result : (result.result || result.data || "");
+        var extracted = null;
+        // 1. 提取最后一个代码块（agent 可能输出多段自言自语+多个代码块）
+        var allCodeBlocks = [];
+        var codeRe = /```(?:cjs|js|javascript|python|html|swift|sh|bash|json)?\s*\n([\s\S]*?)\n```/g;
+        var m;
+        while ((m = codeRe.exec(rawContent)) !== null) allCodeBlocks.push(m[1].trim());
+        if (allCodeBlocks.length > 0) {
+          // 取最长的代码块（通常是最完整的那个）
+          extracted = allCodeBlocks.sort((a,b) => b.length - a.length)[0];
         }
+        // 2. 如果没有代码块，尝试 HTML
+        if (!extracted) {
+          var dtMatch = rawContent.match(/<!DOCTYPE[\s\S]*<\/html>/i);
+          if (dtMatch) extracted = dtMatch[0].trim();
+        }
+        // 3. 如果还没有，找第一行代码开头
+        if (!extracted) {
+          var rLines = rawContent.split("\n");
+          var codeStart = rLines.findIndex(function(l) { return /^(const |var |let |import |require|#!|'use strict')/.test(l.trim()); });
+          if (codeStart >= 0) extracted = rLines.slice(codeStart).join("\n");
+          else extracted = rawContent;
+        }
+        if (extracted) {
+          const { writeFileSync } = require("fs");
+          var savePath = params.saveTo;
+          if (!savePath.startsWith("/")) savePath = "/Users/yay/workspace/" + savePath;
+          // 不强制加 .html，保留用户指定的扩展名
+          writeFileSync(savePath, extracted, "utf8");
+          result = { ok: true, savedTo: savePath, savedBytes: extracted.length };
+        }
+      }
         if (html && html.indexOf('<') > -1) {
           const { writeFileSync } = await import('fs');
           var savePath = params.saveTo;

@@ -68,7 +68,7 @@
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
     // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
-    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append');
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append' || call.name === 'run_process' || call.name === 'run_command');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
@@ -160,8 +160,8 @@
     // Format: \u03A9CODE[:slot=conversationId]\n...content...\n\u03A9CODEEND
     //         \u03A9DATA[:slot=conversationId]\n...content...\n\u03A9DATAEND
     var omegaWritePatterns = [
-      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" },
-      { prefix: "\u03A9DATA", endTag: "\u03A9DATAEND", label: "OMEGADATA" }
+      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" }
+      // ΩDATA disabled 2026-03-26 (was truncating ΩCODE)
     ];
     for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
       var owp = omegaWritePatterns[owi];
@@ -209,6 +209,28 @@
       var modStr = (owSlotId ? ' slot:' + owSlotId.substring(0,8) : '') + (owSlotName ? ' name:' + owSlotName : '') + (owAppend ? ' APPEND' : '');
       addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + modStr, "tool");
       log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
+      // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
+      try {
+        var owParsed = JSON.parse(owContent.trim());
+        if (owParsed && (owParsed.tool || owParsed.steps)) {
+          addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
+          sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);
+          log('SSE ' + owp.label + ' TOOL CALL:', owParsed.tool || (owParsed.steps.length + ' steps'));
+          sseState.executedInCurrentMessage = true;
+          if (owParsed.steps) {
+            var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
+            addExecutedCall(batchHash);
+            addDedupKey('dedup:__BATCH__:' + JSON.stringify(owParsed.steps).substring(0, 200));
+            executeBatchCall(owParsed, batchHash);
+          } else {
+            var callHash = 'sse:' + sseState.messageId + ':omega_call:' + owStartIdx;
+            addExecutedCall(callHash);
+            addDedupKey('dedup:' + owParsed.tool + ':' + JSON.stringify(owParsed.params || {}).substring(0, 150));
+            executeToolCall({name: owParsed.tool, params: owParsed.params || {}}, callHash);
+          }
+          continue;
+        }
+      } catch(e) { /* not JSON or no tool/steps, fall through to VFS write */ }
       // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
       if (owSlotName && typeof window.vfs === 'object') {
         // VFS name-based write (with optional append)
@@ -277,9 +299,10 @@
     }
 
     // 检测 ΩHEREBATCH 格式（HEREDOC 批量执行）
-    var hereBatchSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
+    // [RETIRED 2026-03-26] HEREBATCH replaced by OMEGA CODE batch
+    // var hereBatchSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
     var hereBatchEndSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCHEND';
-    if (text.indexOf(hereBatchSSEMarker) !== -1 && text.indexOf(hereBatchEndSSEMarker) !== -1) {
+    if (false) { // HEREBATCH RETIRED
       var hereBatchSSE = parseHereBatchFormat(text);
       if (hereBatchSSE) {
         var hereBatchSig = 'sse:herebatch:' + hereBatchSSE.start;
@@ -528,65 +551,103 @@
 
 })();
 
-// === Omega 手动执行快捷键 (Ctrl+Shift+E) ===
+// Omega Hotkey v2 - Ctrl+Shift+E
+// 匹配 ΩHERE/ΩHEREBATCH 命令，发到 8766/tool 执行
 (function() {
-  document.addEventListener('keydown', async function(e) {
-    // Ctrl+Shift+E 触发
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
-      e.preventDefault();
-      console.log('[Omega] 快捷键触发');
-      
-      // 获取最后一条 AI 消息
-      const msgs = document.querySelectorAll('.conversation-statement.assistant');
-      const lastMsg = msgs[msgs.length - 1];
-      if (!lastMsg) {
-        alert('No AI message found');
-        return;
+  if (window.__omegaHotkeyV2) return;
+  window.__omegaHotkeyV2 = true;
+
+  function parseOmegaHere(text) {
+    // 解析单个 ΩHERE block
+    var lines = text.split('\n');
+    var tool = null, params = {};
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!tool && line.match(/HERE\s+(\w+)/)) {
+        tool = line.match(/HERE\s+(\w+)/)[1];
       }
-      
-      // 提取文本
-      const contentEl = lastMsg.querySelector('.markdown-viewer') || 
-                        lastMsg.querySelector('.bubble .content') ||
-                        lastMsg.querySelector('.bubble') || lastMsg;
-      const text = contentEl.innerText || lastMsg.innerText || '';
-      
-      // 匹配 Omega 命令
-      const match = text.match(/[ΩŒ©]\{[\s\S]*?\}[ΩŒ©]?STOP/);
-      if (!match) {
-        alert('No Omega command found in last message');
-        return;
-      }
-      
-      console.log('[Omega] Found command:', match[0].substring(0, 100) + '...');
-      
-      // 发送到本地服务器执行
-      try {
-        const resp = await fetch('http://localhost:7749/exec', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: match[0] })
-        });
-        const data = await resp.json();
-        
-        if (data.success) {
-          // 填入输入框
-          const input = document.querySelector('textarea.chat-input') || document.querySelector('textarea');
-          if (input) {
-            input.value = data.result;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
-            console.log('[Omega] Result pasted, press Enter to send');
-          } else {
-            navigator.clipboard.writeText(data.result);
-            alert('Result copied to clipboard!');
-          }
-        } else {
-          alert('Execution error: ' + data.error);
-        }
-      } catch (err) {
-        alert('Server error (is omega-server running?): ' + err.message);
+      var paramMatch = line.match(/^@(\w+)=(.*)/);
+      if (paramMatch) {
+        params[paramMatch[1]] = paramMatch[2];
       }
     }
+    return tool ? { tool: tool, params: params } : null;
+  }
+
+  async function execTool(tool, params) {
+    var resp = await fetch('http://localhost:8766/tool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool: tool, params: params })
+    });
+    return await resp.json();
+  }
+
+  document.addEventListener('keydown', async function(e) {
+    if (!(e.ctrlKey && e.shiftKey && e.key === 'E')) return;
+    e.preventDefault();
+    console.log('[OmegaV2] Ctrl+Shift+E triggered');
+
+    // 获取最后一条 AI 消息的代码块
+    var codeBlocks = document.querySelectorAll('pre code');
+    if (!codeBlocks.length) {
+      alert('[OmegaV2] No code blocks found');
+      return;
+    }
+    var lastCode = codeBlocks[codeBlocks.length - 1].innerText;
+    console.log('[OmegaV2] Last code block:', lastCode.substring(0, 100));
+
+    // 检测命令类型
+    var results = [];
+    
+    if (lastCode.indexOf('HEREBATCH') !== -1) {
+      // 批量命令 - 按 HERE 分割
+      var blocks = lastCode.split(/\nHERE\s+/);
+      for (var i = 1; i < blocks.length; i++) {
+        var parsed = parseOmegaHere('HERE ' + blocks[i]);
+        if (parsed) {
+          console.log('[OmegaV2] Exec:', parsed.tool, JSON.stringify(parsed.params).substring(0, 80));
+          try {
+            var r = await execTool(parsed.tool, parsed.params);
+            results.push('[' + parsed.tool + '] ' + (r.success ? 'OK' : 'FAIL') + ': ' + JSON.stringify(r).substring(0, 200));
+          } catch(err) {
+            results.push('[' + parsed.tool + '] ERROR: ' + err.message);
+          }
+        }
+      }
+    } else if (lastCode.indexOf('HERE ') !== -1) {
+      // 单命令
+      var parsed = parseOmegaHere(lastCode);
+      if (parsed) {
+        console.log('[OmegaV2] Exec single:', parsed.tool);
+        try {
+          var r = await execTool(parsed.tool, parsed.params);
+          results.push('[' + parsed.tool + '] ' + (r.success ? 'OK' : 'FAIL') + ': ' + JSON.stringify(r).substring(0, 200));
+        } catch(err) {
+          results.push('[' + parsed.tool + '] ERROR: ' + err.message);
+        }
+      }
+    }
+
+    if (!results.length) {
+      alert('[OmegaV2] No executable Omega commands found in last code block');
+      return;
+    }
+
+    // 结果填入输入框
+    var resultText = results.join('\n');
+    var input = document.querySelector('textarea');
+    if (input) {
+      var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeSet.call(input, resultText);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      console.log('[OmegaV2] Result pasted to input');
+    } else {
+      navigator.clipboard.writeText(resultText);
+      alert('[OmegaV2] Result copied to clipboard');
+    }
   });
-  console.log('[Omega] Hotkey Ctrl+Shift+E registered');
+
+  console.log('[OmegaV2] Hotkey Ctrl+Shift+E registered (server: 8766)');
 })();

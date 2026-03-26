@@ -1,6 +1,9 @@
   // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
+    // Real-time disable check (no refresh needed)
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') return;
     // SSE 已成功执行当前消息中的工具调用，跳过 DOM 扫描避免重复
     // 但仅在 SSE 最近有活动时才跳过（避免 SSE 断开后 DOM 也不工作）
     if (sseState.executedInCurrentMessage && (Date.now() - sseState.lastDeltaTime < 30000)) return;
@@ -417,9 +420,9 @@
       const source = hasServerData ? '服务端' : '本地';
       
       // 主要靠字符数判断，消息数辅助
-      if (effectiveChars > 200000 || totalMsgs > 800) {
+      if (effectiveChars > 350000 || totalMsgs > 300) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，执行 compress-chat 压缩]`;
-      } else if (effectiveChars > 180000 || totalMsgs > 600) {
+      } else if (effectiveChars > 300000 || totalMsgs > 250) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
       } else {
         contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K${source}]`;

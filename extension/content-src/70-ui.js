@@ -1294,18 +1294,14 @@ ${conversationText}
 
         const newMsgs = [];
 
-        // ── Section 1+2: Forged Prompt (从 Supabase 加载) ──
-        const SB_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
-        const sbHeaders = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
-        
-        addLog('🔍 Loading forged prompt from Supabase...', 'info');
+        // ── Section 1+2: Forged Prompt (从 agent.db 加载) ──
+        addLog('🔍 Loading forged prompt from agent.db...', 'info');
         let forgedCount = 0;
         let forgedSize = 0;
         try {
-          const sbResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('toolkit:_forged:experience-dialogues') + '&select=content&limit=1', { headers: sbHeaders });
-          const sbRows = await sbResp.json();
-          const forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
+          const forgedResp = await fetch('http://127.0.0.1:8766/memory?slot=toolkit&key=_forged:experience-dialogues');
+          const forgedRows = await forgedResp.json();
+          const forgedRaw = (forgedRows && forgedRows[0]) ? forgedRows[0].content : '';
           if (forgedRaw) {
             const dialogues = JSON.parse(forgedRaw);
             if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
@@ -1314,11 +1310,11 @@ ${conversationText}
                 forgedCount++;
                 forgedSize += (d.content || '').length;
               }
-              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded from Supabase', 'success');
+              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded from agent.db', 'success');
             }
           }
           if (forgedCount === 0) {
-            addLog('⚠️ No forged prompt found in Supabase', 'error');
+            addLog('⚠️ No forged prompt found in agent.db', 'error');
           }
         } catch(e) {
           addLog('⚠️ Forged load failed: ' + e.message, 'error');
@@ -1328,10 +1324,10 @@ ${conversationText}
         // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
         // 暂时跳过，不注入空消息
 
-        // ── Section 4: Context (VFS session summary, 从 Supabase 加载) ──
+        // ── Section 4: Context (VFS session summary, 从 agent.db 加载) ──
         let vfsContext = '';
         try {
-          const ctxResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('slot:context') + '&select=content&limit=1', { headers: sbHeaders });
+          const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
           const ctxRows = await ctxResp.json();
           vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
         } catch(e) {
@@ -1359,9 +1355,10 @@ ${conversationText}
           summaryParts.push('## VFS Context (Session Memory)', trimmedCtx);
         }
 
+
         const contextSummary = summaryParts.join('\n');
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: contextSummary });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved.\n\n请先运行以下命令恢复上下文：\ncd ~/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "SELECT timestamp,tool,CASE WHEN success=1 THEN \'✓\' ELSE \'✗ \'||substr(error,1,80) END as result,substr(params,1,200) FROM commands WHERE timestamp >= date(\'now\',\'-1 day\') ORDER BY id DESC LIMIT 80"\n\n常用查询索引（按需使用）：\n- 经验教训/工作规则: node dbfile.cjs get local_store guide cheatsheet\n- DB手册(表结构+SQL): node dbfile.cjs get local_store guide agent-db-manual\n- 可用脚本列表: node dbfile.cjs list local_store script\n- Skill模块: node dbfile.cjs list memory forged' });
         addLog('📝 Section 4: Context (' + contextSummary.length + ' chars)', 'success');
 
         // ── Tail: 保留最近 TAIL_KEEP 条原样 ──
@@ -1443,26 +1440,16 @@ ${conversationText}
           if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
         }
 
-        // ── Step 4: 备份摘要到 Supabase ──
+        // ── Step 4: 备份摘要到 agent.db ──
         try {
           const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2;
           const finalCtx = ctxMsgIdx >= 0 ? newMsgs[ctxMsgIdx].content : contextSummary;
-          // upsert context to Supabase
-          const ctxName = 'slot:context';
-          const existResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent(ctxName) + '&select=id&limit=1', { headers: sbHeaders });
-          const existRows = await existResp.json();
-          if (existRows && existRows[0]) {
-            await fetch(SB_URL + '/rest/v1/agent_memory?id=eq.' + existRows[0].id, {
-              method: 'PATCH', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-              body: JSON.stringify({ content: finalCtx, updated_at: new Date().toISOString() })
-            });
-          } else {
-            await fetch(SB_URL + '/rest/v1/agent_memory', {
-              method: 'POST', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-              body: JSON.stringify({ type: 'slot', scene: 'context', name: ctxName, content: finalCtx, updated_at: new Date().toISOString() })
-            });
-          }
-          addLog('💾 Context backed up to Supabase', 'success');
+          await fetch('http://127.0.0.1:8766/memory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slot: 'context', key: 'session-state', content: finalCtx })
+          });
+          addLog('💾 Context backed up to agent.db', 'success');
         } catch(e) {
           addLog('⚠️ Context backup failed: ' + e.message, 'error');
         }
@@ -1542,8 +1529,8 @@ ${conversationText}
         allMsgs.forEach(m => { totalChars += m.textContent.length; });
         const injSize = window.__injectedPromptSize || 0;
         const effChars = totalChars + injSize;
-        overThreshold = effChars > 200000 || totalMsgs > 800;
-        nearThreshold = effChars > 180000 || totalMsgs > 600;
+        overThreshold = effChars > 350000 || totalMsgs > 300;
+        nearThreshold = effChars > 300000 || totalMsgs > 250;
       } catch(e) {}
       
       // 优先级: ready(总结就绪) > warning(超阈值) > 正常
@@ -1556,6 +1543,13 @@ ${conversationText}
         btn.classList.add('warning');
         btn.textContent = '🗜️ 压缩!';
         btn.title = '⚠️ 对话已超过压缩阈值 — 点击自动生成总结并压缩';
+
+        // 自动触发 fork-compress
+        if (!window.__autoCompressTriggered) {
+          window.__autoCompressTriggered = true;
+          console.log('[AutoCompress] 200+ msgs, auto-triggering fork-compress');
+          setTimeout(function() { btn.click(); }, 2000);
+        }
       } else if (nearThreshold) {
         btn.classList.remove('ready');
         btn.classList.add('warning');

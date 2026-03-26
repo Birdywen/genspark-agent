@@ -545,6 +545,7 @@
       var url = args[0];
       var opts = args[1];
 
+
       if (typeof url !== 'string' || (url.indexOf('/api/agent/ask_proxy') === -1 && url.indexOf('/api/chat/') === -1) || !opts || !opts.body) {
         return targetFetch.apply(this, args);
       }
@@ -562,6 +563,8 @@
       var firstMsg = body.messages[0];
       console.log('[SSE-Hook] messages[0] role=' + firstMsg.role + ' len=' + (firstMsg.content||'').length + ' first100=' + (firstMsg.content||'').substring(0,100));
       console.log('[SSE-Hook] total messages=' + body.messages.length + ' roles=' + body.messages.map(function(m){return m.role}).join(','));
+
+
       var hasSystemPrompt = firstMsg.content && firstMsg.content.indexOf(__SYSTEM_PROMPT_MARKER) !== -1;
       var hasVFSMarker = firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1;
       console.log('[SSE-Hook] hasSystemPrompt=' + hasSystemPrompt + ' hasVFSMarker=' + hasVFSMarker + ' autoInject=' + (localStorage.getItem('agent_auto_prompt') !== 'false'));
@@ -578,14 +581,36 @@
       console.log('[SSE-Hook] Forged injection: convId=' + convId + ' agent=' + sbName);
 
       // 去重：检测 messages 里是否已包含 forged 内容
-      // 方式1：检查是否有 __FORGED__ 标记（注入时添加）
-      // 方式2：第一轮对话只有1条user消息，后续轮次messages>2说明已有历史
+      // 方式1：检查 __FORGED__ 标记（注入时添加）
+      // 方式2：检查已压缩的 forged 内容（compress 后 marker 可能丢失）
+      // 方式3：检查 [已压缩] 标记后面是否有 forged 特征文本
       var alreadyInjected = false;
-      // 方式1: 检查 __FORGED__ 标记
-      for (var fi = 0; fi < Math.min(body.messages.length, 10); fi++) {
+      // 方式1: 检查 __FORGED__ 标记（前15条消息内才算有效注入，超出说明是压缩残留）
+      for (var fi = 0; fi < body.messages.length; fi++) {
         if (body.messages[fi].content && body.messages[fi].content.indexOf('__FORGED__') !== -1) {
-          alreadyInjected = true;
+          if (fi < 15) {
+            alreadyInjected = true;
+            console.log('[SSE-Hook] Dedup: found __FORGED__ marker at msg ' + fi + ' (valid, within first 15)');
+          } else {
+            body.messages[fi].content = body.messages[fi].content.replace('<!-- __FORGED__ -->', '');
+            console.log('[SSE-Hook] Dedup: found stale __FORGED__ marker at msg ' + fi + ', REMOVED (compress residue)');
+          }
           break;
+        }
+      }
+      // 方式2: 检查 forged 特征内容（防止 compress 后 marker 丢失）
+      if (!alreadyInjected) {
+        var forgedFingerprints = ['These are my scars', 'WRITING RULES (MOST IMPORTANT)', 'agent.db 快捷路径'];
+        for (var fi2 = 0; fi2 < body.messages.length; fi2++) {
+          var mc = body.messages[fi2].content || '';
+          for (var fp = 0; fp < forgedFingerprints.length; fp++) {
+            if (mc.indexOf(forgedFingerprints[fp]) !== -1) {
+              alreadyInjected = true;
+              console.log('[SSE-Hook] Dedup: found fingerprint "' + forgedFingerprints[fp] + '" at msg ' + fi2);
+              break;
+            }
+          }
+          if (alreadyInjected) break;
         }
       }
       // 方式2: 已禁用 — 会误杀第一轮注入
@@ -638,6 +663,7 @@
         } else {
           console.log('[SSE-Hook] No forged data in agent.db, passing through as-is');
         }
+
         var newOpts = {};
         for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
         newOpts.body = JSON.stringify(body);
@@ -693,23 +719,14 @@
       if (self._cache[key]) {
         return new Function("args", self._cache[key])(args);
       }
-      return new Promise(function(resolve) {
-        var ws = new WebSocket("ws://localhost:8765");
-        ws.onmessage = function(e) {
-          var d = JSON.parse(e.data);
-          if (d.type === "connected") {
-            ws.send(JSON.stringify({type:"tool_call",tool:"vfs_read",id:"sc-"+key,params:{slot:"toolkit",key:key}}));
-          } else if (d.type === "tool_result") {
-            var raw = d.result;
-            var idx = raw.indexOf("{\"success\"");
-            var outer = JSON.parse(raw.substring(idx));
-            self._cache[key] = outer.result;
-            resolve(new Function("args", outer.result)(args));
-            ws.close();
-          }
-        };
-        setTimeout(function(){resolve("timeout")}, 8000);
-      });
+      return fetch("http://localhost:8766/local/read?slot=toolkit&key=" + encodeURIComponent(key))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var content = d.content || "";
+          if (!content) return "script not found: " + key;
+          self._cache[key] = content;
+          return new Function("args", content)(args);
+        }).catch(function(e) { return "error: " + e.message; });
     },
     compress: function(opts) {
       return this._loadAndRun("compress-chat", opts || {headN:3, tailN:30});
@@ -726,9 +743,17 @@
   updatePlaybook: function() {
     var sql = "INSERT OR REPLACE INTO playbook (keyword,query_count,correct_method,wrong_method,priority,last_updated) SELECT keyword, cnt, correct_method, wrong_method, ROW_NUMBER() OVER (ORDER BY cnt DESC), datetime('now') FROM (SELECT CASE WHEN params LIKE '%LIKE %' THEN substr(params, instr(params,'LIKE \'%')+6, instr(substr(params,instr(params,'LIKE \'%')+6),'%\'')-1) ELSE 'raw' END as keyword, COUNT(*) as cnt, COALESCE((SELECT correct_method FROM playbook p2 WHERE p2.keyword = keyword),'') as correct_method, COALESCE((SELECT wrong_method FROM playbook p2 WHERE p2.keyword = keyword),'') as wrong_method FROM commands WHERE tool='run_process' AND params LIKE '%agent.db%' AND params LIKE '%LIKE%' GROUP BY keyword ORDER BY cnt DESC LIMIT 20)";
     return window.__mine.sql(sql);
+  },
+  restart: function() {
+    return fetch('http://localhost:8766/restart').then(function(r){return r.text();}).then(function(t){
+      try{return JSON.parse(t)}catch(e){return t}
+    });
+  },
+  status: function() {
+    return fetch('http://localhost:8766/status').then(function(r){return r.json();});
   }
   };
-  console.log("[SSE-Hook] Shortcuts registered: compress, recover, playbook, updatePlaybook");
+  console.log("[SSE-Hook] Shortcuts registered: compress, recover, playbook, updatePlaybook, restart, status");
 
   // === DB MINING (auto-registered) ===
 window.__mine = {

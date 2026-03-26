@@ -35,7 +35,7 @@ class StateManager {
       checkpoints: [],
       options: {
         stopOnError: true,
-        timeout: 120000,
+        timeout: 600000,
         maxLoopIterations: 50,
         ...options
       },
@@ -79,12 +79,16 @@ class StateManager {
     task.updatedAt = Date.now();
     
     const step = task.steps[stepIndex];
-    if (step?.saveAs && result.success) {
-      let value = result.result;
-      if (typeof value === 'string') {
-        value = value.trim();
-        try { value = JSON.parse(value); } catch (e) {}
+    if (step?.saveAs) {
+      // v2.2: 统一存 {success, result, error} 对象，不管成败
+      let parsedResult = result.result;
+      if (typeof parsedResult === 'string') {
+        parsedResult = parsedResult.trim();
+        try { parsedResult = JSON.parse(parsedResult); } catch (e) {}
       }
+      const value = result.success
+        ? { success: true, result: parsedResult }
+        : { success: false, error: result.error, errorType: result.errorType };
       this.setVariable(taskId, step.saveAs, value);
       this.logger.info(`[StateManager] 💾 保存变量: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : String(value).substring(0,100)}`);
     }

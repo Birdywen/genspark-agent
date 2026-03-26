@@ -152,6 +152,12 @@
       // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
       case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
+        // Red switch: disabled tab ignores browser tool calls
+        const dKeyBtc = 'agent_disabled_' + location.href.split('?')[1];
+        if (localStorage.getItem(dKeyBtc) === 'true') {
+          log('Agent disabled on this tab, ignoring browser_tool_call');
+          break;
+        }
         addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');
 
         const sendBrowserResult = (success, result, error) => {

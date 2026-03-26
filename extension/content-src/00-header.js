@@ -61,7 +61,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 120000,
+    TIMEOUT_MS: 600000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,

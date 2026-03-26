@@ -87,6 +87,8 @@
 
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') { log('Agent disabled, skip batch'); return; }
     clearToolCallDetection();
 
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
@@ -314,6 +316,8 @@
   // === END async_task 引擎 ===
 
   function executeToolCall(tool, callHash) {
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') { log('Agent disabled, skip tool'); return; }
     clearToolCallDetection();
     
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===

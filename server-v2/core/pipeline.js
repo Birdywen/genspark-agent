@@ -64,6 +64,37 @@ export function parseParams(params, logger) {
   return params;
 }
 
+
+// ── SSH 命令自动修正 ──
+export function sshFix(tool, params, logger) {
+  if (tool !== "run_process" && tool !== "run_command") return params;
+  const cmd = (params.command_line || params.command || "") + " " + (params.stdin || "");
+  if (!cmd.includes("150.136.51.61")) return params;
+  
+  // 匹配任何手写的 ssh 到 oracle IP 的命令
+  const patterns = [
+    /ssh\s+-i\s+\S+\s+\w+@150\.136\.51\.61/g,
+    /ssh\s+(?:root|opc|ubuntu)@150\.136\.51\.61/g,
+  ];
+  let fixed = cmd;
+  let changed = false;
+  for (const p of patterns) {
+    if (p.test(fixed)) {
+      fixed = fixed.replace(p, "ssh oracle");
+      changed = true;
+    }
+  }
+  if (changed) {
+    logger.warn("[SSHFix] Auto-corrected SSH command to: ssh oracle");
+    const key = params.command_line ? "command_line" : (params.command ? "command" : "stdin");
+    // 只修正对应字段，不修正拼接的 cmd
+    const origField = params[key] || "";
+    let fixedField = origField;
+    for (const p of patterns) { fixedField = fixedField.replace(p, "ssh oracle"); }
+    return { ...params, [key]: fixedField };
+  }
+  return params;
+}
 // ── 预处理：复杂命令自动脚本化 ──
 export function autoScript(tool, params, logger) {
   if (tool !== 'run_process' && tool !== 'run_command') return params;
@@ -107,6 +138,9 @@ export function resolveTimeout(tool, params, message) {
     }
   }
   if (!timeout && (tool === 'agent_pipeline')) {
+    timeout = 600000;
+  }
+  if (!timeout && (tool === 'agent_generate')) {
     timeout = 600000;
   }
   if (!timeout && (tool === 'agent_run')) {

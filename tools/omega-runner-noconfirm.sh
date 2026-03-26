@@ -5,6 +5,8 @@
 
 # 设置 PATH（Automator Service 环境没有用户 PATH）
 export PATH="/Users/yay/.nvm/versions/node/v23.9.0/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 
 INPUT="$1"
 if [ -z "$INPUT" ]; then

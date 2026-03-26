@@ -42,7 +42,7 @@ import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
 import Router from "./core/router.js";
 import Metrics from "./core/metrics.js";
-import { resolvePayloadFiles, decodeBase64Fields, parseParams, autoScript, resolveTimeout, parseResult, sendSuccess, sendError } from './core/pipeline.js';
+import { resolvePayloadFiles, decodeBase64Fields, parseParams, autoScript, sshFix, resolveTimeout, parseResult, sendSuccess, sendError } from './core/pipeline.js';
 import { resolve as resolveAlias } from "./core/alias.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -231,6 +231,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         return;
       }
       // 自动脚本化
+      params = sshFix(tool, params, logger);
       params = autoScript(tool, params, logger);
       // 超时策略
       const callOptions = resolveTimeout(tool, params, message);
@@ -240,7 +241,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
         } else if (r && r.handled) {
           _routerHandled = true;
-          history.add(tool, params, true, JSON.stringify(r).slice(0, 500));
+          history.add(tool, params, true, JSON.stringify(r).slice(0, 5000));
           logger.info('[Router] HANDLED: ' + tool + ' (driver self-sent)');
           // driver 自己处理了 ws.send (如 shell)
         } else if (r && r.browserEval) {
@@ -290,13 +291,13 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           }
           // 重试更新
           if (isRetry && originalId) {
-            history.updateById(originalId, { success: true, resultPreview: (result || '').substring(0, 500), retriedAt: new Date().toISOString(), error: null });
+            history.updateById(originalId, { success: true, resultPreview: (result || '').substring(0, 5000), retriedAt: new Date().toISOString(), error: null });
           }
-          const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 500), success ? null : result);
+          const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 5000), success ? null : result);
           // recorder
           for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
             if (rec.status === 'recording') {
-              recorder.recordStep(recId, { tool, params, result: { success, result: (result || '').slice(0, 500) }, duration: Date.now() - (message.startTime || Date.now()) });
+              recorder.recordStep(recId, { tool, params, result: { success, result: (result || '').slice(0, 5000) }, duration: Date.now() - (message.startTime || Date.now()) });
             }
           }
           if (success) {
@@ -344,7 +345,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
                 const retryCallOptions = resolveTimeout(retryTool, retryParams, message);
                 const rr = await router.dispatch(retryTool, retryParams, ws, message, retryCallOptions);
                 const { result: retryResult, images: retryImages } = parseResult(rr);
-                const retryHistoryId = history.add(retryTool, retryParams, true, (retryResult || '').slice(0, 500));
+                const retryHistoryId = history.add(retryTool, retryParams, true, (retryResult || '').slice(0, 5000));
                 sendSuccess(ws, { id, historyId: retryHistoryId, tool: retryTool, result: '[自愈: ' + healResult.message + '] ' + retryResult, images: retryImages });
                 return;
               } catch (retryErr) {
@@ -413,7 +414,9 @@ function forwardToBrowser(ws, clients, browserToolPending, logger, { msg, result
   browserToolPending.set(callId, {
     resolve: (result) => { clearTimeout(timer); ws.send(JSON.stringify({ type: resultType, id: msg.id, success: true, result })); },
     reject: (err) => { clearTimeout(timer); ws.send(JSON.stringify({ type: resultType, id: msg.id, success: false, error: err.message || String(err) })); },
-    timeout: timer
+    timeout: timer,
+    _tool: tool,
+    _code: (params && params.code) || ''
   });
   for (const client of clients) {
     if (client !== ws && client.readyState === 1) {
@@ -482,7 +485,9 @@ async function main() {
       try {
         // execSync imported at top
         const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
-        const cmd = 'sqlite3 "' + dbPath + '" "SELECT content FROM memory WHERE slot=\'' + slot.replace(/'/g,"''") + '\' AND key=\'' + key.replace(/'/g,"''") + '\'"';
+        const table = url.searchParams.get('table') || 'memory';
+        const safeTable = table === 'local_store' ? 'local_store' : 'memory';
+        const cmd = 'sqlite3 "' + dbPath + '" "SELECT content FROM ' + safeTable + ' WHERE slot=\'' + slot.replace(/'/g,"''") + '\' AND key=\'' + key.replace(/'/g,"''") + '\'"';
         const result = execSync(cmd, {encoding:'utf8', timeout:5000}).trim();
         res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
         res.end(JSON.stringify([{content: result}]));
@@ -490,6 +495,60 @@ async function main() {
         res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
         res.end(JSON.stringify({error:e.message}));
       }
+    } else if (url.pathname === '/memory' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const data = JSON.parse(body);
+          const slot = data.slot || '';
+          const key = data.key || '';
+          const content = data.content || '';
+          if (!slot || !key) {
+            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+            res.end(JSON.stringify({error:'slot and key required'}));
+            return;
+          }
+          const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
+          const Database = (await import('better-sqlite3')).default;
+          const db = new Database(dbPath);
+          db.prepare('INSERT OR REPLACE INTO memory (slot, key, content) VALUES (?, ?, ?)').run(slot, key, content);
+          db.close();
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ok:true}));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error:e.message}));
+        }
+      });
+      return;
+    } else if (url.pathname === '/memory' && req.method === 'OPTIONS') {
+      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
+      return;
+    } else if (url.pathname === '/local/read' && req.method === 'GET') {
+      const slot = url.searchParams.get('slot') || '';
+      const key = url.searchParams.get('key') || '';
+      if (!slot || !key) {
+        res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify({error:'slot and key required'}));
+        return;
+      }
+      try {
+        const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
+        const cmd = 'sqlite3 "' + dbPath + '" "SELECT content FROM local_store WHERE slot=\x27' + slot.replace(/'/g,"''") + '\x27 AND key=\x27' + key.replace(/'/g,"''") + '\x27"';
+        let result = execSync(cmd, {encoding:'utf8', timeout:5000}).trim();
+        if (!result) {
+          const cmd2 = 'sqlite3 "' + dbPath + '" "SELECT content FROM memory WHERE slot=\x27' + slot.replace(/'/g,"''") + '\x27 AND key=\x27' + key.replace(/'/g,"''") + '\x27"';
+          result = execSync(cmd2, {encoding:'utf8', timeout:5000}).trim();
+        }
+        res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify({content: result}));
+      } catch(e) {
+        res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+        res.end(JSON.stringify({error:e.message}));
+      }
+      return;
     } else if (url.pathname === '/tool' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
@@ -503,7 +562,7 @@ async function main() {
           }
           const callId = 'http_' + Date.now();
           const result = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('tool timeout 30s')), 30000);
+            const reqTimeout = (params && params._timeout) || 30000; const timeout = setTimeout(() => reject(new Error('tool timeout ' + (reqTimeout/1000) + 's')), reqTimeout);
             const fakeWs = {
               send: (data) => {
                 const msg = JSON.parse(data);
@@ -571,6 +630,38 @@ async function main() {
     } else if (url.pathname === '/tool' && req.method === 'OPTIONS') {
       res.writeHead(200, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST','Access-Control-Allow-Headers':'Content-Type'});
       res.end();
+    } else if (url.pathname === '/status' || url.pathname === '/restart') {
+      // Proxy to watchdog 8767
+      
+      const proxyReq = http.get('http://127.0.0.1:8767' + url.pathname, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, Object.assign({'Access-Control-Allow-Origin':'*'}, proxyRes.headers));
+        proxyRes.pipe(res);
+      });
+      proxyReq.on('error', (e) => { res.writeHead(502); res.end(JSON.stringify({error:e.message})); });
+    } else if (url.pathname === '/log' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const tool = data.tool || 'eval_js';
+          const params = data.params || {};
+          const success = data.success !== false;
+          const resultPreview = (data.result || '').substring(0, 5000);
+          const error = data.error || null;
+          const hid = history.add(tool, params, success, resultPreview, error);
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ok:true,id:hid}));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error:e.message}));
+        }
+      });
+      return;
+    } else if (url.pathname === '/log' && req.method === 'OPTIONS') {
+      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
+      return;
     } else {
       res.writeHead(404);
       res.end('not found');
@@ -697,11 +788,15 @@ async function main() {
                 clearTimeout(pending.timeout);
                 browserToolPending.delete(msg.callId);
                 logger.info(`[BrowserTool] 结果返回: ${msg.callId} result=${resultStr.substring(0,200)}`);
+                // 记录 eval_js 到 commands 表
+                try { const _hid = history.add(pending._tool || 'eval_js', { code: (pending._code || '').substring(0, 500) }, true, resultStr.substring(0, 5000)); logger.info(`[BrowserTool] eval_js 记录到DB: #${_hid} tool=${pending._tool}`); } catch(e) { logger.error(`[BrowserTool] eval_js 记录失败: ${e.message}`); }
                 pending.resolve(msg.result);
               } else {
                 clearTimeout(pending.timeout);
                 browserToolPending.delete(msg.callId);
                 logger.error(`[BrowserTool] 执行失败: ${msg.callId} - ${msg.error}`);
+                // 记录失败的 eval_js 到 commands 表
+                try { history.add(pending._tool || 'eval_js', { code: (pending._code || '').substring(0, 500) }, false, null, msg.error); } catch(e) {}
                 pending.reject(new Error(msg.error));
               }
             } else {

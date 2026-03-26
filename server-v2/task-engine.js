@@ -2,6 +2,7 @@
 // 新增: if/else/elseIf 分支, forEach/while 循环, compute 变量运算, sub-batch 子任务
 
 import StateManager, { TaskState } from './state-manager.js';
+import { sshFix } from './core/pipeline.js';
 
 class TaskEngine {
   constructor(logger, hub, safety, errorClassifier, router) {
@@ -267,7 +268,7 @@ class TaskEngine {
     }
 
     if (iteration >= maxLoop) {
-      this.logger.warn(`[TaskEngine] while 循环达到最大迭代数 ${maxLoop}`);
+      this.logger.info(`[TaskEngine] ⚠️ while 循环达到最大迭代数 ${maxLoop}`);
     }
 
     if (step.saveAs) {
@@ -284,8 +285,9 @@ class TaskEngine {
    */
   async _executeCompute(batchId, step, stepIndex, onStepComplete) {
     try {
-      if (step.operations && Array.isArray(step.operations)) {
-        for (const op of step.operations) {
+      const opsArray = step.operations || step.ops;
+      if (opsArray && Array.isArray(opsArray)) {
+        for (const op of opsArray) {
           if (op.set && op.value !== undefined) {
             let value = this.stateManager.resolveTemplate(batchId, String(op.value));
             // 尝试数学运算
@@ -362,7 +364,8 @@ class TaskEngine {
    */
   async _executeToolStep(batchId, step, stepIndex, options, onStepComplete) {
     // 解析模板
-    const resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
+    let resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
+    if (step.tool === "run_process" || step.tool === "run_command") { resolvedParams = sshFix(step.tool, resolvedParams, this.logger); }
 
     // 安全检查
     const safetyCheck = await this.safety.checkOperation(step.tool, resolvedParams);
@@ -413,22 +416,31 @@ class TaskEngine {
         }
       }
 
+      // v2.2: 从工具返回值中检测真实的 success 状态
+      let toolSuccess = true;
+      if (result && typeof result === 'object') {
+        if ('success' in result && result.success === false) toolSuccess = false;
+        if ('exitCode' in result && result.exitCode !== 0) toolSuccess = false;
+      }
       const stepResult = {
         stepIndex,
         tool: step.tool,
-        success: true,
+        success: toolSuccess,
         result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr)
       };
 
       this.stateManager.recordStepResult(batchId, stepIndex, stepResult);
 
-      // 直接处理 saveAs（不依赖 recordStepResult 从 task.steps 取）
-      if (step.saveAs && stepResult.success) {
-        let value = stepResult.result;
-        if (typeof value === 'string') {
-          value = value.trim();
-          try { value = JSON.parse(value); } catch (e) {}
+      // 直接处理 saveAs（v2.2: 统一存 {success, result, error} 对象）
+      if (step.saveAs) {
+        let parsedResult = stepResult.result;
+        if (typeof parsedResult === 'string') {
+          parsedResult = parsedResult.trim();
+          try { parsedResult = JSON.parse(parsedResult); } catch (e) {}
         }
+        const value = stepResult.success
+          ? { success: true, result: parsedResult }
+          : { success: false, error: stepResult.error, errorType: stepResult.errorType };
         this.stateManager.setVariable(batchId, step.saveAs, value);
         this.logger.info(`[TaskEngine] 工具步骤 saveAs: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : String(value).substring(0,100)}`);
       }

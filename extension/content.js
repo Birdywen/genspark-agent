@@ -61,7 +61,7 @@
 
   const CONFIG = {
     SCAN_INTERVAL: 200,
-    TIMEOUT_MS: 120000,
+    TIMEOUT_MS: 600000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
     DEBUG: false,
@@ -679,7 +679,7 @@ ${toolSummary}
       var hdr = text.substring(si + MARKER.length, he).trim();
       var hdrParts = hdr.split(/\s+/);
       if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) { searchFrom = si + 1; continue; }
-      var toolName = hdrParts[0];
+      var toolName = hdrParts[0]; if (toolName.indexOf("BATCH") === 0) { searchFrom = si + 1; continue; }
       var customEnd = hdrParts.length > 1 ? hdrParts[1] : null;
       // 用自定义结束标记或默认 omega END
       var actualEnd = customEnd || END_STR;
@@ -825,7 +825,10 @@ ${toolSummary}
       var header = block.substring(HERE.length, headerEnd).trim();
       var hdrParts = header.split(/\s+/);
       if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) continue;
-      var toolName = hdrParts[0];
+      var toolName = hdrParts[0]; if (toolName.indexOf("BATCH") === 0) { searchFrom = si + 1; continue; }
+      // 工具名完整性验证：防止截断的工具名（如 run_ 而非 run_process）
+      var knownTools = ["run_process","run_command","eval_js","write_file","read_file","edit_file","vfs_save","vfs_read","vfs_local_write","vfs_local_read","vfs_list","vfs_delete","vfs_append","vfs_search","vfs_query","vfs_write","vfs_exec","web_search","screenshot","take_screenshot","browser_click","browser_eval","browser_navigate","navigate","list_tabs","list_dir","list_directory","read_multiple_files","search_files","create_directory","find_text","crawler","delay_run","bg_run","bg_status","bg_kill","reload_tools","broadcast","ssh-oracle:exec","ssh-oracle:read_file","ssh-oracle:write_file","ssh-oracle:edit_file"];
+      if (knownTools.indexOf(toolName) === -1) continue;
       
       var blockBody = block.substring(headerEnd + 1);
       var lines = blockBody.split(NL);
@@ -842,6 +845,36 @@ ${toolSummary}
         // Extract when
         var whenMatch = line.match(/^@when=(.*)/);
         if (whenMatch) { when = whenMatch[1]; idx++; continue; }
+        // @edits for edit_file (oldText<<DELIM / newText<<DELIM pairs)
+        if (line.trim() === '@edits' || line.indexOf('@oldText<<') === 0) {
+          if (!params.edits) params.edits = [];
+          if (line.trim() === '@edits') { idx++; }
+          while (idx < lines.length) {
+            var eline = lines[idx];
+            if (eline.indexOf('@oldText<<') === 0) {
+              var odm = eline.match(/^@oldText<<(\S+)/);
+              if (!odm) break;
+              var odelim = odm[1], obuf = [];
+              idx++;
+              while (idx < lines.length && lines[idx] !== odelim) {
+                obuf.push(lines[idx]); idx++;
+              }
+              idx++;
+              if (idx < lines.length && lines[idx].indexOf('@newText<<') === 0) {
+                var ndm = lines[idx].match(/^@newText<<(\S+)/);
+                if (!ndm) break;
+                var ndelim = ndm[1], nbuf = [];
+                idx++;
+                while (idx < lines.length && lines[idx] !== ndelim) {
+                  nbuf.push(lines[idx]); idx++;
+                }
+                idx++;
+                params.edits.push({ oldText: obuf.join(NL), newText: nbuf.join(NL) });
+              }
+            } else { break; }
+          }
+          continue;
+        }
         // Heredoc param
         var hdm = line.match(/^@(\w+)<<(\S+)\s*$/);
         if (hdm) {
@@ -978,7 +1011,7 @@ ${toolSummary}
     if (text.indexOf(hereBatchMarker) !== -1) {
       var hereBatch = parseHereBatchFormat(text);
       if (hereBatch && !state.executedCalls.has('herebatch:' + hereBatch.start)) {
-        return [{ name: '__BATCH__', params: hereBatch.steps, isBatch: true, start: hereBatch.start }];
+        return [{ name: '__BATCH__', params: { steps: hereBatch.steps }, isBatch: true, start: hereBatch.start }];
       }
     }
 
@@ -1319,6 +1352,8 @@ ${toolSummary}
 
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') { log('Agent disabled, skip batch'); return; }
     clearToolCallDetection();
 
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
@@ -1546,6 +1581,8 @@ ${toolSummary}
   // === END async_task 引擎 ===
 
   function executeToolCall(tool, callHash) {
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') { log('Agent disabled, skip tool'); return; }
     clearToolCallDetection();
     
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
@@ -2126,6 +2163,9 @@ ${toolSummary}
   // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
+    // Real-time disable check (no refresh needed)
+    const dKey = 'agent_disabled_' + location.href.split('?')[1];
+    if (localStorage.getItem(dKey) === 'true') return;
     // SSE 已成功执行当前消息中的工具调用，跳过 DOM 扫描避免重复
     // 但仅在 SSE 最近有活动时才跳过（避免 SSE 断开后 DOM 也不工作）
     if (sseState.executedInCurrentMessage && (Date.now() - sseState.lastDeltaTime < 30000)) return;
@@ -2542,9 +2582,9 @@ ${toolSummary}
       const source = hasServerData ? '服务端' : '本地';
       
       // 主要靠字符数判断，消息数辅助
-      if (effectiveChars > 200000 || totalMsgs > 800) {
+      if (effectiveChars > 350000 || totalMsgs > 300) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 已超过压缩阈值，执行 compress-chat 压缩]`;
-      } else if (effectiveChars > 180000 || totalMsgs > 600) {
+      } else if (effectiveChars > 300000 || totalMsgs > 250) {
         contextInfo = `\n⚠️ [对话: ${totalMsgs}条/${effectiveK}K${source}(含注入${Math.round(injectedSize/1000)}K) — 接近压缩阈值]`;
       } else {
         contextInfo = `\n[对话状态: ${totalMsgs}条/${effectiveK}K${source}]`;
@@ -3855,18 +3895,14 @@ ${conversationText}
 
         const newMsgs = [];
 
-        // ── Section 1+2: Forged Prompt (从 Supabase 加载) ──
-        const SB_URL = 'https://gqzkywxxdtmwrcmvsrnr.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxemt5d3h4ZHRtd3JjbXZzcm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzcxNzksImV4cCI6MjA4NzAxMzE3OX0.G_VEfkhrGC4ncEIV7xTBjKYBDJAjDCATC-ZPivaSnD0';
-        const sbHeaders = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
-        
-        addLog('🔍 Loading forged prompt from Supabase...', 'info');
+        // ── Section 1+2: Forged Prompt (从 agent.db 加载) ──
+        addLog('🔍 Loading forged prompt from agent.db...', 'info');
         let forgedCount = 0;
         let forgedSize = 0;
         try {
-          const sbResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('toolkit:_forged:experience-dialogues') + '&select=content&limit=1', { headers: sbHeaders });
-          const sbRows = await sbResp.json();
-          const forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
+          const forgedResp = await fetch('http://127.0.0.1:8766/memory?slot=toolkit&key=_forged:experience-dialogues');
+          const forgedRows = await forgedResp.json();
+          const forgedRaw = (forgedRows && forgedRows[0]) ? forgedRows[0].content : '';
           if (forgedRaw) {
             const dialogues = JSON.parse(forgedRaw);
             if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
@@ -3875,11 +3911,11 @@ ${conversationText}
                 forgedCount++;
                 forgedSize += (d.content || '').length;
               }
-              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded from Supabase', 'success');
+              addLog('✅ Forged prompt: ' + forgedCount + ' msgs (' + Math.round(forgedSize/1024) + 'K) loaded from agent.db', 'success');
             }
           }
           if (forgedCount === 0) {
-            addLog('⚠️ No forged prompt found in Supabase', 'error');
+            addLog('⚠️ No forged prompt found in agent.db', 'error');
           }
         } catch(e) {
           addLog('⚠️ Forged load failed: ' + e.message, 'error');
@@ -3889,10 +3925,10 @@ ${conversationText}
         // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
         // 暂时跳过，不注入空消息
 
-        // ── Section 4: Context (VFS session summary, 从 Supabase 加载) ──
+        // ── Section 4: Context (VFS session summary, 从 agent.db 加载) ──
         let vfsContext = '';
         try {
-          const ctxResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent('slot:context') + '&select=content&limit=1', { headers: sbHeaders });
+          const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
           const ctxRows = await ctxResp.json();
           vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
         } catch(e) {
@@ -3920,9 +3956,10 @@ ${conversationText}
           summaryParts.push('## VFS Context (Session Memory)', trimmedCtx);
         }
 
+
         const contextSummary = summaryParts.join('\n');
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: contextSummary });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved. Ready to continue.' });
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved.\n\n请先运行以下命令恢复上下文：\ncd ~/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "SELECT timestamp,tool,CASE WHEN success=1 THEN \'✓\' ELSE \'✗ \'||substr(error,1,80) END as result,substr(params,1,200) FROM commands WHERE timestamp >= date(\'now\',\'-1 day\') ORDER BY id DESC LIMIT 80"\n\n常用查询索引（按需使用）：\n- 经验教训/工作规则: node dbfile.cjs get local_store guide cheatsheet\n- DB手册(表结构+SQL): node dbfile.cjs get local_store guide agent-db-manual\n- 可用脚本列表: node dbfile.cjs list local_store script\n- Skill模块: node dbfile.cjs list memory forged' });
         addLog('📝 Section 4: Context (' + contextSummary.length + ' chars)', 'success');
 
         // ── Tail: 保留最近 TAIL_KEEP 条原样 ──
@@ -4004,26 +4041,16 @@ ${conversationText}
           if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
         }
 
-        // ── Step 4: 备份摘要到 Supabase ──
+        // ── Step 4: 备份摘要到 agent.db ──
         try {
           const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2;
           const finalCtx = ctxMsgIdx >= 0 ? newMsgs[ctxMsgIdx].content : contextSummary;
-          // upsert context to Supabase
-          const ctxName = 'slot:context';
-          const existResp = await fetch(SB_URL + '/rest/v1/agent_memory?name=eq.' + encodeURIComponent(ctxName) + '&select=id&limit=1', { headers: sbHeaders });
-          const existRows = await existResp.json();
-          if (existRows && existRows[0]) {
-            await fetch(SB_URL + '/rest/v1/agent_memory?id=eq.' + existRows[0].id, {
-              method: 'PATCH', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-              body: JSON.stringify({ content: finalCtx, updated_at: new Date().toISOString() })
-            });
-          } else {
-            await fetch(SB_URL + '/rest/v1/agent_memory', {
-              method: 'POST', headers: Object.assign({}, sbHeaders, { 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-              body: JSON.stringify({ type: 'slot', scene: 'context', name: ctxName, content: finalCtx, updated_at: new Date().toISOString() })
-            });
-          }
-          addLog('💾 Context backed up to Supabase', 'success');
+          await fetch('http://127.0.0.1:8766/memory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slot: 'context', key: 'session-state', content: finalCtx })
+          });
+          addLog('💾 Context backed up to agent.db', 'success');
         } catch(e) {
           addLog('⚠️ Context backup failed: ' + e.message, 'error');
         }
@@ -4103,8 +4130,8 @@ ${conversationText}
         allMsgs.forEach(m => { totalChars += m.textContent.length; });
         const injSize = window.__injectedPromptSize || 0;
         const effChars = totalChars + injSize;
-        overThreshold = effChars > 200000 || totalMsgs > 800;
-        nearThreshold = effChars > 180000 || totalMsgs > 600;
+        overThreshold = effChars > 350000 || totalMsgs > 300;
+        nearThreshold = effChars > 300000 || totalMsgs > 250;
       } catch(e) {}
       
       // 优先级: ready(总结就绪) > warning(超阈值) > 正常
@@ -4117,6 +4144,13 @@ ${conversationText}
         btn.classList.add('warning');
         btn.textContent = '🗜️ 压缩!';
         btn.title = '⚠️ 对话已超过压缩阈值 — 点击自动生成总结并压缩';
+
+        // 自动触发 fork-compress
+        if (!window.__autoCompressTriggered) {
+          window.__autoCompressTriggered = true;
+          console.log('[AutoCompress] 200+ msgs, auto-triggering fork-compress');
+          setTimeout(function() { btn.click(); }, 2000);
+        }
       } else if (nearThreshold) {
         btn.classList.remove('ready');
         btn.classList.add('warning');
@@ -4805,6 +4839,12 @@ ${conversationText}
       // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
       case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
+        // Red switch: disabled tab ignores browser tool calls
+        const dKeyBtc = 'agent_disabled_' + location.href.split('?')[1];
+        if (localStorage.getItem(dKeyBtc) === 'true') {
+          log('Agent disabled on this tab, ignoring browser_tool_call');
+          break;
+        }
         addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');
 
         const sendBrowserResult = (success, result, error) => {
@@ -5537,7 +5577,7 @@ ${conversationText}
     // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
     // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
-    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append');
+    var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append' || call.name === 'run_process' || call.name === 'run_command');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
@@ -5629,8 +5669,8 @@ ${conversationText}
     // Format: \u03A9CODE[:slot=conversationId]\n...content...\n\u03A9CODEEND
     //         \u03A9DATA[:slot=conversationId]\n...content...\n\u03A9DATAEND
     var omegaWritePatterns = [
-      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" },
-      { prefix: "\u03A9DATA", endTag: "\u03A9DATAEND", label: "OMEGADATA" }
+      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" }
+      // ΩDATA disabled 2026-03-26 (was truncating ΩCODE)
     ];
     for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
       var owp = omegaWritePatterns[owi];
@@ -5678,6 +5718,28 @@ ${conversationText}
       var modStr = (owSlotId ? ' slot:' + owSlotId.substring(0,8) : '') + (owSlotName ? ' name:' + owSlotName : '') + (owAppend ? ' APPEND' : '');
       addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + modStr, "tool");
       log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
+      // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
+      try {
+        var owParsed = JSON.parse(owContent.trim());
+        if (owParsed && (owParsed.tool || owParsed.steps)) {
+          addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
+          sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);
+          log('SSE ' + owp.label + ' TOOL CALL:', owParsed.tool || (owParsed.steps.length + ' steps'));
+          sseState.executedInCurrentMessage = true;
+          if (owParsed.steps) {
+            var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
+            addExecutedCall(batchHash);
+            addDedupKey('dedup:__BATCH__:' + JSON.stringify(owParsed.steps).substring(0, 200));
+            executeBatchCall(owParsed, batchHash);
+          } else {
+            var callHash = 'sse:' + sseState.messageId + ':omega_call:' + owStartIdx;
+            addExecutedCall(callHash);
+            addDedupKey('dedup:' + owParsed.tool + ':' + JSON.stringify(owParsed.params || {}).substring(0, 150));
+            executeToolCall({name: owParsed.tool, params: owParsed.params || {}}, callHash);
+          }
+          continue;
+        }
+      } catch(e) { /* not JSON or no tool/steps, fall through to VFS write */ }
       // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
       if (owSlotName && typeof window.vfs === 'object') {
         // VFS name-based write (with optional append)
@@ -5746,9 +5808,10 @@ ${conversationText}
     }
 
     // 检测 ΩHEREBATCH 格式（HEREDOC 批量执行）
-    var hereBatchSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
+    // [RETIRED 2026-03-26] HEREBATCH replaced by OMEGA CODE batch
+    // var hereBatchSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCH';
     var hereBatchEndSSEMarker = String.fromCharCode(0x03A9) + 'HEREBATCHEND';
-    if (text.indexOf(hereBatchSSEMarker) !== -1 && text.indexOf(hereBatchEndSSEMarker) !== -1) {
+    if (false) { // HEREBATCH RETIRED
       var hereBatchSSE = parseHereBatchFormat(text);
       if (hereBatchSSE) {
         var hereBatchSig = 'sse:herebatch:' + hereBatchSSE.start;
@@ -5997,65 +6060,103 @@ ${conversationText}
 
 })();
 
-// === Omega 手动执行快捷键 (Ctrl+Shift+E) ===
+// Omega Hotkey v2 - Ctrl+Shift+E
+// 匹配 ΩHERE/ΩHEREBATCH 命令，发到 8766/tool 执行
 (function() {
-  document.addEventListener('keydown', async function(e) {
-    // Ctrl+Shift+E 触发
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
-      e.preventDefault();
-      console.log('[Omega] 快捷键触发');
-      
-      // 获取最后一条 AI 消息
-      const msgs = document.querySelectorAll('.conversation-statement.assistant');
-      const lastMsg = msgs[msgs.length - 1];
-      if (!lastMsg) {
-        alert('No AI message found');
-        return;
+  if (window.__omegaHotkeyV2) return;
+  window.__omegaHotkeyV2 = true;
+
+  function parseOmegaHere(text) {
+    // 解析单个 ΩHERE block
+    var lines = text.split('\n');
+    var tool = null, params = {};
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!tool && line.match(/HERE\s+(\w+)/)) {
+        tool = line.match(/HERE\s+(\w+)/)[1];
       }
-      
-      // 提取文本
-      const contentEl = lastMsg.querySelector('.markdown-viewer') || 
-                        lastMsg.querySelector('.bubble .content') ||
-                        lastMsg.querySelector('.bubble') || lastMsg;
-      const text = contentEl.innerText || lastMsg.innerText || '';
-      
-      // 匹配 Omega 命令
-      const match = text.match(/[ΩŒ©]\{[\s\S]*?\}[ΩŒ©]?STOP/);
-      if (!match) {
-        alert('No Omega command found in last message');
-        return;
-      }
-      
-      console.log('[Omega] Found command:', match[0].substring(0, 100) + '...');
-      
-      // 发送到本地服务器执行
-      try {
-        const resp = await fetch('http://localhost:7749/exec', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: match[0] })
-        });
-        const data = await resp.json();
-        
-        if (data.success) {
-          // 填入输入框
-          const input = document.querySelector('textarea.chat-input') || document.querySelector('textarea');
-          if (input) {
-            input.value = data.result;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
-            console.log('[Omega] Result pasted, press Enter to send');
-          } else {
-            navigator.clipboard.writeText(data.result);
-            alert('Result copied to clipboard!');
-          }
-        } else {
-          alert('Execution error: ' + data.error);
-        }
-      } catch (err) {
-        alert('Server error (is omega-server running?): ' + err.message);
+      var paramMatch = line.match(/^@(\w+)=(.*)/);
+      if (paramMatch) {
+        params[paramMatch[1]] = paramMatch[2];
       }
     }
+    return tool ? { tool: tool, params: params } : null;
+  }
+
+  async function execTool(tool, params) {
+    var resp = await fetch('http://localhost:8766/tool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool: tool, params: params })
+    });
+    return await resp.json();
+  }
+
+  document.addEventListener('keydown', async function(e) {
+    if (!(e.ctrlKey && e.shiftKey && e.key === 'E')) return;
+    e.preventDefault();
+    console.log('[OmegaV2] Ctrl+Shift+E triggered');
+
+    // 获取最后一条 AI 消息的代码块
+    var codeBlocks = document.querySelectorAll('pre code');
+    if (!codeBlocks.length) {
+      alert('[OmegaV2] No code blocks found');
+      return;
+    }
+    var lastCode = codeBlocks[codeBlocks.length - 1].innerText;
+    console.log('[OmegaV2] Last code block:', lastCode.substring(0, 100));
+
+    // 检测命令类型
+    var results = [];
+    
+    if (lastCode.indexOf('HEREBATCH') !== -1) {
+      // 批量命令 - 按 HERE 分割
+      var blocks = lastCode.split(/\nHERE\s+/);
+      for (var i = 1; i < blocks.length; i++) {
+        var parsed = parseOmegaHere('HERE ' + blocks[i]);
+        if (parsed) {
+          console.log('[OmegaV2] Exec:', parsed.tool, JSON.stringify(parsed.params).substring(0, 80));
+          try {
+            var r = await execTool(parsed.tool, parsed.params);
+            results.push('[' + parsed.tool + '] ' + (r.success ? 'OK' : 'FAIL') + ': ' + JSON.stringify(r).substring(0, 200));
+          } catch(err) {
+            results.push('[' + parsed.tool + '] ERROR: ' + err.message);
+          }
+        }
+      }
+    } else if (lastCode.indexOf('HERE ') !== -1) {
+      // 单命令
+      var parsed = parseOmegaHere(lastCode);
+      if (parsed) {
+        console.log('[OmegaV2] Exec single:', parsed.tool);
+        try {
+          var r = await execTool(parsed.tool, parsed.params);
+          results.push('[' + parsed.tool + '] ' + (r.success ? 'OK' : 'FAIL') + ': ' + JSON.stringify(r).substring(0, 200));
+        } catch(err) {
+          results.push('[' + parsed.tool + '] ERROR: ' + err.message);
+        }
+      }
+    }
+
+    if (!results.length) {
+      alert('[OmegaV2] No executable Omega commands found in last code block');
+      return;
+    }
+
+    // 结果填入输入框
+    var resultText = results.join('\n');
+    var input = document.querySelector('textarea');
+    if (input) {
+      var nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeSet.call(input, resultText);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      console.log('[OmegaV2] Result pasted to input');
+    } else {
+      navigator.clipboard.writeText(resultText);
+      alert('[OmegaV2] Result copied to clipboard');
+    }
   });
-  console.log('[Omega] Hotkey Ctrl+Shift+E registered');
+
+  console.log('[OmegaV2] Hotkey Ctrl+Shift+E registered (server: 8766)');
 })();

@@ -73,6 +73,11 @@ export default class VariableResolver {
         return undefined;
       }
       
+      // v2.2: 虚拟属性 failure = !success（用于 when 条件）
+      if (part === 'failure' && value && typeof value === 'object' && 'success' in value) {
+        return !value.success;
+      }
+      
       // 数组索引或对象属性
       value = value[part];
     }
@@ -191,7 +196,27 @@ export default class VariableResolver {
       return false;
     }
 
-    // 单值 truthy 检查
+    // 算术运算: +, -, *, /
+    const arithmeticOps = ['+', '-', '*', '/'];
+    for (const op of arithmeticOps) {
+      // 找到不在字符串内的运算符
+      const idx = expr.lastIndexOf(op);
+      if (idx > 0 && expr[idx-1] !== '=' && expr[idx-1] !== '!' && expr[idx-1] !== '>' && expr[idx-1] !== '<') {
+        const left = this._resolveExprValue(expr.substring(0, idx).trim(), vars);
+        const right = this._resolveExprValue(expr.substring(idx + 1).trim(), vars);
+        const numL = typeof left === 'number' ? left : parseFloat(left);
+        const numR = typeof right === 'number' ? right : parseFloat(right);
+        if (!isNaN(numL) && !isNaN(numR)) {
+          switch(op) {
+            case '+': return numL + numR;
+            case '-': return numL - numR;
+            case '*': return numL * numR;
+            case '/': return numR !== 0 ? numL / numR : 0;
+          }
+        }
+      }
+    }
+
     const val = this._resolveExprValue(expr, vars);
     return !!val;
   }

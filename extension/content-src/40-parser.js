@@ -106,7 +106,7 @@
       var hdr = text.substring(si + MARKER.length, he).trim();
       var hdrParts = hdr.split(/\s+/);
       if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) { searchFrom = si + 1; continue; }
-      var toolName = hdrParts[0];
+      var toolName = hdrParts[0]; if (toolName.indexOf("BATCH") === 0) { searchFrom = si + 1; continue; }
       var customEnd = hdrParts.length > 1 ? hdrParts[1] : null;
       // 用自定义结束标记或默认 omega END
       var actualEnd = customEnd || END_STR;
@@ -252,7 +252,10 @@
       var header = block.substring(HERE.length, headerEnd).trim();
       var hdrParts = header.split(/\s+/);
       if (!hdrParts[0] || !hdrParts[0].match(/^[a-zA-Z_][a-zA-Z0-9_:-]*$/)) continue;
-      var toolName = hdrParts[0];
+      var toolName = hdrParts[0]; if (toolName.indexOf("BATCH") === 0) { searchFrom = si + 1; continue; }
+      // 工具名完整性验证：防止截断的工具名（如 run_ 而非 run_process）
+      var knownTools = ["run_process","run_command","eval_js","write_file","read_file","edit_file","vfs_save","vfs_read","vfs_local_write","vfs_local_read","vfs_list","vfs_delete","vfs_append","vfs_search","vfs_query","vfs_write","vfs_exec","web_search","screenshot","take_screenshot","browser_click","browser_eval","browser_navigate","navigate","list_tabs","list_dir","list_directory","read_multiple_files","search_files","create_directory","find_text","crawler","delay_run","bg_run","bg_status","bg_kill","reload_tools","broadcast","ssh-oracle:exec","ssh-oracle:read_file","ssh-oracle:write_file","ssh-oracle:edit_file"];
+      if (knownTools.indexOf(toolName) === -1) continue;
       
       var blockBody = block.substring(headerEnd + 1);
       var lines = blockBody.split(NL);
@@ -269,6 +272,36 @@
         // Extract when
         var whenMatch = line.match(/^@when=(.*)/);
         if (whenMatch) { when = whenMatch[1]; idx++; continue; }
+        // @edits for edit_file (oldText<<DELIM / newText<<DELIM pairs)
+        if (line.trim() === '@edits' || line.indexOf('@oldText<<') === 0) {
+          if (!params.edits) params.edits = [];
+          if (line.trim() === '@edits') { idx++; }
+          while (idx < lines.length) {
+            var eline = lines[idx];
+            if (eline.indexOf('@oldText<<') === 0) {
+              var odm = eline.match(/^@oldText<<(\S+)/);
+              if (!odm) break;
+              var odelim = odm[1], obuf = [];
+              idx++;
+              while (idx < lines.length && lines[idx] !== odelim) {
+                obuf.push(lines[idx]); idx++;
+              }
+              idx++;
+              if (idx < lines.length && lines[idx].indexOf('@newText<<') === 0) {
+                var ndm = lines[idx].match(/^@newText<<(\S+)/);
+                if (!ndm) break;
+                var ndelim = ndm[1], nbuf = [];
+                idx++;
+                while (idx < lines.length && lines[idx] !== ndelim) {
+                  nbuf.push(lines[idx]); idx++;
+                }
+                idx++;
+                params.edits.push({ oldText: obuf.join(NL), newText: nbuf.join(NL) });
+              }
+            } else { break; }
+          }
+          continue;
+        }
         // Heredoc param
         var hdm = line.match(/^@(\w+)<<(\S+)\s*$/);
         if (hdm) {
@@ -405,7 +438,7 @@
     if (text.indexOf(hereBatchMarker) !== -1) {
       var hereBatch = parseHereBatchFormat(text);
       if (hereBatch && !state.executedCalls.has('herebatch:' + hereBatch.start)) {
-        return [{ name: '__BATCH__', params: hereBatch.steps, isBatch: true, start: hereBatch.start }];
+        return [{ name: '__BATCH__', params: { steps: hereBatch.steps }, isBatch: true, start: hereBatch.start }];
       }
     }
 

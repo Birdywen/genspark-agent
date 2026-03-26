@@ -75,7 +75,7 @@ export default {
     const hasSleep = /\bsleep\s+\d/.test(cmd) || (params.stdin && /\bsleep\s+\d/.test(params.stdin));
     const isLong = longPatterns.some(p => p.test(cmd));
 
-    if ((isLong || hasSleep) && !params._noAutoRoute) {
+    if ((isLong || hasSleep) && !params._noAutoRoute && !params.no_bg) {
       trace.span('shell', { action: 'auto_route_to_bg_run', reason: hasSleep ? 'sleep' : 'long_command' });
       params._noAutoRoute = true;
       const bgDriver = (await import('./bg.js')).default;

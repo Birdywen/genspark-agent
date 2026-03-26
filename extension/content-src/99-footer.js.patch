@@ -1,0 +1,3 @@
+// 找到旧的 Omega 快捷键代码位置，替换整段
+// 旧: Ctrl+Shift+E -> 匹配 Ω{...}ΩSTOP -> 发到 7749
+// 新: Ctrl+Shift+E -> 匹配 ΩHERE...ΩEND -> 发到 8766
