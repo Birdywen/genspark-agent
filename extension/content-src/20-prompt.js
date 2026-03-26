@@ -32,38 +32,7 @@
 
 ## 工具调用格式
 
-### ΩHERE Heredoc 格式（默认）
 
-ΩHERE 工具名 @参数=值 @大内容参数<<分隔符
-任意内容（零转义，原样传递）
-分隔符
-ΩEND
-
-**run_command 示例:**
-ΩHERE run_command
-@command=bash
-@stdin<<SCRIPT
-echo "hello $USER"
-SCRIPT
-ΩEND
-
-edit_file 用 @edits @oldText<<OLD ... OLD @newText<<NEW ... NEW 分隔。oldText 必须与文件完全一致，匹配失败改用 write_file 重写。
-
-规则: 数值自动转换，true/false 转布尔值。分隔符可为任意标识符（EOF/SCRIPT/CODE）。
-自定义结束标记: 内容含 ΩEND 时，用 ΩHERE 工具名 自定义结束词。
-
-### 批量执行 (ΩBATCH)
-
-ΩBATCH{"steps":[ {"tool":"工具1","params":{...},"saveAs":"变量名"}, {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}} ],"stopOnError":false}ΩEND
-
-when 条件: success / contains / regex（用 var 不是 variable）
-
-| 场景 | 格式 |
-|------|------|
-| 纯 bash 多步操作 | 单个 ΩHERE bash 脚本 |
-| 跨工具 + 简单参数 | ΩBATCH |
-| 适合批量 | 查询、API 调用、环境检查 |
-| 不适合批量 | write_file 长内容(>50行)、edit_file 复杂修改 |
 
 ### 高级调度与标记
 
