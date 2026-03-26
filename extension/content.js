@@ -4488,7 +4488,7 @@ ${conversationText}
             stepIndex: msg.stepIndex,
             tool: msg.tool,
             success: false,
-            error: msg.error
+            error: msg.error || '未知错误'
           });
           // 更新进度条（错误状态）
           if (window.PanelEnhancer) {
@@ -4526,7 +4526,7 @@ ${conversationText}
               if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
               return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
             } else {
-              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error}`;
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error || "未知错误"}`;
             }
           }).join('\n\n');
           state.batchResults = []; // 清空
