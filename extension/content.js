@@ -5403,7 +5403,7 @@ ${conversationText}
         }
         owSearchFrom = candidateIdx + owp.prefix.length;
       }
-      if (owStartIdx === -1) continue;
+      if (owStartIdx === -1) { log('SSE ' + owp.label + ' NOT FOUND in text (len=' + text.length + ')'); continue; }
       var owEndMarker = "\n" + owp.endTag;
       var owEndIdx = text.indexOf(owEndMarker, owStartIdx);
       if (owEndIdx === -1 || owEndIdx <= owStartIdx) continue;
