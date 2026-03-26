@@ -220,12 +220,12 @@
           if (owParsed.steps) {
             var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
             addExecutedCall(batchHash);
-            addDedupKey('dedup:__BATCH__:' + owStartIdx + ':' + JSON.stringify(owParsed.steps).substring(0, 200));
+            addDedupKey('dedup:' + Date.now() + ':' + Math.random());
             executeBatchCall(owParsed, batchHash);
           } else {
             var callHash = 'sse:' + sseState.messageId + ':omega_call:' + owStartIdx;
             addExecutedCall(callHash);
-            addDedupKey('dedup:' + owParsed.tool + ':' + owStartIdx + ':' + JSON.stringify(owParsed.params || {}).substring(0, 150));
+            addDedupKey('dedup:' + Date.now() + ':' + Math.random());
             executeToolCall({name: owParsed.tool, params: owParsed.params || {}}, callHash);
           }
           continue;
@@ -336,8 +336,8 @@
           try {
             const skipParsed = safeJsonParse(skipExtracted.json);
             if (skipParsed && skipParsed.tool) {
-              addDedupKey(`dedup:${skipParsed.tool}:${omegaIdx}:${JSON.stringify(skipParsed.params)}`);
-              addDedupKey(`exec:${skipParsed.tool}:${omegaIdx}:${JSON.stringify(skipParsed.params).substring(0, 200)}`);
+              addDedupKey('dedup:' + Date.now() + ':' + Math.random());
+              addDedupKey('exec:' + Date.now() + ':' + Math.random());
               log('SSE SKIP (example keyword):', skipParsed.tool);
             }
           } catch(e) {}
@@ -377,7 +377,7 @@
         log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
         addExecutedCall(callHash);
-        addDedupKey(`dedup:${parsed.tool}:${omegaIdx}:${JSON.stringify(parsed.params)}`);
+        addDedupKey('dedup:' + Date.now() + ':' + Math.random());
         sseState.executedInCurrentMessage = true;
         executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
