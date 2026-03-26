@@ -133,7 +133,7 @@ export default {
             }));
           }
         }
-        resolve({ success, result: output, exitCode: code });
+        resolve({ success, result: output, exitCode: code, error: success ? undefined : output || 'exit code ' + code });
       });
 
       proc.on('error', e => {
