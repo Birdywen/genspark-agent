@@ -794,42 +794,8 @@ ${toolSummary}
         }
       }
     }
-    // ========== ΩPLAN ==========
-    const planData = extractBalancedJson(text, 'ΩPLAN', true);
-    if (planData && !state.executedCalls.has('plan:' + planData.start)) {
-      const beforePlan = text.substring(Math.max(0, planData.start - 30), planData.start);
-      // 只检查紧邻的前文是否包含文档关键词
-      if (!beforePlan.includes('格式') && !beforePlan.includes('示例') && !beforePlan.includes('例如')) {
-        try {
-          const plan = safeJsonParse(planData.json);
-          if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planData.start, end: planData.end, isPlan: true }];
-        } catch (e) {}
-      }
-    }
 
-    // ========== ΩFLOW ==========
-    const flowData = extractBalancedJson(text, 'ΩFLOW', true);
-    if (flowData && !state.executedCalls.has('flow:' + flowData.start)) {
-      const beforeFlow = text.substring(Math.max(0, flowData.start - 30), flowData.start);
-      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例') && !beforeFlow.includes('例如')) {
-        try {
-          const flow = safeJsonParse(flowData.json);
-          if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];
-        } catch (e) {}
-      }
-    }
 
-    // ========== ΩRESUME ==========
-    const resumeData = extractBalancedJson(text, 'ΩRESUME', true);
-    if (resumeData && !state.executedCalls.has('resume:' + resumeData.start)) {
-      const beforeResume = text.substring(Math.max(0, resumeData.start - 30), resumeData.start);
-      if (!beforeResume.includes('格式') && !beforeResume.includes('示例') && !beforeResume.includes('例如')) {
-        try {
-          const resume = safeJsonParse(resumeData.json);
-          if (resume) return [{ name: '__RESUME__', params: resume, raw: 'ΩRESUME' + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];
-        } catch (e) {}
-      }
-    }
 
     // 方案3: 优先解析 ```tool 代码块
     const toolBlockCalls = parseToolCodeBlock(text);
@@ -5513,14 +5479,9 @@ ${conversationText}
             addLog("\u274C " + label + " write failed: " + e.message, "error");
           });
         })(owSlotId, owContent, owp.label, owAppend);
-      } else if (typeof window.writeCodeStorage === "function") {
-        window.writeCodeStorage(owContent).then(function(len) {
-          addLog("\u2705 " + owp.label + " stored " + len + " chars", "success");
-          log(owp.label + " stored:", len, "chars");
-        });
       } else {
-        window.__OMEGA_CODE = owContent;
-        addLog("\u26A0 " + owp.label + " saved to window.__OMEGA_CODE (storage unavailable)", "warning");
+        // writeCodeStorage removed - no useful purpose for tool call JSON
+        addLog("\u26A0 " + owp.label + " not executable, " + owContent.length + " chars ignored", "warning");
       }
     }
 

@@ -264,14 +264,9 @@
             addLog("\u274C " + label + " write failed: " + e.message, "error");
           });
         })(owSlotId, owContent, owp.label, owAppend);
-      } else if (typeof window.writeCodeStorage === "function") {
-        window.writeCodeStorage(owContent).then(function(len) {
-          addLog("\u2705 " + owp.label + " stored " + len + " chars", "success");
-          log(owp.label + " stored:", len, "chars");
-        });
       } else {
-        window.__OMEGA_CODE = owContent;
-        addLog("\u26A0 " + owp.label + " saved to window.__OMEGA_CODE (storage unavailable)", "warning");
+        // writeCodeStorage removed - no useful purpose for tool call JSON
+        addLog("\u26A0 " + owp.label + " not executable, " + owContent.length + " chars ignored", "warning");
       }
     }
 
