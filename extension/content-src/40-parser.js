@@ -223,6 +223,35 @@
       }
     }
 
+    // ========== ΩCODE DOM FALLBACK ==========
+    // When SSE hook not loaded (SPA nav), detect ΩCODE...ΩCODEEND in DOM
+    const ocPrefix = String.fromCharCode(0x03A9) + "CODE";
+    const ocEndTag = String.fromCharCode(0x03A9) + "CODEEND";
+    let ocStart = text.indexOf(ocPrefix + String.fromCharCode(10));
+    if (ocStart === -1) ocStart = text.indexOf(ocPrefix + "{");
+    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart)) {
+      const beforeOC = text.substring(Math.max(0, ocStart - 100), ocStart);
+      if (!/Example:|e\.g\.|示例|格式/.test(beforeOC)) {
+        try {
+          const ocEndIdx = text.indexOf(ocEndTag, ocStart);
+          if (ocEndIdx !== -1) {
+            const hdrEnd = text.indexOf(String.fromCharCode(10), ocStart);
+            let ocBody = (hdrEnd !== -1 && hdrEnd < ocEndIdx) ? text.substring(hdrEnd + 1, ocEndIdx).trim() : text.substring(ocStart + ocPrefix.length, ocEndIdx).trim();
+            ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
+            const ocObj = safeJsonParse(ocBody);
+            if (ocObj && (ocObj.tool || ocObj.steps)) {
+              if (ocObj.steps && Array.isArray(ocObj.steps)) {
+                return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];
+              } else {
+                return [{ name: ocObj.tool, params: ocObj.params || {}, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8 }];
+              }
+            }
+          }
+        } catch (e) {
+          if (CONFIG.DEBUG) console.log("[Agent] ΩCODE DOM fallback skip:", e.message);
+        }
+      }
+    }
     // ========== ΩPLAN ==========
     const planData = extractBalancedJson(text, 'ΩPLAN', true);
     if (planData && !state.executedCalls.has('plan:' + planData.start)) {

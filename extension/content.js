@@ -765,6 +765,35 @@ ${toolSummary}
       }
     }
 
+    // ========== ΩCODE DOM FALLBACK ==========
+    // When SSE hook not loaded (SPA nav), detect ΩCODE...ΩCODEEND in DOM
+    const ocPrefix = String.fromCharCode(0x03A9) + "CODE";
+    const ocEndTag = String.fromCharCode(0x03A9) + "CODEEND";
+    let ocStart = text.indexOf(ocPrefix + String.fromCharCode(10));
+    if (ocStart === -1) ocStart = text.indexOf(ocPrefix + "{");
+    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart)) {
+      const beforeOC = text.substring(Math.max(0, ocStart - 100), ocStart);
+      if (!/Example:|e\.g\.|示例|格式/.test(beforeOC)) {
+        try {
+          const ocEndIdx = text.indexOf(ocEndTag, ocStart);
+          if (ocEndIdx !== -1) {
+            const hdrEnd = text.indexOf(String.fromCharCode(10), ocStart);
+            let ocBody = (hdrEnd !== -1 && hdrEnd < ocEndIdx) ? text.substring(hdrEnd + 1, ocEndIdx).trim() : text.substring(ocStart + ocPrefix.length, ocEndIdx).trim();
+            ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
+            const ocObj = safeJsonParse(ocBody);
+            if (ocObj && (ocObj.tool || ocObj.steps)) {
+              if (ocObj.steps && Array.isArray(ocObj.steps)) {
+                return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];
+              } else {
+                return [{ name: ocObj.tool, params: ocObj.params || {}, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8 }];
+              }
+            }
+          }
+        } catch (e) {
+          if (CONFIG.DEBUG) console.log("[Agent] ΩCODE DOM fallback skip:", e.message);
+        }
+      }
+    }
     // ========== ΩPLAN ==========
     const planData = extractBalancedJson(text, 'ΩPLAN', true);
     if (planData && !state.executedCalls.has('plan:' + planData.start)) {
@@ -1066,13 +1095,14 @@ ${toolSummary}
     clearToolCallDetection();
 
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
-    const contentKey = `exec:__BATCH__:${JSON.stringify(batch).substring(0, 200)}`;
+    const batchStr = JSON.stringify(batch);
+    const contentKey = `exec:__BATCH__:${batchStr.length}:${Array.from(batchStr).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0).toString(36)}`;
     if (hasDedupKey(contentKey)) {
       log('跳过重复 BATCH 执行（内容级去重）');
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 30000);
+    addDedupKey(contentKey, 3000);
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1295,13 +1325,14 @@ ${toolSummary}
     clearToolCallDetection();
     
     // === 内容级去重: 防止 SSE + DOM 双通道重复执行 ===
-    const contentKey = `exec:${tool.name}:${JSON.stringify(tool.params).substring(0, 200)}`;
+    const paramStr = JSON.stringify(tool.params);
+    const contentKey = `exec:${tool.name}:${paramStr.length}:${Array.from(paramStr).reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0).toString(36)}`;
     if (hasDedupKey(contentKey)) {
       log('跳过重复执行（内容级去重）:', tool.name);
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 10000);
+    addDedupKey(contentKey, 3000);
     
     // === 本地拦截: list_tabs 查询所有标签页 ===
     if (tool.name === 'list_tabs') {
@@ -5429,7 +5460,7 @@ ${conversationText}
       log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
       // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
       try {
-        var owParsed = JSON.parse(owContent.trim());
+        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = JSON.parse(cleanOw);
         if (owParsed && (owParsed.tool || owParsed.steps)) {
           addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
           sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);
@@ -5448,7 +5479,7 @@ ${conversationText}
           }
           continue;
         }
-      } catch(e) { /* not JSON or no tool/steps, fall through to VFS write */ }
+      } catch(e) { addLog('\u26A0 ' + owp.label + ' JSON parse failed: ' + e.message + ' | content preview: ' + owContent.substring(0,80), 'warning'); log(owp.label + ' parse error:', e.message, 'content:', owContent.substring(0,120)); }
       // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
       if (owSlotName && typeof window.vfs === 'object') {
         // VFS name-based write (with optional append)
