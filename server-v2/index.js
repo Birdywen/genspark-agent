@@ -293,7 +293,8 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           if (isRetry && originalId) {
             history.updateById(originalId, { success: true, resultPreview: (result || '').substring(0, 5000), retriedAt: new Date().toISOString(), error: null });
           }
-          const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 5000), success ? null : result);
+          const errorMsg = success ? null : (result || r?.error || r?.errorType || '执行失败(无详情)');
+          const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 5000), errorMsg);
           // recorder
           for (const [recId, rec] of (recorder.activeRecordings instanceof Map ? recorder.activeRecordings : [])) {
             if (rec.status === 'recording') {

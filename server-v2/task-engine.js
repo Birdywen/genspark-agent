@@ -422,11 +422,13 @@ class TaskEngine {
         if ('success' in result && result.success === false) toolSuccess = false;
         if ('exitCode' in result && result.exitCode !== 0) toolSuccess = false;
       }
+      const stepError = toolSuccess ? undefined : (result?.error || result?.stderr || (typeof resultStr === 'string' && resultStr.length > 0 ? resultStr.slice(0, 500) : '执行失败(无详情)'));
       const stepResult = {
         stepIndex,
         tool: step.tool,
         success: toolSuccess,
-        result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr)
+        result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr),
+        ...(stepError ? { error: stepError } : {})
       };
 
       this.stateManager.recordStepResult(batchId, stepIndex, stepResult);
