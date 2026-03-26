@@ -75,3 +75,4 @@ scripts/pipeline-flowchart.html
 *.bak_*
 mydatabase.db
 server-v2/nohup.out
+project.db
