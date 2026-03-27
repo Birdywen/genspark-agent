@@ -161,36 +161,6 @@
       }
     }
     
-    // 先检查跨 Tab 发送命令 ΩSEND:agent_id:message
-    // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/ΩSEND:([\w_-]+):([\s\S]+?)ΩSENDEND/);
-    const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
-    const timeSinceStable = Date.now() - state.lastStableTime;
-    if (sendMatch && !isExampleSend && timeSinceStable >= 3000) {
-      const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
-      if (!state.executedCalls.has(sendHash)) {
-        addExecutedCall(sendHash);
-        const toAgent = sendMatch[1];
-        const message = sendMatch[2].trim();
-        addLog(`📨 发送给 ${toAgent}...`, 'tool');
-        if (toAgent === 'phone-bridge') {
-          // phone-bridge 是外部进程，通过 Agent 服务器中转
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: { type: 'phone_reply', text: message }
-          }, (resp) => {
-            if (chrome.runtime.lastError) {
-              addLog('❌ 手机发送失败: ' + chrome.runtime.lastError.message, 'error');
-            } else {
-              addLog('📱 已发送到手机', 'success');
-            }
-          });
-        } else {
-          sendToAgent(toAgent, message);
-        }
-        return;
-      }
-    }
     
     const toolCalls = parseToolCalls(text);
     

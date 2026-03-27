@@ -156,7 +156,7 @@
       
       // 检查是否有待处理任务
       addLog(`🔍 自动检查任务 (${agentId})`, 'info');
-      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩ{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
+      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩCODE\n{"tool":"run_process","params":{"command_line":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}","mode":"shell"}}\nΩCODEEND"}}\n\`\`\``);
     }, CONFIG.AUTO_CHECK_INTERVAL);
     
     addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');

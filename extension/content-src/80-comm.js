@@ -149,7 +149,7 @@
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
-      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
+      // ===== 浏览器工具反向调用（来自 ΩCODE steps 中的 js_flow/eval_js/list_tabs）=====
       case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
         // Red switch: disabled tab ignores browser tool calls
@@ -614,7 +614,7 @@
         const delay = fromAgent === 'phone-bridge' ? 200 : 2000;
         buffer.timer = setTimeout(() => {
           const combinedMsg = buffer.messages.join('');
-          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容ΩSENDEND 来回复。`;
+          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 （通过跨Tab通道回复） 来回复。`;
           waitForGenerationComplete(() => enqueueMessage(crossTabMsg));
           
           // 清空缓冲区

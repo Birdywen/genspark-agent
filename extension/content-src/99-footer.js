@@ -1,6 +1,6 @@
   // ============== SSE 原始数据拦截 ==============
   // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 SSE delta
-  // 拼接后直接解析 Ω 命令，避免 DOM 渲染导致的转义问题
+  // 拼接后直接解析 ΩCODE 命令，避免 DOM 渲染导致的转义问题
   
   const sseState = {
     currentText: '',          // 当前 SSE stream 拼接的完整文本
@@ -38,7 +38,7 @@
           sseState.lastDeltaTime = Date.now();
           sseState.messageId = parsed.message_id || sseState.messageId;
           
-          // 实时检测完整的 Ω 命令
+          // 实时检测完整的 ΩCODE 命令
           tryParseSSECommands();
         }
       } catch (err) {
@@ -166,7 +166,7 @@
     for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
       var owp = omegaWritePatterns[owi];
       // Find start marker: prefix must be at line start (preceded by \n or text start)
-      // and followed immediately by \n or :slot= (not arbitrary text like "ΩDATA 回复")
+      // and followed immediately by \n or :slot= (not arbitrary text like "legacy")
       var owStartIdx = -1;
       var owSearchFrom = 0;
       while (owSearchFrom < text.length) {
@@ -275,86 +275,6 @@
 
 
 
-    // 检测 Ω{...}ΩSTOP (可能有多个)
-    // 策略：直接用括号平衡法提取完整 JSON + safeJsonParse 解析
-    let searchPos = 0;
-    while (true) {
-      const omegaIdx = text.indexOf('Ω{', searchPos);
-      if (omegaIdx === -1) break;
-      // === SSE example keyword detection ===
-      const sseNearBefore = text.substring(Math.max(0, omegaIdx - 30), omegaIdx);
-      const sseIsExample = /Example:|e\.g\./.test(sseNearBefore);
-      if (sseIsExample) {
-        const skipExtracted = extractJsonFromText(text, omegaIdx + 1);
-        if (skipExtracted) {
-          try {
-            const skipParsed = safeJsonParse(skipExtracted.json);
-            if (skipParsed && skipParsed.tool) {
-              addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-              addDedupKey('exec:' + Date.now() + ':' + Math.random());
-              log('SSE SKIP (example keyword):', skipParsed.tool);
-            }
-          } catch(e) {}
-        }
-        searchPos = omegaIdx + 2; continue;
-      }
-      const extracted = extractJsonFromText(text, omegaIdx + 1);
-      if (!extracted) { searchPos = omegaIdx + 1; continue; }
-      const after = text.substring(extracted.end, extracted.end + 10);
-      if (!after.trim().startsWith('ΩSTOP')) { searchPos = extracted.end; continue; }
-      let parsed = null;
-      try {
-        parsed = safeJsonParse(extracted.json);
-      } catch (e) {
-        log('SSE single parse error:', e.message);
-        searchPos = extracted.end;
-        continue;
-      }
-      searchPos = extracted.end;
-      if (!parsed) continue;
-      // 如果是 partial parse（JSON.parse 失败后的 fallback），跳过 SSE 执行
-      // partial parse 使用正则提取字段，参数可能不准确（如 command+ 被拼接）
-      // 让 DOM 通道用完整文本重新解析
-      if (parsed._partialParse) {
-        log('SSE skip partial parse result:', parsed.tool, '(unreliable params)');
-        continue;
-      }
-      const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
-      if (sseState.processedCommands.has(normalizedSig)) continue;
-      sseState.processedCommands.add(normalizedSig);
-      if (parsed.tool) {
-        // === SSE 通用参数完整性预检查 ===
-        if (sseParamsLookCorrupted({ name: parsed.tool, params: parsed.params || {} })) {
-          continue;
-        }
-        addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
-        log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
-        const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
-        addExecutedCall(callHash);
-        addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-        sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
-        executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
-      }
-    }
-
-    // 检测 ΩPLAN / ΩFLOW / ΩRESUME
-    const planMatch = text.match(/ΩPLAN(\{[\s\S]*?\})/);
-    if (planMatch) {
-      const sig = 'sse:plan:' + planMatch[1].substring(0, 100);
-      if (!sseState.processedCommands.has(sig)) {
-        sseState.processedCommands.add(sig);
-        try {
-          const plan = JSON.parse(planMatch[1]);
-          addLog('⚡ SSE 直接解析 ΩPLAN', 'tool');
-          const callHash = `sse:${sseState.messageId}:__PLAN__:${JSON.stringify(plan)}`;
-          addExecutedCall(callHash);
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: { type: 'task_plan', params: plan, id: Date.now() }
-          });
-        } catch (e) {}
-      }
-    }
   }
 
   // 检查一个命令是否已被 SSE 通道处理过（供 scanForToolCalls 判断）

@@ -681,7 +681,7 @@ async function main() {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
 
-    // 设置浏览器工具回调：ΩBATCH 中的 js_flow/eval_js/list_tabs 通过 ws 委托浏览器执行
+    // 设置浏览器工具回调：ΩCODE steps 中的 js_flow/eval_js/list_tabs 通过 ws 委托浏览器执行
     if (taskEngine) {
       taskEngine.setBrowserCallHandler(async (tool, params) => {
         const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;

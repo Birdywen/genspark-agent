@@ -36,9 +36,7 @@
 
 ### 高级调度与标记
 
-- ΩPLAN{"goal":"..."} — 智能规划 | ΩFLOW{"template":"..."} — 工作流 | ΩRESUME{"taskId":"..."} — 断点续传
 - base64 模式: content/stdin/code 以 \`base64:\` 开头自动解码
-- 重试: @RETRY:#ID | 协作: ΩSEND:目标agent:消息ΩSENDEND
 
 ---
 
