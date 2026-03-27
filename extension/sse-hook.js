@@ -90,6 +90,7 @@
     const origRead = reader.read.bind(reader);
 
     let isAgentStream = null;
+        let __lineBuffer = '';
     let fullText = '';
     let chunkCount = 0;
     const decoder = new TextDecoder();
@@ -98,6 +99,21 @@
       return origRead().then(result => {
         if (result.done) {
           if (isAgentStream) {
+            // Flush remaining lineBuffer before closing
+            if (__lineBuffer.trim()) {
+              var trimmed = __lineBuffer.trim();
+              if (trimmed.startsWith('data: ')) {
+                var jsonStr = trimmed.substring(6);
+                if (jsonStr && jsonStr !== '[DONE]') {
+                  try {
+                    document.dispatchEvent(new CustomEvent('__sse_data__', {
+                      detail: { data: jsonStr, timestamp: Date.now() }
+                    }));
+                  } catch (e) {}
+                }
+              }
+              __lineBuffer = '';
+            }
             document.dispatchEvent(new CustomEvent('__sse_closed__', {
               detail: { timestamp: Date.now(), totalLength: fullText.length, transport: 'fetch-stream' }
             }));
@@ -129,11 +145,15 @@
         if (isAgentStream) {
           fullText += text;
 
-          const lines = text.split('\n');
-          for (const line of lines) {
-            const trimmed = line.trim();
+          // [2026-03-27] Line-buffered SSE parsing to prevent chunk-boundary data loss
+          __lineBuffer += text;
+          var bufLines = __lineBuffer.split('\n');
+          // Last element may be incomplete - save it for next chunk
+          __lineBuffer = bufLines.pop() || '';
+          for (var li = 0; li < bufLines.length; li++) {
+            var trimmed = bufLines[li].trim();
             if (trimmed.startsWith('data: ')) {
-              const jsonStr = trimmed.substring(6);
+              var jsonStr = trimmed.substring(6);
               if (jsonStr && jsonStr !== '[DONE]') {
                 try {
                   document.dispatchEvent(new CustomEvent('__sse_data__', {
@@ -149,8 +169,6 @@
               } catch (e) {}
             }
           }
-        }
-
         return result;
       });
     };
