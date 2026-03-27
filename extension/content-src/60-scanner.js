@@ -327,7 +327,7 @@
       'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
-      '支持批量执行: ΩBATCH{"steps":[...]}',
+      'ΩCODE 统一通道: 单步{tool:...} 多步{steps:[...]}',
       '长内容用 run_command + heredoc 写入',
       '项目记忆: memory_manager_v2.js projects',
     ],

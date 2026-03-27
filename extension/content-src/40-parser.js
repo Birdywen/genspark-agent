@@ -182,46 +182,6 @@
 
     function parseToolCalls(text) {
 
-    // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
-    const batchStartIdx = text.indexOf('ΩBATCH');
-    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx) && !(sseState && sseState.executedInCurrentMessage)) {
-      // 跳过示例中的 ΩBATCH
-      const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
-      const isExample = /Example:/.test(beforeBatch);
-      if (!isExample) {
-        try {
-          // 尝试找 ΩEND 结束标记
-          const jsonStart = text.indexOf('{', batchStartIdx);
-          let jsonEnd = text.indexOf('ΩEND', jsonStart);
-          let batchJson;
-          if (jsonEnd !== -1) {
-            // 有 ΩEND 标记，直接截取
-            batchJson = text.substring(jsonStart, jsonEnd).trim();
-          } else {
-            // 没有 ΩEND，使用平衡括号匹配
-            const batchData = extractBalancedJson(text, 'ΩBATCH');
-            if (batchData) batchJson = batchData.json;
-          }
-          if (batchJson) {
-            batchJson = batchJson.replace(/[""]/g, '"').replace(/['']/g, "'");
-            const batch = safeJsonParse(batchJson);
-            if (batch.steps && Array.isArray(batch.steps)) {
-              const endPos = jsonEnd !== -1 ? jsonEnd + 4 : batchStartIdx + 6 + batchJson.length;
-              return [{
-                name: '__BATCH__',
-                params: batch,
-                raw: text.substring(batchStartIdx, endPos),
-                start: batchStartIdx,
-                end: endPos,
-                isBatch: true
-              }];
-            }
-          }
-        } catch (e) {
-          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
-        }
-      }
-    }
 
     // ========== ΩCODE DOM FALLBACK ==========
     // When SSE hook not loaded (SPA nav), detect ΩCODE...ΩCODEEND in DOM

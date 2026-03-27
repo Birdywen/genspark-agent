@@ -275,47 +275,6 @@
 
 
 
-    // 检测 ΩBATCH...ΩEND (正则快速匹配 + fallback 括号平衡法)
-    let batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
-    let batchJson = batchMatch ? batchMatch[1] : null;
-    if (batchMatch) {
-      try {
-        JSON.parse(batchJson);
-      } catch (e) {
-        // 正则截断，用括号平衡法重新提取
-        const batchIdx = text.indexOf('ΩBATCH{');
-        if (batchIdx !== -1) {
-          const extracted = extractJsonFromText(text, batchIdx + 6);
-          if (extracted) {
-            const after = text.substring(extracted.end, extracted.end + 10);
-            if (after.trim().startsWith('ΩEND')) {
-              batchJson = extracted.json;
-              log('SSE BATCH fallback bracket parse OK');
-            }
-          }
-        }
-      }
-    }
-    if (batchJson) {
-      try {
-        const batch = JSON.parse(batchJson);
-        const sig = 'sse:batch:' + JSON.stringify(batch).substring(0, 100);
-        if (!sseState.processedCommands.has(sig)) {
-          sseState.processedCommands.add(sig);
-          if (batch.steps && Array.isArray(batch.steps)) {
-            addLog('⚡ SSE 直接解析 ΩBATCH', 'tool');
-            log('SSE parsed BATCH (raw, no DOM):', batch);
-            const callHash = `sse:${sseState.messageId}:__BATCH__:${JSON.stringify(batch)}`;
-            addExecutedCall(callHash);
-            sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
-            executeBatchCall(batch, callHash);
-          }
-        }
-      } catch (e) {
-        log('SSE BATCH parse error:', e.message);
-      }
-    }
-
     // 检测 Ω{...}ΩSTOP (可能有多个)
     // 策略：直接用括号平衡法提取完整 JSON + safeJsonParse 解析
     let searchPos = 0;
