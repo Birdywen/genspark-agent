@@ -79,6 +79,7 @@ handlers.set('gen_image', async (params, context) => {
   
   // Step 1: 在浏览器端发起生图请求
   const initCode = [
+    'if(window.__imgState && (window.__imgState.st==="sending"||window.__imgState.st==="polling")){return "already_running"}',
     'window.__imgState={tid:null,url:null,err:null,st:"sending"};',
     'fetch("/api/agent/ask_proxy",{method:"POST",headers:{"Content-Type":"application/json"},',
     'body:JSON.stringify({messages:[{role:"user",content:'+prompt+'}],',
