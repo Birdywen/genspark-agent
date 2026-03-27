@@ -127,6 +127,23 @@ handlers.set('gen_image', async (params, context) => {
   return { success: false, error: 'timeout 70s' };
 });
 
+
+// ask_ai: 通过 evalInBrowser 桥接 ask_proxy，调用 genspark AI
+handlers.set('ask_ai', async (params, context) => {
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
+  const messages = params.messages || [{ role: 'user', content: params.prompt || '' }];
+  const model = params.model || 'gpt-4.1-nano';
+  const projectId = params.project_id || '1876348b-72a6-405c-823d-29ffc5be35b2';
+  const msgJson = JSON.stringify(messages).replace(/'/g, "\\'");
+  const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:${msgJson},model:'${model}',project_id:'${projectId}'})}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
+  try {
+    const result = await evalInBrowser(code);
+    return { success: true, result };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
 export function getCustomHandler(toolName) {
   return handlers.get(toolName) || null;
 }
