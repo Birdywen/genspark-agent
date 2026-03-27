@@ -587,7 +587,7 @@
       // [2026-03-27] Forged injection REMOVED.
       // Forged identity injected ONCE at create/fork time.
       var newOptsFinal = {};
-      for (var kf in opts) { if (opts.hasOwnProperty(kf)) newOptsFinal[kf]; }
+      for (var kf in opts) { if (opts.hasOwnProperty(kf)) newOptsFinal[kf] = opts[kf]; }
       newOptsFinal.body = JSON.stringify(body);
       return targetFetch.call(this, url, newOptsFinal);
     };
