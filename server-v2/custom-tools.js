@@ -69,7 +69,55 @@ handlers.set('oracle_run', async (params) => {
 
 // ===== gen_image (需要浏览器转发) =====
 // 标记为 browser-side，handleToolCall 检测到后走 forwardToBrowser
-handlers.set('gen_image', 'browser');
+handlers.set('gen_image', async (params, context) => {
+  // gen_image 需要浏览器 cookie，通过 evalInBrowser 桥接
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
+  
+  const prompt = JSON.stringify(params.prompt || '');
+  const model = params.model || 'nano-banana-pro';
+  
+  // Step 1: 在浏览器端发起生图请求
+  const initCode = [
+    'window.__imgState={tid:null,url:null,err:null,st:"sending"};',
+    'fetch("/api/agent/ask_proxy",{method:"POST",headers:{"Content-Type":"application/json"},',
+    'body:JSON.stringify({messages:[{role:"user",content:'+prompt+'}],',
+    'type:"image_generation_agent",auto_prompt:null,model:"'+model+'",',
+    'project_id:"7e6cbd20-270d-43aa-afe0-331d1c6d7f52"})})',
+    '.then(function(r){var rd=r.body.getReader(),dc=new TextDecoder(),b="";',
+    'function p(){return rd.read().then(function(rs){if(rs.done){window.__imgState.err="no tid";window.__imgState.st="failed";return}',
+    'b+=dc.decode(rs.value);var m=b.match(/task_id.*?([a-f0-9-]{36})/);',
+    'if(m){window.__imgState.tid=m[1];rd.cancel();po(0)}else return p()})}p()});',
+    'function po(n){if(n>30){window.__imgState.err="timeout";window.__imgState.st="failed";return}',
+    'setTimeout(function(){',
+    'fetch("/api/spark/image_generation_task_detail?task_id="+window.__imgState.tid)',
+    '.then(function(r){return r.json()})',
+    '.then(function(d){',
+    'if(d.data&&d.data.status==="SUCCESS"){',
+    'window.__imgState.url=(d.data.image_urls_nowatermark||d.data.image_urls||[])[0];window.__imgState.st="done"}',
+    'else if(d.data&&d.data.status==="FAILED"){window.__imgState.err="gen failed";window.__imgState.st="failed"}',
+    'else po(n+1)})},2000)}',
+    'return "started"'
+  ].join('');
+  
+  await evalInBrowser(initCode);
+  
+  // Step 2: 轮询 __imgState 直到完成
+  for (let i = 0; i < 35; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const checkResult = await evalInBrowser('return JSON.stringify(window.__imgState)');
+    try {
+      const state = JSON.parse(checkResult);
+      if (state.st === 'done') {
+        return { success: true, result: { url: state.url, task_id: state.tid } };
+      }
+      if (state.st === 'failed') {
+        return { success: false, error: state.err, task_id: state.tid };
+      }
+    } catch(e) { /* continue polling */ }
+  }
+  return { success: false, error: 'timeout 70s' };
+});
 
 export function getCustomHandler(toolName) {
   return handlers.get(toolName) || null;

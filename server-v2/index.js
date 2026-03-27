@@ -151,7 +151,25 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         return;
       }
       const handler = getCustomHandler(tool);
-      const result = await handler(params);
+      // evalInBrowser: 发 eval_js 给浏览器，返回 Promise<string>
+      const evalInBrowser = (jsCode) => new Promise((resolve, reject) => {
+        const callId = 'eval_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        const timer = setTimeout(() => {
+          browserToolPending.delete(callId);
+          reject(new Error('evalInBrowser timeout 10s'));
+        }, 10000);
+        browserToolPending.set(callId, {
+          resolve: (r) => { clearTimeout(timer); browserToolPending.delete(callId); resolve(r); },
+          reject: (e) => { clearTimeout(timer); browserToolPending.delete(callId); reject(e); },
+          timeout: timer, _tool: 'eval_js', _code: jsCode.substring(0, 500)
+        });
+        for (const client of clients) {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: 'eval_js', params: { code: jsCode } }));
+          }
+        }
+      });
+      const result = await handler(params, { evalInBrowser });
       const resultStr = typeof result.result === "string" ? result.result : JSON.stringify(result.result); const historyId = history.add(tool, params, result.success, resultStr, result.error);
       ws.send(JSON.stringify({
         type: 'tool_result', id, historyId, tool,
