@@ -134,7 +134,7 @@ handlers.set('ask_ai', async (params, context) => {
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const messages = params.messages || [{ role: 'user', content: params.prompt || '' }];
   const model = params.model || 'gpt-5.4';
-  const projectId = params.project_id || '1876348b-72a6-405c-823d-29ffc5be35b2';
+  const projectId = params.project_id || 'face262c-60a3-49a7-b4a2-5c2f9d305316';
   const body = {
     ai_chat_model: model,
     ai_chat_enable_search: false,
