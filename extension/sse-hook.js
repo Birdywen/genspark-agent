@@ -576,6 +576,14 @@
       // 3. If not found → check if session_state already has assistant msg (UI forged) → pass through
       // 4. Fallback: inject default experience-dialogues
       var convId = new URLSearchParams(window.location.search).get('id') || '';
+      // Skip forged injection for spawned agent conversations
+      var noForged = localStorage.getItem('agent_no_forged_' + convId);
+      if (noForged === 'true') {
+        console.log('[SSE-Hook] Skipping forged injection for spawned agent conv        var newOptsSkip = {};
+        for (var ks in opts) { if (opts.hasOwnProperty(ks)) newOptsSkip[ks] = opts[ks]; }
+        newOptsSkip.body = JSON.stringify(body);
+        return targetFetch.call(this, url, newOptsSkip);
+      }
       var agentOverride = localStorage.getItem('agent_forged_' + convId);
       var sbName = agentOverride || 'toolkit:_forged:experience-dialogues';
       console.log('[SSE-Hook] Forged injection: convId=' + convId + ' agent=' + sbName);
