@@ -565,121 +565,12 @@
       console.log('[SSE-Hook] total messages=' + body.messages.length + ' roles=' + body.messages.map(function(m){return m.role}).join(','));
 
 
-      var hasSystemPrompt = firstMsg.content && firstMsg.content.indexOf(__SYSTEM_PROMPT_MARKER) !== -1;
-      var hasVFSMarker = firstMsg.content && firstMsg.content.indexOf(__DYNAMIC_PROMPT_MARKER) !== -1;
-      console.log('[SSE-Hook] hasSystemPrompt=' + hasSystemPrompt + ' hasVFSMarker=' + hasVFSMarker + ' autoInject=' + (localStorage.getItem('agent_auto_prompt') !== 'false'));
-      var autoInjectEnabled = localStorage.getItem('agent_auto_prompt') !== 'false';
-
-      // [2026-03-18] Smart forged injection:
-      // 1. Check localStorage for per-conv agent override
-      // 2. If found → inject that agent's forged from Supabase
-      // 3. If not found → check if session_state already has assistant msg (UI forged) → pass through
-      // 4. Fallback: inject default experience-dialogues
-      var convId = new URLSearchParams(window.location.search).get('id') || '';
-      // Skip forged injection for spawned agent conversations
-      var noForged = localStorage.getItem('agent_no_forged_' + convId);
-      if (noForged === 'true') {
-        console.log('[SSE-Hook] Skipping forged injection for spawned agent conv        var newOptsSkip = {};
-        for (var ks in opts) { if (opts.hasOwnProperty(ks)) newOptsSkip[ks] = opts[ks]; }
-        newOptsSkip.body = JSON.stringify(body);
-        return targetFetch.call(this, url, newOptsSkip);
-      }
-      var agentOverride = localStorage.getItem('agent_forged_' + convId);
-      var sbName = agentOverride || 'toolkit:_forged:experience-dialogues';
-      console.log('[SSE-Hook] Forged injection: convId=' + convId + ' agent=' + sbName);
-
-      // 去重：检测 messages 里是否已包含 forged 内容
-      // 方式1：检查 __FORGED__ 标记（注入时添加）
-      // 方式2：检查已压缩的 forged 内容（compress 后 marker 可能丢失）
-      // 方式3：检查 [已压缩] 标记后面是否有 forged 特征文本
-      var alreadyInjected = false;
-      // 方式1: 检查 __FORGED__ 标记（前15条消息内才算有效注入，超出说明是压缩残留）
-      for (var fi = 0; fi < body.messages.length; fi++) {
-        if (body.messages[fi].content && body.messages[fi].content.indexOf('__FORGED__') !== -1) {
-          if (fi < 15) {
-            alreadyInjected = true;
-            console.log('[SSE-Hook] Dedup: found __FORGED__ marker at msg ' + fi + ' (valid, within first 15)');
-          } else {
-            body.messages[fi].content = body.messages[fi].content.replace('<!-- __FORGED__ -->', '');
-            console.log('[SSE-Hook] Dedup: found stale __FORGED__ marker at msg ' + fi + ', REMOVED (compress residue)');
-          }
-          break;
-        }
-      }
-      // 方式2: 检查 forged 特征内容（防止 compress 后 marker 丢失）
-      if (!alreadyInjected) {
-        var forgedFingerprints = ['These are my scars', 'WRITING RULES (MOST IMPORTANT)', 'agent.db 快捷路径'];
-        for (var fi2 = 0; fi2 < body.messages.length; fi2++) {
-          var mc = body.messages[fi2].content || '';
-          for (var fp = 0; fp < forgedFingerprints.length; fp++) {
-            if (mc.indexOf(forgedFingerprints[fp]) !== -1) {
-              alreadyInjected = true;
-              console.log('[SSE-Hook] Dedup: found fingerprint "' + forgedFingerprints[fp] + '" at msg ' + fi2);
-              break;
-            }
-          }
-          if (alreadyInjected) break;
-        }
-      }
-      // 方式2: 已禁用 — 会误杀第一轮注入
-      //       if (!alreadyInjected) {
-      //         var assistantCount = 0;
-      //         for (var ai = 0; ai < body.messages.length; ai++) {
-      //           if (body.messages[ai].role === 'assistant') assistantCount++;
-      //         }
-      //         if (assistantCount > 0) {
-      //           alreadyInjected = true;
-      //           console.log('[SSE-Hook] Forged dedup: found ' + assistantCount + ' assistant msgs, skipping injection');
-      //         }
-      //       }
-      if (alreadyInjected) {
-        console.log('[SSE-Hook] Forged already in messages (found __FORGED__ marker), skipping injection');
-        var newOpts2 = {};
-        for (var k2 in opts) { if (opts.hasOwnProperty(k2)) newOpts2[k2] = opts[k2]; }
-        newOpts2.body = JSON.stringify(body);
-        return targetFetch.call(this, url, newOpts2);
-      }
-
-      var self = this;
-      // sbName format: 'toolkit:_forged:experience-dialogues' -> slot='toolkit', key='_forged:experience-dialogues'
-      var sbParts = sbName.split(':'); var fSlot = sbParts[0]; var fKey = sbParts.slice(1).join(':');
-      var SB_FORGED_URL = 'http://127.0.0.1:8766/memory?slot=' + encodeURIComponent(fSlot) + '&key=' + encodeURIComponent(fKey);
-      // Local agent.db via server-v2 HTTP API - no auth needed
-      return targetFetch.call(null, SB_FORGED_URL).then(function(sbResp) {
-        return sbResp.json();
-      }).then(function(sbRows) {
-        var forgedRaw = (sbRows && sbRows[0]) ? sbRows[0].content : '';
-        if (forgedRaw) {
-          var parsed = JSON.parse(forgedRaw);
-          var dialogues = Array.isArray(parsed) ? parsed : (parsed.messages || []);
-          if (Array.isArray(dialogues) && dialogues.length > 0 && dialogues[0].role) {
-            var forgedMsgs = [];
-            for (var fj = 0; fj < dialogues.length; fj++) {
-              var fContent = dialogues[fj].content;
-              if (fj === 0) fContent = '<!-- __FORGED__ -->' + fContent;
-              var fid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-              forgedMsgs.push({ id: fid, role: dialogues[fj].role, content: fContent, action: null, recommend_actions: null, is_prompt: false, render_template: null, session_state: null, system_reminder: null, message_type: null, tool_calls: null, tool_call_id: null, project_id: null, thinking_blocks: null, response_id: null, reasoning_id: null, reasoning_encrypted_content: null, reasoning_content: null, cogen_id: null, ctime: null });
-            }
-            // Remove system prompt if present as first message
-            if (body.messages[0] && body.messages[0].content && body.messages[0].content.indexOf('\u6838\u5FC3\u884C\u4E3A\u51C6\u5219') !== -1) {
-              body.messages.shift();
-              console.log('[SSE-Hook] Removed system prompt from messages');
-            }
-            body.messages = forgedMsgs.concat(body.messages);
-            console.log('[SSE-Hook] Injected ' + forgedMsgs.length + ' forged msgs from agent.db');
-          }
-        } else {
-          console.log('[SSE-Hook] No forged data in agent.db, passing through as-is');
-        }
-
-        var newOpts = {};
-        for (var k in opts) { if (opts.hasOwnProperty(k)) newOpts[k] = opts[k]; }
-        newOpts.body = JSON.stringify(body);
-        return targetFetch.call(self, url, newOpts);
-      }).catch(function(e) {
-        console.error('[SSE-Hook] Forged injection failed:', e);
-        return targetFetch.apply(self, args);
-      });
+      // [2026-03-27] Forged injection REMOVED.
+      // Forged identity injected ONCE at create/fork time.
+      var newOptsFinal = {};
+      for (var kf in opts) { if (opts.hasOwnProperty(kf)) newOptsFkf]; }
+      newOptsFinal.body = JSON.stringify(body);
+      return targetFetch.call(this, url, newOptsFinal);
     };
   }
 
