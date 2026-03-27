@@ -152,12 +152,12 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       }
       const handler = getCustomHandler(tool);
       // evalInBrowser: 发 eval_js 给浏览器，返回 Promise<string>
-      const evalInBrowser = (jsCode) => new Promise((resolve, reject) => {
+      const evalInBrowser = (jsCode, timeoutMs) => new Promise((resolve, reject) => {
         const callId = 'eval_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
         const timer = setTimeout(() => {
           browserToolPending.delete(callId);
-          reject(new Error('evalInBrowser timeout 10s'));
-        }, 10000);
+          reject(new Error('evalInBrowser timeout ' + (timeoutMs/1000) + 's'));
+        }, timeoutMs || 10000);
         browserToolPending.set(callId, {
           resolve: (r) => { clearTimeout(timer); browserToolPending.delete(callId); resolve(r); },
           reject: (e) => { clearTimeout(timer); browserToolPending.delete(callId); reject(e); },

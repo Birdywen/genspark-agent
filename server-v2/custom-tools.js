@@ -128,26 +128,35 @@ handlers.set('gen_image', async (params, context) => {
 });
 
 
-// ask_ai: 通过 evalInBrowser 桥接 ask_proxy，调用 genspark AI
+// ask_ai: 通过 evalInBrowser 桥接 ask_proxy (ai_chat模式，不扣积分)
 handlers.set('ask_ai', async (params, context) => {
   const { evalInBrowser } = context;
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const messages = params.messages || [{ role: 'user', content: params.prompt || '' }];
-  const model = params.model || 'gpt-4.1-nano';
-  const body = { messages, model };
-  if (params.project_id) body.project_id = params.project_id;
-  if (params.type) body.type = params.type;
-  if (params.auto_prompt !== undefined) body.auto_prompt = params.auto_prompt;
+  const model = params.model || 'gpt-5.4';
+  const projectId = params.project_id || '1876348b-72a6-405c-823d-29ffc5be35b2';
+  const body = {
+    ai_chat_model: model,
+    ai_chat_enable_search: false,
+    ai_chat_disable_personalization: true,
+    use_moa_proxy: false,
+    moa_models: [],
+    type: 'ai_chat',
+    project_id: projectId,
+    messages: messages.map(m => ({ role: m.role, id: crypto.randomUUID(), content: m.content })),
+    user_s_input: messages[messages.length - 1].content,
+    is_private: true,
+    push_token: ''
+  };
   const bodyJson = JSON.stringify(body).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'${bodyJson}'}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
   try {
-    const result = await evalInBrowser(code);
+    const result = await evalInBrowser(code, 60000);
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };
   }
-});
-export function getCustomHandler(toolName) {
+});export function getCustomHandler(toolName) {
   return handlers.get(toolName) || null;
 }
 
