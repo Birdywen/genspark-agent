@@ -184,7 +184,7 @@
 
     // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
     const batchStartIdx = text.indexOf('ΩBATCH');
-    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
+    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx) && !(sseState && sseState.executedInCurrentMessage)) {
       // 跳过示例中的 ΩBATCH
       const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
       const isExample = /Example:/.test(beforeBatch);
@@ -229,7 +229,7 @@
     const ocEndTag = String.fromCharCode(0x03A9) + "CODEEND";
     let ocStart = text.indexOf(ocPrefix + String.fromCharCode(10));
     if (ocStart === -1) ocStart = text.indexOf(ocPrefix + "{");
-    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart)) {
+    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart) && !(sseState && sseState.executedInCurrentMessage)) {
       const beforeOC = text.substring(Math.max(0, ocStart - 100), ocStart);
       if (!/Example:|e\.g\.|示例|格式/.test(beforeOC)) {
         try {

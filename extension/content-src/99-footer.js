@@ -216,7 +216,7 @@
           addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
           sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);
           log('SSE ' + owp.label + ' TOOL CALL:', owParsed.tool || (owParsed.steps.length + ' steps'));
-          sseState.executedInCurrentMessage = true;
+          sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
           if (owParsed.steps) {
             var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
             addExecutedCall(batchHash);
@@ -307,7 +307,7 @@
             log('SSE parsed BATCH (raw, no DOM):', batch);
             const callHash = `sse:${sseState.messageId}:__BATCH__:${JSON.stringify(batch)}`;
             addExecutedCall(callHash);
-            sseState.executedInCurrentMessage = true;
+            sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
             executeBatchCall(batch, callHash);
           }
         }
@@ -373,7 +373,7 @@
         const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
         addExecutedCall(callHash);
         addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-        sseState.executedInCurrentMessage = true;
+        sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
         executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
       }
     }
