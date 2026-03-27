@@ -96,48 +96,6 @@
 
 
 
-  // 解析新的代码块格式: Ωname ... ΩEND
-  function parseCodeBlockFormat(text) {
-    const toolCalls = [];
-    const regex = /Ω(\w+)\s*\n([\s\S]*?)ΩEND/g;
-    let match;
-    
-    while ((match = regex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const toolName = match[1];
-      const body = match[2];
-      const params = {};
-      
-      const pathMatch = body.match(/@PATH:\s*(.+)/);
-      if (pathMatch) params.path = pathMatch[1].trim();
-      
-      const cmdMatch = body.match(/@COMMAND:\s*(.+)/);
-      if (cmdMatch) params.command = cmdMatch[1].trim();
-      
-      const urlMatch = body.match(/@URL:\s*(.+)/);
-      if (urlMatch) params.url = urlMatch[1].trim();
-      
-      const contentMatch = body.match(/@CONTENT:\s*\n```[\w]*\n([\s\S]*?)\n```/);
-      if (contentMatch) {
-        params.content = contentMatch[1];
-      }
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({
-          name: toolName,
-          params,
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    return toolCalls;
-  }
 
   
   // 方案3: 解析 ```tool 代码块
@@ -219,8 +177,6 @@
     const toolBlockCalls = parseToolCodeBlock(text);
     if (toolBlockCalls.length > 0) return toolBlockCalls;
 
-    // 兼容旧格式: Ωname ... ΩEND
-    const codeBlockCalls = parseCodeBlockFormat(text);
     if (codeBlockCalls.length > 0) return codeBlockCalls;
 
     const toolCalls = [];
