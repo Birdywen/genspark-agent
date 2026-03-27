@@ -101,9 +101,9 @@
           if (isAgentStream) {
             // Flush remaining lineBuffer before closing
             if (__lineBuffer.trim()) {
-              var trimmed = __lineBuffer.trim();
-              if (trimmed.startsWith('data: ')) {
-                var jsonStr = trimmed.substring(6);
+              var flushed = __lineBuffer.trim();
+              if (flushed.startsWith('data: ')) {
+                var jsonStr = flushed.substring(6);
                 if (jsonStr && jsonStr !== '[DONE]') {
                   try {
                     document.dispatchEvent(new CustomEvent('__sse_data__', {
@@ -169,10 +169,11 @@
               } catch (e) {}
             }
           }
+        }
+
         return result;
       });
     };
-
     return reader;
   };
 
@@ -586,7 +587,7 @@
       // [2026-03-27] Forged injection REMOVED.
       // Forged identity injected ONCE at create/fork time.
       var newOptsFinal = {};
-      for (var kf in opts) { if (opts.hasOwnProperty(kf)) newOptsFkf]; }
+      for (var kf in opts) { if (opts.hasOwnProperty(kf)) newOptsFinal[kf]; }
       newOptsFinal.body = JSON.stringify(body);
       return targetFetch.call(this, url, newOptsFinal);
     };
