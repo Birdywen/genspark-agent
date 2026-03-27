@@ -72,4 +72,5 @@ if (cmd === 'query') {
   console.log('Usage: node dbfile.cjs <query|get|set|append|list|load> [args...]');
 }
 
+db.pragma("wal_checkpoint(TRUNCATE)");
 db.close();

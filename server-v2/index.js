@@ -514,7 +514,7 @@ async function main() {
           const Database = (await import('better-sqlite3')).default;
           const db = new Database(dbPath);
           db.prepare('INSERT OR REPLACE INTO memory (slot, key, content) VALUES (?, ?, ?)').run(slot, key, content);
-          db.close();
+          db.pragma("wal_checkpoint(TRUNCATE)"); db.close();
           res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
           res.end(JSON.stringify({ok:true}));
         } catch(e) {
