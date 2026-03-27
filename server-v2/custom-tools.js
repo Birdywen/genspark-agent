@@ -134,9 +134,12 @@ handlers.set('ask_ai', async (params, context) => {
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const messages = params.messages || [{ role: 'user', content: params.prompt || '' }];
   const model = params.model || 'gpt-4.1-nano';
-  const projectId = params.project_id || '1876348b-72a6-405c-823d-29ffc5be35b2';
-  const msgJson = JSON.stringify(messages).replace(/'/g, "\\'");
-  const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:${msgJson},model:'${model}',project_id:'${projectId}'})}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
+  const body = { messages, model };
+  if (params.project_id) body.project_id = params.project_id;
+  if (params.type) body.type = params.type;
+  if (params.auto_prompt !== undefined) body.auto_prompt = params.auto_prompt;
+  const bodyJson = JSON.stringify(body).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'${bodyJson}'}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
   try {
     const result = await evalInBrowser(code);
     return { success: true, result };
