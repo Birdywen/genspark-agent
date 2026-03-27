@@ -48,6 +48,7 @@ import { resolve as resolveAlias } from "./core/alias.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { MCPHub, expandEnvVars } from './core/mcp-hub.js';
+import { isCustomTool, isBrowserTool, getCustomHandler, customToolNames, buildBrowserToolCode } from './custom-tools.js';
 
 const config = expandEnvVars(JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8')));
 
@@ -135,6 +136,35 @@ const processManager = new ProcessManager();
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
   logger.info("[DEBUG-HTC] tool:"+tool+" id:"+id+" params:"+JSON.stringify(params));
+
+  // ── 自定义 Tool 拦截（不走 MCP）──
+  if (isCustomTool(tool)) {
+    const _cStart = Date.now();
+    try {
+      if (isBrowserTool(tool)) {
+        // browser-side tool（如 gen_image）通过 forwardToBrowser 执行
+        const browserCode = buildBrowserToolCode(tool, params);
+        forwardToBrowser(ws, clients, browserToolPending, logger, {
+          msg: message, resultType: 'browser_eval_result',
+          tool: 'eval_js', params: { code: browserCode }, timeout: 90000
+        });
+        return;
+      }
+      const handler = getCustomHandler(tool);
+      const result = await handler(params);
+      const resultStr = typeof result.result === "string" ? result.result : JSON.stringify(result.result); const historyId = history.add(tool, params, result.success, resultStr, result.error);
+      ws.send(JSON.stringify({
+        type: 'tool_result', id, historyId, tool,
+        success: result.success,
+        result: typeof result.result === 'string' ? result.result : JSON.stringify(result.result),
+        error: result.error
+      }));
+    } catch(e) {
+      const historyId = history.add(tool, params, false, null, e.message);
+      ws.send(JSON.stringify({ type: 'tool_result', id, historyId, tool, success: false, error: e.message }));
+    }
+    return;
+  }
 
   // ── metrics 查询快捷入口 ──
   // ── Router Phase 2: trace 观察模式 ──
