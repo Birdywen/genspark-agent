@@ -69,8 +69,15 @@ handlers.set('oracle_run', async (params) => {
 
 // ===== gen_image (需要浏览器转发) =====
 // 标记为 browser-side，handleToolCall 检测到后走 forwardToBrowser
+// gen_image 去重: 30秒内同 prompt 不重复执行
+// gen_image 去重: 30秒内同 prompt 不重复执行
+let _lastGenImage = { prompt: null, time: 0, result: null };
 handlers.set('gen_image', async (params, context) => {
-  // gen_image 需要浏览器 cookie，通过 evalInBrowser 桥接
+  const now = Date.now();
+  if (params.prompt === _lastGenImage.prompt && now - _lastGenImage.time < 30000 && _lastGenImage.result) {
+    return _lastGenImage.result;
+  }
+  _lastGenImage = { prompt: params.prompt, time: now, result: null };
   const { evalInBrowser } = context;
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   
@@ -110,7 +117,7 @@ handlers.set('gen_image', async (params, context) => {
     try {
       const state = JSON.parse(checkResult);
       if (state.st === 'done') {
-        return { success: true, result: { url: state.url, task_id: state.tid } };
+        const r = { success: true, result: { url: state.url, task_id: state.tid } }; _lastGenImage.result = r; return r;
       }
       if (state.st === 'failed') {
         return { success: false, error: state.err, task_id: state.tid };
