@@ -65,6 +65,14 @@ const stmts = {
 
 const dbApi = {
   addCommand(entry) {
+    // Dedup: skip if same tool+params within 2s
+    const dedupKey = entry.tool + ':' + (typeof entry.params === 'string' ? entry.params : JSON.stringify(entry.params)).substring(0,200);
+    const now = Date.now();
+    if (!dbApi._lastCmd) dbApi._lastCmd = {};
+    if (dbApi._lastCmd.key === dedupKey && (now - dbApi._lastCmd.time) < 2000) {
+      return dbApi._lastCmd.id; // return previous id
+    }
+    dbApi._lastCmd = { key: dedupKey, time: now, id: entry.id };
     return stmts.insertCommand.run({
       id: entry.id,
       timestamp: entry.timestamp || new Date().toISOString(),

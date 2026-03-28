@@ -135,7 +135,6 @@ const processManager = new ProcessManager();
 
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
-  logger.info("[DEBUG-HTC] tool:"+tool+" id:"+id+" params:"+JSON.stringify(params));
 
   // ── 自定义 Tool 拦截（不走 MCP）──
   if (isCustomTool(tool)) {
@@ -258,12 +257,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     params = _aliasResult.params;
   }
   
-  logger.info("[DEBUG-HTC] pre-pipeline, tool:"+tool);
   // ── Pipeline 预处理 ──
   params = resolvePayloadFiles(params, logger);
   params = decodeBase64Fields(params, logger);
   params = parseParams(params, logger);
-  logger.info("[DEBUG-HTC] post-pipeline, entering router check");
   // ── Router Phase 3: 灰度切流量 ──
   const ROUTER_INTERCEPT = (process.env.ROUTER_INTERCEPT || 'ssh,filesystem,vfs,browser,shell,utility,bg,memory,agent').split(',');
   let _routerHandled = false;

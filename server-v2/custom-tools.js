@@ -156,7 +156,98 @@ handlers.set('ask_ai', async (params, context) => {
   } catch (e) {
     return { success: false, error: e.message };
   }
-});export function getCustomHandler(toolName) {
+});
+
+// datawrapper custom tool handler
+// Actions: create, upload_data, publish, update, list, delete, fork
+handlers.set('datawrapper', async (params, context) => {
+  const { action } = params;
+  if (!action) return { success: false, error: 'action is required: create|upload_data|publish|update|list|delete|fork' };
+  
+  const TOKEN = 'qvhi9qM49vFbj3hdJ7uvzykERnZPDDOjBnXCj2bBPCUOhqopFlz3z6UggPgyxCKj';
+  const BASE = 'https://api.datawrapper.de/v3';
+  
+  const fetchDW = async (path, opts = {}) => {
+    const url = BASE + path;
+    const headers = { Authorization: 'Bearer ' + TOKEN, ...opts.headers };
+    const resp = await fetch(url, { ...opts, headers });
+    const text = await resp.text();
+    if (!resp.ok) return { success: false, error: `${resp.status}: ${text.substring(0, 300)}` };
+    try { return { success: true, result: JSON.parse(text) }; } catch { return { success: true, result: text }; }
+  };
+
+  switch (action) {
+    case 'create': {
+      // params: title, type, metadata (optional)
+      const body = { title: params.title || 'Untitled', type: params.type || 'column-chart' };
+      if (params.metadata) body.metadata = params.metadata;
+      if (params.theme) body.theme = params.theme;
+      return fetchDW('/charts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+    case 'upload_data': {
+      // params: id, data (CSV string)
+      if (!params.id) return { success: false, error: 'id is required' };
+      if (!params.data) return { success: false, error: 'data (CSV) is required' };
+      return fetchDW(`/charts/${params.id}/data`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'text/csv' },
+        body: params.data
+      });
+    }
+    case 'publish': {
+      // params: id
+      if (!params.id) return { success: false, error: 'id is required' };
+      return fetchDW(`/charts/${params.id}/publish`, { method: 'POST' });
+    }
+    case 'update': {
+      // params: id, patch (object to PATCH)
+      if (!params.id) return { success: false, error: 'id is required' };
+      if (!params.patch) return { success: false, error: 'patch object is required' };
+      return fetchDW(`/charts/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params.patch)
+      });
+    }
+    case 'list': {
+      // params: limit (default 10), search (optional)
+      const limit = params.limit || 10;
+      let path = `/charts?limit=${limit}&order=DESC&orderBy=lastModifiedAt`;
+      if (params.search) path += `&search=${encodeURIComponent(params.search)}`;
+      return fetchDW(path);
+    }
+    case 'delete': {
+      // params: id
+      if (!params.id) return { success: false, error: 'id is required' };
+      return fetchDW(`/charts/${params.id}`, { method: 'DELETE' });
+    }
+    case 'fork': {
+      // params: id (source chart to fork)
+      if (!params.id) return { success: false, error: 'id is required' };
+      return fetchDW(`/charts/${params.id}/fork`, { method: 'POST' });
+    }
+    case 'get': {
+      // params: id
+      if (!params.id) return { success: false, error: 'id is required' };
+      return fetchDW(`/charts/${params.id}`);
+    }
+    case 'river': {
+      // params: limit, search
+      const limit = params.limit || 10;
+      let path = `/river?limit=${limit}`;
+      if (params.search) path += `&search=${encodeURIComponent(params.search)}`;
+      return fetchDW(path);
+    }
+    default:
+      return { success: false, error: `unknown action: ${action}. Use: create|upload_data|publish|update|list|delete|fork|get|river` };
+  }
+});
+
+export function getCustomHandler(toolName) {
   return handlers.get(toolName) || null;
 }
 
