@@ -40,13 +40,18 @@ handlers.set('git_commit', async (params) => {
 
 // ===== wechat =====
 handlers.set('wechat', async (params) => {
-  const { action, to, content, args } = params;
+  const { action, to, chat, content, args } = params;
   if (!action) return { success: false, error: 'action is required' };
   const parts = ['~/workspace/wechat-cli/wechat', action];
-  if (to) parts.push('--to', `"${to}"`);
-  if (content) parts.push('--content', `"${content}"`);
+  // 位置参数格式: wechat send "联系人" "内容" / wechat read "联系人"
+  if (action === 'send' && to && content) {
+    parts.push(`"${to}"`, `"${content}"`);
+  } else if (action === 'read' && (chat || to)) {
+    parts.push(`"${chat || to}"`);
+  } else if (to) {
+    parts.push(`"${to}"`);
+  }
   if (args) parts.push(...(Array.isArray(args) ? args : [args]));
-  parts.push('--json');
   try {
     const result = execSync(parts.join(' '), { encoding: 'utf8', timeout: 30000, shell: true });
     return { success: true, result: result.trim() };
@@ -421,6 +426,36 @@ handlers.set('local_store', async (params) => {
     return { success: false, error: e.message };
   } finally {
     db.close();
+  }
+});
+
+// ===== compress: 压缩当前对话 =====
+handlers.set('compress', async (params, context) => {
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
+  const headN = params.headN || 3;
+  const tailN = params.tailN || 30;
+  const dryRun = params.dryRun || false;
+  const code = `return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun}}) : 'error: __shortcuts not loaded'`;
+  try {
+    const result = await evalInBrowser(code, 120000);
+    return { success: true, result };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ===== recover: 恢复压缩前的对话 =====
+handlers.set('recover', async (params, context) => {
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
+  const date = params.date || new Date().toISOString().split('T')[0];
+  const code = `return window.__shortcuts ? window.__shortcuts.recover('${date}') : 'error: __shortcuts not loaded'`;
+  try {
+    const result = await evalInBrowser(code, 60000);
+    return { success: true, result };
+  } catch (e) {
+    return { success: false, error: e.message };
   }
 });
 

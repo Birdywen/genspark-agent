@@ -21,7 +21,7 @@ try {
 } catch(e) { /* .env not found, skip */ }
 
 import { WebSocketServer } from 'ws';
-import { spawn, execSync } from 'child_process';
+import { spawn, exec, execSync } from 'child_process';
 import { readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -862,6 +862,12 @@ async function main() {
                 try { const _hid = history.add(pending._tool || 'eval_js', { code: (pending._code || '').substring(0, 500) }, true, resultStr.substring(0, 5000)); logger.info(`[BrowserTool] eval_js 记录到DB: #${_hid} tool=${pending._tool}`); } catch(e) { logger.error(`[BrowserTool] eval_js 记录失败: ${e.message}`); }
                 pending.resolve(msg.result);
               } else {
+                // 多tab竞争：失败结果先不reject，等其他tab可能返回成功
+                if (clients.size > 1 && !pending._failCount) {
+                  pending._failCount = 1;
+                  logger.warning(`[BrowserTool] tab失败但有${clients.size}个连接，等其他tab: ${msg.callId} - ${msg.error}`);
+                  return; // 不删pending不清timer，等下一个tab
+                }
                 clearTimeout(pending.timeout);
                 browserToolPending.delete(msg.callId);
                 logger.error(`[BrowserTool] 执行失败: ${msg.callId} - ${msg.error}`);
@@ -947,7 +953,7 @@ async function main() {
                 });
                 
                 // 触发外部重启
-                const { exec } = require('child_process');
+                // exec already imported at top
                 exec('touch /tmp/agent-restart-trigger', (err) => {
                   if (err) {
                     logger.error('[WS] 触发重启失败:', err.message);

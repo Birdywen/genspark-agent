@@ -651,99 +651,14 @@
     },
     recover: function(date) {
       return this._loadAndRun("agent-recover", {date: date || new Date().toISOString().split("T")[0]});
-    },
-    playbook: function(keyword) {
-    var sql = keyword
-      ? "SELECT keyword,correct_method,wrong_method,query_count FROM playbook WHERE keyword LIKE '%" + keyword + "%' ORDER BY priority ASC"
-      : "SELECT keyword,correct_method,wrong_method,query_count FROM playbook ORDER BY priority ASC";
-    return window.__mine.sql(sql);
-  },
-  updatePlaybook: function() {
-    var sql = "INSERT OR REPLACE INTO playbook (keyword,query_count,correct_method,wrong_method,priority,last_updated) SELECT keyword, cnt, correct_method, wrong_method, ROW_NUMBER() OVER (ORDER BY cnt DESC), datetime('now') FROM (SELECT CASE WHEN params LIKE '%LIKE %' THEN substr(params, instr(params,'LIKE \'%')+6, instr(substr(params,instr(params,'LIKE \'%')+6),'%\'')-1) ELSE 'raw' END as keyword, COUNT(*) as cnt, COALESCE((SELECT correct_method FROM playbook p2 WHERE p2.keyword = keyword),'') as correct_method, COALESCE((SELECT wrong_method FROM playbook p2 WHERE p2.keyword = keyword),'') as wrong_method FROM commands WHERE tool='run_process' AND params LIKE '%agent.db%' AND params LIKE '%LIKE%' GROUP BY keyword ORDER BY cnt DESC LIMIT 20)";
-    return window.__mine.sql(sql);
-  },
-  restart: function() {
-    return fetch('http://localhost:8766/restart').then(function(r){return r.text();}).then(function(t){
-      try{return JSON.parse(t)}catch(e){return t}
-    });
-  },
-  status: function() {
-    return fetch('http://localhost:8766/status').then(function(r){return r.json();});
-  }
+    }
   };
-  console.log("[SSE-Hook] Shortcuts registered: compress, recover, playbook, updatePlaybook, restart, status");
+  console.log("[SSE-Hook] Shortcuts registered: compress, recover (playbook/mine/restart/status → sys-tools)");
 
-  // === DB MINING (auto-registered) ===
-window.__mine = {
-  how: function(keyword) {
-    return this._q("SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%"+keyword+"%' AND success=1 ORDER BY id DESC LIMIT 10");
-  },
-  fail: function(keyword) {
-    return this._q("SELECT id,timestamp,tool,substr(params,1,150) as p,substr(error,1,100) as err FROM commands WHERE params LIKE '%"+keyword+"%' AND success=0 ORDER BY id DESC LIMIT 10");
-  },
-  recent: function(n) {
-    return this._q("SELECT id,timestamp,tool,substr(params,1,150) as p,success FROM commands ORDER BY id DESC LIMIT "+(n||20));
-  },
-  today: function() {
-    return this._q("SELECT tool,COUNT(*) as cnt,SUM(success) as ok FROM commands WHERE date(timestamp)=date('now') GROUP BY tool ORDER BY cnt DESC");
-  },
-  file: function(filename) {
-    return this._q("SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%"+filename+"%' ORDER BY id DESC LIMIT 10");
-  },
-  sql: function(query) {
-    return this._q(query);
-  },
-  struggle: function(keyword, ctx) {
-    var c = ctx || 3;
-    var ws2 = new WebSocket("ws://localhost:8765");
-    return new Promise(function(resolve){
-      var step = 1;
-      ws2.onmessage = function(e){
-        var d = JSON.parse(e.data);
-        if (d.type === "connected") {
-          var findSql = "SELECT id FROM commands WHERE params LIKE '%" + keyword + "%' AND success=0 ORDER BY id DESC LIMIT 10";
-          ws2.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"s1",params:{command_line:"bash",mode:"shell",stdin:"cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 -json data/agent.db \"" + findSql + "\""}}));
-        } else if (d.type === "tool_result" && step === 1) {
-          step = 2;
-          try {
-            var raw = d.result;
-            var idx = raw.indexOf("[{");
-            if (idx === -1) { resolve("no failures found for: " + keyword); ws2.close(); return; }
-            var ids = JSON.parse(raw.substring(idx));
-            if (!ids.length) { resolve("no failures found for: " + keyword); ws2.close(); return; }
-            var ranges = ids.map(function(r){ return "id BETWEEN " + (r.id - c) + " AND " + (r.id + c); });
-            var emptyStr = String.fromCharCode(39) + String.fromCharCode(39);
-            var sql2 = "SELECT id,timestamp,tool,success,substr(params,1,100) as p,substr(COALESCE(error," + emptyStr + "),1,60) as err FROM commands WHERE (" + ranges.join(" OR ") + ") ORDER BY id ASC";
-            ws2.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"s2",params:{command_line:"bash",mode:"shell",stdin:"cd /Users/yay/workspace/genspark-agent/server-v2 && sqlite3 -header -column data/agent.db \"" + sql2 + "\""}}));
-          } catch(e2) {
-            resolve("parse error: " + e2.message);
-            ws2.close();
-          }
-        } else if (d.type === "tool_result" && step === 2) {
-          resolve(d.result);
-          ws2.close();
-        }
-      };
-      setTimeout(function(){ resolve("timeout"); }, 8000);
-    });
-  },
-  _q: function(sql) {
-    var ws = new WebSocket("ws://localhost:8765");
-    return new Promise(function(resolve){
-      ws.onmessage = function(e){
-        var d = JSON.parse(e.data);
-        if (d.type === "connected") {
-          ws.send(JSON.stringify({type:"tool_call",tool:"run_process",id:"mine",params:{command:"sqlite3 -header -column /Users/yay/workspace/genspark-agent/server-v2/data/agent.db \""+sql+"\""}}));
-        } else if (d.type === "tool_result") {
-          resolve(d.result);
-          ws.close();
-        }
-      };
-      setTimeout(function(){resolve("timeout")}, 5000);
-    });
-  }
-};
-  console.log("[SSE-Hook] __mine registered: how, fail, recent, today, file, sql, struggle");
+  // === DB MINING: moved to sys-tools.js (mine tool) ===
+  // Use ΩCODE {"tool":"mine","params":{"action":"how","keyword":"..."}} instead
+  // Actions: how|fail|recent|today|file|struggle
 
   console.log('[SSE-Hook] Fetch prompt-injection hook v2 installed (auto-inject + append + reverse-channel)');
 })();
+// [2026-03-30] __mine fully removed — use sys-tools: {tool:"mine",params:{action:"how|fail|recent|today|file",keyword:"..."}}
