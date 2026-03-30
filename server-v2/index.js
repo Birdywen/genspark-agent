@@ -48,7 +48,13 @@ import { resolve as resolveAlias } from "./core/alias.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { MCPHub, expandEnvVars } from './core/mcp-hub.js';
-import { isCustomTool, isBrowserTool, getCustomHandler, customToolNames, buildBrowserToolCode } from './custom-tools.js';
+import { isSysTool, isBrowserTool, getSysHandler, sysToolNames, buildBrowserToolCode } from './sys-tools.js';
+
+// 合并 MCP tools + custom tools 的完整列表
+function getAllTools() {
+  const customDefs = sysToolNames.map(name => ({ name, description: `[sys] ${name}` }));
+  return [...(hub?.tools || []), ...customDefs];
+}
 
 const config = expandEnvVars(JSON.parse(readFileSync(path.join(__dirname, 'config.json'), 'utf-8')));
 
@@ -137,7 +143,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
 
   // ── 自定义 Tool 拦截（不走 MCP）──
-  if (isCustomTool(tool)) {
+  if (isSysTool(tool)) {
     const _cStart = Date.now();
     try {
       if (isBrowserTool(tool)) {
@@ -149,7 +155,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         });
         return;
       }
-      const handler = getCustomHandler(tool);
+      const handler = getSysHandler(tool);
       // evalInBrowser: 发 eval_js 给浏览器，返回 Promise<string>
       const evalInBrowser = (jsCode, timeoutMs) => new Promise((resolve, reject) => {
         const callId = 'eval_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
@@ -268,6 +274,24 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
     const driver = router.handlers.get(tool);
     if (driver && ROUTER_INTERCEPT.includes(driver.name)) {
       logger.info('[Router] INTERCEPT: ' + tool + ' -> ' + driver.name);
+      // 去重：同内容 tool_call 10秒内不重复执行
+      const dedupeKey = tool + ':' + JSON.stringify(params).substring(0, 500);
+      const now = Date.now();
+      if (!global._toolDedup) global._toolDedup = new Map();
+      const lastRun = global._toolDedup.get(dedupeKey);
+      if (lastRun && now - lastRun < 10000) {
+        logger.info('[Router] DEDUP: skipping duplicate ' + tool + ' (within 10s)');
+        // 静默返回成功，不报错，避免浏览器端显示错误
+        if (ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'tool_result', id, tool, success: true, result: '[dedup] skipped' }));
+        }
+        return;
+      }
+      global._toolDedup.set(dedupeKey, now);
+      // 清理旧条目
+      if (global._toolDedup.size > 100) {
+        for (const [k, t] of global._toolDedup) { if (now - t > 30000) global._toolDedup.delete(k); }
+      }
       // 安全检查
       const safetyCheck = await safety.checkOperation(tool, params || {}, broadcast);
       if (!safetyCheck.allowed) {
@@ -752,7 +776,7 @@ async function main() {
     ws.send(JSON.stringify({
       type: 'connected',
       message: 'Genspark Agent Server v2.1 已连接 (支持命令重试)',
-      tools: hub.tools,
+      tools: getAllTools(),
       skills: skillsManager.getSkillsList(),
       skillsPrompt: skillsManager.getSystemPrompt(),
       agents: agentsData.agents || {},
@@ -852,7 +876,7 @@ async function main() {
           }
             
           case 'list_tools':
-            ws.send(JSON.stringify({ type: 'tools_list', tools: hub.tools }));
+            ws.send(JSON.stringify({ type: 'tools_list', tools: getAllTools() }));
             break;
           
           // ===== 新增: 工具热刷新 =====
@@ -866,13 +890,13 @@ async function main() {
                 type: 'reload_tools_result',
                 success: true,
                 toolCount: reloadResult.toolCount,
-                tools: hub.tools
+                tools: getAllTools()
               }));
               
               // 广播给所有客户端
               broadcast({
                 type: 'tools_updated',
-                tools: hub.tools,
+                tools: getAllTools(),
                 timestamp: Date.now()
               });
               
@@ -1091,7 +1115,7 @@ async function main() {
 
 // Teams Agent v3 - 启动 node 端 agent loop
 try {
-  // teamsAgent.start({ handleToolCall, logger, clients, browserToolPending }); // DISABLED: using birdy-standalone.js
+  teamsAgent.start({ handleToolCall, logger, clients, browserToolPending, getTaskEngine: () => taskEngine });
   logger.info("Teams Agent v3 已启动");
 } catch(e) {
   logger.warning("Teams Agent 启动失败: " + e.message);

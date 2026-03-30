@@ -77,6 +77,8 @@ function connectWebSocket() {
     }
     broadcastToAllTabs({ type: 'WS_STATUS', connected: true });
     startPing();
+    // 重连后发送队列中暂存的 tool_call
+    setTimeout(() => flushPendingQueue(), 500);
   };
 
   socket.onmessage = (event) => {
@@ -278,25 +280,56 @@ function broadcastToAllTabs(message) {
   });
 }
 
+// 待发送队列：WS 断开时暂存，重连后自动发送
+const pendingQueue = [];
+const PENDING_QUEUE_MAX = 20;
+const PENDING_QUEUE_TTL = 30000; // 30秒过期
+
 function sendToServer(message, tabId) {
+  // 记录这个调用来自哪个 Tab（包括 retry）
+  if ((message.type === 'tool_call' || message.type === 'retry' || message.type === 'tool_batch') && message.id && tabId) {
+    pendingCallsByTab.set(message.id, tabId);
+    console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
+    setTimeout(() => { pendingCallsByTab.delete(message.id); }, 120000);
+  }
+
   if (socket && socket.readyState === WebSocket.OPEN) {
-    // 记录这个调用来自哪个 Tab（包括 retry）
-    if ((message.type === 'tool_call' || message.type === 'retry') && message.id && tabId) {
-      pendingCallsByTab.set(message.id, tabId);
-      console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
-      
-      // 30秒后清理，防止内存泄漏
-      setTimeout(() => {
-        pendingCallsByTab.delete(message.id);
-      }, 120000);  // 延长到120秒
-    }
-    
     socket.send(JSON.stringify(message));
     console.log('[BG] 发送到服务器:', message.type);
     return true;
   }
-  console.warn('[BG] 未连接');
+  
+  // WS 未连接：加入队列等待重连
+  if (message.type === 'tool_call' || message.type === 'tool_batch') {
+    if (pendingQueue.length < PENDING_QUEUE_MAX) {
+      pendingQueue.push({ message, tabId, timestamp: Date.now() });
+      console.log('[BG] WS 断开，加入队列:', message.type, '队列长度:', pendingQueue.length);
+    } else {
+      console.warn('[BG] 队列已满，丢弃:', message.type);
+    }
+    return false;
+  }
+  
+  console.warn('[BG] 未连接，丢弃:', message.type);
   return false;
+}
+
+function flushPendingQueue() {
+  const now = Date.now();
+  while (pendingQueue.length > 0) {
+    const item = pendingQueue.shift();
+    if (now - item.timestamp > PENDING_QUEUE_TTL) {
+      console.log('[BG] 队列消息过期，丢弃:', item.message.type);
+      continue;
+    }
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(item.message));
+      console.log('[BG] 队列重发:', item.message.type);
+    } else {
+      pendingQueue.unshift(item); // 放回队首
+      break;
+    }
+  }
 }
 
 // ============== 跨 Tab 通信 ==============

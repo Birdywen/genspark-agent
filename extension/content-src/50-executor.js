@@ -99,7 +99,7 @@
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 3000);
+    addDedupKey(contentKey, 120000);
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -329,7 +329,7 @@
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 3000);
+    addDedupKey(contentKey, 120000);
     
     // === 本地拦截: list_tabs 查询所有标签页 ===
     if (tool.name === 'list_tabs') {

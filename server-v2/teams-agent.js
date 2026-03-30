@@ -1,9 +1,10 @@
 // Teams Agent v3 - Node-side agent with direct tool access
 // Runs inside server-v2, calls handleToolCall directly
-// AI: Kimi (fast, no cookie needed) | CometChat: direct HTTPS
+// AI: Gemini (via ask_ai) | CometChat: direct HTTPS
 
 import https from 'https';
 import { execSync } from 'child_process';
+import { readFileSync, writeFileSync } from 'fs';
 
 const CONFIG = {
   // CometChat
@@ -14,43 +15,72 @@ const CONFIG = {
   birdyToken: '94abdf9e-04cd-40ce-883d-fdc8b445d132_1771874125707e8907dd7750b3a7545da9cefae1',
   birdyUid: '94abdf9e-04cd-40ce-883d-fdc8b445d132',
   
-  // Kimi AI
-  kimiKey: 'sk-EB4UEHdVBmfvqjPJB8WIu6UJ9E1cplgtyByFvmG56E9BLAEe',
-  kimiModel: 'moonshot-v1-8k',
-  
   // Agent
   pollInterval: 3000,
-  maxToolLoops: 10,
+  maxToolLoops: 25,
 };
 
-const SYSTEM_PROMPT = `You are Birdy, a helpful AI assistant in a team chat. You have access to tools. When you need to execute commands, read a tool call in this exact format:
+const SYSTEM_PROMPT = `You are Birdy 🐦, an AI assistant in team chat. Mac shell access.
 
+Tool format (ONE per response):
 TOOL_CALL
-tool: <tool_name>
+tool: <name>
 params:
-<json params>
+<json>
 END_TOOL_CALL
 
-Available tools:
-- run_command: Execute shell commands. Params: {"command":"bash","stdin":"<script>"}
-- read_file: Read a file. Params: {"path":"<filepath>"}
-- write_file: Write a file. Params: {"path":">"}
-- list_directory: List directory. Params: {"path":"<dirpath>"}
-- web_search: Search web. Params: {"q":"<query>"}
+Tools: run_command({command:"bash",stdin:"script"}), read_file({path}), write_file({path,content}), list_directory({path})
 
-Rules:
-- Be concise, replies go to mobile chat
-- Reply in the same language the user uses
-- If a tool is needed, output exactly ONE tool call, wait for result, then respond
-- After getting tool results, summarize and reply to the user`;
+== WeChat CLI (微信) ==
+Path: /Users/yay/.local/bin/wechat. 名字模糊匹配。--json for scripting.
+常用: unread, history 名字 N, send 名字 内容, list, search
+不确定时: run_command with {"command":"bash","stdin":"wechat --help"}
 
-let lastMsgId = 0;
+== TASK_CALL (先查再处理，一轮搞定) ==
+TASK_CALL
+[{"tool":"run_process","params":{"command_line":"wechat unread --json","mode":"shell"},"saveAs":"s1"},{"type":"forEach","collection":"{{s1.result}}","item":"c","steps":[{"tool":"run_process","params":{"command_line":"wechat history '{{c.name}}' 3","mode":"shell"}}]}]
+END_TASK
+Keys: saveAs, when, forEach(collection,item,steps), if(condition,then,else), parallel:true
+
+== BATCH (无依赖并行) ==
+BATCH_TOOL_CALL
+---
+tool: run_command
+params:
+{"command":"bash","stdin":"cmd1"}
+---
+tool: run_command
+params:
+{"command":"bash","stdin":"cmd2"}
+END_BATCH
+
+Rules: 简洁回复(手机看), 用户语言回复, 微信请求直接执行不要问
+⚠️ 多聊天操作→用一个shell脚本搞定(wechat unread --json | jq + while循环), 不要用TASK_CALL或多轮TOOL_CALL
+示例: run_command {"command":"bash","stdin":"wechat unread --json | jq -r '.[].name' | while read n; do echo \"=== $n ==="; wechat history \"$n\" 2; done"}
+禁止BATCH执行多个wechat命令(GUI不能并行)`;
+
+const LAST_MSG_FILE = '/tmp/teams-agent-lastmsgid';
+const PROCESSED_IDS_FILE = '/tmp/teams-agent-processed';
+let lastMsgId = (() => { try { return parseInt(readFileSync(LAST_MSG_FILE, 'utf8').trim()) || 0; } catch(e) { return 0; } })();
 let processing = false;
+const processedMsgIds = (() => {
+  try {
+    const data = readFileSync(PROCESSED_IDS_FILE, 'utf8').trim();
+    return new Set(data.split('\n').filter(Boolean).map(Number));
+  } catch(e) { return new Set(); }
+})();
+function persistProcessedIds() {
+  try {
+    const ids = [...processedMsgIds].slice(-200).join('\n');
+    writeFileSync(PROCESSED_IDS_FILE, ids);
+  } catch(e) {}
+}
 let pollTimer = null;
 let handleToolCallFn = null;
 let loggerRef = null;
 let clientsRef = null;
 let browserToolPendingRef = null;
+let getTaskEngineRef = null;
 
 function log(msg) {
   const ts = new Date().toLocaleTimeString();
@@ -111,6 +141,7 @@ function fetchMessages() {
 }
 
 function sendAsBirdy(text) {
+  text = text + '\n— 🐦';  // signature to distinguish from platform AI
   if (text.length > 4000) text = text.slice(0, 3900) + '\n...(truncated)';
   return ccRequest('POST', '/messages', {
     type: 'text',
@@ -122,38 +153,68 @@ function sendAsBirdy(text) {
   }, CONFIG.birdyToken);
 }
 
-// ============ KIMI AI ============
-function askKimi(messages) {
+// ============ ASK AI (direct Anthropic API via apipod) ============
+const AI_BASE = 'https://api.apipod.ai';
+const AI_KEY = process.env.ANTHROPIC_AUTH_TOKEN || 'sk-1f56c0aa134c1f3ce9dbb5a9df53c600291bcd617a2b116a340252b8c8579cad';
+const AI_MODEL = 'claude-sonnet-4-6';
+
+async function askViaCustomTool(messages) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({
-      model: CONFIG.kimiModel,
+    if (!handleToolCallFn) return reject(new Error('handleToolCall not available'));
+    const callId = 'teams_ai_' + Date.now();
+    let done = false;
+    const fakeWs = {
+      send(data) {
+        if (done) return;
+        try {
+          const msg = JSON.parse(data);
+          if (msg.id === callId || msg.type === 'tool_result') {
+            done = true;
+            let result = msg.result;
+            if (typeof result === 'object') result = result.result || JSON.stringify(result);
+            resolve(typeof result === 'string' ? result : JSON.stringify(result));
+          }
+        } catch(e) { done = true; resolve(data.toString()); }
+      },
+      readyState: 1,
+    };
+    setTimeout(() => { if (!done) { done = true; resolve('(AI timeout 60s)'); } }, 60000);
+    handleToolCallFn(fakeWs, { id: callId, type: 'tool_call', tool: 'ask_ai', params: {
       messages,
-      temperature: 0.7,
-    });
-    const req = https.request({
-      hostname: 'api.moonshot.ai',
-      path: '/v1/chat/completions',
+      model: 'claude-sonnet-4-6',
+    }}).catch(e => { if (!done) { done = true; resolve('AI error: ' + e.message); } });
+  });
+}
+
+async function askGemini(messages) {
+  try {
+    const sysMsg = messages.find(m => m.role === 'system');
+    const nonSys = messages.filter(m => m.role !== 'system');
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+    const resp = await fetch(AI_BASE + '/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${CONFIG.kimiKey}`,
-        'Content-Length': Buffer.byteLength(body),
+        'x-api-key': AI_KEY,
+        'anthropic-version': '2023-06-01',
       },
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        log('Kimi raw (status ' + res.statusCode + '): ' + data.substring(0, 300));
-        try {
-          const json = JSON.parse(data);
-          resolve(json.choices?.[0]?.message?.content || '(empty response)');
-        } catch(e) { reject(new Error('Kimi parse error: ' + data.substring(0, 200))); }
-      });
+      body: JSON.stringify({
+        model: AI_MODEL,
+        max_tokens: 2048,
+        system: sysMsg?.content || '',
+        messages: nonSys.map(m => ({ role: m.role, content: m.content })),
+      }),
+      signal: controller.signal,
     });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
+    clearTimeout(timer);
+    const data = await resp.json();
+    if (data.content?.[0]?.text) return data.content[0].text;
+    if (data.error) return 'AI error: ' + (data.error.message || JSON.stringify(data.error));
+    return JSON.stringify(data);
+  } catch(e) {
+    return 'AI error: ' + e.message;
+  }
 }
 
 // ============ ASK_PROXY (via browser eval_js) ============
@@ -204,18 +265,105 @@ function askProxy(messages, model) {
 }
 
 // ============ TOOL EXECUTION ============
-function parseToolCall(text) {
-  const match = text.match(/TOOL_CALL\s*\ntool:\s*(\S+)\s*\nparams:\s*\n([\s\S]*?)\nEND_TOOL_CALL/);
+function parseSingleToolCall(text) {
+  let match = text.match(/TOOL_CALL\s*\ntool:\s*(\S+)\s*\nparams:\s*\n([\s\S]*?)\nEND_TOOL_CALL/);
+  if (!match) match = text.match(/TOOL_CALL\s*\ntool:\s*(\S+)\s*\nparams:\s*\n([\s\S]*)$/);
+  if (!match) return null;
+  const tool = match[1];
+  const raw = match[2].trim();
+  try { return { tool, params: JSON.parse(raw) }; } catch(e) {}
+  try {
+    const params = {};
+    for (const line of raw.split('\n')) {
+      const m = line.match(/^\s*([\w_]+):\s*(.+)$/);
+      if (m) {
+        let val = m[2].trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) val = val.slice(1, -1);
+        params[m[1]] = val;
+      }
+    }
+    if (Object.keys(params).length > 0) return { tool, params };
+  } catch(e) {}
+  return null;
+}
+
+function parseBatchToolCalls(text) {
+  const batchMatch = text.match(/BATCH_TOOL_CALL\s*\n([\s\S]*?)\nEND_BATCH/);
+  if (!batchMatch) return null;
+  const blocks = batchMatch[1].split(/\n---\s*\n/).filter(b => b.trim());
+  const calls = [];
+  for (const block of blocks) {
+    const toolMatch = block.match(/tool:\s*(\S+)/);
+    const paramsMatch = block.match(/params:\s*\n([\s\S]*)/);
+    if (toolMatch && paramsMatch) {
+      const tool = toolMatch[1];
+      const raw = paramsMatch[1].trim();
+      let params;
+      try { params = JSON.parse(raw); } catch(e) {
+        params = {};
+        for (const line of raw.split('\n')) {
+          const m = line.match(/^\s*([\w_]+):\s*(.+)$/);
+          if (m) { let v = m[2].trim(); if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1,-1); params[m[1]] = v; }
+        }
+      }
+      if (params && Object.keys(params).length > 0) calls.push({ tool, params });
+    }
+  }
+  return calls.length > 0 ? calls : null;
+}
+
+function parseTaskCall(text) {
+  const match = text.match(/TASK_CALL\s*\n([\s\S]*?)\nEND_TASK/);
   if (!match) return null;
   try {
-    return { tool: match[1], params: JSON.parse(match[2].trim()) };
-  } catch(e) {
-    return null;
-  }
+    const steps = JSON.parse(match[1].trim());
+    if (Array.isArray(steps) && steps.length > 0) return steps;
+  } catch(e) {}
+  return null;
+}
+
+function parseToolCall(text) {
+  // Try task engine first
+  const task = parseTaskCall(text);
+  if (task) return { task };
+  // Try batch
+  const batch = parseBatchToolCalls(text);
+  if (batch) return { batch };
+  // Single tool call
+  return parseSingleToolCall(text);
 }
 
 function executeTool(tool, params) {
   return new Promise((resolve, reject) => {
+    // Direct ask_ai handler - uses custom tool pipeline
+    if (tool === 'ask_ai') {
+      const askParams = {
+        prompt: params.prompt || params.q || '',
+        model: params.model || 'claude-sonnet-4-6',
+      };
+      if (!handleToolCallFn) return reject(new Error('handleToolCall not available'));
+      const callId = 'teams_ask_' + Date.now();
+      let done = false;
+      const fakeWs = {
+        send(data) {
+          if (done) return;
+          try {
+            const msg = JSON.parse(data);
+            if (msg.id === callId || msg.type === 'tool_result') {
+              done = true;
+              let result = msg.result;
+              if (typeof result === 'object') result = result.result || JSON.stringify(result);
+              resolve(typeof result === 'string' ? result : JSON.stringify(result));
+            }
+          } catch(e) { done = true; resolve(data.toString()); }
+        },
+        readyState: 1,
+      };
+      setTimeout(() => { if (!done) { done = true; log('askGemini TIMEOUT - conversation length: ' + JSON.stringify(messages).length + ' chars'); resolve('(AI timeout 60s)'); } }, 60000);
+      handleToolCallFn(fakeWs, { id: callId, type: 'tool_call', tool: 'ask_ai', params: askParams })
+        .catch(e => { if (!done) { done = true; resolve('ask_ai error: ' + e.message); } });
+      return;
+    }
     if (!handleToolCallFn) return reject(new Error('handleToolCall not available'));
     
     const callId = 'teams_' + Date.now();
@@ -259,6 +407,27 @@ function executeTool(tool, params) {
   });
 }
 
+// ============ TASK ENGINE BRIDGE ============
+async function executeTask(steps) {
+  const taskEngine = getTaskEngineRef ? getTaskEngineRef() : null;
+  if (!taskEngine) throw new Error('TaskEngine not available');
+  const batchId = `birdy-${Date.now()}`;
+  log(`TaskEngine: ${batchId}, ${steps.length} steps, available=${!!taskEngine}`);
+  const result = await taskEngine.executeBatch(batchId, steps, { stopOnError: false }, (stepResult) => {
+    log(`TaskEngine step ${stepResult.stepIndex}: ${stepResult.success ? '✓' : '✗'} ${stepResult.tool || stepResult.type || ''}`);
+  });
+  // Format results concisely
+  const lines = result.results.map((r, i) => {
+    const name = r.tool || r.type || `step${i}`;
+    if (r.skipped) return `[${i+1}] ${name}: SKIPPED`;
+    if (!r.success) return `[${i+1}] ${name}: ERROR - ${r.error || 'failed'}`;
+    const raw = r.result !== undefined ? r.result : r.results || r.error || '';
+    const val = typeof raw === 'string' ? raw : JSON.stringify(raw) || '';
+    return `[${i+1}] ${name}: ${(val || '').substring(0, 400)}`;
+  });
+  return `Task ${batchId}: ${result.stepsCompleted}/${result.totalSteps} succeeded\n${lines.join('\n')}`;
+}
+
 // ============ AGENT LOOP ============
 async function processMessage(text, senderUid) {
   if (processing) return;
@@ -274,7 +443,7 @@ async function processMessage(text, senderUid) {
     ];
     
     for (let loop = 0; loop < CONFIG.maxToolLoops; loop++) {
-      const aiResponse = await askKimi(conversation);
+      const aiResponse = await askViaCustomTool(conversation);
       log(`AI response (loop ${loop}): ${aiResponse.substring(0, 100)}`);
       
       const toolCall = parseToolCall(aiResponse);
@@ -286,14 +455,45 @@ async function processMessage(text, senderUid) {
         return;
       }
       
-      // Execute tool
-      log(`Tool call: ${toolCall.tool} ${JSON.stringify(toolCall.params).substring(0, 100)}`);
-      const toolResult = await executeTool(toolCall.tool, toolCall.params);
-      log(`Tool result: ${toolResult.substring(0, 100)}`);
-      
-      // Add to conversation and continue
       conversation.push({ role: 'assistant', content: aiResponse });
-      conversation.push({ role: 'user', content: `Tool result:\n${toolResult.substring(0, 2000)}` });
+      
+      if (toolCall.task) {
+        // Task Engine execution - full control flow
+        log(`Task: ${toolCall.task.length} steps`);
+        try {
+          log(`Calling executeTask with ${JSON.stringify(toolCall.task).substring(0, 200)}`);
+          const taskResult = await executeTask(toolCall.task);
+          log(`Task result (${taskResult.length} chars): ${taskResult.substring(0, 200)}`);
+          let safeResult = taskResult.substring(0, 3000).replace(/[\u0000-\u001f]/g, ' ');
+          conversation.push({ role: 'user', content: `Task results:\n${safeResult}` });
+        } catch(e) {
+          log(`Task ERROR: ${e.message}\n${e.stack}`);
+          conversation.push({ role: 'user', content: `Task error: ${e.message}` });
+        }
+      } else if (toolCall.batch) {
+        // Batch execution - run all tools in parallel
+        log(`Batch: ${toolCall.batch.length} tools`);
+        const results = await Promise.all(toolCall.batch.map(async (tc, i) => {
+          log(`Batch[${i}]: ${tc.tool} ${JSON.stringify(tc.params).substring(0, 80)}`);
+          try {
+            const r = await executeTool(tc.tool, tc.params);
+            return `[${i+1}] ${tc.tool}: ${r.substring(0, 500)}`;
+          } catch(e) {
+            return `[${i+1}] ${tc.tool}: ERROR - ${e.message}`;
+          }
+        }));
+        const batchResult = results.join('\n');
+        log(`Batch results (${batchResult.length} chars)`);
+        let safeResult = batchResult.substring(0, 3000).replace(/[\u0000-\u001f]/g, ' ');
+        conversation.push({ role: 'user', content: `Batch results:\n${safeResult}` });
+      } else {
+        // Single tool execution
+        log(`Tool call: ${toolCall.tool} ${JSON.stringify(toolCall.params).substring(0, 100)}`);
+        const toolResult = await executeTool(toolCall.tool, toolCall.params);
+        log(`Tool result (${toolResult.length} chars): ${toolResult.substring(0, 100)}`);
+        let safeResult = toolResult.substring(0, 1500).replace(/[\u0000-\u001f]/g, ' ');
+        conversation.push({ role: 'user', content: `Tool result:\n${safeResult}` });
+      }
     }
     
     await sendAsBirdy('(Max tool loops reached)');
@@ -315,7 +515,10 @@ async function poll() {
     if (Array.isArray(messages)) {
       for (const msg of messages) {
         const id = msg.id || msg.messageId;
-        if (id && id > lastMsgId) lastMsgId = id;
+        if (id && id > lastMsgId) {
+          lastMsgId = id;
+          try { writeFileSync(LAST_MSG_FILE, String(lastMsgId)); } catch(e) {}
+        }
         
         const sender = msg.sender || msg.senderId;
         const senderUid = typeof sender === 'object' ? sender.uid : sender;
@@ -327,6 +530,14 @@ async function poll() {
         const text = msg.data?.text || msg.text || '';
         if (!text) continue;
         
+        const msgId = id || text;
+        if (processedMsgIds.has(msgId)) continue;
+        processedMsgIds.add(msgId);
+        if (processedMsgIds.size > 200) {
+          const first = processedMsgIds.values().next().value;
+          processedMsgIds.delete(first);
+        }
+        persistProcessedIds();
         processMessage(text, senderUid);
       }
     }
@@ -341,6 +552,7 @@ function start(deps) {
   if (deps.logger) loggerRef = deps.logger;
   if (deps.clients) clientsRef = deps.clients;
   if (deps.browserToolPending) browserToolPendingRef = deps.browserToolPending;
+  if (deps.getTaskEngine) getTaskEngineRef = deps.getTaskEngine;
   
   log('Starting Teams Agent v3 (node-side)');
   log(`Polling ${CONFIG.ccBase} every ${CONFIG.pollInterval}ms`);
@@ -351,7 +563,10 @@ function start(deps) {
     if (Array.isArray(messages)) {
       for (const msg of messages) {
         const id = msg.id || msg.messageId;
-        if (id && id > lastMsgId) lastMsgId = id;
+        if (id && id > lastMsgId) {
+          lastMsgId = id;
+          try { writeFileSync(LAST_MSG_FILE, String(lastMsgId)); } catch(e) {}
+        }
       }
     }
     log(`Starting from message ID: ${lastMsgId}`);

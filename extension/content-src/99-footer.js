@@ -17,9 +17,14 @@
     document.addEventListener('__sse_connected__', (e) => {
       sseState.connected = true;
       sseState.currentText = '';
+      // 保留上次的 messageId 用于比较
+      var prevMessageId = sseState.messageId;
       sseState.messageId = null;
-      sseState.processedCommands.clear();
-      sseState.executedInCurrentMessage = false;
+      // 不清除 processedCommands 和 executedInCurrentMessage
+      // 只有在新消息到达时才重置（在 __sse_data__ 中检测 messageId 变化）
+      // sseState.processedCommands.clear();
+      // sseState.executedInCurrentMessage = false;
+      sseState._prevMessageId = prevMessageId;
       log('SSE connected:', e.detail?.transport);
     });
 
@@ -34,9 +39,17 @@
         
         // 只处理 content delta
         if (parsed.type === 'message_field_delta' && parsed.field_name === 'content' && parsed.delta) {
+          // 检测是否是新消息（messageId 变化） → 重置执行状态
+          var newMsgId = parsed.message_id || sseState.messageId;
+          if (newMsgId && newMsgId !== sseState._prevMessageId && newMsgId !== sseState.messageId) {
+            log('SSE new message detected: ' + newMsgId + ' (prev: ' + sseState._prevMessageId + ')');
+            sseState.processedCommands.clear();
+            sseState.executedInCurrentMessage = false;
+            sseState.currentText = '';
+          }
           sseState.currentText += parsed.delta;
           sseState.lastDeltaTime = Date.now();
-          sseState.messageId = parsed.message_id || sseState.messageId;
+          sseState.messageId = newMsgId;
           
           // 实时检测完整的 ΩCODE 命令
           tryParseSSECommands();

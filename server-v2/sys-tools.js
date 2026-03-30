@@ -1,4 +1,4 @@
-// custom-tools.js — 自定义工具，不走 MCP
+// sys-tools.js — 自定义工具，不走 MCP
 import { execSync } from 'child_process';
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -128,6 +128,28 @@ handlers.set('gen_image', async (params, context) => {
 });
 
 
+handlers.set('web_search', async (params) => {
+  const q = params.q || params.query || '';
+  if (!q) return { success: false, error: 'No query provided' };
+  const { execSync } = require('child_process');
+  try {
+    const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
+    const raw = execSync('curl -s "' + url + '" -H "User-Agent: Mozilla/5.0"', { timeout: 15000, encoding: 'utf8' });
+    const results = [];
+    const parts = raw.split('result__a');
+    for (let i = 1; i < parts.length && results.length < 5; i++) {
+      const hrefM = parts[i].match(/href="([^"]+)"/);
+      const textM = parts[i].match(/>([^<]+)/);
+      if (hrefM && textM) {
+        results.push({ url: hrefM[1], title: textM[1].trim(), snippet: '' });
+      }
+    }
+    return { success: true, query: q, results };
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+});
+
 // ask_ai: 通过 evalInBrowser 桥接 ask_proxy (ai_chat模式，不扣积分)
 handlers.set('ask_ai', async (params, context) => {
   const { evalInBrowser } = context;
@@ -247,11 +269,199 @@ handlers.set('datawrapper', async (params, context) => {
   }
 });
 
-export function getCustomHandler(toolName) {
+// ===== server_status: 服务状态查询 =====
+handlers.set('server_status', async () => {
+  try {
+    const resp = await fetch('http://127.0.0.1:8767/status');
+    return { success: true, result: JSON.parse(await resp.text()) };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ===== server_restart: 热重启 =====
+handlers.set('server_restart', async () => {
+  try {
+    const resp = await fetch('http://127.0.0.1:8767/restart');
+    return { success: true, result: await resp.text() };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ===== playbook: 操作手册查询/更新 =====
+handlers.set('playbook', async (params) => {
+  const { action, keyword } = params;
+  const dbPath = path.join(__dirname, 'data', 'agent.db');
+  const db = new Database(dbPath);
+  try {
+    if (action === 'update') {
+      // 从 commands 表统计高频查询，更新 playbook
+      db.exec(`INSERT OR REPLACE INTO playbook (keyword,query_count,correct_method,wrong_method,priority,last_updated)
+        SELECT keyword, cnt, COALESCE((SELECT correct_method FROM playbook p2 WHERE p2.keyword = keyword),''),
+        COALESCE((SELECT wrong_method FROM playbook p2 WHERE p2.keyword = keyword),''),
+        ROW_NUMBER() OVER (ORDER BY cnt DESC), datetime('now')
+        FROM (SELECT CASE WHEN params LIKE '%LIKE %' THEN substr(params, instr(params,'LIKE ''%')+6, instr(substr(params,instr(params,'LIKE ''%')+6),'%''')-1) ELSE 'raw' END as keyword,
+        COUNT(*) as cnt FROM commands WHERE tool='run_process' AND params LIKE '%agent.db%' AND params LIKE '%LIKE%'
+        GROUP BY keyword ORDER BY cnt DESC LIMIT 20)`);
+      return { success: true, result: 'playbook updated' };
+    }
+    const sql = keyword
+      ? "SELECT keyword,correct_method,wrong_method,query_count FROM playbook WHERE keyword LIKE '%" + keyword.replace(/'/g, "''") + "%' ORDER BY priority ASC"
+      : "SELECT keyword,correct_method,wrong_method,query_count FROM playbook ORDER BY priority ASC";
+    const rows = db.prepare(sql).all();
+    return { success: true, result: rows, count: rows.length };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    db.close();
+  }
+});
+
+// ===== mine: DB 挖掘快捷查询 =====
+handlers.set('mine', async (params) => {
+  const { action, keyword, n } = params;
+  if (!action) return { success: false, error: 'action required: how|fail|recent|today|file|struggle' };
+  const dbPath = path.join(__dirname, 'data', 'agent.db');
+  const db = new Database(dbPath, { readonly: true });
+  try {
+    let sql;
+    const k = (keyword || '').replace(/'/g, "''");
+    switch (action) {
+      case 'how':
+        if (!k) return { success: false, error: 'keyword required' };
+        sql = `SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%${k}%' AND success=1 ORDER BY id DESC LIMIT 10`;
+        break;
+      case 'fail':
+        if (!k) return { success: false, error: 'keyword required' };
+        sql = `SELECT id,timestamp,tool,substr(params,1,150) as p,substr(error,1,100) as err FROM commands WHERE params LIKE '%${k}%' AND success=0 ORDER BY id DESC LIMIT 10`;
+        break;
+      case 'recent':
+        sql = `SELECT id,timestamp,tool,substr(params,1,150) as p,success FROM commands ORDER BY id DESC LIMIT ${n || 20}`;
+        break;
+      case 'today':
+        sql = `SELECT tool,COUNT(*) as cnt,SUM(success) as ok FROM commands WHERE date(timestamp)=date('now') GROUP BY tool ORDER BY cnt DESC`;
+        break;
+      case 'file':
+        if (!k) return { success: false, error: 'keyword required' };
+        sql = `SELECT id,timestamp,tool,substr(params,1,200) as p,success FROM commands WHERE params LIKE '%${k}%' ORDER BY id DESC LIMIT 10`;
+        break;
+      default:
+        return { success: false, error: `unknown action: ${action}. Use: how|fail|recent|today|file` };
+    }
+    const rows = db.prepare(sql).all();
+    return { success: true, result: rows, count: rows.length };
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    db.close();
+  }
+});
+
+// ===== memory: 读写 memory 表 (slot/key/content) =====
+handlers.set('memory', async (params) => {
+  const { action, slot, key, value } = params;
+  if (!action) return { success: false, error: 'action required: get|set|list|delete' };
+  const dbPath = path.join(__dirname, 'data', 'agent.db');
+  const db = new Database(dbPath);
+  try {
+    switch (action) {
+      case 'get':
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        const row = db.prepare('SELECT content,updated_at FROM memory WHERE slot=? AND key=?').get(slot, key);
+        return row ? { success: true, result: row } : { success: false, error: 'not found' };
+      case 'set':
+        if (!slot || !key || value === undefined) return { success: false, error: 'slot, key, and value required' };
+        db.prepare(`INSERT OR REPLACE INTO memory (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, value);
+        return { success: true, result: 'saved' };
+      case 'list':
+        const rows = db.prepare('SELECT slot,key,substr(content,1,100) as preview,updated_at FROM memory' + (slot ? ' WHERE slot=?' : '') + ' ORDER BY updated_at DESC').all(...(slot ? [slot] : []));
+        return { success: true, result: rows, count: rows.length };
+      case 'delete':
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        db.prepare('DELETE FROM memory WHERE slot=? AND key=?').run(slot, key);
+        return { success: true, result: 'deleted' };
+      default:
+        return { success: false, error: `unknown action: ${action}. Use: get|set|list|delete` };
+    }
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    db.close();
+  }
+});
+
+// ===== local_store: 读写 local_store 表（脚本/指南等）=====
+handlers.set('local_store', async (params) => {
+  const { action, slot, key, value } = params;
+  if (!action) return { success: false, error: 'action required: get|set|list|delete' };
+  const dbPath = path.join(__dirname, 'data', 'agent.db');
+  const db = new Database(dbPath);
+  try {
+    switch (action) {
+      case 'get':
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        const row = db.prepare('SELECT content,updated_at FROM local_store WHERE slot=? AND key=?').get(slot, key);
+        return row ? { success: true, result: row } : { success: false, error: 'not found' };
+      case 'set':
+        if (!slot || !key || value === undefined) return { success: false, error: 'slot, key, and value required' };
+        db.prepare(`INSERT OR REPLACE INTO local_store (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, value);
+        return { success: true, result: 'saved' };
+      case 'list':
+        const rows = db.prepare('SELECT slot,key,length(content) as size,updated_at FROM local_store' + (slot ? ' WHERE slot=?' : '') + ' ORDER BY updated_at DESC').all(...(slot ? [slot] : []));
+        return { success: true, result: rows, count: rows.length };
+      case 'delete':
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        db.prepare('DELETE FROM local_store WHERE slot=? AND key=?').run(slot, key);
+        return { success: true, result: 'deleted' };
+      default:
+        return { success: false, error: `unknown action: ${action}. Use: get|set|list|delete` };
+    }
+  } catch (e) {
+    return { success: false, error: e.message };
+  } finally {
+    db.close();
+  }
+});
+
+// ===== tokens: 查看当前对话的 token 使用情况 =====
+handlers.set('tokens', async (params, context) => {
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
+  const code = [
+    "var pid=window.location.href.match(/id=([a-f0-9-]+)/);",
+    "if(!pid)return {error:'no project id'};",
+    "pid=pid[1];",
+    "return fetch('/api/project/update',{method:'POST',credentials:'include',",
+    "headers:{'Content-Type':'application/json'},",
+    "body:JSON.stringify({id:pid,request_not_update_permission:true})})",
+    ".then(function(r){return r.json()})",
+    ".then(function(d){",
+    "var msgs=(d.data&&d.data.session_state&&d.data.session_state.messages||[])",
+    ".filter(function(m){return m.role==='assistant'&&m.session_state&&m.session_state._llm_usage});",
+    "var last=msgs[msgs.length-1];",
+    "if(!last)return {error:'no usage data'};",
+    "var u=last.session_state._llm_usage;",
+    "return {total_tokens:u.total_tokens,",
+    "cached:(u.prompt_tokens_details&&u.prompt_tokens_details.cached_tokens)||u.cache_read_input_tokens||0,",
+    "cache_creation:u.cache_creation_input_tokens||0,",
+    "completion:u.completion_tokens,",
+    "msgCount:(d.data.session_state.messages||[]).length}",
+    "})"
+  ].join('');
+  try {
+    const result = await evalInBrowser(code);
+    return { success: true, result };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+export function getSysHandler(toolName) {
   return handlers.get(toolName) || null;
 }
 
-export function isCustomTool(toolName) {
+export function isSysTool(toolName) {
   return handlers.has(toolName);
 }
 
@@ -259,7 +469,7 @@ export function isBrowserTool(toolName) {
   return handlers.get(toolName) === 'browser';
 }
 
-export const customToolNames = [...handlers.keys()];
+export const sysToolNames = [...handlers.keys()];
 
 // ===== buildBrowserToolCode: 生成浏览器端执行代码 =====
 export function buildBrowserToolCode(tool, params) {

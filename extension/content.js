@@ -1,4 +1,4 @@
-// content.js v1.0.53 - REC增强 - Ω标记格式 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
+// content.js v1.0.53 - REC增强 - ΩCODE统一通道 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
 (function() { console.log('=== GENSPARK AGENT v35 LOADED ===');
   'use strict';
 
@@ -301,9 +301,7 @@ function log(...args) {
 
 ### 高级调度与标记
 
-- ΩPLAN{"goal":"..."} — 智能规划 | ΩFLOW{"template":"..."} — 工作流 | ΩRESUME{"taskId":"..."} — 断点续传
 - base64 模式: content/stdin/code 以 \`base64:\` 开头自动解码
-- 重试: @RETRY:#ID | 协作: ΩSEND:目标agent:消息ΩSENDEND
 
 ---
 
@@ -638,48 +636,6 @@ ${toolSummary}
 
 
 
-  // 解析新的代码块格式: Ωname ... ΩEND
-  function parseCodeBlockFormat(text) {
-    const toolCalls = [];
-    const regex = /Ω(\w+)\s*\n([\s\S]*?)ΩEND/g;
-    let match;
-    
-    while ((match = regex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const toolName = match[1];
-      const body = match[2];
-      const params = {};
-      
-      const pathMatch = body.match(/@PATH:\s*(.+)/);
-      if (pathMatch) params.path = pathMatch[1].trim();
-      
-      const cmdMatch = body.match(/@COMMAND:\s*(.+)/);
-      if (cmdMatch) params.command = cmdMatch[1].trim();
-      
-      const urlMatch = body.match(/@URL:\s*(.+)/);
-      if (urlMatch) params.url = urlMatch[1].trim();
-      
-      const contentMatch = body.match(/@CONTENT:\s*\n```[\w]*\n([\s\S]*?)\n```/);
-      if (contentMatch) {
-        params.content = contentMatch[1];
-      }
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({
-          name: toolName,
-          params,
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    return toolCalls;
-  }
 
   
   // 方案3: 解析 ```tool 代码块
@@ -724,46 +680,6 @@ ${toolSummary}
 
     function parseToolCalls(text) {
 
-    // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
-    const batchStartIdx = text.indexOf('ΩBATCH');
-    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx) && !(sseState && sseState.executedInCurrentMessage)) {
-      // 跳过示例中的 ΩBATCH
-      const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
-      const isExample = /Example:/.test(beforeBatch);
-      if (!isExample) {
-        try {
-          // 尝试找 ΩEND 结束标记
-          const jsonStart = text.indexOf('{', batchStartIdx);
-          let jsonEnd = text.indexOf('ΩEND', jsonStart);
-          let batchJson;
-          if (jsonEnd !== -1) {
-            // 有 ΩEND 标记，直接截取
-            batchJson = text.substring(jsonStart, jsonEnd).trim();
-          } else {
-            // 没有 ΩEND，使用平衡括号匹配
-            const batchData = extractBalancedJson(text, 'ΩBATCH');
-            if (batchData) batchJson = batchData.json;
-          }
-          if (batchJson) {
-            batchJson = batchJson.replace(/[""]/g, '"').replace(/['']/g, "'");
-            const batch = safeJsonParse(batchJson);
-            if (batch.steps && Array.isArray(batch.steps)) {
-              const endPos = jsonEnd !== -1 ? jsonEnd + 4 : batchStartIdx + 6 + batchJson.length;
-              return [{
-                name: '__BATCH__',
-                params: batch,
-                raw: text.substring(batchStartIdx, endPos),
-                start: batchStartIdx,
-                end: endPos,
-                isBatch: true
-              }];
-            }
-          }
-        } catch (e) {
-          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
-        }
-      }
-    }
 
     // ========== ΩCODE DOM FALLBACK ==========
     // When SSE hook not loaded (SPA nav), detect ΩCODE...ΩCODEEND in DOM
@@ -801,116 +717,9 @@ ${toolSummary}
     const toolBlockCalls = parseToolCodeBlock(text);
     if (toolBlockCalls.length > 0) return toolBlockCalls;
 
-    // 兼容旧格式: Ωname ... ΩEND
-    const codeBlockCalls = parseCodeBlockFormat(text);
     if (codeBlockCalls.length > 0) return codeBlockCalls;
 
     const toolCalls = [];
-    let searchStart = 0;
-    while (true) {
-      const marker = 'Ω';
-      const idx = text.indexOf(marker, searchStart);
-      if (idx === -1) break;
-      
-      // 检查前面100字符是否包含示例关键词
-      const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
-      const isExample = /格式[：:]|示例：|例如：|Example:|e.g./.test(beforeMarker);
-      if (isExample) {
-        searchStart = idx + marker.length;
-        continue;
-      }
-      
-      // 检查是否紧跟 {"tool":
-      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);
-      if (!afterMarker.match(/^\s*\{\s*"tool"/)) {
-        searchStart = idx + marker.length;
-        continue;
-      }
-      const extracted = extractJsonFromText(text, idx + marker.length);
-      if (extracted) {
-        // Skip if extracted JSON is too short or looks invalid
-        if (!extracted.json || extracted.json.length < 5 || !extracted.json.startsWith('{')) {
-          searchStart = idx + marker.length;
-          continue;
-        }
-        try {
-          // Fix Chinese quotes that break JSON parsing
-          let jsonStr = extracted.json
-            .replace(/[“”]/g, '"')  // Chinese double quotes to ASCII
-            .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
-          const parsed = safeJsonParse(jsonStr);
-          if (parsed.tool) {
-            // 检查是否有 ΩSTOP 结束标记
-            const afterJson = text.substring(idx + marker.length + extracted.json.length, idx + marker.length + extracted.json.length + 10);
-            const hasStop = afterJson.trim().startsWith('ΩSTOP');
-            if (!hasStop) {
-              // 强制要求 ΩSTOP 结束标记，没有则跳过
-              searchStart = idx + marker.length + extracted.json.length;
-              continue;
-            }
-            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;
-            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: true });
-          }
-        } catch (e) {
-          if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
-          console.error('[Agent] Raw JSON:', extracted.json.slice(0, 300));
-          addLog('JSON parse error: ' + e.message, 'error');
-        }
-        searchStart = extracted.end;
-      } else { searchStart = idx + marker.length; }
-    }
-    if (toolCalls.length > 0) return toolCalls;
-
-    const inlineRegex = /\[\[TOOL:(\w+)((?:\s+\w+="[^"]*")+)\s*\]\]/g;
-    let match;
-    
-    while ((match = inlineRegex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const params = {};
-      const paramRegex = /(\w+)="([^"]*)"/g;
-      let paramMatch;
-      while ((paramMatch = paramRegex.exec(match[2])) !== null) {
-        params[paramMatch[1]] = paramMatch[2];
-      }
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({ 
-          name: match[1], 
-          params, 
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    if (toolCalls.length > 0) return toolCalls;
-    
-    const blockRegex = /\[\[TOOL:(\w+)\]\]([\s\S]*?)\[\[\/TOOL\]\]/g;
-    
-    while ((match = blockRegex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const toolName = match[1];
-      const body = match[2].trim();
-      const params = parseParams(body);
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({ 
-          name: toolName, 
-          params, 
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
     return toolCalls;
   }
 
@@ -1068,7 +877,7 @@ ${toolSummary}
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 3000);
+    addDedupKey(contentKey, 120000);
     const batchId = `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
     state.agentRunning = true;
@@ -1298,7 +1107,7 @@ ${toolSummary}
       addExecutedCall(callHash);
       return;
     }
-    addDedupKey(contentKey, 3000);
+    addDedupKey(contentKey, 120000);
     
     // === 本地拦截: list_tabs 查询所有标签页 ===
     if (tool.name === 'list_tabs') {
@@ -2029,36 +1838,6 @@ ${toolSummary}
       }
     }
     
-    // 先检查跨 Tab 发送命令 ΩSEND:agent_id:message
-    // 排除示例、代码块内、引用中的 @SEND
-    const sendMatch = text.match(/ΩSEND:([\w_-]+):([\s\S]+?)ΩSENDEND/);
-    const isExampleSend = sendMatch && isExampleToolCall(text, sendMatch.index);
-    const timeSinceStable = Date.now() - state.lastStableTime;
-    if (sendMatch && !isExampleSend && timeSinceStable >= 3000) {
-      const sendHash = `${index}:send:${sendMatch[1]}:${sendMatch[2].slice(0,50)}`;
-      if (!state.executedCalls.has(sendHash)) {
-        addExecutedCall(sendHash);
-        const toAgent = sendMatch[1];
-        const message = sendMatch[2].trim();
-        addLog(`📨 发送给 ${toAgent}...`, 'tool');
-        if (toAgent === 'phone-bridge') {
-          // phone-bridge 是外部进程，通过 Agent 服务器中转
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: { type: 'phone_reply', text: message }
-          }, (resp) => {
-            if (chrome.runtime.lastError) {
-              addLog('❌ 手机发送失败: ' + chrome.runtime.lastError.message, 'error');
-            } else {
-              addLog('📱 已发送到手机', 'success');
-            }
-          });
-        } else {
-          sendToAgent(toAgent, message);
-        }
-        return;
-      }
-    }
     
     const toolCalls = parseToolCalls(text);
     
@@ -2195,7 +1974,7 @@ ${toolSummary}
       'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
-      '支持批量执行: ΩBATCH{"steps":[...]}',
+      'ΩCODE 统一通道: 单步{tool:...} 多步{steps:[...]}',
       '长内容用 run_command + heredoc 写入',
       '项目记忆: memory_manager_v2.js projects',
     ],
@@ -4542,7 +4321,7 @@ ${conversationText}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
-      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
+      // ===== 浏览器工具反向调用（来自 ΩCODE steps 中的 js_flow/eval_js/list_tabs）=====
       case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
         // Red switch: disabled tab ignores browser tool calls
@@ -5007,7 +4786,7 @@ ${conversationText}
         const delay = fromAgent === 'phone-bridge' ? 200 : 2000;
         buffer.timer = setTimeout(() => {
           const combinedMsg = buffer.messages.join('');
-          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 ΩSEND:${fromAgent}:回复内容ΩSENDEND 来回复。`;
+          const crossTabMsg = `**[来自 ${fromAgent} 的消息]**\n\n${combinedMsg}\n\n---\n请处理上述消息。完成后可以用 （通过跨Tab通道回复） 来回复。`;
           waitForGenerationComplete(() => enqueueMessage(crossTabMsg));
           
           // 清空缓冲区
@@ -5178,7 +4957,7 @@ ${conversationText}
       
       // 检查是否有待处理任务
       addLog(`🔍 自动检查任务 (${agentId})`, 'info');
-      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩ{"tool":"run_command","params":{"command":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}"}}\n\`\`\``);
+      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩCODE\n{"tool":"run_process","params":{"command_line":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}","mode":"shell"}}\nΩCODEEND"}}\n\`\`\``);
     }, CONFIG.AUTO_CHECK_INTERVAL);
     
     addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');
@@ -5215,7 +4994,7 @@ ${conversationText}
 
   // ============== SSE 原始数据拦截 ==============
   // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 SSE delta
-  // 拼接后直接解析 Ω 命令，避免 DOM 渲染导致的转义问题
+  // 拼接后直接解析 ΩCODE 命令，避免 DOM 渲染导致的转义问题
   
   const sseState = {
     currentText: '',          // 当前 SSE stream 拼接的完整文本
@@ -5232,9 +5011,14 @@ ${conversationText}
     document.addEventListener('__sse_connected__', (e) => {
       sseState.connected = true;
       sseState.currentText = '';
+      // 保留上次的 messageId 用于比较
+      var prevMessageId = sseState.messageId;
       sseState.messageId = null;
-      sseState.processedCommands.clear();
-      sseState.executedInCurrentMessage = false;
+      // 不清除 processedCommands 和 executedInCurrentMessage
+      // 只有在新消息到达时才重置（在 __sse_data__ 中检测 messageId 变化）
+      // sseState.processedCommands.clear();
+      // sseState.executedInCurrentMessage = false;
+      sseState._prevMessageId = prevMessageId;
       log('SSE connected:', e.detail?.transport);
     });
 
@@ -5249,11 +5033,19 @@ ${conversationText}
         
         // 只处理 content delta
         if (parsed.type === 'message_field_delta' && parsed.field_name === 'content' && parsed.delta) {
+          // 检测是否是新消息（messageId 变化） → 重置执行状态
+          var newMsgId = parsed.message_id || sseState.messageId;
+          if (newMsgId && newMsgId !== sseState._prevMessageId && newMsgId !== sseState.messageId) {
+            log('SSE new message detected: ' + newMsgId + ' (prev: ' + sseState._prevMessageId + ')');
+            sseState.processedCommands.clear();
+            sseState.executedInCurrentMessage = false;
+            sseState.currentText = '';
+          }
           sseState.currentText += parsed.delta;
           sseState.lastDeltaTime = Date.now();
-          sseState.messageId = parsed.message_id || sseState.messageId;
+          sseState.messageId = newMsgId;
           
-          // 实时检测完整的 Ω 命令
+          // 实时检测完整的 ΩCODE 命令
           tryParseSSECommands();
         }
       } catch (err) {
@@ -5381,7 +5173,7 @@ ${conversationText}
     for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
       var owp = omegaWritePatterns[owi];
       // Find start marker: prefix must be at line start (preceded by \n or text start)
-      // and followed immediately by \n or :slot= (not arbitrary text like "ΩDATA 回复")
+      // and followed immediately by \n or :slot= (not arbitrary text like "legacy")
       var owStartIdx = -1;
       var owSearchFrom = 0;
       while (owSearchFrom < text.length) {
@@ -5490,127 +5282,6 @@ ${conversationText}
 
 
 
-    // 检测 ΩBATCH...ΩEND (正则快速匹配 + fallback 括号平衡法)
-    let batchMatch = text.match(/ΩBATCH(\{[\s\S]*?\})ΩEND/);
-    let batchJson = batchMatch ? batchMatch[1] : null;
-    if (batchMatch) {
-      try {
-        JSON.parse(batchJson);
-      } catch (e) {
-        // 正则截断，用括号平衡法重新提取
-        const batchIdx = text.indexOf('ΩBATCH{');
-        if (batchIdx !== -1) {
-          const extracted = extractJsonFromText(text, batchIdx + 6);
-          if (extracted) {
-            const after = text.substring(extracted.end, extracted.end + 10);
-            if (after.trim().startsWith('ΩEND')) {
-              batchJson = extracted.json;
-              log('SSE BATCH fallback bracket parse OK');
-            }
-          }
-        }
-      }
-    }
-    if (batchJson) {
-      try {
-        const batch = JSON.parse(batchJson);
-        const sig = 'sse:batch:' + JSON.stringify(batch).substring(0, 100);
-        if (!sseState.processedCommands.has(sig)) {
-          sseState.processedCommands.add(sig);
-          if (batch.steps && Array.isArray(batch.steps)) {
-            addLog('⚡ SSE 直接解析 ΩBATCH', 'tool');
-            log('SSE parsed BATCH (raw, no DOM):', batch);
-            const callHash = `sse:${sseState.messageId}:__BATCH__:${JSON.stringify(batch)}`;
-            addExecutedCall(callHash);
-            sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
-            executeBatchCall(batch, callHash);
-          }
-        }
-      } catch (e) {
-        log('SSE BATCH parse error:', e.message);
-      }
-    }
-
-    // 检测 Ω{...}ΩSTOP (可能有多个)
-    // 策略：直接用括号平衡法提取完整 JSON + safeJsonParse 解析
-    let searchPos = 0;
-    while (true) {
-      const omegaIdx = text.indexOf('Ω{', searchPos);
-      if (omegaIdx === -1) break;
-      // === SSE example keyword detection ===
-      const sseNearBefore = text.substring(Math.max(0, omegaIdx - 30), omegaIdx);
-      const sseIsExample = /Example:|e\.g\./.test(sseNearBefore);
-      if (sseIsExample) {
-        const skipExtracted = extractJsonFromText(text, omegaIdx + 1);
-        if (skipExtracted) {
-          try {
-            const skipParsed = safeJsonParse(skipExtracted.json);
-            if (skipParsed && skipParsed.tool) {
-              addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-              addDedupKey('exec:' + Date.now() + ':' + Math.random());
-              log('SSE SKIP (example keyword):', skipParsed.tool);
-            }
-          } catch(e) {}
-        }
-        searchPos = omegaIdx + 2; continue;
-      }
-      const extracted = extractJsonFromText(text, omegaIdx + 1);
-      if (!extracted) { searchPos = omegaIdx + 1; continue; }
-      const after = text.substring(extracted.end, extracted.end + 10);
-      if (!after.trim().startsWith('ΩSTOP')) { searchPos = extracted.end; continue; }
-      let parsed = null;
-      try {
-        parsed = safeJsonParse(extracted.json);
-      } catch (e) {
-        log('SSE single parse error:', e.message);
-        searchPos = extracted.end;
-        continue;
-      }
-      searchPos = extracted.end;
-      if (!parsed) continue;
-      // 如果是 partial parse（JSON.parse 失败后的 fallback），跳过 SSE 执行
-      // partial parse 使用正则提取字段，参数可能不准确（如 command+ 被拼接）
-      // 让 DOM 通道用完整文本重新解析
-      if (parsed._partialParse) {
-        log('SSE skip partial parse result:', parsed.tool, '(unreliable params)');
-        continue;
-      }
-      const normalizedSig = 'sse:single:' + JSON.stringify({tool: parsed.tool, params: parsed.params}).substring(0, 100);
-      if (sseState.processedCommands.has(normalizedSig)) continue;
-      sseState.processedCommands.add(normalizedSig);
-      if (parsed.tool) {
-        // === SSE 通用参数完整性预检查 ===
-        if (sseParamsLookCorrupted({ name: parsed.tool, params: parsed.params || {} })) {
-          continue;
-        }
-        addLog(`⚡ SSE 直接解析 Ω ${parsed.tool}`, 'tool');
-        log('SSE parsed tool call (raw, no DOM):', parsed.tool, parsed.params);
-        const callHash = `sse:${sseState.messageId}:${parsed.tool}:${JSON.stringify(parsed.params)}`;
-        addExecutedCall(callHash);
-        addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-        sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
-        executeToolCall({ name: parsed.tool, params: parsed.params || {} }, callHash);
-      }
-    }
-
-    // 检测 ΩPLAN / ΩFLOW / ΩRESUME
-    const planMatch = text.match(/ΩPLAN(\{[\s\S]*?\})/);
-    if (planMatch) {
-      const sig = 'sse:plan:' + planMatch[1].substring(0, 100);
-      if (!sseState.processedCommands.has(sig)) {
-        sseState.processedCommands.add(sig);
-        try {
-          const plan = JSON.parse(planMatch[1]);
-          addLog('⚡ SSE 直接解析 ΩPLAN', 'tool');
-          const callHash = `sse:${sseState.messageId}:__PLAN__:${JSON.stringify(plan)}`;
-          addExecutedCall(callHash);
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: { type: 'task_plan', params: plan, id: Date.now() }
-          });
-        } catch (e) {}
-      }
-    }
   }
 
   // 检查一个命令是否已被 SSE 通道处理过（供 scanForToolCalls 判断）

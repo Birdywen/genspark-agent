@@ -34,6 +34,17 @@ export default class VariableResolver {
   _resolveString(str, vars) {
     if (typeof str !== 'string') return str;
 
+    // 如果整个字符串就是一个模板变量，直接返回原始值（保留类型）
+    const wholeMatch = str.match(/^\{\{(.+?)\}\}$/);
+    if (wholeMatch) {
+      const expr = wholeMatch[1].trim();
+      const pipeIndex = expr.indexOf('|');
+      if (pipeIndex === -1) {
+        const value = this._accessValue(expr, vars);
+        if (value !== undefined) return value;
+      }
+    }
+
     return str.replace(/\{\{(.+?)\}\}|\$\{(.+?)\}/g, (match, g1, g2) => {
       const expr = (g1 || g2).trim();
       

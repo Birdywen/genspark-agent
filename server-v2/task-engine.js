@@ -185,19 +185,40 @@ class TaskEngine {
     const maxLoop = options.maxLoopIterations || 50;
     let collection = step.collection;
     
-    // 如果 collection 是字符串，从变量取值
+    // 解析模板变量
+    this.logger.info(`[TaskEngine] forEach raw collection: type=${typeof collection}, val=${JSON.stringify(collection).substring(0,300)}`);
     if (typeof collection === 'string') {
-      collection = this.stateManager.getVariable(batchId, collection);
+      // 先尝试直接取变量
+      let resolved = this.stateManager.getVariable(batchId, collection);
+      // 如果没取到且包含模板语法，解析模板
+      if (resolved === undefined && collection.includes('{{')) {
+        resolved = this.stateManager.resolveTemplate(batchId, collection);
+      }
+      if (resolved !== undefined) collection = resolved;
+      // 如果是 JSON 字符串，解析
+      if (typeof collection === 'string') {
+        try { collection = JSON.parse(collection); } catch (e) {}
+      }
     }
-    
-    // 解析模板
+    this.logger.info(`[TaskEngine] forEach after resolve: type=${typeof collection}, isArray=${Array.isArray(collection)}, val=${JSON.stringify(collection).substring(0,300)}`);
+    // 如果是对象（tool result wrapper），递归提取内部 result 直到找到数组或字符串
+    let unwrapAttempts = 0;
+    while (collection && typeof collection === 'object' && !Array.isArray(collection) && unwrapAttempts < 5) {
+      if (collection.result !== undefined) {
+        this.logger.info(`[TaskEngine] forEach unwrap level ${unwrapAttempts}: type=${typeof collection.result}`);
+        collection = collection.result;
+        unwrapAttempts++;
+      } else break;
+    }
+    // JSON 字符串 → 数组
     if (typeof collection === 'string') {
-      collection = this.stateManager.resolveTemplate(batchId, collection);
-      try { collection = JSON.parse(collection); } catch (e) {}
+      try { const parsed = JSON.parse(collection); if (Array.isArray(parsed)) collection = parsed; } catch(e) {
+        this.logger.error(`[TaskEngine] forEach JSON.parse failed: ${e.message}, str=${collection.substring(0,200)}`);
+      }
     }
 
     if (!Array.isArray(collection)) {
-      this.logger.error(`[TaskEngine] forEach: collection 不是数组`);
+      this.logger.error(`[TaskEngine] forEach: collection 不是数组, type=${typeof collection}, val=${JSON.stringify(collection).substring(0,200)}`);
       return { stepIndex, type: 'forEach', success: false, error: 'collection is not an array', tool: 'forEach' };
     }
 
@@ -386,8 +407,13 @@ class TaskEngine {
       if (isBrowserTool && this.browserCallHandler) {
         result = await this.browserCallHandler(step.tool, resolvedParams);
       } else {
-        // 优先走 Router（内部 driver），fallback 到 hub（MCP）
-        if (this.router && this.router.handlers && this.router.handlers.has(resolved.tool)) {
+        // 优先 custom tool → Router（内部 driver）→ hub（MCP）
+        const { isSysTool, getSysHandler } = await import('./sys-tools.js');
+        if (isSysTool(resolved.tool)) {
+          const handler = getSysHandler(resolved.tool);
+          const evalInBrowser = this.browserCallHandler ? (code, timeout) => this.browserCallHandler('eval_js', { code }, timeout) : null;
+          result = await handler(resolved.params, { evalInBrowser });
+        } else if (this.router && this.router.handlers && this.router.handlers.has(resolved.tool)) {
           const driver = this.router.handlers.get(resolved.tool);
           result = await driver.handle(resolved.tool, resolved.params, { trace: { span(){}, error(){}, flush(){}, duration: 0 } });
         } else {
