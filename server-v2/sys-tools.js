@@ -40,13 +40,16 @@ handlers.set('git_commit', async (params) => {
 
 // ===== wechat =====
 handlers.set('wechat', async (params) => {
-  const { action, to, chat, content, args } = params;
+  const { action, to, chat, content, count, args } = params;
   if (!action) return { success: false, error: 'action is required' };
   const parts = ['~/workspace/wechat-cli/wechat', action];
-  // 位置参数格式: wechat send "联系人" "内容" / wechat read "联系人"
+  // 位置参数格式: wechat send "联系人" "内容" / wechat read "联系人" -n 20
   if (action === 'send' && to && content) {
     parts.push(`"${to}"`, `"${content}"`);
-  } else if (action === 'read' && (chat || to)) {
+  } else if ((action === 'read' || action === 'history') && (chat || to)) {
+    parts.push(`"${chat || to}"`);
+    if (count) parts.push('-n', String(count));
+  } else if (action === 'members' && (chat || to)) {
     parts.push(`"${chat || to}"`);
   } else if (to) {
     parts.push(`"${to}"`);
