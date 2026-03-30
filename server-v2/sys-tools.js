@@ -365,7 +365,7 @@ handlers.set('mine', async (params) => {
 
 // ===== memory: 读写 memory 表 (slot/key/content) =====
 handlers.set('memory', async (params) => {
-  const { action, slot, key, value } = params;
+  const { action, slot, key, value, fromFile } = params;
   if (!action) return { success: false, error: 'action required: get|set|list|delete' };
   const dbPath = path.join(__dirname, 'data', 'agent.db');
   const db = new Database(dbPath);
@@ -375,10 +375,14 @@ handlers.set('memory', async (params) => {
         if (!slot || !key) return { success: false, error: 'slot and key required' };
         const row = db.prepare('SELECT content,updated_at FROM memory WHERE slot=? AND key=?').get(slot, key);
         return row ? { success: true, result: row } : { success: false, error: 'not found' };
-      case 'set':
-        if (!slot || !key || value === undefined) return { success: false, error: 'slot, key, and value required' };
-        db.prepare(`INSERT OR REPLACE INTO memory (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, value);
-        return { success: true, result: 'saved' };
+      case 'set': {
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        let val = value;
+        if (fromFile) { const fs = await import('fs'); val = fs.readFileSync(fromFile, 'utf8'); }
+        if (val === undefined) return { success: false, error: 'value or fromFile required' };
+        db.prepare(`INSERT OR REPLACE INTO memory (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, val);
+        return { success: true, result: 'saved', length: val.length };
+      }
       case 'list':
         const rows = db.prepare('SELECT slot,key,substr(content,1,100) as preview,updated_at FROM memory' + (slot ? ' WHERE slot=?' : '') + ' ORDER BY updated_at DESC').all(...(slot ? [slot] : []));
         return { success: true, result: rows, count: rows.length };
@@ -398,7 +402,7 @@ handlers.set('memory', async (params) => {
 
 // ===== local_store: 读写 local_store 表（脚本/指南等）=====
 handlers.set('local_store', async (params) => {
-  const { action, slot, key, value } = params;
+  const { action, slot, key, value, fromFile } = params;
   if (!action) return { success: false, error: 'action required: get|set|list|delete' };
   const dbPath = path.join(__dirname, 'data', 'agent.db');
   const db = new Database(dbPath);
@@ -408,10 +412,14 @@ handlers.set('local_store', async (params) => {
         if (!slot || !key) return { success: false, error: 'slot and key required' };
         const row = db.prepare('SELECT content,updated_at FROM local_store WHERE slot=? AND key=?').get(slot, key);
         return row ? { success: true, result: row } : { success: false, error: 'not found' };
-      case 'set':
-        if (!slot || !key || value === undefined) return { success: false, error: 'slot, key, and value required' };
-        db.prepare(`INSERT OR REPLACE INTO local_store (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, value);
-        return { success: true, result: 'saved' };
+      case 'set': {
+        if (!slot || !key) return { success: false, error: 'slot and key required' };
+        let val = value;
+        if (fromFile) { const fs = await import('fs'); val = fs.readFileSync(fromFile, 'utf8'); }
+        if (val === undefined) return { success: false, error: 'value or fromFile required' };
+        db.prepare(`INSERT OR REPLACE INTO local_store (slot, key, content, updated_at) VALUES (?, ?, ?, datetime('now'))`).run(slot, key, val);
+        return { success: true, result: 'saved', length: val.length };
+      }
       case 'list':
         const rows = db.prepare('SELECT slot,key,length(content) as size,updated_at FROM local_store' + (slot ? ' WHERE slot=?' : '') + ' ORDER BY updated_at DESC').all(...(slot ? [slot] : []));
         return { success: true, result: rows, count: rows.length };
