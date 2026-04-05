@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Giz.AI Agent Bridge",
+  "version": "1.0.0",
+  "description": "将 Giz.AI 聊天窗口转变为 AI Agent 运行时",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "scripting",
+    "clipboardWrite",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://app.giz.ai/*",
+    "https://giz.ai/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://app.giz.ai/*", "https://giz.ai/*"],
+      "js": ["ws-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://app.giz.ai/*", "https://giz.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["ws-hook.js"],
+      "matches": ["https://app.giz.ai/*", "https://giz.ai/*"]
+    }
+  ]
+}
