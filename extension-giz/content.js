@@ -438,15 +438,22 @@
   }
 
   function executeBatchCall(batchObj, hash) {
+    const batchId = 'batch-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     state.agentRunning = true;
     state.totalCalls++;
+    state.currentBatchId = batchId;
     updateStatus();
     showExecutingIndicator('batch[' + batchObj.steps.length + ']');
     addLog('⚡ 批量执行: ' + batchObj.steps.length + ' 步', 'tool');
 
     chrome.runtime.sendMessage({
       type: 'SEND_TO_SERVER',
-      payload: { type: 'batch_call', steps: batchObj.steps, id: hash, callId: hash }
+      payload: {
+        type: 'tool_batch',
+        id: batchId,
+        steps: batchObj.steps,
+        options: batchObj.options || { stopOnError: true }
+      }
     }, resp => {
       if (chrome.runtime.lastError || !resp?.success) {
         const err = chrome.runtime.lastError?.message || resp?.error || 'unknown';
@@ -454,6 +461,8 @@
         hideExecutingIndicator();
         state.agentRunning = false;
         updateStatus();
+      } else {
+        addLog('📤 批量任务已提交: ' + batchId, 'info');
       }
     });
   }
