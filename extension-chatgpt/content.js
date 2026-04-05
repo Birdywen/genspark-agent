@@ -1,5 +1,5 @@
-// content.js v1.0.0 - ChatGPT Agent Bridge - Ω标记格式 - Agent 心跳机制
-(function() { console.log('=== CHATGPT AGENT v1.0.0 LOADED ===');
+// content.js v2.0.0 - ChatGPT Agent Bridge - SSE+DOM双通道 - ΩCODE统一通道 - Agent 心跳机制
+(function() { console.log('=== CHATGPT AGENT v2.0.0 (SSE+DOM) LOADED ===');
   'use strict';
 
   // 防止脚本重复加载
@@ -27,7 +27,7 @@
     availableTools: [],
     availableSkills: [],
     skillsPrompt: "",
-    executedCalls: new Set(JSON.parse(localStorage.getItem('agent_executed_calls') || '[]')),
+    executedCalls: new Set(), // Fresh each page load — dedup is per-message now
     pendingCalls: new Map(),
     lastMessageText: '',
     lastStableTime: 0,
@@ -71,667 +71,10 @@
     document.head.appendChild(script);
   }
 
-  // === VideoGenerator 内联模块 ===
-  function loadVideoGenerator() {
-    try {
-      /**
-       * 视频生成模块 - Agent Opus → YouTube 自动化
-       * 流程：选题 → 构建 Prompt → 创建 Opus 项目 → 轮询完成 → Webhook 上传 YouTube
-       */
-      
-      const VideoGenerator = {
-        // 配置
-        config: {
-          opusApiBase: 'https://api.opus.pro/api',
-          webhookUrl: 'https://flow.sokt.io/func/scri42hM0QuZ',
-          pollInterval: 30000, // 30秒轮询一次
-          maxPollTime: 3600000, // 最长等待60分钟
-          opusTabId: null // opus.pro 的 tab ID
-        },
-      
-        // 状态
-        state: {
-          isRunning: false,
-          currentStep: null,
-          projectId: null
-        },
-      
-        // ===== Token 管理 =====
-        async getOpusToken() {
-          // 在 opus.pro tab 里读取 localStorage token
-          return new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({
-              type: 'EVAL_IN_TAB',
-              tabUrl: 'opus.pro',
-              code: `
-                const token = JSON.parse(localStorage.getItem('atom:user:access-token'));
-                const orgId = JSON.parse(localStorage.getItem('atom:user:org-id'));
-                const userId = JSON.parse(localStorage.getItem('atom:user:org-user-id'));
-                if (!token) return {error: 'no token'};
-                const parts = token.split('.');
-                const payload = JSON.parse(atob(parts[1]));
-                const now = Math.floor(Date.now()/1000);
-                if (now > payload.exp) return {error: 'token expired', remainingSec: payload.exp - now};
-                return {token, orgId, userId, remainingSec: payload.exp - now};
-              `
-            }, (resp) => {
-              if (resp && resp.result && !resp.result.error) {
-                resolve(resp.result);
-              } else {
-                reject(new Error(resp?.result?.error || 'Failed to get opus token'));
-              }
-            });
-          });
-        },
-      
-        // ===== API 调用 =====
-        async opusApiCall(method, endpoint, body, auth) {
-          // Execute API call in opus.pro tab context to avoid CORS
-          // Pass params as JSON-safe strings to avoid injection issues
-          return new Promise((resolve, reject) => {
-            const safeBody = body ? JSON.stringify(JSON.stringify(body)) : 'null';
-            const code = [
-              'return (async () => {',
-              '  const token = JSON.parse(localStorage.getItem("atom:user:access-token"));',
-              '  const orgId = JSON.parse(localStorage.getItem("atom:user:org-id"));',
-              '  const userId = JSON.parse(localStorage.getItem("atom:user:org-user-id"));',
-              '  const headers = {',
-              '    "Content-Type": "application/json",',
-              '    "Accept": "application/json",',
-              '    "Authorization": "Bearer " + token,',
-              '    "X-OPUS-ORG-ID": orgId,',
-              '    "X-OPUS-USER-ID": userId,',
-              '    "X-OPUS-SHARED-ID": ""',
-              '  };',
-              '  const opts = { method: "' + method + '", headers };',
-              '  const bodyData = ' + safeBody + ';',
-              '  if (bodyData && bodyData !== "null") opts.body = bodyData;',
-              '  const resp = await fetch("https://api.opus.pro/api' + endpoint + '", opts);',
-              '  if (!resp.ok) {',
-              '    const text = await resp.text();',
-              '    return { __error: true, status: resp.status, message: text };',
-              '  }',
-              '  return resp.json();',
-              '})()'
-            ].join('\n');
-            chrome.runtime.sendMessage({
-              type: 'EVAL_IN_TAB',
-              tabUrl: 'opus.pro',
-              code: code
-            }, (resp) => {
-              if (resp && resp.success && resp.result) {
-                if (resp.result.__error) {
-                  reject(new Error('API ' + resp.result.status + ': ' + resp.result.message));
-                } else {
-                  resolve(resp.result);
-                }
-              } else {
-                reject(new Error(resp?.error || 'EVAL_IN_TAB failed'));
-              }
-            });
-          });
-        },
-      
-        // ===== 内容调度 =====
-        getTodayCategory() {
-          const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-          const today = days[new Date().getDay()];
-          const schedule = {
-            mon: 'tech', tue: 'people', wed: 'society',
-            thu: 'science', fri: 'business', sat: 'culture', sun: 'wildcard'
-          };
-          return schedule[today] || 'tech';
-        },
-      
-        getCategoryConfig(categoryId) {
-          const categories = {
-            tech: { label: '科技趋势', hashtags: ['#Tech', '#AI', '#Innovation'], tone: 'informative, forward-looking' },
-            people: { label: '人物传记', hashtags: ['#Biography', '#Inspiring', '#People'], tone: 'storytelling, emotional' },
-            society: { label: '社会热点', hashtags: ['#Society', '#Trending', '#News'], tone: 'analytical, thought-provoking' },
-            science: { label: '科学解读', hashtags: ['#Science', '#Discovery', '#Facts'], tone: 'educational, wonder-inducing' },
-            business: { label: '商业分析', hashtags: ['#Business', '#Money', '#Strategy'], tone: 'analytical, actionable' },
-            culture: { label: '文化现象', hashtags: ['#Culture', '#Viral', '#Entertainment'], tone: 'observational, witty' },
-            wildcard: { label: '百搭话题', hashtags: ['#Interesting', '#MustWatch'], tone: 'engaging, versatile' }
-          };
-          return categories[categoryId] || categories.tech;
-        },
-      
-        // ===== Prompt 构建 =====
-        buildPrompt(topic, category, sourceUrl) {
-          // Keep prompt short and natural - Opus AI agents handle the rest
-          let prompt = topic;
-          if (sourceUrl) {
-            prompt += '\nReference: ' + sourceUrl;
-          }
-          return prompt;
-        },
-      
-        // ===== YouTube 元数据 =====
-        buildYouTubeMetadata(topic, category) {
-          const cat = this.getCategoryConfig(category);
-          
-          // 标题: 最多 100 字符，推荐 60
-          let title = topic.length > 55 ? topic.substring(0, 52) + '...' : topic;
-          title += ' #Shorts';
-          if (title.length > 100) title = title.substring(0, 97) + '...';
-      
-          // 描述
-          const hashtags = ['#Shorts', ...cat.hashtags].slice(0, 5).join(' ');
-          const description = `${topic}\n\n${hashtags}\n\nThis video was created with AI assistance. All facts have been verified.`;
-      
-          // Tags
-          const tags = ['Shorts', category, ...cat.hashtags.map(h => h.replace('#', ''))];
-      
-          return { title, description, tags };
-        },
-      
-        // ===== 核心流程 =====
-        async createProject(topic, category, sourceUrl, auth) {
-          const prompt = this.buildPrompt(topic, category, sourceUrl);
-          
-          const body = {
-            initialText: prompt,
-            voice: {
-              labels: ['English (US)', 'Female', 'Entertainment', 'Engaging'],
-              name: 'Lily',
-              provider: 'minimax',
-              type: 'voice-over',
-              voiceId: 'moss_audio_c12a59b9-7115-11f0-a447-9613c873494c'
-            },
-            hookTemplateName: 'hook_slidecut_down',
-            enableCaption: true
-          };
-      
-          const result = await this.opusApiCall('POST', '/project', body, auth);
-          return result;
-        },
-      
-        async pollProjectStatus(projectId, auth, onUpdate) {
-          const startTime = Date.now();
-          let consecutiveErrors = 0;
-          
-          while (Date.now() - startTime < this.config.maxPollTime) {
-            try {
-              // Re-fetch token each poll cycle (may have been refreshed)
-              let currentAuth = auth;
-              try {
-                currentAuth = await this.getOpusToken();
-              } catch(tokenErr) {
-                // Token expired, wait and retry
-                if (onUpdate) onUpdate('TOKEN_EXPIRED - please login opus.pro', null);
-                await new Promise(r => setTimeout(r, 60000)); // wait 1 min
-                continue;
-              }
-              
-              const project = await this.opusApiCall('GET', `/project/${projectId}`, null, currentAuth);
-              consecutiveErrors = 0;
-              
-              if (onUpdate) onUpdate(project.stage, project);
-      
-              if (project.stage === 'EDITOR' && project.resultVideo) {
-                return project;
-              }
-      
-              if (project.stage === 'FAILED' || project.stage === 'ERROR') {
-                throw new Error('Project failed: ' + (project.error || project.stage));
-              }
-            } catch (e) {
-              consecutiveErrors++;
-              if (e.message.includes('401') || e.message.includes('Unauthorized')) {
-                if (onUpdate) onUpdate('⚠️ Token expired, retrying in 60s... (login opus.pro to refresh)', null);
-                await new Promise(r => setTimeout(r, 60000));
-                if (consecutiveErrors > 10) {
-                  throw new Error('Too many auth failures. Please login opus.pro and retry.');
-                }
-                continue;
-              }
-              if (consecutiveErrors > 5) throw e;
-              if (onUpdate) onUpdate('⚠️ Error: ' + e.message + ', retrying...', null);
-            }
-      
-            await new Promise(r => setTimeout(r, this.config.pollInterval));
-          }
-      
-          throw new Error('Polling timeout: video generation took too long');
-        },
-      
-        async uploadToYouTube(videoUrl, metadata) {
-          const payload = {
-            video_url: videoUrl,
-            youtube_title: metadata.title,
-            youtube_description: metadata.description,
-            youtube_tags: metadata.tags
-          };
-      
-          const resp = await fetch(this.config.webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-      
-          return resp.json();
-        },
-      
-        // ===== 主流程 =====
-        async run(topic, options = {}) {
-          if (this.state.isRunning) {
-            throw new Error('视频生成正在进行中，请等待完成');
-          }
-      
-          this.state.isRunning = true;
-          this.state.currentStep = 'init';
-          const log = options.onLog || console.log;
-          const category = options.category || this.getTodayCategory();
-          const sourceUrl = options.sourceUrl || '';
-      
-          try {
-            // Step 1: 获取 Token
-            log('🔑 获取 Opus Pro Token...');
-            this.state.currentStep = 'auth';
-            let auth;
-            try {
-              auth = await this.getOpusToken();
-              log(`✅ Token 有效，剩余 ${auth.remainingSec}s`);
-            } catch (e) {
-              log('❌ Token 获取失败: ' + e.message);
-              log('💡 请在 opus.pro 页面重新登录后再试');
-              throw e;
-            }
-      
-            // Step 2: 创建项目
-            log(`🎬 创建视频项目... 类别: ${category}`);
-            this.state.currentStep = 'create';
-            const project = await this.createProject(topic, category, sourceUrl, auth);
-            this.state.projectId = project.id;
-            log(`✅ 项目已创建: ${project.id}`);
-      
-            // Step 3: 轮询等待
-            log('⏳ 等待视频生成（可能需要 3-8 分钟）...');
-            this.state.currentStep = 'polling';
-            
-            const completed = await this.pollProjectStatus(project.id, auth, (stage, data) => {
-              log(`  📊 状态: ${stage}`);
-            });
-            
-            const videoUrl = completed.resultVideo;
-            log(`✅ 视频生成完成: ${videoUrl}`);
-      
-            // Step 4: 构建 YouTube 元数据
-            log('📝 生成 YouTube 元数据...');
-            this.state.currentStep = 'metadata';
-            const metadata = this.buildYouTubeMetadata(topic, category);
-            log(`  标题: ${metadata.title}`);
-      
-            // Step 5: 上传到 YouTube
-            log('📤 上传到 YouTube (Private)...');
-            this.state.currentStep = 'upload';
-            const uploadResult = await this.uploadToYouTube(videoUrl, metadata);
-            log('✅ YouTube 上传成功！');
-      
-            // Step 6: 记录历史
-            this.state.currentStep = 'done';
-            this.recordHistory(topic, category, videoUrl, metadata);
-            log('🎉 全流程完成！视频已上传为 Private，请在 YouTube Studio 审核后公开。');
-      
-            return {
-              success: true,
-              projectId: project.id,
-              videoUrl,
-              metadata,
-              uploadResult
-            };
-      
-          } catch (error) {
-            log('❌ 失败: ' + error.message);
-            throw error;
-          } finally {
-            this.state.isRunning = false;
-            this.state.currentStep = null;
-          }
-        },
-      
-        // ===== 批量创建（一次登录创建多个项目） =====
-        async batchCreate(topics, onLog) {
-          const log = onLog || console.log;
-          const results = [];
-          
-          log('🔑 获取 Token...');
-          let auth;
-          try {
-            auth = await this.getOpusToken();
-            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
-          } catch(e) {
-            log('❌ Token 获取失败: ' + e.message);
-            throw e;
-          }
-          
-          for (let i = 0; i < topics.length; i++) {
-            const t = topics[i];
-            log('🎬 [' + (i+1) + '/' + topics.length + '] 创建: ' + t.topic.substring(0, 50) + '...');
-            try {
-              const project = await this.createProject(t.topic, t.category, t.sourceUrl || '', auth);
-              const metadata = this.buildYouTubeMetadata(t.topic, t.category);
-              results.push({
-                projectId: project.id,
-                topic: t.topic,
-                category: t.category,
-                metadata,
-                status: 'created',
-                createdAt: new Date().toISOString()
-              });
-              log('✅ 项目已创建: ' + project.id);
-            } catch(e) {
-              log('❌ 创建失败: ' + e.message);
-              results.push({ topic: t.topic, status: 'failed', error: e.message });
-            }
-            // 间隔 2 秒避免限流
-            if (i < topics.length - 1) await new Promise(r => setTimeout(r, 2000));
-          }
-          
-          // 保存待上传列表到 localStorage
-          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
-          pending.push(...results.filter(r => r.status === 'created'));
-          localStorage.setItem('video_pending_uploads', JSON.stringify(pending));
-          
-          log('📋 已创建 ' + results.filter(r => r.status === 'created').length + '/' + topics.length + ' 个项目，等待生成完成后上传');
-          return results;
-        },
+  // === VideoGenerator 已移除 (v2.0.0) ===
+  function loadVideoGenerator() { /* removed */ }
 
-        // ===== 批量上传（检查完成的项目并上传） =====
-        async batchUpload(onLog) {
-          const log = onLog || console.log;
-          const pending = JSON.parse(localStorage.getItem('video_pending_uploads') || '[]');
-          
-          if (pending.length === 0) {
-            log('📭 没有待上传的项目');
-            return [];
-          }
-          
-          log('🔑 获取 Token...');
-          let auth;
-          try {
-            auth = await this.getOpusToken();
-            log('✅ Token 有效，剩余 ' + auth.remainingSec + 's');
-          } catch(e) {
-            log('❌ Token 获取失败: ' + e.message);
-            throw e;
-          }
-          
-          const results = [];
-          const stillPending = [];
-          
-          for (const item of pending) {
-            log('🔍 检查项目: ' + item.projectId);
-            try {
-              const project = await this.opusApiCall('GET', '/project/' + item.projectId, null, auth);
-              
-              if (project.stage === 'EDITOR' && project.resultVideo) {
-                log('✅ 视频已完成: ' + project.resultVideo.substring(0, 60) + '...');
-                // Enhance metadata with actual project data
-                if (project.name) item.metadata.title = (project.name + ' #Shorts').substring(0, 100);
-                if (project.script) {
-                  const scriptPreview = project.script.substring(0, 200) + '...';
-                  item.metadata.description = project.name + '\n\n' + scriptPreview + '\n\n' + (item.metadata.description || '');
-                }
-                log('📤 上传到 YouTube... 标题: ' + item.metadata.title);
-                const uploadResult = await this.uploadToYouTube(project.resultVideo, item.metadata);
-                log('✅ YouTube 上传成功! 标题: ' + item.metadata.title);
-                this.recordHistory(item.topic, item.category, project.resultVideo, item.metadata);
-                results.push({ ...item, status: 'uploaded', videoUrl: project.resultVideo });
-              } else if (project.stage === 'FAILED' || project.stage === 'ERROR') {
-                log('❌ 项目失败: ' + item.projectId);
-                results.push({ ...item, status: 'failed' });
-              } else {
-                log('⏳ 仍在生成中: ' + project.stage);
-                stillPending.push(item);
-                results.push({ ...item, status: 'pending', stage: project.stage });
-              }
-            } catch(e) {
-              log('⚠️ 查询失败: ' + e.message);
-              stillPending.push(item);
-            }
-            await new Promise(r => setTimeout(r, 1000));
-          }
-          
-          // 更新待上传列表
-          localStorage.setItem('video_pending_uploads', JSON.stringify(stillPending));
-          log('📊 结果: ' + results.filter(r => r.status === 'uploaded').length + ' 已上传, ' + stillPending.length + ' 待处理');
-          return results;
-        },
-
-        // ===== 历史记录 =====
-        recordHistory(topic, category, videoUrl, metadata) {
-          try {
-            const history = JSON.parse(localStorage.getItem('video_content_history') || '{"published":[],"topics_used":[]}');
-            history.published.push({
-              date: new Date().toISOString(),
-              topic,
-              category,
-              videoUrl,
-              youtubeTitle: metadata.title,
-              status: 'uploaded_private'
-            });
-            history.topics_used.push(topic.substring(0, 100));
-            // 只保留最近 100 条
-            if (history.published.length > 100) history.published = history.published.slice(-100);
-            if (history.topics_used.length > 200) history.topics_used = history.topics_used.slice(-200);
-            localStorage.setItem('video_content_history', JSON.stringify(history));
-          } catch (e) {
-            console.error('Failed to record history:', e);
-          }
-        },
-      
-        // ===== UI: 弹出选题对话框 =====
-        showTopicDialog(addLog) {
-          // 如果已有对话框，移除
-          const existing = document.getElementById('video-gen-dialog');
-          if (existing) existing.remove();
-      
-          const category = this.getTodayCategory();
-          const catConfig = this.getCategoryConfig(category);
-      
-          const dialog = document.createElement('div');
-          dialog.id = 'video-gen-dialog';
-          dialog.innerHTML = `
-            <div class="vg-overlay"></div>
-            <div class="vg-modal">
-              <div class="vg-header">
-                <span>🎬 生成视频</span>
-                <button class="vg-close">✕</button>
-              </div>
-              <div class="vg-body">
-                <div class="vg-field">
-                  <label>今日类别</label>
-                  <select id="vg-category">
-                    <option value="tech" ${category === 'tech' ? 'selected' : ''}>🔧 科技趋势 (Mon)</option>
-                    <option value="people" ${category === 'people' ? 'selected' : ''}>👤 人物传记 (Tue)</option>
-                    <option value="society" ${category === 'society' ? 'selected' : ''}>🌍 社会热点 (Wed)</option>
-                    <option value="science" ${category === 'science' ? 'selected' : ''}>🔬 科学解读 (Thu)</option>
-                    <option value="business" ${category === 'business' ? 'selected' : ''}>💼 商业分析 (Fri)</option>
-                    <option value="culture" ${category === 'culture' ? 'selected' : ''}>🎭 文化现象 (Sat)</option>
-                    <option value="wildcard" ${category === 'wildcard' ? 'selected' : ''}>🎲 百搭话题 (Sun)</option>
-                  </select>
-                </div>
-                <div class="vg-field">
-                  <label>话题 1 *</label>
-                  <textarea id="vg-topic" rows="2" placeholder="第一个视频话题"></textarea>
-                </div>
-                <div class="vg-field">
-                  <label>来源 URL 1（可选）</label>
-                  <input id="vg-source" type="text" placeholder="https://..." />
-                </div>
-                <div class="vg-field">
-                  <label>话题 2（可选，留空则只创建1个）</label>
-                  <textarea id="vg-topic2" rows="2" placeholder="第二个视频话题"></textarea>
-                </div>
-                <div class="vg-field">
-                  <label>来源 URL 2（可选）</label>
-                  <input id="vg-source2" type="text" placeholder="https://..." />
-                </div>
-                <div class="vg-preview" id="vg-preview" style="display:none">
-                  <div class="vg-preview-title">预览</div>
-                  <div id="vg-preview-content"></div>
-                </div>
-                <div class="vg-status" id="vg-status"></div>
-              </div>
-              <div class="vg-footer">
-                <button id="vg-upload-btn" class="vg-btn vg-btn-secondary" style="background:#059669">📤 上传已完成</button>
-                <button id="vg-preview-btn" class="vg-btn vg-btn-secondary">👁️ 预览</button>
-                <button id="vg-start-btn" class="vg-btn vg-btn-primary">🚀 批量创建</button>
-              </div>
-            </div>
-          `;
-      
-          // 样式
-          const style = document.createElement('style');
-          style.id = 'video-gen-styles';
-          if (!document.getElementById('video-gen-styles')) {
-            style.textContent = `
-              #video-gen-dialog { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10002; display: flex; align-items: center; justify-content: center; }
-              .vg-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); }
-              .vg-modal { position: relative; background: #1a1a2e; color: #e0e0e0; border-radius: 12px; width: 460px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-              .vg-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #333; font-size: 16px; font-weight: 600; }
-              .vg-close { background: none; border: none; color: #999; font-size: 18px; cursor: pointer; }
-              .vg-close:hover { color: #fff; }
-              .vg-body { padding: 20px; }
-              .vg-field { margin-bottom: 16px; }
-              .vg-field label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; font-weight: 500; }
-              .vg-field select, .vg-field input, .vg-field textarea { width: 100%; padding: 10px 12px; background: #0f0f23; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 14px; box-sizing: border-box; }
-              .vg-field textarea { resize: vertical; font-family: inherit; }
-              .vg-field select:focus, .vg-field input:focus, .vg-field textarea:focus { outline: none; border-color: #6366f1; }
-              .vg-preview { background: #0f0f23; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
-              .vg-preview-title { font-size: 11px; color: #6366f1; font-weight: 600; margin-bottom: 8px; }
-              #vg-preview-content { font-size: 12px; color: #ccc; white-space: pre-wrap; max-height: 150px; overflow-y: auto; }
-              .vg-status { font-size: 12px; color: #aaa; min-height: 20px; }
-              .vg-status.error { color: #ef4444; }
-              .vg-status.success { color: #22c55e; }
-              .vg-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px; border-top: 1px solid #333; }
-              .vg-btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-              .vg-btn-secondary { background: #333; color: #e0e0e0; }
-              .vg-btn-secondary:hover { background: #444; }
-              .vg-btn-primary { background: #6366f1; color: white; }
-              .vg-btn-primary:hover { background: #5558e6; }
-              .vg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-              .vg-log { font-size: 11px; padding: 4px 0; border-bottom: 1px solid #1a1a2e; }
-            `;
-            document.head.appendChild(style);
-          }
-      
-          document.body.appendChild(dialog);
-      
-          // 事件绑定
-          dialog.querySelector('.vg-close').onclick = () => dialog.remove();
-          dialog.querySelector('.vg-overlay').onclick = () => dialog.remove();
-      
-          // 预览按钮
-          dialog.querySelector('#vg-preview-btn').onclick = () => {
-            const topic = dialog.querySelector('#vg-topic').value.trim();
-            const cat = dialog.querySelector('#vg-category').value;
-            const source = dialog.querySelector('#vg-source').value.trim();
-            if (!topic) {
-              this.setStatus(dialog, '请输入话题', 'error');
-              return;
-            }
-            const prompt = this.buildPrompt(topic, cat, source);
-            const metadata = this.buildYouTubeMetadata(topic, cat);
-            const preview = dialog.querySelector('#vg-preview');
-            preview.style.display = 'block';
-            dialog.querySelector('#vg-preview-content').textContent = 
-              `📺 YouTube 标题: ${metadata.title}\n\n📝 Opus Prompt:\n${prompt}\n\n🏷️ Tags: ${metadata.tags.join(', ')}`;
-          };
-      
-          // 开始生成按钮
-          // 批量创建按钮
-          dialog.querySelector('#vg-start-btn').onclick = async () => {
-            const topic1 = dialog.querySelector('#vg-topic').value.trim();
-            const cat = dialog.querySelector('#vg-category').value;
-            const source1 = dialog.querySelector('#vg-source').value.trim();
-            const topic2 = dialog.querySelector('#vg-topic2') ? dialog.querySelector('#vg-topic2').value.trim() : '';
-            const source2 = dialog.querySelector('#vg-source2') ? dialog.querySelector('#vg-source2').value.trim() : '';
-
-            if (!topic1) {
-              this.setStatus(dialog, '请输入至少一个话题', 'error');
-              return;
-            }
-
-            const topics = [{topic: topic1, category: cat, sourceUrl: source1}];
-            if (topic2) topics.push({topic: topic2, category: cat, sourceUrl: source2});
-
-            const startBtn = dialog.querySelector('#vg-start-btn');
-            const previewBtn = dialog.querySelector('#vg-preview-btn');
-            const uploadBtn = dialog.querySelector('#vg-upload-btn');
-            startBtn.disabled = true;
-            previewBtn.disabled = true;
-            if (uploadBtn) uploadBtn.disabled = true;
-            startBtn.textContent = '⏳ 创建中...';
-
-            const logToDialog = (msg) => {
-              this.setStatus(dialog, msg);
-              if (addLog) addLog(msg, 'info');
-            };
-
-            try {
-              const results = await this.batchCreate(topics, logToDialog);
-              const created = results.filter(r => r.status === 'created').length;
-              this.setStatus(dialog, '🎉 已创建 ' + created + ' 个项目！等视频生成完成后点「📤 上传已完成」', 'success');
-              startBtn.textContent = '✅ 已创建 ' + created + ' 个';
-              if (uploadBtn) uploadBtn.disabled = false;
-            } catch (error) {
-              this.setStatus(dialog, '❌ ' + error.message, 'error');
-              startBtn.disabled = false;
-              previewBtn.disabled = false;
-              if (uploadBtn) uploadBtn.disabled = false;
-              startBtn.textContent = '🚀 重试';
-            }
-          };
-
-          // 上传已完成的视频
-          dialog.querySelector('#vg-upload-btn').onclick = async () => {
-            const uploadBtn = dialog.querySelector('#vg-upload-btn');
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = '⏳ 检查中...';
-
-            const logToDialog = (msg) => {
-              this.setStatus(dialog, msg);
-              if (addLog) addLog(msg, 'info');
-            };
-
-            try {
-              const results = await this.batchUpload(logToDialog);
-              const uploaded = results.filter(r => r.status === 'uploaded').length;
-              const pending = results.filter(r => r.status === 'pending').length;
-              if (uploaded > 0) {
-                this.setStatus(dialog, '🎉 ' + uploaded + ' 个视频已上传! ' + (pending > 0 ? pending + ' 个仍在生成中' : ''), 'success');
-              } else if (pending > 0) {
-                this.setStatus(dialog, '⏳ ' + pending + ' 个视频仍在生成中，稍后再试');
-              } else {
-                this.setStatus(dialog, '📭 没有待上传的项目');
-              }
-              uploadBtn.textContent = '📤 上传已完成';
-              uploadBtn.disabled = false;
-            } catch(error) {
-              this.setStatus(dialog, '❌ ' + error.message, 'error');
-              uploadBtn.textContent = '📤 重试上传';
-              uploadBtn.disabled = false;
-            }
-          };
-        },
-      
-        setStatus(dialog, msg, type) {
-          const el = dialog.querySelector('#vg-status');
-          el.className = 'vg-status ' + (type || '');
-          el.innerHTML += `<div class="vg-log">${msg}</div>`;
-        }
-      };
-      
-      // VideoGenerator is now available in scope
-      
-      window.VideoGenerator = VideoGenerator;
-      console.log('[Agent] VideoGenerator loaded (inline)');
-    } catch(e) {
-      console.error('[Agent] loadVideoGenerator error:', e);
-    }
-  }
+  // === 原 VideoGenerator 代码已清理 ===
 
   
   // 改进的 JSON 解析函数 - 处理长内容和特殊字符
@@ -739,6 +82,10 @@
     let fixed = jsonStr
       .replace(/[""]/g, '"')
       .replace(/['']/g, "'");
+    
+    // Support relaxed JSON: add quotes to unquoted keys
+    // e.g. {tool:"run_process"} -> {"tool":"run_process"}
+    fixed = fixed.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
     
     try {
       return JSON.parse(fixed);
@@ -760,13 +107,29 @@
       } catch (e2) {
         // 最后尝试：提取工具名和简单参数
         const toolMatch = fixed.match(/"tool"\s*:\s*"(\w+)"/);
-        const pathMatch = fixed.match(/"path"\s*:\s*"([^"]+)"/);
-        const cmdMatch = fixed.match(/"command"\s*:\s*"([^"]+)"/);
         if (toolMatch) {
           const params = {};
-          if (pathMatch) params.path = pathMatch[1];
-          if (cmdMatch) params.command = cmdMatch[1];
-          console.warn('[Agent] Partial parse for tool:', toolMatch[1]);
+          // 使用更宽松的正则来匹配可能包含转义字符的字符串
+          const pathMatch = fixed.match(/"path"\s*:\s*"((?:\\.|[^"\\])*)"/);
+          if (pathMatch) params.path = pathMatch[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          
+          const cmdMatch = fixed.match(/"command"\s*:\s*"((?:\\.|[^"\\])*)"/);
+          if (cmdMatch) params.command = cmdMatch[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          
+          const cmdLineMatch = fixed.match(/"command_line"\s*:\s*"((?:\\.|[^"\\])*)"/);
+          if (cmdLineMatch) params.command_line = cmdLineMatch[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          
+          const modeMatch = fixed.match(/"mode"\s*:\s*"(\w+)"/);
+          if (modeMatch) params.mode = modeMatch[1];
+          
+          // stdin 可能是多行的，尝试提取直到下一个引号结束的复杂内容
+          const stdinMatch = fixed.match(/"stdin"\s*:\s*"((?:\\.|[^"\\])*)"/);
+          if (stdinMatch) params.stdin = stdinMatch[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          
+          const urlMatch = fixed.match(/"url"\s*:\s*"((?:\\.|[^"\\])*)"/);
+          if (urlMatch) params.url = urlMatch[1].replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          
+          console.warn('[Agent] Partial parse for tool:', toolMatch[1], 'params:', Object.keys(params).join(','));
           return { tool: toolMatch[1], params, _partialParse: true };
         }
         throw e1;
@@ -776,6 +139,206 @@
 
 function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
+  }
+
+  // ============== SSE 原始数据拦截 (ChatGPT WebSocket/fetch delta) ==============
+  // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 delta
+  // ChatGPT 格式: {type:"content_delta", text:"..."} 或 {type:"status_change", status:"..."}
+  
+  const sseState = {
+    currentText: '',
+    connected: false,
+    processedCommands: new Set(),
+    lastDeltaTime: 0,
+    messageId: null,
+    enabled: true,
+    executedInCurrentMessage: false
+  };
+
+  function initSSEListener() {
+    // Fetch hook is now in fetch-hook.js (MAIN world, document_idle via manifest)
+    addLog('🔌 Fetch hook (via manifest)', 'info');
+
+    // SSE 连接建立
+    document.addEventListener('__sse_connected__', (e) => {
+      sseState.connected = true;
+      sseState.currentText = '';
+      sseState.processedCommands.clear();
+      sseState.executedInCurrentMessage = false;
+      const prevMessageId = sseState.messageId;
+      sseState.messageId = null;
+      sseState._prevMessageId = prevMessageId;
+      log('SSE connected:', e.detail?.transport);
+      addLog('📡 SSE ' + (e.detail?.transport || 'stream') + ' connected', 'success');
+    });
+
+    // 每个 SSE delta
+    document.addEventListener('__sse_data__', (e) => {
+      if (!sseState.enabled) return;
+      const raw = e.detail?.data;
+      if (!raw) return;
+
+      try {
+        const parsed = JSON.parse(raw);
+        
+        // ChatGPT content delta
+        if (parsed.type === 'content_delta' && parsed.text) {
+          // 防重复：如果这段文本已经存在于末尾，则跳过
+          if (!sseState.currentText.endsWith(parsed.text)) {
+            sseState.currentText += parsed.text;
+          } else {
+            log('SSE duplicate delta skipped');
+          }
+          sseState.lastDeltaTime = Date.now();
+          
+          // 实时检测 ΩCODE 命令
+          checkSSEForToolCalls();
+        }
+        
+        // Status change
+        if (parsed.type === 'status_change' && parsed.status === 'finished_successfully') {
+          log('SSE message finished');
+          // 最终检查一次
+          setTimeout(() => checkSSEForToolCalls(), 100);
+        }
+
+        // Genspark 兼容格式 (message_field_delta)
+        if (parsed.type === 'message_field_delta' && parsed.field_name === 'content' && parsed.delta) {
+          const newMsgId = parsed.message_id || sseState.messageId;
+          if (newMsgId && newMsgId !== sseState._prevMessageId && newMsgId !== sseState.messageId) {
+            sseState.processedCommands.clear();
+            sseState.executedInCurrentMessage = false;
+            sseState.currentText = '';
+          }
+          sseState.messageId = newMsgId;
+          sseState.currentText += parsed.delta;
+          sseState.lastDeltaTime = Date.now();
+          checkSSEForToolCalls();
+        }
+      } catch (e) {
+        // Not JSON — ignore
+      }
+    });
+
+    // 消息完成
+    document.addEventListener('__sse_message_complete__', (e) => {
+      log('SSE message complete event');
+      // 延迟最终检查，确保所有 delta 已到
+      setTimeout(() => {
+        checkSSEForToolCalls();
+        // 重置为下一条消息做准备
+        sseState._prevMessageId = sseState.messageId;
+      }, 200);
+    });
+
+    // SSE 关闭
+    document.addEventListener('__sse_closed__', (e) => {
+      log('SSE closed:', e.detail?.transport);
+      sseState.connected = false;
+    });
+
+    log('SSE listener initialized (ChatGPT mode)');
+    addLog('🔌 SSE 监听器已启动', 'info');
+  }
+
+  // ============================================================
+  // 文本清理：处理 SSE 重复数据导致的损坏
+  // ============================================================
+  function cleanCorruptedText(text) {
+    // 检测重复的 ΩCODE { 模式（如 ΩCODE {ΩCODE {ΩCODE {）
+    // 保留最后一个 ΩCODE { 及其后面的内容
+    const omegaCodePattern = /ΩCODE\s*\{/g;
+    const matches = text.match(omegaCodePattern);
+    if (matches && matches.length > 1) {
+      // 找到最后一个 ΩCODE { 的位置
+      let lastIndex = text.lastIndexOf('ΩCODE {');
+      if (lastIndex === -1) {
+        // 尝试不带空格的变体
+        lastIndex = text.lastIndexOf('ΩCODE{');
+        if (lastIndex !== -1) lastIndex += 6; // 包含 ΩCODE{
+        else lastIndex = 0;
+      } else {
+        lastIndex += 7; // 包含 ΩCODE {
+      }
+      // 保留从最后一个 ΩCODE { 开始到 ΩCODEEND 的内容
+      const endIndex = text.indexOf('ΩCODEEND', lastIndex);
+      if (endIndex !== -1) {
+        text = 'ΩCODE {' + text.substring(lastIndex, endIndex + 8);
+      }
+    }
+    
+    // 修复字段名重复（如 tooltooltool -> tool）
+    // 检测重复模式：tooltool, tooltooltool, paramsparams 等
+    text = text.replace(/(\w{3,})\1+/g, '$1');
+    
+    // 修复重复的空键值（如 "":"run_process" 应该是 "tool":"run_process"）
+    text = text.replace(/"":"([^"]+)"/g, '"$1":"$1"');
+    
+    return text;
+  }
+
+  function checkSSEForToolCalls() {
+    // Note: removed agentRunning guard — batch calls handle dedup via callHash
+    const text = sseState.currentText;
+    if (!text) return;
+
+    // 检测所有完整的 ΩCODE 块（支持同一消息多个命令）
+    let searchFrom = 0;
+    while (searchFrom < text.length) {
+      const codeStart = text.indexOf('ΩCODE', searchFrom);
+      if (codeStart === -1) break;
+      const codeEnd = text.indexOf('ΩCODEEND', codeStart + 5);
+      if (codeEnd === -1) break; // 未完成的块，等下一个 delta
+      
+      const cmdSignature = 'sse:' + codeStart + ':' + text.substring(codeStart, codeStart + 50);
+      searchFrom = codeEnd + 8; // 跳过 ΩCODEEND 继续搜索
+      
+      if (sseState.processedCommands.has(cmdSignature)) continue;
+      sseState.processedCommands.add(cmdSignature);
+      
+      log('SSE detected ΩCODE at position', codeStart);
+      // 提取这个块的文本并解析
+      let blockText = text.substring(codeStart, codeEnd + 8);
+      
+      // 尝试解析，如果失败则清理损坏的文本
+      let toolCalls = parseToolCalls(blockText);
+      if (toolCalls.length === 0) {
+        const cleanedText = cleanCorruptedText(blockText);
+        if (cleanedText !== blockText) {
+          addLog('🧹 文本损坏，尝试清理后重新解析', 'info');
+          toolCalls = parseToolCalls(cleanedText);
+        }
+      }
+      
+      if (toolCalls.length > 0) {
+        sseState.executedInCurrentMessage = true;
+        for (const tool of toolCalls) {
+          // Include message context in hash so same command in different messages can execute
+          const msgCtx = sseState.messageId || ('t' + Math.floor(sseState.lastDeltaTime / 10000));
+          const callHash = 'sse:' + msgCtx + ':' + tool.name + ':' + JSON.stringify(tool.params).substring(0, 100);
+          if (!state.executedCalls.has(callHash)) {
+            addExecutedCall(callHash);
+            if (tool.isBatch) {
+              executeBatchCall(tool.params, callHash);
+            } else {
+              executeToolCall(tool, callHash);
+            }
+          }
+        }
+      }
+    }
+
+    // ΩCODE already handled above, no other formats needed
+
+    // 检测 @DONE
+    if (text.includes('@DONE') || text.includes('[[DONE]]')) {
+      const doneSig = 'sse:done:' + sseState.messageId;
+      if (!sseState.processedCommands.has(doneSig)) {
+        sseState.processedCommands.add(doneSig);
+        log('SSE detected @DONE');
+        addLog('✅ @DONE (via SSE)', 'success');
+      }
+    }
   }
 
   // ============== AI 生成状态检测 ==============
@@ -836,42 +399,25 @@ function log(...args) {
 
 ---
 
-## 工具调用格式
+## 工具调用格式 (ΩCODE 统一通道)
 
-所有工具调用必须用代码块包裹。文字说明和代码块之间必须留一个空行。
+### 单步执行
+ΩCODE
+{"tool":"run_process","params":{"command_line":"echo hello","mode":"shell"}}
+ΩCODEEND
 
-### 单个工具
-
-\`\`\`
-Ω{"tool":"工具名","params":{"参数":"值"}}ΩSTOP
-\`\`\`
-
-### 批量执行 (ΩBATCH) v1.0.52+
-
-\`\`\`
-ΩBATCH{"steps":[
-  {"tool":"工具1","params":{...},"saveAs":"变量名"},
-  {"tool":"工具2","params":{...},"when":{"var":"变量名","success":true}}
-],"stopOnError":false}ΩEND
-\`\`\`
-
-when 条件: success / contains / regex（注意用 var 不是 variable）
-
-### 高级调度
-
-- ΩPLAN{"goal":"...","context":{...}} — 智能规划
-- ΩFLOW{"template":"模板名","variables":{...}} — 工作流模板
-- ΩRESUME{"taskId":"任务ID"} — 断点续传
+### 多步批量执行
+ΩCODE
+{"steps":[{"tool":"...","params":{...},"saveAs":"s1"},{"tool":"...","params":{...},"when":"s1.success"}]}
+ΩCODEEND
 
 ---
 
 ## 核心规则
 
-1. 代码块包裹所有工具调用，等待结果再继续
-2. 多个独立操作用 ΩBATCH 批量执行
-3. 永远不要假设或编造执行结果
-4. 任务完成输出 @DONE
-5. JSON 中的引号使用 \\"
+1. 所有工具调用用 ΩCODE...ΩCODEEND 包裹
+2. 等待结果再继续，永不假设或编造结果
+3. 任务完成输出 @DONE
 
 ---
 
@@ -1238,366 +784,41 @@ ${toolSummary}
     return false;
   }
 
-  function isRealToolCall(text, matchStart, matchEnd) {
-    if (isExampleToolCall(text, matchStart)) {
-      log('跳过示例工具调用');
-      return false;
-    }
-    
-    const afterText = text.substring(matchEnd, matchEnd + 150);
-    if (afterText.includes('[执行结果]') || afterText.includes('执行结果')) {
-      log('跳过已执行的工具调用');
-      return false;
-    }
-    
-    return true;
-  }
-
-  function extractJsonFromText(text, startIndex) {
-    let depth = 0, inString = false, escapeNext = false, start = -1;
-    for (let i = startIndex; i < text.length; i++) {
-      const c = text[i];
-      if (escapeNext) { escapeNext = false; continue; }
-      if (c === "\\" && inString) { escapeNext = true; continue; }
-      if (c === '"' && !escapeNext) { inString = !inString; continue; }
-      if (inString) continue;
-      if (c === '{') { if (depth === 0) start = i; depth++; }
-      else if (c === '}') { depth--; if (depth === 0 && start !== -1) return { json: text.substring(start, i + 1), end: i + 1 }; }
-    }
-    return null;
-  }
-
-  // 解析新的代码块格式: Ωname ... ΩEND
-  function parseCodeBlockFormat(text) {
-    const toolCalls = [];
-    const regex = /Ω(\w+)\s*\n([\s\S]*?)ΩEND/g;
-    let match;
-    
-    while ((match = regex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const toolName = match[1];
-      const body = match[2];
-      const params = {};
-      
-      const pathMatch = body.match(/@PATH:\s*(.+)/);
-      if (pathMatch) params.path = pathMatch[1].trim();
-      
-      const cmdMatch = body.match(/@COMMAND:\s*(.+)/);
-      if (cmdMatch) params.command = cmdMatch[1].trim();
-      
-      const urlMatch = body.match(/@URL:\s*(.+)/);
-      if (urlMatch) params.url = urlMatch[1].trim();
-      
-      const contentMatch = body.match(/@CONTENT:\s*\n```[\w]*\n([\s\S]*?)\n```/);
-      if (contentMatch) {
-        params.content = contentMatch[1];
-      }
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({
-          name: toolName,
-          params,
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    return toolCalls;
-  }
-
-  
-  // 方案3: 解析 ```tool 代码块
-  function parseToolCodeBlock(text) {
-    console.log('[Agent] parseToolCodeBlock called, text length:', text.length);
-    console.log('[Agent] looking for tool blocks...');
-    const calls = [];
-    const re = /```tool\s*\n([\s\S]*?)\n```/g;
-    console.log('[Agent] regex test:', re.test(text));
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      try {
-        const json = m[1].trim().replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-        const p = safeJsonParse(json);
-        if (p.tool) calls.push({ name: p.tool, params: p.params || {}, raw: m[0], start: m.index, end: m.index + m[0].length });
-      } catch (e) { console.error('[Agent] tool block error:', e.message); }
-    }
-    return calls;
-  }
-
-  // 辅助函数: 提取平衡的 JSON 对象 (支持任意嵌套)
-  function extractBalancedJson(text, marker, fromEnd = false) {
-    const idx = fromEnd ? text.lastIndexOf(marker) : text.indexOf(marker);
-    if (idx === -1) return null;
-    const jsonStart = text.indexOf('{', idx + marker.length);
-    if (jsonStart === -1) return null;
-    // 严格检查: marker 和 { 之间只能有空白字符
-    const between = text.slice(idx + marker.length, jsonStart);
-    if (between.trim() !== '') return null;
-    let depth = 0, inStr = false, esc = false;
-    for (let i = jsonStart; i < text.length; i++) {
-      const ch = text[i];
-      if (esc) { esc = false; continue; }
-      if (ch === '\\') { esc = true; continue; }
-      if (ch === '"') { inStr = !inStr; continue; }
-      if (inStr) continue;
-      if (ch === '{') depth++;
-      if (ch === '}') { depth--; if (depth === 0) return { json: text.slice(jsonStart, i+1), start: idx, end: i+1 }; }
-    }
-    return null;
-  }
-
     function parseToolCalls(text) {
-    // 优先检查 ΩBATCH 批量格式（支持 ΩBATCH{...}ΩEND 或 ΩBATCH{...} 格式）
-    const batchStartIdx = text.indexOf('ΩBATCH');
-    if (batchStartIdx !== -1 && !state.executedCalls.has('batch:' + batchStartIdx)) {
-      // 跳过示例中的 ΩBATCH
-      const beforeBatch = text.substring(Math.max(0, batchStartIdx - 100), batchStartIdx);
-      const isExample = /格式[：:]|示例|用法|如下|Example|前缀/.test(beforeBatch);
-      if (!isExample) {
+    // ========== ΩCODE 统一通道 (最高优先级) ==========
+    const ocPrefix = String.fromCharCode(0x03A9) + "CODE";
+    const ocEndTag = String.fromCharCode(0x03A9) + "CODEEND";
+    let ocStart = text.indexOf(ocPrefix + String.fromCharCode(10));
+    if (ocStart === -1) ocStart = text.indexOf(ocPrefix + "{");
+    if (ocStart === -1) ocStart = text.indexOf(ocPrefix + " {");
+    if (ocStart === -1) ocStart = text.indexOf(ocPrefix + " \n");
+    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart) && !(sseState && sseState.executedInCurrentMessage)) {
+      const beforeOC = text.substring(Math.max(0, ocStart - 100), ocStart);
+      if (!/Example:|e\.g\.|示例|格式/.test(beforeOC)) {
         try {
-          // 尝试找 ΩEND 结束标记
-          const jsonStart = text.indexOf('{', batchStartIdx);
-          let jsonEnd = text.indexOf('ΩEND', jsonStart);
-          let batchJson;
-          if (jsonEnd !== -1) {
-            // 有 ΩEND 标记，直接截取
-            batchJson = text.substring(jsonStart, jsonEnd).trim();
-          } else {
-            // 没有 ΩEND，使用平衡括号匹配
-            const batchData = extractBalancedJson(text, 'ΩBATCH');
-            if (batchData) batchJson = batchData.json;
-          }
-          if (batchJson) {
-            batchJson = batchJson.replace(/[""]/g, '"').replace(/['']/g, "'");
-            const batch = safeJsonParse(batchJson);
-            if (batch.steps && Array.isArray(batch.steps)) {
-              const endPos = jsonEnd !== -1 ? jsonEnd + 4 : batchStartIdx + 6 + batchJson.length;
-              return [{
-                name: '__BATCH__',
-                params: batch,
-                raw: text.substring(batchStartIdx, endPos),
-                start: batchStartIdx,
-                end: endPos,
-                isBatch: true
-              }];
+          const ocEndIdx = text.indexOf(ocEndTag, ocStart);
+          if (ocEndIdx !== -1) {
+            const hdrEnd = text.indexOf(String.fromCharCode(10), ocStart);
+            let ocBody = text.substring(ocStart + ocPrefix.length, ocEndIdx).trim();
+            // Strip leading newline if present
+            if (ocBody.startsWith('\n')) ocBody = ocBody.substring(1).trim();
+            ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
+            const ocObj = safeJsonParse(ocBody);
+            if (ocObj && (ocObj.tool || ocObj.steps)) {
+              if (ocObj.steps && Array.isArray(ocObj.steps)) {
+                return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];
+              } else {
+                return [{ name: ocObj.tool, params: ocObj.params || {}, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8 }];
+              }
             }
           }
         } catch (e) {
-          if (CONFIG.DEBUG) console.log('[Agent] ΩBATCH parse skip:', e.message);
+          if (CONFIG.DEBUG) console.log("[Agent] ΩCODE DOM fallback skip:", e.message);
         }
       }
     }
 
-    // ========== ΩPLAN ==========
-    const planData = extractBalancedJson(text, 'ΩPLAN', true);
-    if (planData && !state.executedCalls.has('plan:' + planData.start)) {
-      const beforePlan = text.substring(Math.max(0, planData.start - 30), planData.start);
-      // 只检查紧邻的前文是否包含文档关键词
-      if (!beforePlan.includes('格式') && !beforePlan.includes('示例') && !beforePlan.includes('例如')) {
-        try {
-          const plan = safeJsonParse(planData.json);
-          if (plan) return [{ name: '__PLAN__', params: plan, raw: 'ΩPLAN' + planData.json, start: planData.start, end: planData.end, isPlan: true }];
-        } catch (e) {}
-      }
-    }
-
-    // ========== ΩFLOW ==========
-    const flowData = extractBalancedJson(text, 'ΩFLOW', true);
-    if (flowData && !state.executedCalls.has('flow:' + flowData.start)) {
-      const beforeFlow = text.substring(Math.max(0, flowData.start - 30), flowData.start);
-      if (!beforeFlow.includes('格式') && !beforeFlow.includes('示例') && !beforeFlow.includes('例如')) {
-        try {
-          const flow = safeJsonParse(flowData.json);
-          if (flow) return [{ name: '__FLOW__', params: flow, raw: 'ΩFLOW' + flowData.json, start: flowData.start, end: flowData.end, isFlow: true }];
-        } catch (e) {}
-      }
-    }
-
-    // ========== ΩRESUME ==========
-    const resumeData = extractBalancedJson(text, 'ΩRESUME', true);
-    if (resumeData && !state.executedCalls.has('resume:' + resumeData.start)) {
-      const beforeResume = text.substring(Math.max(0, resumeData.start - 30), resumeData.start);
-      if (!beforeResume.includes('格式') && !beforeResume.includes('示例') && !beforeResume.includes('例如')) {
-        try {
-          const resume = safeJsonParse(resumeData.json);
-          if (resume) return [{ name: '__RESUME__', params: resume, raw: 'ΩRESUME' + resumeData.json, start: resumeData.start, end: resumeData.end, isResume: true }];
-        } catch (e) {}
-      }
-    }
-
-    // 方案3: 优先解析 ```tool 代码块
-    const toolBlockCalls = parseToolCodeBlock(text);
-    if (toolBlockCalls.length > 0) return toolBlockCalls;
-
-    // 兼容旧格式: Ωname ... ΩEND
-    const codeBlockCalls = parseCodeBlockFormat(text);
-    if (codeBlockCalls.length > 0) return codeBlockCalls;
-
-    const toolCalls = [];
-    let searchStart = 0;
-    while (true) {
-      const marker = 'Ω';
-      const idx = text.indexOf(marker, searchStart);
-      if (idx === -1) break;
-      
-      // 检查前面100字符是否包含示例关键词
-      const beforeMarker = text.substring(Math.max(0, idx - 100), idx);
-      const isExample = /格式[：:]|示例：|例如：|Example:|e.g./.test(beforeMarker);
-      if (isExample) {
-        searchStart = idx + marker.length;
-        continue;
-      }
-      
-      // 检查是否紧跟 {"tool":
-      const afterMarker = text.substring(idx + marker.length, idx + marker.length + 10);
-      if (!afterMarker.match(/^\s*\{\s*"tool"/)) {
-        searchStart = idx + marker.length;
-        continue;
-      }
-      const extracted = extractJsonFromText(text, idx + marker.length);
-      if (extracted) {
-        // Skip if extracted JSON is too short or looks invalid
-        if (!extracted.json || extracted.json.length < 5 || !extracted.json.startsWith('{')) {
-          searchStart = idx + marker.length;
-          continue;
-        }
-        try {
-          // Fix Chinese quotes that break JSON parsing
-          let jsonStr = extracted.json
-            .replace(/[“”]/g, '"')  // Chinese double quotes to ASCII
-            .replace(/[‘’]/g, "'"); // Chinese single quotes to ASCII
-          const parsed = safeJsonParse(jsonStr);
-          if (parsed.tool) {
-            // 检查是否有 ΩSTOP 结束标记
-            const afterJson = text.substring(idx + marker.length + extracted.json.length, idx + marker.length + extracted.json.length + 10);
-            const hasStop = afterJson.trim().startsWith('ΩSTOP');
-            if (!hasStop) {
-              // 强制要求 ΩSTOP 结束标记，没有则跳过
-              searchStart = idx + marker.length + extracted.json.length;
-              continue;
-            }
-            const endPos = idx + marker.length + extracted.json.length + afterJson.indexOf('ΩSTOP') + 5;
-            toolCalls.push({ name: parsed.tool, params: parsed.params || {}, raw: text.substring(idx, endPos), start: idx, end: endPos, hasStopMarker: true });
-          }
-        } catch (e) {
-          if (CONFIG.DEBUG) console.log('[Agent] JSON parse skip:', e.message);
-          console.error('[Agent] Raw JSON:', extracted.json.slice(0, 300));
-          addLog('JSON parse error: ' + e.message, 'error');
-        }
-        searchStart = extracted.end;
-      } else { searchStart = idx + marker.length; }
-    }
-    if (toolCalls.length > 0) return toolCalls;
-
-    const inlineRegex = /\[\[TOOL:(\w+)((?:\s+\w+="[^"]*")+)\s*\]\]/g;
-    let match;
-    
-    while ((match = inlineRegex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const params = {};
-      const paramRegex = /(\w+)="([^"]*)"/g;
-      let paramMatch;
-      while ((paramMatch = paramRegex.exec(match[2])) !== null) {
-        params[paramMatch[1]] = paramMatch[2];
-      }
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({ 
-          name: match[1], 
-          params, 
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    if (toolCalls.length > 0) return toolCalls;
-    
-    const blockRegex = /\[\[TOOL:(\w+)\]\]([\s\S]*?)\[\[\/TOOL\]\]/g;
-    
-    while ((match = blockRegex.exec(text)) !== null) {
-      if (!isRealToolCall(text, match.index, match.index + match[0].length)) {
-        continue;
-      }
-      
-      const toolName = match[1];
-      const body = match[2].trim();
-      const params = parseParams(body);
-      
-      if (Object.keys(params).length > 0) {
-        toolCalls.push({ 
-          name: toolName, 
-          params, 
-          raw: match[0],
-          start: match.index,
-          end: match.index + match[0].length
-        });
-      }
-    }
-    
-    return toolCalls;
-  }
-
-  function parseParams(body) {
-    const params = {};
-    body = body.trim();
-    
-    const bracketRegex = /(\w+):\s*<<<([\s\S]*?)>>>/g;
-    let bm;
-    while ((bm = bracketRegex.exec(body)) !== null) {
-      params[bm[1]] = bm[2].trim();
-    }
-    if (Object.keys(params).length > 0) {
-      const cleanBody = body.replace(/\w+:\s*<<<[\s\S]*?>>>/g, '');
-      const lines = cleanBody.split(/\n/).map(l => l.trim()).filter(Boolean);
-      for (const line of lines) {
-        const m = line.match(/^(\w+):\s*(.+)$/);
-        if (m && !params[m[1]]) params[m[1]] = m[2].trim();
-      }
-      return params;
-    }
-    
-    let lines = body.split(/\n/).map(l => l.trim()).filter(Boolean);
-    
-    if (lines.length >= 2) {
-      let currentKey = null;
-      let currentValue = [];
-      for (const line of lines) {
-        const match = line.match(/^(\w+):\s*(.*)$/);
-        if (match) {
-          if (currentKey) { params[currentKey] = currentValue.join('\n').trim(); }
-          currentKey = match[1];
-          currentValue = match[2] ? [match[2]] : [];
-        } else if (currentKey) { currentValue.push(line); }
-      }
-      if (currentKey) { params[currentKey] = currentValue.join('\n').trim(); }
-    } else {
-      const text = lines[0] || '';
-      const knownKeys = ['path', 'content', 'command', 'url', 'directory', 'pattern', 'body', 'headers'];
-      const keyPositions = [];
-      for (const key of knownKeys) {
-        const regex = new RegExp('\\b' + key + ':\\s*');
-        const match = regex.exec(text);
-        if (match) { keyPositions.push({ key, start: match.index, valueStart: match.index + match[0].length }); }
-      }
-      keyPositions.sort((a, b) => a.start - b.start);
-      for (let i = 0; i < keyPositions.length; i++) {
-        const curr = keyPositions[i];
-        const next = keyPositions[i + 1];
-        const valueEnd = next ? next.start : text.length;
-        params[curr.key] = text.substring(curr.valueStart, valueEnd).trim();
-      }
-    }
-    return params;
+    return [];
   }
 
   // ============== 执行指示器 ==============
@@ -2111,6 +1332,8 @@ ${toolSummary}
   // ============== 扫描工具调用 ==============
 
   function scanForToolCalls() {
+    // SSE 已执行当前消息的工具调用，跳过 DOM 检测避免重复
+    if (sseState.executedInCurrentMessage && (Date.now() - sseState.lastDeltaTime < 30000)) return;
     // console.log("[Agent] scanning...");
     if (state.agentRunning) return;
     
@@ -2378,7 +1601,7 @@ ${toolSummary}
       'syntax error': '语法错误，检查代码格式',
     },
     generalTips: [
-      '支持批量执行: ΩBATCH{"steps":[...]}',
+      '支持批量执行: ΩCODE{"steps":[...]}ΩCODEEND',
       '长内容用 run_command + heredoc 写入',
       '项目记忆: memory_manager_v2.js projects',
     ],
@@ -3302,7 +2525,7 @@ ${tip}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
-      // ===== 浏览器工具反向调用（来自 ΩBATCH 中的 js_flow/eval_js/list_tabs）=====
+      // ===== 浏览器工具反向调用（来自 ΩCODE 中的 js_flow/eval_js/list_tabs）=====
       case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
         addLog(`🔄 BATCH→浏览器: ${bTool} (${callId})`, 'tool');
@@ -3958,6 +3181,9 @@ ${tip}
     // 加载面板增强模块
     loadPanelEnhancer();
     loadVideoGenerator();
+
+    // 初始化 SSE 监听器（优先通道）
+    initSSEListener();
 
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
 

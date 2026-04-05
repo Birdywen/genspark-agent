@@ -243,10 +243,10 @@ function sendToTab(tabId, message) {
   });
 }
 
-// 广播给所有 Genspark Tab
+// 广播给所有 Agent Tab (ChatGPT + Genspark)
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
-  chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
+  chrome.tabs.query({ url: ['https://chatgpt.com/*', 'https://chat.openai.com/*', 'https://www.genspark.ai/*'] }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
     tabs.forEach((tab) => {
       chrome.tabs.sendMessage(tab.id, message).catch((e) => {

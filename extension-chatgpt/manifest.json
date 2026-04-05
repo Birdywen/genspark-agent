@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Agent Bridge",
-  "version": "1.0.0",
-  "description": "将 ChatGPT 聊天窗口转变为 AI Agent 运行时",
+  "version": "2.0.0",
+  "description": "\u5c06 ChatGPT \u804a\u5929\u7a97\u53e3\u8f6c\u53d8\u4e3a AI Agent \u8fd0\u884c\u65f6 (SSE+WS)",
   "permissions": [
     "activeTab",
     "storage",
@@ -13,27 +13,35 @@
     "https://*.chatgpt.com/*",
     "https://chat.openai.com/*",
     "https://*.openai.com/*",
-    "https://*.google.com/*",
-    "https://*.github.com/*",
-    "https://*.youtube.com/*",
-    "https://*.wikipedia.org/*",
-    "https://*.amazon.com/*",
-    "https://*.reddit.com/*",
-    "https://*.vercel.app/*",
-    "https://*.netlify.app/*",
     "http://localhost:*/*",
-    "http://127.0.0.1:*/*",
-    "https://*.opus.pro/*",
-    "https://*.viasocket.com/*"
+    "http://127.0.0.1:*/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
-      "js": ["content.js"],
-      "css": ["styles.css"],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "sse-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -44,8 +52,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["panel-enhancer.js"],
-      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"]
+      "resources": [
+        "panel-enhancer.js"
+      ],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ]
     }
   ]
 }
