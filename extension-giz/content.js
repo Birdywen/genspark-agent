@@ -169,7 +169,7 @@
   function updateStatus() {
     const el = id => document.getElementById(id);
     if (el('giz-server-status')) el('giz-server-status').textContent = 'Server: ' + (state.wsConnected ? '✅' : '❌');
-    if (el('giz-ws-hook-status')) el('giz-ws-hook-status').textContent = 'WS-Hook: ' + (window.__GIZ_WS_HOOK_ACTIVE__ ? '✅' : '❌');
+    if (el('giz-ws-hook-status')) el('giz-ws-hook-status').textContent = 'WS-Hook: ' + (state.wsHookActive ? '✅' : '❌');
     if (el('giz-agent-status')) el('giz-agent-status').textContent = 'Agent: ' + (state.agentRunning ? '🔄' : '⏸');
     if (el('giz-call-count')) el('giz-call-count').textContent = 'Calls: ' + state.totalCalls;
     if (el('giz-pending-count')) el('giz-pending-count').textContent = 'Pending: ' + state.pendingCalls.size;
@@ -422,7 +422,7 @@
 
     chrome.runtime.sendMessage({
       type: 'SEND_TO_SERVER',
-      payload: { type: 'tool_call', tool: tool.name, params: tool.params, callId: hash }
+      payload: { type: 'tool_call', tool: tool.name, params: tool.params, id: hash, callId: hash }
     }, resp => {
       if (chrome.runtime.lastError || !resp?.success) {
         const err = chrome.runtime.lastError?.message || resp?.error || 'unknown';
@@ -446,7 +446,7 @@
 
     chrome.runtime.sendMessage({
       type: 'SEND_TO_SERVER',
-      payload: { type: 'batch_call', steps: batchObj.steps, callId: hash }
+      payload: { type: 'batch_call', steps: batchObj.steps, id: hash, callId: hash }
     }, resp => {
       if (chrome.runtime.lastError || !resp?.success) {
         const err = chrome.runtime.lastError?.message || resp?.error || 'unknown';
@@ -481,7 +481,7 @@
 
   function handleToolResult(data) {
     log('handleToolResult:', data);
-    const callId = data.callId || data.call_id;
+    const callId = data.callId || data.call_id || data.id;
     const toolName = data.tool || data.name || 'unknown';
     const result = data.result !== undefined ? data.result : (data.output || data.error || JSON.stringify(data));
 
@@ -560,6 +560,7 @@
 
   // 监听 ws-hook.js 发来的 WS 流事件
   document.addEventListener('__giz_ws_connected__', () => {
+    state.wsHookActive = true;
     addLog('🔌 Giz WebSocket 已连接', 'success');
     updateStatus();
   });
@@ -591,7 +592,7 @@
       log('新消息 subscribeId:', subscribeId);
     }
 
-    if (output) ws.currentText = output; // Giz 每次发全量 output
+    if (output) ws.currentText += output; // Giz sends delta chunks, accumulate
 
     // 消息完成时尝试解析
     if (status === 'completed' || status === 'done' || status === 'finished') {

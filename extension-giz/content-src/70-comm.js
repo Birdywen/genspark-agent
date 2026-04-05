@@ -2,6 +2,7 @@
 
   // 监听 ws-hook.js 发来的 WS 流事件
   document.addEventListener('__giz_ws_connected__', () => {
+    state.wsHookActive = true;
     addLog('🔌 Giz WebSocket 已连接', 'success');
     updateStatus();
   });
@@ -33,7 +34,7 @@
       log('新消息 subscribeId:', subscribeId);
     }
 
-    if (output) ws.currentText = output; // Giz 每次发全量 output
+    if (output) ws.currentText += output; // Giz sends delta chunks, accumulate
 
     // 消息完成时尝试解析
     if (status === 'completed' || status === 'done' || status === 'finished') {

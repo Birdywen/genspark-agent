@@ -62,7 +62,7 @@
   function updateStatus() {
     const el = id => document.getElementById(id);
     if (el('giz-server-status')) el('giz-server-status').textContent = 'Server: ' + (state.wsConnected ? '✅' : '❌');
-    if (el('giz-ws-hook-status')) el('giz-ws-hook-status').textContent = 'WS-Hook: ' + (window.__GIZ_WS_HOOK_ACTIVE__ ? '✅' : '❌');
+    if (el('giz-ws-hook-status')) el('giz-ws-hook-status').textContent = 'WS-Hook: ' + (state.wsHookActive ? '✅' : '❌');
     if (el('giz-agent-status')) el('giz-agent-status').textContent = 'Agent: ' + (state.agentRunning ? '🔄' : '⏸');
     if (el('giz-call-count')) el('giz-call-count').textContent = 'Calls: ' + state.totalCalls;
     if (el('giz-pending-count')) el('giz-pending-count').textContent = 'Pending: ' + state.pendingCalls.size;

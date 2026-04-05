@@ -11,7 +11,7 @@
 
     chrome.runtime.sendMessage({
       type: 'SEND_TO_SERVER',
-      payload: { type: 'tool_call', tool: tool.name, params: tool.params, callId: hash }
+      payload: { type: 'tool_call', tool: tool.name, params: tool.params, id: hash, callId: hash }
     }, resp => {
       if (chrome.runtime.lastError || !resp?.success) {
         const err = chrome.runtime.lastError?.message || resp?.error || 'unknown';
@@ -35,7 +35,7 @@
 
     chrome.runtime.sendMessage({
       type: 'SEND_TO_SERVER',
-      payload: { type: 'batch_call', steps: batchObj.steps, callId: hash }
+      payload: { type: 'batch_call', steps: batchObj.steps, id: hash, callId: hash }
     }, resp => {
       if (chrome.runtime.lastError || !resp?.success) {
         const err = chrome.runtime.lastError?.message || resp?.error || 'unknown';
@@ -70,7 +70,7 @@
 
   function handleToolResult(data) {
     log('handleToolResult:', data);
-    const callId = data.callId || data.call_id;
+    const callId = data.callId || data.call_id || data.id;
     const toolName = data.tool || data.name || 'unknown';
     const result = data.result !== undefined ? data.result : (data.output || data.error || JSON.stringify(data));
 
