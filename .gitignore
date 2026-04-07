@@ -76,3 +76,12 @@ scripts/pipeline-flowchart.html
 mydatabase.db
 server-v2/nohup.out
 project.db
+
+# Agent DB files
+agent.db
+agent.db-wal
+agent.db-shm
+agent.db-journal
+*.db.bak*
+server-v2/data/agent.db*
+
