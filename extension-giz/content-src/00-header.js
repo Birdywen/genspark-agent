@@ -34,7 +34,7 @@
   if (isDisabled) { console.log('[GizAgent] Disabled on this page'); return; }
 
   const CONFIG = {
-    SCAN_INTERVAL: 300, TIMEOUT_MS: 600000, MAX_RESULT_LENGTH: 50000, MAX_LOGS: 50, DEBUG: false,
+    SCAN_INTERVAL: 300, TIMEOUT_MS: 600000, MAX_RESULT_LENGTH: 50000, MAX_LOGS: 50, DEBUG: true,
     SELECTORS: {
       INPUT: 'textarea.q-field__native[placeholder*="Message"], div[contenteditable="true"], textarea[placeholder*="Message"]',
       SEND_BTN: 'button.q-btn[title="Send"], button[aria-label*="Send"]',
@@ -52,6 +52,8 @@
     totalCalls: 0, sessionStart: Date.now(),
     wsState: { currentSubscribeId: null, currentText: '', executedInCurrentMessage: false, lastMessageTime: 0, processedCommands: new Set() }
   };
+
+  window.__gizState = state;
 
   function addExecutedCall(hash) {
     state.executedCalls.add(hash);

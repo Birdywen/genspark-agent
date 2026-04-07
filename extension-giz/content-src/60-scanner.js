@@ -3,6 +3,8 @@
   function scanForToolCalls() {
     if (localStorage.getItem('giz_agent_disabled_' + location.pathname) === 'true') return;
     if (state.agentRunning) return;
+    // Skip if WS channel already handled this message
+    if (state.wsState && state.wsState.executedInCurrentMessage) return;
     if (isAIGenerating()) { state.generatingFalseCount = 0; return; }
 
     state.generatingFalseCount++;

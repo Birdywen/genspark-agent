@@ -1,5 +1,5 @@
 // sys-tools.js — 自定义工具，不走 MCP
-import { execSync } from 'child_process';
+import { execSync, exec as _exec } from 'child_process';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,7 +16,7 @@ handlers.set('db_query', async (params) => {
   const db = new Database(dbPath, { readonly: true });
   try {
     const rows = db.prepare(sql).all();
-    return { success: true, result: rows.length > 50 ? rows.slice(0, 50) : rows, count: rows.length };
+    return { success: true, result: rows.length > 200 ? rows.slice(0, 200) : rows, count: rows.length };
   } catch (e) {
     return { success: false, error: e.message };
   } finally {
@@ -49,6 +49,11 @@ handlers.set('wechat', async (params) => {
   } else if ((action === 'read' || action === 'history') && (chat || to)) {
     parts.push(`"${chat || to}"`);
     if (count) parts.push('-n', String(count));
+  } else if (action === 'at' && (chat || to)) {
+    const member = params.member || params.who;
+    if (!member) return { success: false, error: 'member is required for @mention' };
+    parts.push('"'+(chat||to)+'"', '--', '"'+member+'"');
+    if (content) parts.push('"'+content+'"');
   } else if (action === 'members' && (chat || to)) {
     parts.push(`"${chat || to}"`);
   } else if (to) {
@@ -69,7 +74,7 @@ handlers.set('oracle_run', async (params) => {
   if (!command) return { success: false, error: 'command is required' };
   try {
     const result = execSync(`ssh oracle "${command.replace(/"/g, '\\"')}"`, { encoding: 'utf8', timeout: 120000, shell: true });
-    return { success: true, result: result.trim().substring(0, 5000) };
+    return { success: true, result: result.trim().substring(0, 20000) };
   } catch (e) {
     return { success: false, error: e.message.substring(0, 500) };
   }
@@ -139,17 +144,20 @@ handlers.set('gen_image', async (params, context) => {
 handlers.set('web_search', async (params) => {
   const q = params.q || params.query || '';
   if (!q) return { success: false, error: 'No query provided' };
-  const { execSync } = require('child_process');
   try {
     const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
-    const raw = execSync('curl -s "' + url + '" -H "User-Agent: Mozilla/5.0"', { timeout: 15000, encoding: 'utf8' });
+    const raw = execSync('curl -s "' + url + '" -H "User-Agent: Mozilla/5.0"', { timeout: 30000, encoding: 'utf8' });
     const results = [];
     const parts = raw.split('result__a');
-    for (let i = 1; i < parts.length && results.length < 5; i++) {
+    for (let i = 1; i < parts.length && results.length < 8; i++) {
       const hrefM = parts[i].match(/href="([^"]+)"/);
       const textM = parts[i].match(/>([^<]+)/);
+      const snipM = parts[i].match(/result__snippet[^>]*>([^<]*)/);
       if (hrefM && textM) {
-        results.push({ url: hrefM[1], title: textM[1].trim(), snippet: '' });
+        let href = hrefM[1];
+        const uddg = href.match(/uddg=([^&]+)/);
+        if (uddg) href = decodeURIComponent(uddg[1]);
+        results.push({ url: href, title: textM[1].trim(), snippet: snipM ? snipM[1].trim() : '' });
       }
     }
     return { success: true, query: q, results };
@@ -181,7 +189,7 @@ handlers.set('ask_ai', async (params, context) => {
   const bodyJson = JSON.stringify(body).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'${bodyJson}'}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
   try {
-    const result = await evalInBrowser(code, 60000);
+    const result = await evalInBrowser(code, 300000);
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };
@@ -463,7 +471,7 @@ handlers.set('recover', async (params, context) => {
   const date = params.date || new Date().toISOString().split('T')[0];
   const code = `return window.__shortcuts ? window.__shortcuts.recover('${date}') : 'error: __shortcuts not loaded'`;
   try {
-    const result = await evalInBrowser(code, 60000);
+    const result = await evalInBrowser(code, 300000);
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };
@@ -511,8 +519,17 @@ export function isSysTool(toolName) {
   return handlers.has(toolName);
 }
 
+// 浏览器原生工具 - 通过 forwardToBrowser 委托给 background.js 的 handleBrowserToolCall
+handlers.set('eval_js', 'browser_native');
+handlers.set('list_tabs', 'browser_native');
+handlers.set('take_screenshot', 'browser_native');
+
 export function isBrowserTool(toolName) {
   return handlers.get(toolName) === 'browser';
+}
+
+export function isBrowserNative(toolName) {
+  return handlers.get(toolName) === 'browser_native';
 }
 
 export const sysToolNames = [...handlers.keys()];

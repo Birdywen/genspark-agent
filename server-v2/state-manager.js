@@ -222,28 +222,25 @@ class StateManager {
       }
       
       if (equals !== undefined) {
-        return varValue == equals;
+        return this._looselyEqual(varValue, equals);
       }
       
       if (success !== undefined) {
-        if (success === true) return varValue !== undefined;
-        if (success === false) return varValue === undefined;
-        if (typeof varValue === 'object' && varValue !== null && 'success' in varValue) {
-          return varValue.success === success;
-        }
-        return false;
+        return this._matchSuccess(varValue, success);
       }
       
-      if (contains) {
-        if (varValue === undefined) return false;
-        const resultStr = typeof varValue === 'string' ? varValue : JSON.stringify(varValue);
-        return resultStr.includes(contains);
+
+      
+      if (contains !== undefined) {
+        if (varValue === undefined || varValue === null) return false;
+        const haystack = this._toSearchableString(varValue);
+        return haystack.includes(String(contains));
       }
       
-      if (regex) {
-        if (varValue === undefined) return false;
-        const resultStr = typeof varValue === 'string' ? varValue : JSON.stringify(varValue);
-        return new RegExp(regex).test(resultStr);
+      if (regex !== undefined) {
+        if (varValue === undefined || varValue === null) return false;
+        const haystack = this._toSearchableString(varValue);
+        return new RegExp(regex).test(haystack);
       }
     }
     
@@ -334,6 +331,52 @@ class StateManager {
       duration: task.completedAt ? task.completedAt - task.createdAt : Date.now() - task.createdAt,
       error: task.error
     };
+  }
+
+  /**
+   * v4: 宽松等值比较 — 处理类型不匹配
+   */
+  _looselyEqual(a, b) {
+    if (a === b) return true;
+    if (a == b) return true;
+    // 字符串化比较
+    if (String(a) === String(b)) return true;
+    // JSON 比较
+    try {
+      if (JSON.stringify(a) === JSON.stringify(b)) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  /**
+   * v4: 鲁棒的 success 匹配 — 支持嵌套对象
+   */
+  _matchSuccess(varValue, expected) {
+    if (varValue === undefined || varValue === null) return !expected;
+    // 直接布尔
+    if (typeof varValue === 'boolean') return varValue === expected;
+    // 对象: 查找 success/meta.success
+    if (typeof varValue === 'object') {
+      if ('success' in varValue) return varValue.success === expected;
+      if (varValue.meta && 'success' in varValue.meta) return varValue.meta.success === expected;
+    }
+    // 有值 = success
+    return expected ? varValue !== undefined : varValue === undefined;
+  }
+
+  /**
+   * v4: 对象转可搜索字符串
+   */
+  _toSearchableString(val) {
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    // 对象: 优先取 result/output 字段
+    if (typeof val === 'object' && val !== null) {
+      if (typeof val.result === 'string') return val.result;
+      if (typeof val.output === 'string') return val.output;
+      try { return JSON.stringify(val); } catch (e) { return String(val); }
+    }
+    return String(val);
   }
 }
 

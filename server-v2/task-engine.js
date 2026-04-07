@@ -1,5 +1,6 @@
-// Task Engine v2 - 增强版执行引擎
-// 新增: if/else/elseIf 分支, forEach/while 循环, compute 变量运算, sub-batch 子任务
+// Task Engine v3 - 增强版执行引擎
+// v2: if/else/elseIf 分支, forEach/while 循环, compute 变量运算, sub-batch 子任务
+// v3: 步骤级 retry + onError + fallback, 引擎层自动错误恢复
 
 import StateManager, { TaskState } from './state-manager.js';
 import { sshFix } from './core/pipeline.js';
@@ -22,7 +23,7 @@ class TaskEngine {
   };
 
   // 控制流步骤类型（不是工具调用）
-  static CONTROL_TYPES = ['if', 'forEach', 'while', 'compute', 'log', 'checkpoint', 'setVar'];
+  static CONTROL_TYPES = ['if', 'forEach', 'while', 'compute', 'log', 'checkpoint', 'setVar', 'switch', 'delay', 'timeout'];
 
   resolveAlias(tool, params) {
     const alias = TaskEngine.TOOL_ALIASES[tool];
@@ -86,21 +87,36 @@ class TaskEngine {
       if (!success && options.stopOnError !== false) break;
 
       if (group.length > 1 && group[0].parallel) {
-        // 并行执行
-        const groupResults = await Promise.all(
-          group.map((step, idx) => this._dispatchStep(batchId, step, results.length + idx, options, onStepComplete, depth))
-        );
+        // 并行执行 (v3: 支持 maxConcurrency)
+        const maxC = group[0].maxConcurrency || options.maxConcurrency || 0;
+        let groupResults;
+        if (maxC > 0 && group.length > maxC) {
+          groupResults = await this._runWithConcurrency(group, maxC, (step, idx) =>
+            this._dispatchStep(batchId, step, results.length + idx, options, onStepComplete, depth)
+          );
+        } else {
+          groupResults = await Promise.all(
+            group.map((step, idx) => this._dispatchStep(batchId, step, results.length + idx, options, onStepComplete, depth))
+          );
+        }
         results.push(...groupResults);
         if (groupResults.some(r => !r.skipped && !r.success)) {
           success = false;
         }
       } else {
-        // 顺序执行
+        // 顺序执行 (v3: 支持 pipe)
+        let prevResult = null;
         for (const step of group) {
           if (!success && options.stopOnError !== false) break;
 
+          // v3: pipe - 前步 result 注入当前步 params
+          if (step.pipe && prevResult && step.params) {
+            step.params._prevResult = prevResult;
+          }
+
           const result = await this._dispatchStep(batchId, step, results.length, options, onStepComplete, depth);
           results.push(result);
+          prevResult = result.result;
 
           if (!result.skipped && !result.success && options.stopOnError !== false) {
             success = false;
@@ -133,6 +149,9 @@ class TaskEngine {
     if (step.type === 'setVar') return this._executeSetVar(batchId, step, stepIndex, onStepComplete);
     if (step.type === 'log') return this._executeLog(batchId, step, stepIndex, onStepComplete);
     if (step.type === 'checkpoint') return this._executeCheckpoint(batchId, step, stepIndex, onStepComplete);
+    if (step.type === 'switch') return this._executeSwitch(batchId, step, stepIndex, options, onStepComplete, depth);
+    if (step.type === 'delay') return this._executeDelay(batchId, step, stepIndex, onStepComplete);
+    if (step.type === 'timeout') return this._executeTimeout(batchId, step, stepIndex, options, onStepComplete, depth);
 
     // 工具调用步骤
     return this._executeToolStep(batchId, step, stepIndex, options, onStepComplete);
@@ -381,20 +400,245 @@ class TaskEngine {
   }
 
   /**
-   * 工具调用步骤（原始逻辑）
+   * v3: switch/case 多路分发
+   * 格式: { type:"switch", value:"{{s1.errorType}}", cases:{"TIMEOUT":[steps], "NOT_FOUND":[steps]}, default:[steps] }
+   */
+  async _executeSwitch(batchId, step, stepIndex, options, onStepComplete, depth) {
+    this.logger.info(`[TaskEngine] SWITCH @ step ${stepIndex}`);
+    const results = [];
+
+    // 解析 value（支持模板变量）
+    let value = step.value;
+    if (typeof value === 'string') {
+      value = this.stateManager.resolveTemplate(batchId, value);
+    }
+    // 如果 value 是对象，尝试转成字符串
+    if (value && typeof value === 'object') {
+      value = JSON.stringify(value);
+    }
+    const strValue = String(value);
+
+    // 匹配 cases
+    const cases = step.cases || {};
+    let matched = false;
+    for (const [key, branchSteps] of Object.entries(cases)) {
+      if (strValue === key || strValue.includes(key)) {
+        this.logger.info(`[TaskEngine] SWITCH 命中 case: ${key}`);
+        matched = true;
+        const ok = await this._executeSteps(batchId, branchSteps || [], results, options, onStepComplete, depth + 1);
+        return { stepIndex, type: 'switch', branch: key, success: ok, results, tool: 'switch' };
+      }
+    }
+
+    // default 分支
+    if (!matched && step.default && Array.isArray(step.default)) {
+      this.logger.info('[TaskEngine] SWITCH 走 default 分支');
+      const ok = await this._executeSteps(batchId, step.default, results, options, onStepComplete, depth + 1);
+      return { stepIndex, type: 'switch', branch: 'default', success: ok, results, tool: 'switch' };
+    }
+
+    // 无匹配
+    return { stepIndex, type: 'switch', branch: 'none', skipped: true, success: true, tool: 'switch' };
+  }
+
+  /**
+   * v3: delay 延迟等待
+   * 格式: { type:"delay", ms:2000 }
+   * 或随机: { type:"delay", min:1000, max:3000 }
+   */
+  async _executeDelay(batchId, step, stepIndex, onStepComplete) {
+    let ms = step.ms || 0;
+    if (step.min !== undefined && step.max !== undefined) {
+      ms = step.min + Math.floor(Math.random() * (step.max - step.min));
+    }
+    this.logger.info(`[TaskEngine] DELAY ${ms}ms @ step ${stepIndex}`);
+    await new Promise(r => setTimeout(r, ms));
+    const r = { stepIndex, type: 'delay', success: true, result: `waited ${ms}ms`, tool: 'delay' };
+    if (onStepComplete) onStepComplete(r);
+    return r;
+  }
+
+  /**
+   * v3: timeout 包装器 - 给一组子步骤设置总超时
+   * 格式: { type:"timeout", ms:10000, steps:[steps], onTimeout:[fallbackSteps] }
+   */
+  async _executeTimeout(batchId, step, stepIndex, options, onStepComplete, depth) {
+    const ms = step.ms || 30000;
+    this.logger.info(`[TaskEngine] TIMEOUT wrapper ${ms}ms @ step ${stepIndex}, ${(step.steps || []).length} 子步骤`);
+    const results = [];
+
+    try {
+      const execPromise = this._executeSteps(batchId, step.steps || [], results, options, onStepComplete, depth + 1);
+      const ok = await Promise.race([
+        execPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout wrapper: ${ms}ms exceeded`)), ms))
+      ]);
+      return { stepIndex, type: 'timeout', success: ok, results, tool: 'timeout' };
+    } catch (e) {
+      this.logger.info(`[TaskEngine] TIMEOUT wrapper 超时: ${e.message}`);
+      // 执行 onTimeout fallback
+      if (step.onTimeout && Array.isArray(step.onTimeout)) {
+        const fbResults = [];
+        const fbOk = await this._executeSteps(batchId, step.onTimeout, fbResults, options, onStepComplete, depth + 1);
+        return { stepIndex, type: 'timeout', success: fbOk, timedOut: true, results: fbResults, tool: 'timeout' };
+      }
+      return { stepIndex, type: 'timeout', success: false, timedOut: true, error: e.message, results, tool: 'timeout' };
+    }
+  }
+
+  /**
+   * v3: 工具调用步骤（带重试+onError编排）
+   * 新增步骤属性:
+   *   retry: {max:3, delay:2000, backoff:'exponential|linear|fixed'}
+   *   onError: {match:{'TIMEOUT':'retry','NOT_FOUND':'skip'}, default:'abort', fallback:[steps]}
+   *   timeout: 30000  // 步骤级超时(ms)
    */
   async _executeToolStep(batchId, step, stepIndex, options, onStepComplete) {
-    // 解析模板
+    const retryConfig = step.retry || {};
+    const maxRetries = retryConfig.max || 0;
+    const baseDelay = retryConfig.delay || 1000;
+    const backoff = retryConfig.backoff || 'fixed';
+    const onErrorConfig = step.onError || {};
+    const stepTimeout = step.timeout || null;
+
+    let lastResult = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        const delay = this._calcDelay(baseDelay, attempt, backoff);
+        this.logger.info(`[TaskEngine] 步骤 ${stepIndex} 重试 ${attempt}/${maxRetries}, 等待 ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      lastResult = await this._callToolOnce(batchId, step, stepIndex, options, stepTimeout);
+
+      // 成功 → 直接返回
+      if (lastResult.success) {
+        this._finalizeStep(batchId, step, stepIndex, lastResult, onStepComplete);
+        return lastResult;
+      }
+
+      // 失败 → 分类错误并决定策略
+      const errorType = lastResult.errorType || this.errorClassifier.classify(lastResult.error || '').type || 'UNKNOWN';
+      lastResult.errorType = errorType;
+      const action = (onErrorConfig.match && onErrorConfig.match[errorType]) || onErrorConfig.default || (attempt < maxRetries ? 'retry' : 'abort');
+
+      this.logger.info(`[TaskEngine] 步骤 ${stepIndex} 失败: ${errorType}, 策略: ${action}, attempt: ${attempt}/${maxRetries}`);
+
+      if (action === 'skip') {
+        lastResult.skipped = true;
+        lastResult.success = true;
+        this._finalizeStep(batchId, step, stepIndex, lastResult, onStepComplete);
+        return lastResult;
+      }
+
+      if (action === 'abort') {
+        break;
+      }
+
+      if (action === 'retry') {
+        continue;
+      }
+
+      if (action === 'fallback' && onErrorConfig.fallback && Array.isArray(onErrorConfig.fallback)) {
+        this.logger.info(`[TaskEngine] 步骤 ${stepIndex} 执行 fallback (${onErrorConfig.fallback.length} 步)`);
+        const fallbackResults = [];
+        const fbOk = await this._executeSteps(batchId, onErrorConfig.fallback, fallbackResults, options, onStepComplete, 0);
+        const fbResult = {
+          stepIndex, tool: step.tool, success: fbOk,
+          result: fallbackResults, fallback: true, originalError: lastResult.error
+        };
+        this._finalizeStep(batchId, step, stepIndex, fbResult, onStepComplete);
+        return fbResult;
+      }
+
+      // 未知action → abort
+      break;
+    }
+
+    // 所有重试耗尽
+    this._finalizeStep(batchId, step, stepIndex, lastResult, onStepComplete);
+    return lastResult;
+  }
+
+  /**
+   * v3: 计算重试延迟
+   */
+  _calcDelay(base, attempt, backoff) {
+    switch (backoff) {
+      case 'exponential': return base * Math.pow(2, attempt - 1);
+      case 'linear': return base * attempt;
+      default: return base;
+    }
+  }
+
+  /**
+   * v3: 步骤结果收尾 (saveAs + record + callback)
+   */
+  _finalizeStep(batchId, step, stepIndex, stepResult, onStepComplete) {
+    this.stateManager.recordStepResult(batchId, stepIndex, stepResult);
+
+    if (step.saveAs) {
+      const binding = this._buildSavedBinding(stepResult);
+      this.stateManager.setVariable(batchId, step.saveAs, binding);
+    }
+
+    if (onStepComplete) onStepComplete(stepResult);
+  }
+
+  /**
+   * v4: saveAs 标准化 — 统一为 { meta, output, raw } 三层结构
+   * meta: 状态元信息 (success, handled, skipped, error 等)
+   * output: 解析后的可用值 (JSON parsed if possible)
+   * raw: 原始 stepResult
+   * 向后兼容: success/result/error 仍可直接访问
+   */
+  _buildSavedBinding(stepResult) {
+    const parsed = this._parseMaybeJson(stepResult?.result);
+    return {
+      // 向后兼容的顶层字段
+      success: stepResult?.success === true,
+      result: parsed,
+      error: stepResult?.error,
+      errorType: stepResult?.errorType,
+      // v4 标准化字段
+      meta: {
+        success: stepResult?.success === true,
+        handled: stepResult?.handled === true,
+        skipped: stepResult?.skipped === true,
+        continued: stepResult?.continued === true,
+        fallback: stepResult?.fallback === true,
+        error: stepResult?.error,
+        errorType: stepResult?.errorType,
+        originalError: stepResult?.originalError,
+        attempt: stepResult?.attempt,
+        tool: stepResult?.tool
+      },
+      output: parsed,
+      raw: stepResult
+    };
+  }
+
+  _parseMaybeJson(val) {
+    if (val === undefined || val === null) return val;
+    if (typeof val !== 'string') return val;
+    const trimmed = val.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try { return JSON.parse(trimmed); } catch (e) { /* not json */ }
+    }
+    return trimmed;
+  }
+
+  /**
+   * v3: 单次工具调用（纯执行，无重试逻辑）
+   */
+  async _callToolOnce(batchId, step, stepIndex, options, stepTimeout) {
     let resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
     if (step.tool === "run_process" || step.tool === "run_command") { resolvedParams = sshFix(step.tool, resolvedParams, this.logger); }
 
-    // 安全检查
     const safetyCheck = await this.safety.checkOperation(step.tool, resolvedParams);
     if (!safetyCheck.allowed) {
-      const r = { stepIndex, tool: step.tool, success: false, error: safetyCheck.reason };
-      this.stateManager.recordStepResult(batchId, stepIndex, r);
-      if (onStepComplete) onStepComplete(r);
-      return r;
+      return { stepIndex, tool: step.tool, success: false, error: safetyCheck.reason, errorType: 'SAFETY_BLOCKED' };
     }
 
     try {
@@ -402,31 +646,38 @@ class TaskEngine {
 
       const isBrowserTool = TaskEngine.BROWSER_TOOLS.includes(step.tool);
       const resolved = this.resolveAlias(step.tool, resolvedParams);
-      let result;
-      // NOTE: BATCH 中 eval_js 走 browserCallHandler（60s 超时），不受 content.js 10s 限制
+
+      let toolPromise;
       if (isBrowserTool && this.browserCallHandler) {
-        result = await this.browserCallHandler(step.tool, resolvedParams);
+        toolPromise = this.browserCallHandler(step.tool, resolvedParams);
       } else {
-        // 优先 custom tool → Router（内部 driver）→ hub（MCP）
         const { isSysTool, getSysHandler } = await import('./sys-tools.js');
         if (isSysTool(resolved.tool)) {
           const handler = getSysHandler(resolved.tool);
           const evalInBrowser = this.browserCallHandler ? (code, timeout) => this.browserCallHandler('eval_js', { code }, timeout) : null;
-          result = await handler(resolved.params, { evalInBrowser });
+          toolPromise = handler(resolved.params, { evalInBrowser });
         } else if (this.router && this.router.handlers && this.router.handlers.has(resolved.tool)) {
           const driver = this.router.handlers.get(resolved.tool);
-          result = await driver.handle(resolved.tool, resolved.params, { trace: { span(){}, error(){}, flush(){}, duration: 0 } });
+          toolPromise = driver.handle(resolved.tool, resolved.params, { trace: { span(){}, error(){}, flush(){}, duration: 0 } });
         } else {
-          result = await this.hub.call(resolved.tool, resolved.params);
+          toolPromise = this.hub.callTool(resolved.tool, resolved.params);
         }
       }
-      // hub.call 返回 browserEval 时，转发给浏览器执行
-      if (result && result.browserEval && this.browserCallHandler) {
-        result = await this.browserCallHandler('eval_js', { code: result.browserEval });
+
+      // v3: 步骤级超时
+      let result;
+      if (stepTimeout) {
+        result = await Promise.race([
+          toolPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error(`Step timeout after ${stepTimeout}ms`)), stepTimeout))
+        ]);
+      } else {
+        result = await toolPromise;
       }
 
+      // 提取结果文本
       let resultStr = result;
-      if (result && result.content && Array.isArray(result.content)) {
+      if (result && result.content) {
         resultStr = result.content.map(c => c.text || c).join('\n');
       }
 
@@ -442,56 +693,47 @@ class TaskEngine {
         }
       }
 
-      // v2.2: 从工具返回值中检测真实的 success 状态
+      // 从工具返回值中检测真实的 success 状态
       let toolSuccess = true;
       if (result && typeof result === 'object') {
         if ('success' in result && result.success === false) toolSuccess = false;
         if ('exitCode' in result && result.exitCode !== 0) toolSuccess = false;
       }
       const stepError = toolSuccess ? undefined : (result?.error || result?.stderr || (typeof resultStr === 'string' && resultStr.length > 0 ? resultStr.slice(0, 500) : '执行失败(无详情)'));
-      const stepResult = {
-        stepIndex,
-        tool: step.tool,
-        success: toolSuccess,
+
+      return {
+        stepIndex, tool: step.tool, success: toolSuccess,
         result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr),
         ...(stepError ? { error: stepError } : {})
       };
 
-      this.stateManager.recordStepResult(batchId, stepIndex, stepResult);
-
-      // 直接处理 saveAs（v2.2: 统一存 {success, result, error} 对象）
-      if (step.saveAs) {
-        let parsedResult = stepResult.result;
-        if (typeof parsedResult === 'string') {
-          parsedResult = parsedResult.trim();
-          try { parsedResult = JSON.parse(parsedResult); } catch (e) {}
-        }
-        const value = stepResult.success
-          ? { success: true, result: parsedResult }
-          : { success: false, error: stepResult.error, errorType: stepResult.errorType };
-        this.stateManager.setVariable(batchId, step.saveAs, value);
-        this.logger.info(`[TaskEngine] 工具步骤 saveAs: ${step.saveAs} = ${typeof value === 'object' ? JSON.stringify(value).substring(0,100) : String(value).substring(0,100)}`);
-      }
-
-      if (onStepComplete) onStepComplete(stepResult);
-      return stepResult;
-
     } catch (e) {
       const classified = this.errorClassifier.wrapError(e, step.tool);
-      const stepResult = {
-        stepIndex,
-        tool: step.tool,
-        success: false,
-        error: e.message,
-        errorType: classified.errorType,
-        recoverable: classified.recoverable,
-        suggestion: classified.suggestion
+      return {
+        stepIndex, tool: step.tool, success: false,
+        error: e.message, errorType: classified.errorType,
+        recoverable: classified.recoverable, suggestion: classified.suggestion
       };
-
-      this.stateManager.recordStepResult(batchId, stepIndex, stepResult);
-      if (onStepComplete) onStepComplete(stepResult);
-      return stepResult;
     }
+  }
+
+  /**
+   * v3: 并发限制执行器
+   */
+  async _runWithConcurrency(items, maxC, fn) {
+    const results = new Array(items.length);
+    let nextIdx = 0;
+
+    async function worker() {
+      while (nextIdx < items.length) {
+        const idx = nextIdx++;
+        results[idx] = await fn(items[idx], idx);
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(maxC, items.length) }, () => worker());
+    await Promise.all(workers);
+    return results;
   }
 
   /**

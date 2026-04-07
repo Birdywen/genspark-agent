@@ -285,6 +285,30 @@ if (tool === 'agent_run') {
     }
 
         if (tool === 'agent_generate') {
+    // Helper: resolve param value - if starts with @file: read file content
+    function resolveParam(val) {
+      if (!val) return '';
+      if (val.startsWith('@file:')) {
+        try { return readFileSync(val.slice(6).trim(), 'utf8').trim(); }
+        catch(e) { return '[FILE_ERROR: ' + e.message + ']'; }
+      }
+      return val;
+    }
+    // Support spec file: single JSON with {goal, capabilities, pitfalls, model, name}
+    var spec = params;
+    if (params.spec) {
+      try {
+        var specContent = params.spec.startsWith('@file:') 
+          ? readFileSync(params.spec.slice(6).trim(), 'utf8') 
+          : params.spec;
+        spec = Object.assign({}, params, JSON.parse(specContent));
+      } catch(e) {
+        return { ok: false, error: 'Cannot parse spec: ' + e.message };
+      }
+    }
+    var goal = resolveParam(spec.goal);
+    var capabilities = resolveParam(spec.capabilities);
+    var pitfalls = resolveParam(spec.pitfalls);
     var evolveScene;
     try {
       evolveScene = JSON.parse(readFileSync('/Users/yay/workspace/forged-benchmark/evolve-forged-v9.json', 'utf8'));
@@ -295,9 +319,9 @@ if (tool === 'agent_run') {
     for (var j = evolveMsgs.length - 1; j >= 0; j--) {
       if (evolveMsgs[j].role === 'user') {
         evolveMsgs[j].content = evolveMsgs[j].content
-          .replace('${GOAL}', params.goal || '')
-          .replace('${CAPABILITIES}', params.capabilities || '')
-          .replace('${PITFALLS}', params.pitfalls || '');
+          .replace('${GOAL}', goal)
+          .replace('${CAPABILITIES}', capabilities)
+          .replace('${PITFALLS}', pitfalls);
         break;
       }
     }

@@ -48,7 +48,7 @@ import { resolve as resolveAlias } from "./core/alias.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import { MCPHub, expandEnvVars } from './core/mcp-hub.js';
-import { isSysTool, isBrowserTool, getSysHandler, sysToolNames, buildBrowserToolCode } from './sys-tools.js';
+import { isSysTool, isBrowserTool, isBrowserNative, getSysHandler, sysToolNames, buildBrowserToolCode } from './sys-tools.js';
 
 // 合并 MCP tools + custom tools 的完整列表
 function getAllTools() {
@@ -143,6 +143,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
 
   // ── 自定义 Tool 拦截（不走 MCP）──
+  logger.info(`[handleToolCall] tool=${tool} isSysTool=${isSysTool(tool)} isBrowserTool2=${isBrowserTool(tool)} isBrowserNative2=${isBrowserNative(tool)}`);
   if (isSysTool(tool)) {
     const _cStart = Date.now();
     try {
@@ -152,6 +153,15 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
         forwardToBrowser(ws, clients, browserToolPending, logger, {
           msg: message, resultType: 'browser_eval_result',
           tool: 'eval_js', params: { code: browserCode }, timeout: 90000
+        });
+        return;
+      }
+      if (isBrowserNative(tool)) {
+        // 浏览器原生工具 (eval_js/list_tabs/take_screenshot) - 直接转发给 background.js
+        logger.info(`[BrowserNative] 转发 ${tool} to browser`);
+        forwardToBrowser(ws, clients, browserToolPending, logger, {
+          msg: message, resultType: 'tool_result',
+          tool, params, timeout: tool === 'eval_js' ? 90000 : 30000
         });
         return;
       }
@@ -168,10 +178,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           reject: (e) => { clearTimeout(timer); browserToolPending.delete(callId); reject(e); },
           timeout: timer, _tool: 'eval_js', _code: jsCode.substring(0, 500)
         });
-        for (const client of clients) {
-          if (client.readyState === 1) {
-            client.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: 'eval_js', params: { code: jsCode } }));
-          }
+        if (browserWs && browserWs.readyState === 1) {
+          browserWs.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: 'eval_js', params: { code: jsCode } }));
+        } else {
+          reject(new Error('浏览器扩展未连接'));
         }
       });
       const result = await handler(params, { evalInBrowser });
@@ -307,7 +317,40 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
       try {
         const r = await router.dispatch(tool, params, ws, message, callOptions);
         if (r && r.delegate) {
-          logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
+          const browserTools = ['eval_js', 'take_screenshot', 'list_tabs'];
+          if (browserTools.includes(tool)) {
+            _routerHandled = true;
+            const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const timeoutMs = tool === 'eval_js' ? 90000 : 30000;
+            const browserPromise = new Promise((resolve, reject) => {
+              const timer = setTimeout(() => { browserToolPending.delete(callId); reject(new Error(`浏览器工具超时 (${timeoutMs/1000}s)`)); }, timeoutMs);
+              browserToolPending.set(callId, {
+                resolve: (result) => { clearTimeout(timer); browserToolPending.delete(callId); resolve(result); },
+                reject: (err) => { clearTimeout(timer); browserToolPending.delete(callId); reject(err); },
+                timeout: timer,
+                _tool: tool,
+                _code: (params && params.code) || ''
+              });
+              if (browserWs && browserWs.readyState === 1) {
+                browserWs.send(JSON.stringify({ type: 'browser_tool_call', callId, tool, params }));
+                logger.info(`[BrowserTool] 精准投递 ${tool} (${callId}) -> background.js`);
+              } else {
+                reject(new Error('浏览器扩展未连接'));
+              }
+              logger.info(`[Browser-Delegate] 转发 ${tool} callId=${callId} to ${sentCount}/${clients.size} clients`);
+            });
+            try {
+              const browserResult = await browserPromise;
+              const resultStr = typeof browserResult === 'string' ? browserResult : JSON.stringify(browserResult);
+              const historyId = history.add(tool, params, true, resultStr.substring(0, 5000));
+              ws.send(JSON.stringify({ type: 'tool_result', id: message.id, historyId, tool, success: true, result: resultStr }));
+            } catch (browserErr) {
+              const historyId = history.add(tool, params, false, null, browserErr.message);
+              ws.send(JSON.stringify({ type: 'tool_result', id: message.id, historyId, tool, success: false, error: browserErr.message }));
+            }
+          } else {
+            logger.info('[Router] DELEGATE: ' + tool + ' (fallthrough)');
+          }
         } else if (r && r.handled) {
           _routerHandled = true;
           history.add(tool, params, true, JSON.stringify(r).slice(0, 5000));
@@ -321,10 +364,10 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           const vfsPromise = new Promise((resolve, reject) => {
             const vfsTimeout = setTimeout(() => { browserToolPending.delete(vfsCallId); reject(new Error("浏览器操作超时 (30s)")); }, 30000);
             browserToolPending.set(vfsCallId, { resolve, reject, timeout: vfsTimeout });
-            for (const client of clients) {
-              if (client.readyState === 1) {
-                client.send(JSON.stringify({ type: "browser_tool_call", callId: vfsCallId, tool: "eval_js", params: { code: r.browserEval } }));
-              }
+            if (browserWs && browserWs.readyState === 1) {
+              browserWs.send(JSON.stringify({ type: "browser_tool_call", callId: vfsCallId, tool: "eval_js", params: { code: r.browserEval } }));
+            } else {
+              reject(new Error('浏览器扩展未连接'));
             }
             logger.info('[browserEval] ' + tool + ' 委托浏览器: ' + vfsCallId);
           });
@@ -488,12 +531,14 @@ function forwardToBrowser(ws, clients, browserToolPending, logger, { msg, result
     _tool: tool,
     _code: (params && params.code) || ''
   });
-  for (const client of clients) {
-    if (client !== ws && client.readyState === 1) {
-      client.send(JSON.stringify({ type: 'browser_tool_call', callId, tool, params }));
-    }
+  // browserWs 在 main() 里定义，这里通过闭包访问不到，用 clients 遍历找 role=browser
+  // 但 forwardToBrowser 已传入 clients，改为也传入 browserWs
+  if (global._browserWs && global._browserWs.readyState === 1) {
+    global._browserWs.send(JSON.stringify({ type: 'browser_tool_call', callId, tool, params }));
+  } else {
+    logger.error(`[Browser] background.js 未连接，无法转发 ${tool}`);
   }
-  logger.info(`[Browser] 转发 ${tool} 到浏览器: ${callId}`);
+  logger.info(`[Browser] 转发 ${tool} 到 background.js: ${callId}`);
 }
 
 async function main() {
@@ -746,29 +791,34 @@ async function main() {
     host: config.server.host
   });
 
+  let browserWs = null; // background.js 的专用连接
+  global._browserWs = null; // forwardToBrowser 函数用的全局引用
+
   wss.on('connection', ws => {
     clients.add(ws);
     logger.success(`客户端已连接, 当前连接数: ${clients.size}`);
 
     // 设置浏览器工具回调：ΩCODE steps 中的 js_flow/eval_js/list_tabs 通过 ws 委托浏览器执行
     if (taskEngine) {
-      taskEngine.setBrowserCallHandler(async (tool, params) => {
+      taskEngine.setBrowserCallHandler(async (tool, params, timeoutMs) => {
         const callId = `browser_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         return new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
             browserToolPending.delete(callId);
-            reject(new Error(`浏览器工具 ${tool} 超时 (60s)`));
-          }, params.timeout || 60000);
+            reject(new Error(`浏览器工具 ${tool} 超时 (${Math.round((timeoutMs||params.timeout||60000)/1000)}s)`));
+          }, timeoutMs || params.timeout || 60000);
 
           browserToolPending.set(callId, { resolve, reject, timeout });
 
-          ws.send(JSON.stringify({
-            type: 'browser_tool_call',
-            callId,
-            tool,
-            params
-          }));
-          logger.info(`[BrowserTool] 发送到浏览器: ${tool} (${callId})`);
+          // 精准投递给 background.js（通过 identify 注册的 browserWs）
+          const msg_payload = JSON.stringify({ type: 'browser_tool_call', callId, tool, params });
+          if (browserWs && browserWs.readyState === 1) {
+            browserWs.send(msg_payload);
+            logger.info(`[BrowserTool] 精准投递 ${tool} (${callId}) -> background.js`);
+          } else {
+            logger.error(`[BrowserTool] background.js 未连接! browserWs=${!!browserWs}`);
+            reject(new Error('浏览器扩展未连接'));
+          }
         });
       });
     }
@@ -790,9 +840,17 @@ async function main() {
     ws.on('message', async data => {
       try {
         const msg = JSON.parse(data.toString());
-        logger.info("[WS-MSG] type:"+msg.type+" tool:"+(msg.tool||"N/A")+" id:"+(msg.id||"N/A"));
+        logger.info("[WS-MSG] type:"+msg.type+" tool:"+(msg.tool||"N/A")+" id:"+(msg.id||"N/A")+" keys:"+Object.keys(msg).join(','));
         
         switch (msg.type) {
+          case 'identify': {
+            if (msg.role === 'browser') {
+              browserWs = ws;
+              global._browserWs = ws;
+              logger.info(`[Browser] background.js 已注册为浏览器工具执行器`);
+            }
+            break;
+          }
           case 'tool_call': {
             const _mStart = Date.now();
             let _mOk = true;
@@ -845,15 +903,15 @@ async function main() {
           }
 
           case 'browser_tool_result': {
-            logger.info(`[BrowserTool] 收到result callId=${msg.callId} pendingKeys=[${Array.from(browserToolPending.keys()).join(',')}] success=${msg.success}`);
+            logger.info(`[BrowserTool] 收到result callId=${msg.callId} pendingKeys=[${Array.from(browserToolPending.keys()).join(',')}] success=${msg.success} result=${String(JSON.stringify(msg.result) || 'UNDEF').substring(0,200)} error=${msg.error || 'none'}`);
             const pending = browserToolPending.get(msg.callId);
             if (pending) {
               if (msg.success) {
                 const resultStr = typeof msg.result === 'string' ? msg.result : JSON.stringify(msg.result);
-                // 跳过空结果（多tab竞争：第一个tab可能没await Promise就返回空）
-                if (!resultStr || resultStr === '' || resultStr === '(undefined)') {
-                  logger.warning(`[BrowserTool] 跳过空结果: ${msg.callId} (等待其他tab返回实际内容)`);
-                  return; // 不删pending不清timer，等下一个tab的结果
+                // 跳过空结果（多client竞争：非执行者可能返回空），等真正的执行结果
+                if (!resultStr || resultStr === '' || resultStr === '(undefined)' || resultStr === 'undefined' || resultStr === 'null') {
+                  logger.warning(`[BrowserTool] 跳过空结果: ${msg.callId} result=${resultStr} (等待其他client返回实际内容)`);
+                  return; // 不删pending不清timer，等下一个client
                 }
                 clearTimeout(pending.timeout);
                 browserToolPending.delete(msg.callId);
@@ -863,9 +921,9 @@ async function main() {
                 pending.resolve(msg.result);
               } else {
                 // 多tab竞争：失败结果先不reject，等其他tab可能返回成功
-                if (clients.size > 1 && !pending._failCount) {
-                  pending._failCount = 1;
-                  logger.warning(`[BrowserTool] tab失败但有${clients.size}个连接，等其他tab: ${msg.callId} - ${msg.error}`);
+                pending._failCount = (pending._failCount || 0) + 1;
+                if (pending._failCount < clients.size) {
+                  logger.warning(`[BrowserTool] tab失败(${pending._failCount}/${clients.size})，等其他tab: ${msg.callId} - ${msg.error}`);
                   return; // 不删pending不清timer，等下一个tab
                 }
                 clearTimeout(pending.timeout);
@@ -1091,6 +1149,11 @@ async function main() {
 
     ws.on('close', () => {
       clients.delete(ws);
+      if (ws === browserWs) {
+        browserWs = null;
+        global._browserWs = null;
+        logger.info('[Browser] background.js 连接已断开');
+      }
       // 注销该连接关联的 agent
       const agentId = agents.unregister(ws);
       logger.info(`客户端断开, 当前连接数: ${clients.size}${agentId ? `, 已注销 Agent: ${agentId}` : ''}`);

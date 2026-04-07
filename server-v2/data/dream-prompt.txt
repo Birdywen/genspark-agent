@@ -1,0 +1,426 @@
+# Dream: Memory Consolidation for AI Agent System
+
+You are performing a dream — a reflective pass over an AI agent's memory stores.
+Your job: analyze recent activity, extract new lessons, identify stale/duplicate data, and produce actionable updates.
+
+## Current Memory State
+memory table: 206 entries, 430.2KB
+local_store table: 115 entries, 126.6KB
+
+### memory entries:
+context/main (38B, 2026-03-19T12:39:28.127795+00:00)
+context/session-2026-03-19-mining (738B, 2026-03-20T00:33:56.464104+00:00)
+context/session-state (76B, 2026-04-01 09:59:48)
+conversation/summary (19B, 2026-03-30 08:36:31)
+debug/_stale:test-big (18B, 2026-03-31 14:39:49)
+debug/_stale:test-quotes (40B, 2026-03-31 14:39:49)
+debug/_stale:test123 (11B, 2026-03-31 14:39:49)
+debug/system-prompt-dump (10749B, 2026-03-22 01:05:05)
+default/chart-designer (2030B, 2026-03-15T07:13:08.292189+00:00)
+default/code-builder (4157B, 2026-03-15T05:24:57.41416+00:00)
+default/code-challenger (2156B, 2026-03-15T06:12:54.296881+00:00)
+default/data-analyst-v8 (2903B, 2026-03-15T07:01:20.13143+00:00)
+default/forge-agent (2548B, 2026-03-15T12:41:54.870542+00:00)
+default/forged-compressor (1505B, 2026-03-15T15:06:35.04476+00:00)
+default/forged-scorer (3136B, 2026-03-14T22:08:03.637285+00:00)
+default/game-developer (9969B, 2026-03-17T01:13:47.810084+00:00)
+default/json-parser-resilient (2403B, 2026-03-13T14:06:35.406954+00:00)
+default/log-analyzer (1937B, 2026-03-14T22:13:13.448746+00:00)
+default/log-analyzer-opus (2273B, 2026-03-15T00:18:21.024482+00:00)
+default/prompt-optimizer (558B, 2026-03-13T17:47:20.581883+00:00)
+default/system-expert (1972B, 2026-03-16T10:44:06.11+00:00)
+default/ui-designer (3310B, 2026-03-15T00:24:01.462142+00:00)
+default/ui-planner (3222B, 2026-03-15T01:40:10.19789+00:00)
+default/web-designer-v8 (2241B, 2026-03-15T08:26:40.14594+00:00)
+fn/dom-helper (1227B, 2026-03-12T20:05:54.037639+00:00)
+fn/genspark-api (3976B, 2026-03-17T02:16:59.005+00:00)
+fn/greet-tpl-test1 (44B, 2026-03-12T20:05:56.235557+00:00)
+fn/network (461B, 2026-03-12T20:05:57.737499+00:00)
+fn/page-extract (1259B, 2026-03-12T20:05:58.492084+00:00)
+fn/pit-collector (1546B, 2026-03-12T20:05:59.302173+00:00)
+fn/python-templates (982B, 2026-03-12T20:06:00.076941+00:00)
+fn/utils (1104B, 2026-03-12T20:06:00.754133+00:00)
+fn/vfs-ai-opportunities (3357B, 2026-03-13T14:44:58.269+00:00)
+fn/vfs-ask-direct (999B, 2026-03-12T20:06:02.345993+00:00)
+fn/vfs-auto-compress (2195B, 2026-03-12T20:06:06.836084+00:00)
+fn/vfs-auto-forge (7273B, 2026-03-13T15:02:02.693+00:00)
+fn/vfs-auto-start (1286B, 2026-03-12T20:06:07.649314+00:00)
+fn/vfs-auto-sync (4953B, 2026-03-12T20:06:08.401658+00:00)
+fn/vfs-backup (3207B, 2026-03-12T20:06:09.133787+00:00)
+fn/vfs-batch (595B, 2026-03-12T20:06:09.987353+00:00)
+fn/vfs-bus-wiring (1294B, 2026-03-12T20:06:10.917125+00:00)
+fn/vfs-constitution (4804B, 2026-03-12T20:06:12.442794+00:00)
+fn/vfs-constitution-enforce (1459B, 2026-03-12T20:06:13.196884+00:00)
+fn/vfs-crud (1077B, 2026-03-12T20:06:15.471602+00:00)
+fn/vfs-dashboard (3033B, 2026-03-12T20:06:16.239245+00:00)
+fn/vfs-demand (5741B, 2026-03-12T20:06:17.071778+00:00)
+fn/vfs-deps (542B, 2026-03-12T20:06:18.036085+00:00)
+fn/vfs-encryption (1433B, 2026-03-12T20:06:18.726952+00:00)
+fn/vfs-eventbus (800B, 2026-03-12T20:06:19.415888+00:00)
+fn/vfs-events (1374B, 2026-03-12T20:06:20.182476+00:00)
+fn/vfs-evolve-chain (7071B, 2026-03-12T20:06:21.016908+00:00)
+fn/vfs-evolve-log (1236B, 2026-03-12T20:06:21.700647+00:00)
+fn/vfs-evolve-log-bridge (6566B, 2026-03-12T20:06:22.488988+00:00)
+fn/vfs-evolve-notify (1873B, 2026-03-12T20:06:23.318936+00:00)
+fn/vfs-evolve-sandbox (2225B, 2026-03-12T20:06:24.075786+00:00)
+fn/vfs-evolve-scheduler (5992B, 2026-03-12T20:06:24.801104+00:00)
+fn/vfs-exec-file (506B, 2026-03-12T20:06:25.619471+00:00)
+fn/vfs-health (2148B, 2026-03-12T20:06:28.776649+00:00)
+fn/vfs-history (2853B, 2026-03-12T20:06:30.385323+00:00)
+fn/vfs-loader (1082B, 2026-03-12T20:06:31.908278+00:00)
+fn/vfs-memory-forge (7585B, 2026-03-13T15:02:02.696+00:00)
+fn/vfs-messages (2269B, 2026-03-12T20:06:33.564799+00:00)
+fn/vfs-meta (1108B, 2026-03-12T20:06:34.270257+00:00)
+fn/vfs-performance (1631B, 2026-03-12T20:06:36.868523+00:00)
+fn/vfs-post-evolve-forge (2059B, 2026-03-13T14:46:24.866+00:00)
+fn/vfs-pr (4094B, 2026-03-12T20:06:38.289596+00:00)
+fn/vfs-query (1037B, 2026-03-12T20:06:39.113994+00:00)
+fn/vfs-remote (1755B, 2026-03-12T20:06:39.868139+00:00)
+forged/ask_proxy:models (903B, 2026-03-29 01:37:29)
+forged/exp-dream-engine-birth (1778B, 2026-03-31 14:43:04)
+forged/lesson-bash-vs-python-boundary (159B, 2026-03-31 09:29:27)
+forged/lesson-esm-cjs-interop (166B, 2026-03-31 09:29:27)
+forged/lesson-evalInBrowser (358B, 2026-03-27 17:33:06)
+forged/lesson-footer-is-fragment (117B, 2026-03-26 12:58:55)
+forged/lesson-json-over-csv (187B, 2026-03-31 09:29:27)
+forged/lesson-os-permission-handling (285B, 2026-03-31 14:39:49)
+forged/lesson-private-member-access (182B, 2026-03-31 09:29:27)
+forged/lesson-project-db (151B, 2026-03-26 14:06:54)
+forged/lesson-sandbox-permission-bypass (172B, 2026-03-31 09:29:27)
+forged/lesson-schema-first-query (150B, 2026-03-31 09:29:27)
+forged/lesson-sqlite-memory-schema (232B, 2026-03-31 14:39:49)
+forged/lesson-sqlite-replace (522B, 2026-03-26 13:38:57)
+forged/lesson-wechat-window-polling (239B, 2026-03-31 14:39:49)
+forged/shortcuts:howto (680B, 2026-03-29 02:46:51)
+forged/skill-ask-ai-models (782B, 2026-03-27 17:19:30)
+forged/skill-better-sqlite3 (925B, 2026-03-22 10:04:21)
+forged/skill-custom-tools (902B, 2026-03-27 16:47:43)
+forged/skill-datawrapper (3322B, 2026-03-23 09:17:52)
+forged/skill-datawrapper-patterns (1897B, 2026-03-27 23:45:38)
+forged/skill-datawrapper-tool (629B, 2026-03-27 23:34:50)
+forged/skill-ffmpeg (773B, 2026-03-12T20:05:02.529464+00:00)
+forged/skill-genspark-image (331B, 2026-03-24 17:10:17)
+forged/skill-genspark-image-styles (452B, 2026-03-24 14:54:45)
+forged/skill-genspark-image-v2 (105B, 2026-03-24 19:29:11)
+forged/skill-learn-from-failures (988B, 2026-03-31 13:04:09)
+forged/skill-music-design-agent (2835B, 2026-03-25 08:19:55)
+forged/skill-music-poster-agent (3465B, 2026-03-25 08:14:37)
+forged/skill-omega-channel (720B, 2026-03-27 14:12:40)
+forged/skill-shortcuts (750B, 2026-03-22 09:58:48)
+forged/skill-snep (480B, 2026-03-27 17:40:19)
+forged/skill-spawn-agent (271B, 2026-03-25 14:26:25)
+forged/skill-wechat-cli (897B, 2026-03-24 06:02:27)
+forged/skill-wechat-db-live (1393B, 2026-03-31 13:04:09)
+omega-lessons/lesson-001 (177B, 2026-03-31 21:39:15)
+omega-lessons/lesson-002 (130B, 2026-03-31 21:39:15)
+omega-lessons/lesson-003 (124B, 2026-03-31 21:39:15)
+plan/modular-refactor (2458B, 2026-03-12T20:05:03.209033+00:00)
+ref-guide/agent-system (358B, 2026-03-13T16:22:17.154+00:00)
+session/context (943B, 2026-03-29 14:37:54)
+session/state-20260330 (660B, 2026-03-30 08:05:41)
+session/state-20260330b (398B, 2026-03-30 08:24:52)
+session/state-20260330c (1073B, 2026-03-30 09:11:10)
+session/state-20260330d (1486B, 2026-03-30 13:52:48)
+session/state-20260330e (1302B, 2026-03-30 13:57:25)
+session/state-20260330f (1218B, 2026-03-30 14:04:25)
+session/state-20260330g (940B, 2026-03-30 16:45:09)
+skill/skill-ffmpeg (773B, 2026-03-12T15:57:49.788376+00:00)
+skill/test-ffmpeg (157B, 2026-03-12T20:05:03.980785+00:00)
+slot/boot-prompt (9652B, 2026-03-12T19:16:16.956392+00:00)
+slot/context (551B, 2026-03-26 15:53:22)
+slot/fn (216B, 2026-03-12T19:16:19.347681+00:00)
+slot/ref-guide (23417B, 2026-03-13T13:22:57.244+00:00)
+slot/registry (937B, 2026-03-12T19:16:16.436051+00:00)
+slot/system-prompt (3679B, 2026-03-12T19:16:18.245191+00:00)
+slot/toolkit (14303B, 2026-03-18T09:15:58.428+00:00)
+toolkit/_forged:birdy-experience (1056B, 2026-03-20 15:08:07)
+toolkit/_forged:experience-dialogues (7620B, 2026-03-31 21:50:06)
+toolkit/_forged:session-state (901B, 2026-03-30 06:10:18)
+toolkit/_plan:platform-migration (1551B, 2026-03-17T15:36:57.511+00:00)
+toolkit/agent-chat-builder (7581B, 2026-03-18T13:00:29.365+00:00)
+toolkit/agent-chat-planner (14303B, 2026-03-18T09:17:24.157+00:00)
+toolkit/agent-default (577B, 2026-03-17T12:28:16.946796+00:00)
+toolkit/agent-douyin-script (3254B, 2026-03-17T13:22:20.364+00:00)
+toolkit/agent-linkedin-post (10012B, 2026-03-17T15:54:33.881+00:00)
+toolkit/agent-opus-planner (8352B, 2026-03-19T07:46:01.946+00:00)
+toolkit/agent-professor-zylonix (797B, 2026-03-18T19:49:27.260603+00:00)
+toolkit/agent-prompt-architect (4937B, 2026-03-19T18:18:58.599+00:00)
+toolkit/agent-tools (15B, 2026-03-13T16:20:31.66+00:00)
+toolkit/agent-translator (6462B, 2026-03-18T16:32:58.068+00:00)
+toolkit/agent-web-builder-opus (3274B, 2026-03-19T07:46:28.577+00:00)
+toolkit/agent-web-designer (12206B, 2026-03-18T16:27:04.696+00:00)
+toolkit/agent-wechat-article (5476B, 2026-03-17T15:44:44.264+00:00)
+toolkit/baseline-html (11B, 2026-03-15T15:52:52.901+00:00)
+toolkit/browser (503B, 2026-03-12T20:05:19.809154+00:00)
+toolkit/cdp-exec (587B, 2026-03-12T20:05:20.67212+00:00)
+toolkit/chart (858B, 2026-03-12T20:05:21.540429+00:00)
+toolkit/chat-size (846B, 2026-03-12T20:05:22.285968+00:00)
+toolkit/cloudflare (239B, 2026-03-12T20:05:23.008717+00:00)
+toolkit/compact-chat (4348B, 2026-03-12T20:05:23.789413+00:00)
+toolkit/compress-chat (5497B, 2026-03-12T20:05:24.513682+00:00)
+toolkit/context-save (290B, 2026-03-12T20:05:25.392979+00:00)
+toolkit/db-analysis-2026-03-17 (1483B, 2026-03-17T18:58:26.213654+00:00)
+toolkit/demucs (517B, 2026-03-12T20:05:26.245267+00:00)
+toolkit/env-tools (325B, 2026-03-12T20:05:27.014045+00:00)
+toolkit/exec-b64 (452B, 2026-03-12T20:05:27.822957+00:00)
+toolkit/ffmpeg (1168B, 2026-03-12T20:05:28.605532+00:00)
+toolkit/fork-compress (990B, 2026-03-12T20:05:29.23244+00:00)
+toolkit/genspark-image (109B, 2026-03-12T20:05:30.014113+00:00)
+toolkit/git-push (279B, 2026-03-12T20:05:30.869504+00:00)
+toolkit/health-check (195B, 2026-03-12T20:05:31.513346+00:00)
+toolkit/help (973B, 2026-03-29 10:58:12)
+toolkit/index (1098B, 2026-03-12T20:05:32.253206+00:00)
+toolkit/knowledge (1132B, 2026-03-29 10:54:24)
+toolkit/knowledge-base (3457B, 2026-03-18T07:37:31.886+00:00)
+toolkit/list-commands (153B, 2026-03-12T20:05:33.085958+00:00)
+toolkit/list-skills (1475B, 2026-03-12T20:05:33.858109+00:00)
+toolkit/load-skill (1879B, 2026-03-12T20:05:34.575228+00:00)
+toolkit/mega (235B, 2026-03-12T20:05:35.327809+00:00)
+toolkit/newzik-omr (143B, 2026-03-12T20:05:36.167975+00:00)
+toolkit/notify (243B, 2026-03-12T20:05:36.947947+00:00)
+toolkit/ntfy (233B, 2026-03-12T20:05:37.692406+00:00)
+toolkit/pandoc (478B, 2026-03-12T20:05:38.476755+00:00)
+toolkit/project-history (2440B, 2026-03-18T16:47:52.776+00:00)
+toolkit/read (569B, 2026-03-29 10:56:25)
+toolkit/reverse-eng (301B, 2026-03-12T20:05:39.3091+00:00)
+toolkit/sandbox-exec (192B, 2026-03-12T20:05:40.091049+00:00)
+toolkit/session-state-20260401 (338B, 2026-04-01 15:24:25)
+toolkit/skill-agent-factory (2115B, 2026-03-16T18:08:41.681+00:00)
+toolkit/skill-agent-pipeline (3237B, 2026-03-16T23:35:27.143677+00:00)
+toolkit/skill-product-factory (3988B, 2026-03-16T10:19:22.365+00:00)
+toolkit/skill-vfs-management (3127B, 2026-03-16T10:25:08.282+00:00)
+toolkit/snep-pipeline (2705B, 2026-03-18T09:18:16.121+00:00)
+toolkit/sqlite (358B, 2026-03-12T20:05:41.811189+00:00)
+toolkit/ssh-beast (168B, 2026-03-12T20:05:42.664824+00:00)
+toolkit/teams-agent-v2 (2B, 2026-03-14T05:34:49.482+00:00)
+toolkit/tokens (884B, 2026-03-29 02:38:22)
+toolkit/trigger-backup (71B, 2026-03-12T20:05:43.757901+00:00)
+toolkit/unload-skill (1777B, 2026-03-12T20:05:44.553102+00:00)
+toolkit/vfs-status (162B, 2026-03-12T20:05:45.333315+00:00)
+toolkit/wechat (238B, 2026-03-12T20:05:46.04059+00:00)
+tpl/architecture-map (nullB, 2026-03-12T15:57:49.788376+00:00)
+tpl/batch-evaljs-now-works (618B, 2026-03-12T20:05:08.952593+00:00)
+tpl/batch-foreach-pattern (624B, 2026-03-12T20:05:09.777794+00:00)
+tpl/batch-write-execute (959B, 2026-03-12T20:05:10.557144+00:00)
+tpl/correct-tool-names (504B, 2026-03-12T20:05:11.267021+00:00)
+tpl/edit-file-format (272B, 2026-03-12T20:05:11.985515+00:00)
+tpl/heredoc-omega-conflict (286B, 2026-03-12T20:05:12.844467+00:00)
+tpl/no-evaljs-in-batch (615B, 2026-03-12T20:05:13.599074+00:00)
+tpl/no-patch-vfs-rewrite-whole (687B, 2026-03-12T20:05:14.348296+00:00)
+tpl/no-sleep-use-bgrun (633B, 2026-03-12T20:05:15.113004+00:00)
+tpl/use-fd-rg-modern-tools (510B, 2026-03-12T20:05:15.817373+00:00)
+tpl/use-ssh-oracle-not-runcommand (225B, 2026-03-12T20:05:16.706109+00:00)
+tpl/use-vfs-exec-not-evaljs (795B, 2026-03-12T20:05:17.472327+00:00)
+tpl/use-vfs-write-not-execsh (767B, 2026-03-12T20:05:18.334094+00:00)
+transfer/builder-code-v4 (31545B, 2026-03-25 15:22:06)
+transfer/design-spec-v4 (0B, 2026-03-25 15:18:34)
+
+### local_store entries:
+agent/poster-builder (3290B, 2026-03-25 15:09:01)
+agent/poster-designer (6981B, 2026-03-25 15:04:26)
+birdy/log-Tmmz2ifyl (471B, 2026-03-20 16:01:04)
+birdy/log-latest (1532B, 2026-03-20 16:00:53)
+birdy/result-Tmmz2ifyl (85B, 2026-03-20 16:01:07)
+compress/last-state (40B, 2026-03-22 15:40:21)
+compress/mid-count (3B, 2026-03-22 15:40:21)
+compress/mid-range (5B, 2026-03-22 15:40:21)
+compress/updated (24B, 2026-03-22 15:40:21)
+context/custom-tools-plan (683B, 2026-03-27 15:14:19)
+context/defix-2026-03-26 (113B, 2026-03-26 13:25:16)
+context/etsy-designer-output (282B, 2026-03-24 12:37:09)
+context/etsy-resume-2026-03-24 (1625B, 2026-03-24 15:57:31)
+context/etsy-session-2026-03-24 (251B, 2026-03-24 13:49:23)
+context/etsy-session-2026-03-24-v2 (391B, 2026-03-24 15:56:39)
+context/etsy-session-v3 (359B, 2026-03-24 16:15:32)
+context/etsy-session-v4 (330B, 2026-03-24 16:25:26)
+context/etsy-session-v5 (241B, 2026-03-24 16:41:29)
+context/etsy-session-v6 (207B, 2026-03-24 19:29:11)
+context/ghost-hunt-2026-03-29 (924B, 2026-03-29 20:25:43)
+context/milestone-2026-03-26 (83B, 2026-03-26 03:02:28)
+context/music-poster-agent-v1 (1638B, 2026-03-25 00:24:55)
+context/music-poster-design-agent-raw (189B, 2026-03-25 08:29:16)
+context/session-2026-03-19 (624B, 2026-03-19 09:13:58)
+context/session-2026-03-20-C (1127B, 2026-03-21 00:35:56)
+context/session-2026-03-24 (1323B, 2026-03-24 06:29:53)
+context/session-2026-03-26-debug (283B, 2026-03-26 13:03:53)
+context/session-2026-03-27 (1196B, 2026-03-27 15:04:00)
+context/session-2026-03-27-B (931B, 2026-03-27 23:49:15)
+context/session-2026-03-28-A (441B, 2026-03-28 01:19:00)
+context/session-2026-03-28-B (176B, 2026-03-28 01:44:14)
+context/session-complete-2026-03-26 (76B, 2026-03-26 03:02:54)
+context/session-state (195B, 2026-03-24 04:35:50)
+context/wchat-unified-v1 (1296B, 2026-03-31 01:14:25)
+context/wechat-cli-group-ax (1893B, 2026-03-25 00:44:13)
+context/wechat-cli-menu-progress (791B, 2026-03-25 00:55:09)
+context/wechat-cli-v2-status (999B, 2026-03-25 01:03:18)
+context/wechat-cli-v3 (68B, 2026-03-25 01:18:58)
+context/wechat-cli-v4 (172B, 2026-03-25 01:26:44)
+context/wechat-cli-v4-final (186B, 2026-03-25 08:05:03)
+context/wechat-db-decrypt-v1 (1726B, 2026-03-31 00:54:05)
+debug/single-here-bug (861B, 2026-03-19 09:46:41)
+debug/single-here-investigation (4B, 2026-03-19 12:39:26)
+dream/history (661B, 2026-03-31 14:39:49)
+dream/last-run (411B, 2026-03-31 14:39:49)
+dream/session-count (11B, 2026-04-01 15:27:26)
+file/test-ssh-config (110B, 2026-03-21 10:03:48)
+guide/agent-db-manual (623B, 2026-03-31 17:48:27)
+guide/cheatsheet (1405B, 2026-03-31 14:43:25)
+guide/compress-restore-prompt (710B, 2026-03-29 11:05:24)
+guide/readme (4468B, 2026-03-23 23:06:57)
+guide/session-state (944B, 2026-03-27 05:31:00)
+guide/skill-spawn-pipeline (6480B, 2026-03-25 15:30:15)
+omega-agent/code-reviewer (1759B, 2026-04-01 08:53:25)
+omega-agent/coder (432B, 2026-04-01 01:59:10)
+omega-agent/data-analyst (1942B, 2026-04-01 09:30:33)
+omega-agent/db-expert (3025B, 2026-04-01 04:03:59)
+omega-agent/debugger (1924B, 2026-04-01 12:36:50)
+omega-agent/default (397B, 2026-04-01 01:59:10)
+omega-agent/ops (514B, 2026-04-01 01:59:10)
+omega-agent/pm (1936B, 2026-04-01 12:44:38)
+omega-agent/search-expert (2723B, 2026-04-01 04:39:43)
+omega-agent/translator (440B, 2026-04-01 03:37:31)
+omega-agent/web-designer (6363B, 2026-04-01 14:29:24)
+omega-agent/wechat (1317B, 2026-04-01 01:59:10)
+omega-agent/writer (1980B, 2026-04-01 09:52:20)
+omega-tools/tool-docs (1309B, 2026-04-01 01:23:33)
+plan/dream-upgrade-v1 (2641B, 2026-03-31 14:32:19)
+script/backup-db (234B, 2026-03-20 17:44:19)
+script/batch-health-check (1483B, 2026-03-23 01:14:28)
+script/batch-runner (6580B, 2026-03-24 13:21:45)
+script/batch-stats (423B, 2026-03-26 13:32:27)
+script/check-pipeline (135B, 2026-03-20 17:40:42)
+script/daily-digest (768B, 2026-03-22 10:28:16)
+script/db-cleanup (1511B, 2026-03-22 19:56:22)
+script/db-health (228B, 2026-03-20 17:40:42)
+script/deep-correction (76B, 2026-03-22 10:53:02)
+script/deepseek-compress (10904B, 2026-03-23 13:31:14)
+script/dw-clone (2936B, 2026-03-23 09:33:14)
+script/dw-refresh-all (5001B, 2026-03-23 09:55:51)
+script/error-correction (77B, 2026-03-22 10:53:02)
+script/error-patterns (1154B, 2026-03-22 10:30:07)
+script/fail-hotspot (268B, 2026-03-22 10:28:16)
+script/forged-audit (66B, 2026-03-22 10:30:40)
+script/full-status (597B, 2026-03-22 10:28:16)
+script/img-pipeline (2478B, 2026-03-24 13:07:43)
+script/kill-server-v2 (110B, 2026-03-20 17:40:42)
+script/oracle-health (298B, 2026-03-22 10:28:16)
+script/oracle-tabs (175B, 2026-03-20 17:40:42)
+script/recent-files (470B, 2026-03-22 10:28:16)
+script/restart-server-v2 (37B, 2026-03-22 09:52:35)
+script/restart-yao (170B, 2026-03-22 09:47:10)
+script/run-pipeline (162B, 2026-03-20 17:40:42)
+script/search-history (181B, 2026-03-20 17:40:42)
+script/server-v2-status (59B, 2026-03-22 09:51:12)
+script/session-replay (211B, 2026-03-22 10:28:16)
+script/skill-ops (67B, 2026-03-22 11:08:29)
+script/test-herebatch-parser (313B, 2026-03-25 11:35:49)
+script/today-errors (195B, 2026-03-20 17:40:42)
+script/today-ops (191B, 2026-03-20 17:40:42)
+script/tokens (854B, 2026-03-29 02:35:48)
+script/tool-reliability (270B, 2026-03-20 17:40:42)
+script/tool-trend (234B, 2026-03-22 10:28:16)
+script/update-planner (349B, 2026-03-27 05:04:10)
+script/weekly-rundown (1600B, 2026-03-22 10:30:07)
+script/yao-log (65B, 2026-03-22 09:47:10)
+script/yao-status (264B, 2026-03-22 09:47:10)
+test/escape-test (172B, 2026-03-19 14:38:02)
+test/hello (32B, 2026-03-19 08:45:23)
+test/hijack-test (11B, 2026-03-26 02:52:17)
+test/ping (4B, 2026-03-19 09:13:04)
+toolkit/planner-forged-identity (4305B, 2026-03-27 05:36:06)
+toolkit/planner-task-v3 (3552B, 2026-03-27 05:17:41)
+toolkit/read-conv-msgs (470B, 2026-03-27 05:12:43)
+toolkit/spawn-planner-v3 (1231B, 2026-03-27 05:22:00)
+
+## Recent Failures (last 24h)
+Failure patterns: run_process: 79 fails, wechat: 4 fails, web_search: 3 fails, memory: 1 fails, eval_js: 1 fails, edit_file: 1 fails, db_query: 1 fails, ask_ai: 1 fails
+Details:
+[run_process] {"command_line":"bash /private/tmp/cmd_1775056683451.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && tail -50 logs/agent.log | grep -i 'web_search\\|search\\|err → exit non-zero
+[eval_js] {"code":"return fetch(\"https://html.duckduckgo.com/html/?q=Claude%20opus%204.6%20release\")\n.then(r=>r.text())\n.then( → Failed to fetch
+[web_search] {"q":"Claude opus 4.6 release date"} → require is not defined
+[run_process] {"command_line":"bash /private/tmp/cmd_1775038350570.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && sed -n '186,198p' sys-tools.js | cat -A","mode":"shell","com → exit non-zero
+[edit_file] {"path":"/Users/yay/workspace/genspark-agent/server-v2/sys-tools.js","edits":[{"oldText":"    const result = await evalI → Could not find exact match for edit:
+    const result = await evalInBrowser(code, 60000);
+    return
+[run_process] {"command_line":"bash /private/tmp/cmd_1775033336592.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775015551675.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/forged-benchmark && python3 -c 'import json;d=json.load(open(\"evolve-forged-v9.json\")) → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775014621595.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && node db-stats.cjs 2>&1","mode":"shell","command":"cd ~/works → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775007546021.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cp /tmp/db-stats.cjs ~/workspace/genspark-agent/server-v2/ && cd ~/workspace/genspark-agent/server-v2 & → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775007494525.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+
+## Hot Operations (last 24h)
+run_process: 645, eval_js: 36, vfs_local_write: 31, wechat: 26, ask_ai: 20, bg_run: 16, compress: 12, web_search: 12, db_query: 7, edit_file: 5
+
+## Existing Lessons (forged slot in memory table)
+- lesson-os-permission-handling: WRONG: assuming osascript or bg_status has immediate system access
+CORRECT: handle -25211 assistive access denied by pro
+- lesson-sqlite-memory-schema: WRONG: used 'value' as column name for local_store/memory tables
+CORRECT: use 'content' column name for data storage in 
+- lesson-wechat-window-polling: WRONG: continuous retries when 'No WeChat window' is detected
+CORRECT: implement backoff or verify window state before r
+- lesson-bash-vs-python-boundary: WRONG: 用bash sed/awk处理复杂嵌套文本(XML、多行消息) → 转义地狱、解析崩溃
+CORRECT: 简单流程用bash，复杂文本解析迁移到Python(re/json/xml)
+CONTEXT: agent工具选型。ba
+- lesson-esm-cjs-interop: WRONG: 在type:module的ESM项目中用.js后缀写require语法
+CORRECT: CommonJS脚本改名.cjs，或重构为import语句
+CONTEXT: Node.js混合模块开发。package.json有ty
+- lesson-json-over-csv: WRONG: sqlcipher用.mode csv或|分隔输出 → 内容含分隔符导致解析崩溃(ValueError: not enough values to unpack)
+CORRECT: .mode json输出，天然处理特殊字符转
+- lesson-private-member-access: WRONG: from module import * 后访问 _private_var → NameError（import *忽略_开头成员）
+CORRECT: import module as m → m._private_var 通
+- lesson-sandbox-permission-bypass: WRONG: 直接读写macOS沙箱目录(~/Library/Containers/) → 弹权限窗口阻断agent
+CORRECT: 先cp到用户目录(~/workspace/)再操作本地副本，避免TCC弹窗
+CONTEXT: macOS
+- lesson-schema-first-query: WRONG: 凭记忆猜列名写SQL → no such column
+CORRECT: 先 .schema tablename 或 PRAGMA table_info('tablename') 确认真实列名
+CONTEXT: 操作未知/动态
+- lesson-evalInBrowser: evalInBrowser 桥接踩坑实录(2026-03-27 by ask_ai claude-opus-4-6):
+
+1. server端直接带cookie调API -> Cloudflare拦截(TLS/JA3指纹)
+2. 解法: 让
+- lesson-project-db: # project.db (2026-03-26) - 代码即数据架构
+71 files, 627K chars, 2 projects
+改代码=SQL UPDATE, 搜代码=SQL LIKE, 自动history触发器
+bash ext
+- lesson-sqlite-replace: # SQLite 原地编辑（不要取出来改再写回去）
+
+## 核心原则
+DB 内容修改 → sqlite3 原地 SQL，零中间文件。
+
+## 常用操作
+简单替换: UPDATE table SET content = REPLACE(con
+- lesson-footer-is-fragment: 99-footer.js 是 build 模块片段，不是独立 JS 文件。单独 node -c 永远报错。验证语法只能用: bash extension/build.sh && node -c extension/content.js
+
+## Omega Platform Lessons (from omega-lessons slot)
+- lesson-001: gemini-3-flash 在 apipod 上渠道不可用，遇到空响应时换 gpt-4o 或 deepseek-chat [active]
+- lesson-002: wechat send 参数是 action/to/content，不是 message [active]
+- lesson-003: ΩCODE 块必须放在回复最后，发完就停，不要在后面加文字 [active]
+
+---
+
+Respond with ONLY valid JSON (no markdown fences):
+{
+  "new_lessons": [
+    {"key": "lesson-xxx", "content": "WRONG: ... → CORRECT: ...\nCONTEXT: ..."}
+  ],
+  "stale_entries": [
+    {"table": "memory|local_store", "slot": "...", "key": "...", "reason": "..."}
+  ],
+  "duplicate_merges": [
+    {"keep": {"table":"...","slot":"...","key":"..."}, "remove": {"table":"...","slot":"...","key":"..."}, "reason": "..."}
+  ],
+  "summary": "One paragraph summary of this dream cycle's findings"
+}
+
+Rules:
+1. Only create new_lessons for REAL failure patterns visible in the data above
+2. Mark entries stale only if clearly outdated (old session states, superseded versions)
+3. Merge duplicates only when two entries serve the exact same purpose
+4. Be conservative — when in doubt, keep it
+5. key names for new_lessons must start with "lesson-"
+6. Respond with ONLY the JSON object, nothing else

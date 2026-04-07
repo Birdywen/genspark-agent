@@ -26,7 +26,14 @@
   }
 
   // ── Helper: parse SSE lines from a fetch stream ──
+  var __activeStreamCount = 0;
   function interceptStream(resp, url) {
+    // Dedup: allow max 1 active stream. If another is already reading, skip.
+    if (__activeStreamCount > 0) {
+      console.log('[SSE-Hook] Skipping duplicate stream (one already active):', url.substring(0, 80));
+      return;
+    }
+    __activeStreamCount++;
     try {
       if (!resp.body) return;
       var cloned = resp.clone();
@@ -51,6 +58,7 @@
           }
           try {
             var parsed = JSON.parse(jsonStr);
+
             var patches = parsed.v ? (Array.isArray(parsed.v) ? parsed.v : [parsed]) : (parsed.p ? [parsed] : []);
             for (var j = 0; j < patches.length; j++) {
               var patch = patches[j];
@@ -79,6 +87,7 @@
         reader.read().then(function(chunk) {
           if (chunk.done) {
             if (buffer.trim()) processLine(buffer.trim());
+            __activeStreamCount = 0;
             document.dispatchEvent(new CustomEvent('__sse_closed__', {
               detail: { transport: 'chatgpt-fetch', timestamp: Date.now() }
             }));

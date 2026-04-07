@@ -54,6 +54,8 @@ function connectWebSocket() {
       reconnectTimer = null;
     }
     broadcastToAllTabs({ type: 'WS_STATUS', connected: true });
+    // 告诉 server 我是 background.js（浏览器工具执行器）
+    socket.send(JSON.stringify({ type: 'identify', role: 'browser' }));
     startPing();
   };
 
@@ -167,6 +169,21 @@ function connectWebSocket() {
         return;
       }
       
+      // ============== 浏览器工具转发 ==============
+      if (data.type === 'browser_tool_call') {
+        console.log('[BG] 浏览器工具请求:', data.tool, 'callId:', data.callId);
+        handleBrowserToolCall(data).then(result => {
+          const response = { type: 'browser_tool_result', callId: data.callId, success: true, result };
+          sendToServer(response);
+          console.log('[BG] 浏览器工具完成:', data.tool);
+        }).catch(err => {
+          const response = { type: 'browser_tool_result', callId: data.callId, success: false, error: err.message };
+          sendToServer(response);
+          console.error('[BG] 浏览器工具失败:', data.tool, err.message);
+        });
+        return;
+      }
+
       // 工具执行结果：只发送给发起调用的 Tab
       if (data.type === 'tool_result' && data.id) {
         // 去重检查
@@ -262,8 +279,9 @@ function sendToServer(message, tabId) {
       }, 30000);
     }
     
-    socket.send(JSON.stringify(message));
-    console.log('[BG] 发送到服务器:', message.type);
+    const msgStr = JSON.stringify(message);
+    socket.send(msgStr);
+    console.log('[BG] 发送到服务器:', message.type, 'tool:', message.tool || 'N/A', 'len:', msgStr.length);
     return true;
   }
   console.warn('[BG] 未连接');
@@ -633,6 +651,56 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true;
 });
+
+// ============== 浏览器工具执行 ==============
+async function handleBrowserToolCall(data) {
+  const { tool, params, callId } = data;
+
+  if (tool === 'list_tabs') {
+    const tabs = await chrome.tabs.query({});
+    return tabs.map(t => ({
+      id: t.id,
+      url: t.url,
+      title: t.title,
+      active: t.active,
+      windowId: t.windowId
+    }));
+  }
+
+  if (tool === 'eval_js') {
+    const code = params?.code || '';
+    let tabId = params?.tabId;
+    if (!tabId) {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      tabId = activeTab?.id;
+    }
+    if (!tabId) throw new Error('No target tab found');
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (code) => {
+        try { return eval(code); } catch(e) { return 'Error: ' + e.message; }
+      },
+      args: [code],
+      world: 'MAIN'
+    });
+    return results?.[0]?.result;
+  }
+
+  if (tool === 'screenshot' || tool === 'take_screenshot') {
+    let tabId = params?.tabId;
+    if (!tabId) {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      tabId = activeTab?.id;
+    }
+    if (!tabId) throw new Error('No target tab found');
+    await chrome.tabs.update(tabId, { active: true });
+    await new Promise(r => setTimeout(r, 300));
+    const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+    return dataUrl;
+  }
+
+  throw new Error('Unknown browser tool: ' + tool);
+}
 
 // 启动
 connectWebSocket();

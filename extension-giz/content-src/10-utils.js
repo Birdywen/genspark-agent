@@ -33,10 +33,9 @@
       const fixed = str.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/,\s*([}\]])/g, '$1');
       return JSON.parse(fixed);
     } catch(e2) {}
-    // Level 3: regex add quotes to unquoted keys (last resort, can break string values)
+    // Level 3: eval as JS object literal (handles unquoted keys like {tool: "x"})
     try {
-      const aggressive = str.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/,\s*([}\]])/g, '$1').replace(/(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-      return JSON.parse(aggressive);
+      return (new Function('return (' + str + ')'))();
     } catch(e3) { return null; }
   }
 

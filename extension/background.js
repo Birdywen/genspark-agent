@@ -75,6 +75,8 @@ function connectWebSocket() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    // 标识自己是 background.js，让 server 精准投递 browser_tool_call
+    socket.send(JSON.stringify({ type: 'identify', role: 'browser' }));
     broadcastToAllTabs({ type: 'WS_STATUS', connected: true });
     startPing();
     // 重连后发送队列中暂存的 tool_call
@@ -132,10 +134,18 @@ function connectWebSocket() {
         return;
       }
 
-      // 浏览器工具反向调用：server 请求浏览器执行 js_flow/eval_js/list_tabs
+      // 浏览器工具反向调用：server 请求浏览器执行 eval_js/list_tabs/screenshot
       if (data.type === 'browser_tool_call') {
         console.log('[BG] 浏览器工具调用:', data.tool, data.callId);
-        broadcastToAllTabs(data);
+        handleBrowserToolCall(data).then(result => {
+          const response = { type: 'browser_tool_result', callId: data.callId, success: true, result };
+          if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(response));
+          console.log('[BG] 浏览器工具完成:', data.tool, typeof result);
+        }).catch(err => {
+          const response = { type: 'browser_tool_result', callId: data.callId, success: false, error: err.message };
+          if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(response));
+          console.error('[BG] 浏览器工具失败:', data.tool, err.message);
+        });
         return;
       }
 
@@ -770,7 +780,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             world: world,
             func: async (code) => {
               try {
-                const fn = new Function(code);
+                // 自动加 return：如果代码不含 return/var/let/const/if/for/while/throw/class/function 等语句关键字
+                const needsReturn = !/^\s*(return|var |let |const |if[ (]|for[ (]|while[ (]|throw |class |function |switch[ (]|try[ {])/.test(code) && !/;.*\S/.test(code);
+                const fn = new Function(needsReturn ? 'return (' + code + ')' : code);
                 let result = fn();
                 if (result && typeof result.then === 'function') {
                   result = await result;
@@ -1196,6 +1208,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return true;
 });
+
+// 浏览器工具执行器
+async function handleBrowserToolCall(data) {
+  const { tool, params } = data;
+
+  if (tool === 'list_tabs') {
+    const tabs = await chrome.tabs.query({});
+    return tabs.map(t => ({ id: t.id, url: t.url, title: t.title, active: t.active }));
+  }
+
+  if (tool === 'eval_js') {
+    const code = params?.code || '';
+    let tabId = params?.tabId;
+    if (!tabId) {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      tabId = activeTab?.id;
+    }
+    if (!tabId) throw new Error('No target tab found');
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (c) => { try { const r = eval(c); return (r === undefined ? '(undefined)' : r); } catch(e) { return 'Error: ' + e.message; } },
+      args: [code],
+      world: 'MAIN'
+    });
+    return results?.[0]?.result;
+  }
+
+  if (tool === 'screenshot' || tool === 'take_screenshot') {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!activeTab) throw new Error('No active tab');
+    await chrome.tabs.update(activeTab.id, { active: true });
+    await new Promise(r => setTimeout(r, 300));
+    return await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+  }
+
+  throw new Error('Unknown browser tool: ' + tool);
+}
 
 // 启动
 connectWebSocket();

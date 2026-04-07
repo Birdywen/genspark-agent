@@ -601,117 +601,81 @@ ${toolSummary}
       }));
     }
 
-    const trySend = (attempt = 1) => {
-      const btnSelectors = [
-        'button.composer-submit-button-color',
-        'button[data-testid="send-button"]',
-        'button[aria-label*="send" i]',
-        'button[aria-label*="Send"]'
-      ];
-      
-      // 按 Enter 发送
-      const pressEnter = () => {
-        ['keydown', 'keypress', 'keyup'].forEach(type => {
-          input.dispatchEvent(new KeyboardEvent(type, {
-            key: 'Enter',
-            code: 'Enter', 
-            keyCode: 13,
-            which: 13,
-            bubbles: true,
-            cancelable: true
-          }));
-        });
-      };
-      
-      // v31.1: 先尝试 Enter，失败后多次重试点击按钮
-      pressEnter();
-      addLog('📤 Enter 发送', 'info');
-      
-      // 检查并重试发送的函数
-      const checkAndRetry = (retryCount) => {
-        const inp = getInputBox();
-        const inputContent = inp ? (inp.value || inp.innerText || '') : '';
-        if (!inp || !inputContent || inputContent.trim().length <= 5) {
-          // 发送成功了
-          return;
+    const btnSelectors = [
+      'button.composer-submit-button-color',
+      'button[data-testid="send-button"]',
+      'button[aria-label*="send" i]',
+      'button[aria-label*="Send"]'
+    ];
+
+    // Try button click first, then Enter as fallback
+    const tryClick = () => {
+      for (const sel of btnSelectors) {
+        const btn = document.querySelector(sel);
+        if (btn && !btn.disabled && btn.offsetParent !== null) {
+          btn.click();
+          addLog('📤 按钮发送', 'info');
+          return true;
         }
-        
-        if (retryCount <= 0) {
-          addLog('⚠️ 发送失败，请手动点击', 'error');
-          return;
-        }
-        
-        // 尝试点击按钮
-        let clicked = false;
-        for (const sel of btnSelectors) {
-          const btn = document.querySelector(sel);
-          if (btn && !btn.disabled && btn.offsetParent !== null) {
-            btn.click();
-            clicked = true;
-            addLog(`📤 点击按钮 (剩余重试: ${retryCount - 1})`, 'info');
-            break;
-          }
-        }
-        
-        if (!clicked) {
-          // 没找到按钮，再试 Enter
-          pressEnter();
-          addLog(`📤 重试 Enter (剩余: ${retryCount - 1})`, 'info');
-        }
-        
-        // 500ms 后再检查
-        setTimeout(() => checkAndRetry(retryCount - 1), 500);
-      };
-      
-      // 300ms 后开始检查，最多重试 3 次
-      setTimeout(() => checkAndRetry(3), 300);
-      
-      return true;  // Enter 已发送
+      }
+      return false;
     };
 
-    // 第一次尝试发送（延迟 800ms 等待页面就绪）
+    // 800ms wait for page ready, then send
     setTimeout(() => {
-      const sent = trySend(1);
-      if (!sent) {
-        // 800ms 后检查输入框是否还有内容，有则重试
-        setTimeout(() => {
-          const currentInput = getInputBox();
-          if (currentInput && currentInput.value && currentInput.value.length > 10) {
-            addLog('🔄 重试发送...', 'info');
-            trySend(2);
-            // 再次检查
-            setTimeout(() => {
-              const inp = getInputBox();
-              const remainingText = inp ? (inp.value || inp.innerText || '') : '';
-              if (inp && remainingText && remainingText.trim().length > 10) {
-                addLog('⚠️ 请手动点击发送', 'error');
-              } else {
-                addLog('📤 已发送', 'info');
-              }
-            }, 500);
-          } else {
-            addLog('📤 已发送(Enter)', 'info');
-          }
-        }, 800);
+      if (!tryClick()) {
+        // Fallback: Enter key
+        ['keydown', 'keypress', 'keyup'].forEach(type => {
+          input.dispatchEvent(new KeyboardEvent(type, {
+            key: 'Enter', code: 'Enter', keyCode: 13, which: 13,
+            bubbles: true, cancelable: true
+          }));
+        });
+        addLog('📤 Enter 发送', 'info');
       }
+      // One retry after 1s if text still in input
+      setTimeout(() => {
+        const inp = getInputBox();
+        const remaining = inp ? (inp.value || inp.innerText || '').trim() : '';
+        if (remaining.length > 5) {
+          if (!tryClick()) {
+            addLog('⚠️ 发送失败，请手动点击', 'error');
+          }
+        }
+      }, 1000);
     }, 800);
 
     return true;
   }
 
+  // Dedup: prevent sending same text within 5s
+  const _lastSentMessages = new Map();
   function sendMessageSafe(text) {
     // 更新最后消息时间（用于超时唤醒检测）
     if (typeof updateLastAiMessageTime === 'function') {
       updateLastAiMessageTime();
     }
     
+    // Dedup: skip if same text sent within 5s
+    const textKey = text.substring(0, 200);
+    const now = Date.now();
+    if (_lastSentMessages.has(textKey) && now - _lastSentMessages.get(textKey) < 5000) {
+      addLog('⚠️ 跳过重复发送 (5s内)', 'info');
+      return;
+    }
+    _lastSentMessages.set(textKey, now);
+    // Cleanup old entries
+    if (_lastSentMessages.size > 20) {
+      for (const [k, t] of _lastSentMessages) {
+        if (now - t > 10000) _lastSentMessages.delete(k);
+      }
+    }
+    
     if (isAIGenerating()) {
       addLog('⏳ 等待 AI 完成输出...', 'info');
       waitForGenerationComplete(() => sendMessage(text));
     } else {
-      // 增加延迟到 800ms，确保页面完全稳定后再发送
       setTimeout(() => {
-        // 再次检查是否正在生成
         if (isAIGenerating()) {
           addLog('⏳ 检测到 AI 开始输出，等待完成...', 'info');
           waitForGenerationComplete(() => sendMessage(text));
@@ -792,7 +756,7 @@ ${toolSummary}
     if (ocStart === -1) ocStart = text.indexOf(ocPrefix + "{");
     if (ocStart === -1) ocStart = text.indexOf(ocPrefix + " {");
     if (ocStart === -1) ocStart = text.indexOf(ocPrefix + " \n");
-    if (ocStart !== -1 && !state.executedCalls.has("omegacode:" + ocStart) && !(sseState && sseState.executedInCurrentMessage)) {
+    if (ocStart !== -1) {
       const beforeOC = text.substring(Math.max(0, ocStart - 100), ocStart);
       if (!/Example:|e\.g\.|示例|格式/.test(beforeOC)) {
         try {
@@ -803,11 +767,15 @@ ${toolSummary}
             // Strip leading newline if present
             if (ocBody.startsWith('\n')) ocBody = ocBody.substring(1).trim();
             ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
+
             const ocObj = safeJsonParse(ocBody);
+            log('ΩCODE parsed:', ocObj && ocObj.steps ? 'BATCH(' + ocObj.steps.length + ')' : ocObj && ocObj.tool ? 'SINGLE(' + ocObj.tool + ')' : 'INVALID');
             if (ocObj && (ocObj.tool || ocObj.steps)) {
               if (ocObj.steps && Array.isArray(ocObj.steps)) {
+
                 return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];
               } else {
+
                 return [{ name: ocObj.tool, params: ocObj.params || {}, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8 }];
               }
             }

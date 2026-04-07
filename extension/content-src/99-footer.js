@@ -13,6 +13,64 @@
   };
 
   function initSSEListener() {
+    // ── ChatGPT: inject fetch stream hook into MAIN world ──
+    if (location.hostname.includes('chatgpt.com') || location.hostname.includes('openai.com')) {
+      var hookScript = document.createElement('script');
+      hookScript.textContent = '(' + function() {
+        if (window.__chatgptFetchHooked) return;
+        window.__chatgptFetchHooked = true;
+        var _f = window.fetch;
+        window.fetch = function() {
+          var args = arguments;
+          var url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
+          var r = _f.apply(this, args);
+          if (url.indexOf('backend-api') !== -1 && url.indexOf('conversation') !== -1 && url.indexOf('limit') === -1) {
+            r.then(function(resp) {
+              try {
+                var c = resp.clone();
+                var rd = c.body.getReader();
+                var dec = new TextDecoder();
+                var buf = '';
+                document.dispatchEvent(new CustomEvent('__sse_connected__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } }));
+                function pump() {
+                  rd.read().then(function(ch) {
+                    if (ch.done) { document.dispatchEvent(new CustomEvent('__sse_closed__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } })); return; }
+                    buf += dec.decode(ch.value, {stream: true});
+                    var lines = buf.split('\n'); buf = lines.pop();
+                    for (var i = 0; i < lines.length; i++) {
+                      var line = lines[i].trim();
+                      if (!line || line.indexOf('data: ') !== 0) continue;
+                      var js = line.substring(6);
+                      if (js === '[DONE]') { document.dispatchEvent(new CustomEvent('__sse_message_complete__', { detail: { timestamp: Date.now() } })); continue; }
+                      try {
+                        var p = JSON.parse(js);
+                        var pv = p.v ? (Array.isArray(p.v) ? p.v : [p]) : (p.p ? [p] : []);
+                        for (var j = 0; j < pv.length; j++) {
+                          if (pv[j].p === '/message/content/parts/0' && pv[j].o === 'append' && pv[j].v) {
+                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'content_delta', text: pv[j].v}), timestamp: Date.now() } }));
+                          }
+                          if (pv[j].p === '/message/status' && pv[j].o === 'replace' && pv[j].v === 'finished_successfully') {
+                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'status_change', status: 'finished_successfully'}), timestamp: Date.now() } }));
+                          }
+                        }
+                      } catch(e) {}
+                    }
+                    pump();
+                  }).catch(function() {});
+                }
+                pump();
+              } catch(e) {}
+            }).catch(function() {});
+          }
+          return r;
+        };
+        console.log('[ChatGPT-Hook] Fetch stream interceptor injected from content.js');
+      } + ')();';
+      document.documentElement.appendChild(hookScript);
+      hookScript.remove();
+      addLog('🔌 ChatGPT fetch hook injected', 'info');
+    }
+
     // 监听 SSE 连接建立
     document.addEventListener('__sse_connected__', (e) => {
       sseState.connected = true;

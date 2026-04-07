@@ -20,6 +20,7 @@
 
   // 接收 AI 流式消息
   document.addEventListener('__giz_message__', (e) => {
+    console.log('[GizAgent] __giz_message__ received, detail:', e.detail);
     const { subscribeId, output, status } = e.detail;
     const ws = state.wsState;
 
@@ -44,6 +45,7 @@
       const text = ws.currentText;
       if (!text) return;
 
+      log('WS completed text:', JSON.stringify(text).substring(0, 300));
       const calls = parseToolCalls(text);
       if (calls.length === 0) return;
 

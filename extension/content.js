@@ -324,6 +324,112 @@ ${toolSummary}
 
 
 
+// ============== DOM 操作 (ChatGPT 专用) ==============
+
+function getAIMessages() {
+ return Array.from(document.querySelectorAll('article[data-testid^="conversation-turn-"]'));
+}
+
+function getLatestAIMessage() {
+ const messages = getAIMessages();
+ if (messages.length === 0) return { text: '', index: -1, element: null };
+ const lastMsg = messages[messages.length - 1];
+ const contentEl = lastMsg.querySelector('[data-message-author-role="assistant"] .markdown.prose') || 
+ lastMsg.querySelector('[data-message-author-role="assistant"] .markdown') ||
+ lastMsg.querySelector('[data-message-author-role="assistant"]');
+ return {
+ text: contentEl?.innerText || lastMsg.innerText || '',
+ index: messages.length - 1,
+ element: lastMsg
+ };
+}
+
+function isGenerating() {
+ const turns = document.querySelectorAll('article[data-testid^="conversation-turn-"]');
+ if (turns.length === 0) return false;
+ const lastTurn = turns[turns.length - 1];
+ return lastTurn.querySelector('.result-streaming, [class*="streaming"]') !== null;
+}
+
+function isAssistantTurn(el) {
+ return el.querySelector('[data-message-author-role="assistant"]') !== null;
+}
+
+function getInputBox() {
+ const selectors = [
+ 'div[data-placeholder="Ask anything"]',
+ 'div[contenteditable="true"][data-placeholder]',
+ 'div.ProseMirror[contenteditable="true"]',
+ 'textarea#prompt-textarea',
+ 'div[contenteditable="true"]',
+ 'textarea'
+ ];
+ for (const sel of selectors) {
+ const el = document.querySelector(sel);
+ if (el && el.offsetParent !== null) return el;
+ }
+ return null;
+}
+
+function sendMessage(text) {
+ const input = getInputBox();
+ if (!input) {
+ addLog('❌ 找不到输入框', 'error');
+ return false;
+ }
+ input.focus();
+ if (input.classList.contains('ProseMirror') || input.contentEditable === 'true') {
+ input.innerHTML = '';
+ const p = document.createElement('p');
+ p.textContent = text;
+ input.appendChild(p);
+ input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: text, inputType: 'insertText' }));
+ } else {
+ const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+ input.value = '';
+ if (nativeSetter) nativeSetter.call(input, text);
+ else input.value = text;
+ input.dispatchEvent(new Event('input', { bubbles: true }));
+ }
+ const btnSelectors = [
+ 'button[data-testid="send-button"]',
+ 'button[aria-label*="Send"]',
+ 'button[aria-label*="发送"]',
+ 'button[type="submit"]'
+ ];
+ let sent = false;
+ for (const sel of btnSelectors) {
+ const btn = document.querySelector(sel);
+ if (btn && !btn.disabled && btn.offsetParent !== null) {
+ btn.click();
+ addLog('📤 点击发送按钮', 'info');
+ sent = true;
+ break;
+ }
+ }
+ if (!sent) {
+ ['keydown', 'keypress', 'keyup'].forEach(type => {
+ input.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+ });
+ addLog('📤 Enter 发送', 'info');
+ }
+ return true;
+}
+
+function enqueueMessage(msg) {
+ state.messageQueue.push(msg);
+ addLog(`📥 消息入队 (队列长度: ${state.messageQueue.length})`, 'info');
+ processMessageQueue();
+}
+
+function processMessageQueue() {
+ if (state.isProcessingQueue || state.messageQueue.length === 0) return;
+ state.isProcessingQueue = true;
+ const msg = state.messageQueue.shift();
+ addLog(`📤 处理队列消息 (剩余: ${state.messageQueue.length})`, 'info');
+ sendMessage(msg);
+ setTimeout(() => { state.isProcessingQueue = false; processMessageQueue(); }, 3000);
+}
     // ============== DOM 操作 (Genspark 专用) ==============
   
   function getAIMessages() {
@@ -4321,8 +4427,8 @@ ${conversationText}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
-      // ===== 浏览器工具反向调用（来自 ΩCODE steps 中的 js_flow/eval_js/list_tabs）=====
-      case 'browser_tool_call': {
+      // ===== 浏览器工具反向调用：已迁移到 background.js handleBrowserToolCall =====
+      case 'browser_tool_call_DISABLED': {
         const { callId, tool: bTool, params: bParams } = msg;
         // Red switch: disabled tab ignores browser tool calls
         const dKeyBtc = 'agent_disabled_' + location.href.split('?')[1];
@@ -5007,6 +5113,64 @@ ${conversationText}
   };
 
   function initSSEListener() {
+    // ── ChatGPT: inject fetch stream hook into MAIN world ──
+    if (location.hostname.includes('chatgpt.com') || location.hostname.includes('openai.com')) {
+      var hookScript = document.createElement('script');
+      hookScript.textContent = '(' + function() {
+        if (window.__chatgptFetchHooked) return;
+        window.__chatgptFetchHooked = true;
+        var _f = window.fetch;
+        window.fetch = function() {
+          var args = arguments;
+          var url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
+          var r = _f.apply(this, args);
+          if (url.indexOf('backend-api') !== -1 && url.indexOf('conversation') !== -1 && url.indexOf('limit') === -1) {
+            r.then(function(resp) {
+              try {
+                var c = resp.clone();
+                var rd = c.body.getReader();
+                var dec = new TextDecoder();
+                var buf = '';
+                document.dispatchEvent(new CustomEvent('__sse_connected__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } }));
+                function pump() {
+                  rd.read().then(function(ch) {
+                    if (ch.done) { document.dispatchEvent(new CustomEvent('__sse_closed__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } })); return; }
+                    buf += dec.decode(ch.value, {stream: true});
+                    var lines = buf.split('\n'); buf = lines.pop();
+                    for (var i = 0; i < lines.length; i++) {
+                      var line = lines[i].trim();
+                      if (!line || line.indexOf('data: ') !== 0) continue;
+                      var js = line.substring(6);
+                      if (js === '[DONE]') { document.dispatchEvent(new CustomEvent('__sse_message_complete__', { detail: { timestamp: Date.now() } })); continue; }
+                      try {
+                        var p = JSON.parse(js);
+                        var pv = p.v ? (Array.isArray(p.v) ? p.v : [p]) : (p.p ? [p] : []);
+                        for (var j = 0; j < pv.length; j++) {
+                          if (pv[j].p === '/message/content/parts/0' && pv[j].o === 'append' && pv[j].v) {
+                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'content_delta', text: pv[j].v}), timestamp: Date.now() } }));
+                          }
+                          if (pv[j].p === '/message/status' && pv[j].o === 'replace' && pv[j].v === 'finished_successfully') {
+                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'status_change', status: 'finished_successfully'}), timestamp: Date.now() } }));
+                          }
+                        }
+                      } catch(e) {}
+                    }
+                    pump();
+                  }).catch(function() {});
+                }
+                pump();
+              } catch(e) {}
+            }).catch(function() {});
+          }
+          return r;
+        };
+        console.log('[ChatGPT-Hook] Fetch stream interceptor injected from content.js');
+      } + ')();';
+      document.documentElement.appendChild(hookScript);
+      hookScript.remove();
+      addLog('🔌 ChatGPT fetch hook injected', 'info');
+    }
+
     // 监听 SSE 连接建立
     document.addEventListener('__sse_connected__', (e) => {
       sseState.connected = true;

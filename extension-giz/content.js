@@ -34,7 +34,7 @@
   if (isDisabled) { console.log('[GizAgent] Disabled on this page'); return; }
 
   const CONFIG = {
-    SCAN_INTERVAL: 300, TIMEOUT_MS: 600000, MAX_RESULT_LENGTH: 50000, MAX_LOGS: 50, DEBUG: false,
+    SCAN_INTERVAL: 300, TIMEOUT_MS: 600000, MAX_RESULT_LENGTH: 50000, MAX_LOGS: 50, DEBUG: true,
     SELECTORS: {
       INPUT: 'textarea.q-field__native[placeholder*="Message"], div[contenteditable="true"], textarea[placeholder*="Message"]',
       SEND_BTN: 'button.q-btn[title="Send"], button[aria-label*="Send"]',
@@ -52,6 +52,8 @@
     totalCalls: 0, sessionStart: Date.now(),
     wsState: { currentSubscribeId: null, currentText: '', executedInCurrentMessage: false, lastMessageTime: 0, processedCommands: new Set() }
   };
+
+  window.__gizState = state;
 
   function addExecutedCall(hash) {
     state.executedCalls.add(hash);
@@ -93,10 +95,9 @@
       const fixed = str.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/,\s*([}\]])/g, '$1');
       return JSON.parse(fixed);
     } catch(e2) {}
-    // Level 3: regex add quotes to unquoted keys (last resort, can break string values)
+    // Level 3: eval as JS object literal (handles unquoted keys like {tool: "x"})
     try {
-      const aggressive = str.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'").replace(/,\s*([}\]])/g, '$1').replace(/(\{|,)\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-      return JSON.parse(aggressive);
+      return (new Function('return (' + str + ')'))();
     } catch(e3) { return null; }
   }
 
@@ -502,6 +503,8 @@
   function scanForToolCalls() {
     if (localStorage.getItem('giz_agent_disabled_' + location.pathname) === 'true') return;
     if (state.agentRunning) return;
+    // Skip if WS channel already handled this message
+    if (state.wsState && state.wsState.executedInCurrentMessage) return;
     if (isAIGenerating()) { state.generatingFalseCount = 0; return; }
 
     state.generatingFalseCount++;
@@ -587,6 +590,7 @@
 
   // 接收 AI 流式消息
   document.addEventListener('__giz_message__', (e) => {
+    console.log('[GizAgent] __giz_message__ received, detail:', e.detail);
     const { subscribeId, output, status } = e.detail;
     const ws = state.wsState;
 
@@ -611,6 +615,7 @@
       const text = ws.currentText;
       if (!text) return;
 
+      log('WS completed text:', JSON.stringify(text).substring(0, 300));
       const calls = parseToolCalls(text);
       if (calls.length === 0) return;
 

@@ -10,7 +10,10 @@
   ],
   "host_permissions": [
     "https://vear.com/*",
-    "https://www.vear.com/*"
+    "https://www.vear.com/*",
+    "https://www.genspark.ai/*",
+    "https://genspark.ai/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -18,9 +21,21 @@
   "content_scripts": [
     {
       "matches": ["https://vear.com/*", "https://www.vear.com/*"],
+      "js": ["ws-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://vear.com/*", "https://www.vear.com/*"],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["ws-hook.js"],
+      "matches": ["https://vear.com/*", "https://www.vear.com/*"]
     }
   ],
   "icons": {

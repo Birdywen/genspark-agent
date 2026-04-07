@@ -8,6 +8,225 @@
   if (window.__SSE_HOOK_ACTIVE__) return;
   window.__SSE_HOOK_ACTIVE__ = true;
 
+  // ── Hook 0: ChatGPT fetch stream interceptor ──────────────────
+  // ChatGPT streams conversation responses via fetch to /backend-api/*/conversation
+  // We clone the response body and parse SSE events from it
+  (function hookChatGPTFetch() {
+    if (!location.hostname.includes('chatgpt.com') && !location.hostname.includes('openai.com')) return;
+    const _origFetch = window.fetch;
+    window.fetch = function(...args) {
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      const result = _origFetch.apply(this, args);
+      if (url.includes('backend-api') && url.includes('conversation') && !url.includes('limit')) {
+        result.then(function(resp) {
+          try {
+            const cloned = resp.clone();
+            const reader = cloned.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            document.dispatchEvent(new CustomEvent('__sse_connected__', {
+              detail: { transport: 'chatgpt-fetch', url: url, timestamp: Date.now() }
+            }));
+            function pump() {
+              reader.read().then(function(chunk) {
+                if (chunk.done) {
+                  document.dispatchEvent(new CustomEvent('__sse_closed__', {
+                    detail: { transport: 'chatgpt-fetch', timestamp: Date.now() }
+                  }));
+                  return;
+                }
+                buffer += decoder.decode(chunk.value, {stream: true});
+                var lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (!line) continue;
+                  if (line.startsWith('data: ')) {
+                    var jsonStr = line.substring(6);
+                    if (jsonStr === '[DONE]') {
+                      document.dispatchEvent(new CustomEvent('__sse_message_complete__', {
+                        detail: { timestamp: Date.now() }
+                      }));
+                      continue;
+                    }
+                    try {
+                      var parsed = JSON.parse(jsonStr);
+                      // Extract content delta patches
+                      var patches = parsed.v ? (Array.isArray(parsed.v) ? parsed.v : [parsed]) : (parsed.p ? [parsed] : []);
+                      for (var j = 0; j < patches.length; j++) {
+                        var patch = patches[j];
+                        if (patch.p === '/message/content/parts/0' && patch.o === 'append' && patch.v) {
+                          document.dispatchEvent(new CustomEvent('__sse_data__', {
+                            detail: {
+                              data: JSON.stringify({ type: 'content_delta', text: patch.v }),
+                              timestamp: Date.now()
+                            }
+                          }));
+                        }
+                        if (patch.p === '/message/status' && patch.o === 'replace' && patch.v === 'finished_successfully') {
+                          document.dispatchEvent(new CustomEvent('__sse_data__', {
+                            detail: {
+                              data: JSON.stringify({ type: 'status_change', status: 'finished_successfully' }),
+                              timestamp: Date.now()
+                            }
+                          }));
+                        }
+                      }
+                    } catch(e) {}
+                  }
+                }
+                pump();
+              }).catch(function(e) {});
+            }
+            pump();
+          } catch(e) {}
+        }).catch(function(e) {});
+      }
+      return result;
+    };
+    // Protect our fetch hook from being overwritten by ChatGPT's instrumentation
+    var __ourFetch = window.fetch;
+    Object.defineProperty(window, 'fetch', {
+      get: function() { return __ourFetch; },
+      set: function(newFetch) {
+        // Allow the overwrite but wrap it to preserve our stream interception
+        var theirFetch = newFetch;
+        __ourFetch = function(...args) {
+          var url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+          var result = theirFetch.apply(this, args);
+          if (url.includes('backend-api') && url.includes('conversation') && !url.includes('limit')) {
+            result.then(function(resp) {
+              try {
+                var cloned = resp.clone();
+                var reader = cloned.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = '';
+                document.dispatchEvent(new CustomEvent('__sse_connected__', {
+                  detail: { transport: 'chatgpt-fetch', url: url, timestamp: Date.now() }
+                }));
+                function pump() {
+                  reader.read().then(function(chunk) {
+                    if (chunk.done) {
+                      document.dispatchEvent(new CustomEvent('__sse_closed__', {
+                        detail: { transport: 'chatgpt-fetch', timestamp: Date.now() }
+                      }));
+                      return;
+                    }
+                    buffer += decoder.decode(chunk.value, {stream: true});
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    for (var i = 0; i < lines.length; i++) {
+                      var line = lines[i].trim();
+                      if (!line) continue;
+                      if (line.startsWith('data: ')) {
+                        var jsonStr = line.substring(6);
+                        if (jsonStr === '[DONE]') {
+                          document.dispatchEvent(new CustomEvent('__sse_message_complete__', {
+                            detail: { timestamp: Date.now() }
+                          }));
+                          continue;
+                        }
+                        try {
+                          var parsed = JSON.parse(jsonStr);
+                          var patches = parsed.v ? (Array.isArray(parsed.v) ? parsed.v : [parsed]) : (parsed.p ? [parsed] : []);
+                          for (var j = 0; j < patches.length; j++) {
+                            var patch = patches[j];
+                            if (patch.p === '/message/content/parts/0' && patch.o === 'append' && patch.v) {
+                              document.dispatchEvent(new CustomEvent('__sse_data__', {
+                                detail: {
+                                  data: JSON.stringify({ type: 'content_delta', text: patch.v }),
+                                  timestamp: Date.now()
+                                }
+                              }));
+                            }
+                            if (patch.p === '/message/status' && patch.o === 'replace' && patch.v === 'finished_successfully') {
+                              document.dispatchEvent(new CustomEvent('__sse_data__', {
+                                detail: {
+                                  data: JSON.stringify({ type: 'status_change', status: 'finished_successfully' }),
+                                  timestamp: Date.now()
+                                }
+                              }));
+                            }
+                          }
+                        } catch(e) {}
+                      }
+                    }
+                    pump();
+                  }).catch(function(e) {});
+                }
+                pump();
+              } catch(e) {}
+            }).catch(function(e) {});
+          }
+          return result;
+        };
+        console.log('[SSE-Hook] ChatGPT fetch re-hooked after third-party overwrite');
+      },
+      configurable: true
+    });
+    console.log('[SSE-Hook] ChatGPT fetch stream interceptor installed');
+    // Re-hook fetch after ChatGPT's instrumentation overwrites it
+    // Use multiple delayed attempts to ensure we catch it
+    function rehookFetch() {
+      var desc = Object.getOwnPropertyDescriptor(window, 'fetch');
+      if (desc && desc.get) return; // already protected
+      var currentFetch = window.fetch;
+      if (currentFetch === _origFetch) return; // not overwritten yet
+      // Wrap their fetch with our stream interceptor
+      var theirFetch = currentFetch;
+      window.fetch = function(...args) {
+        var url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+        var result = theirFetch.apply(this, args);
+        if (url.includes('backend-api') && url.includes('conversation') && !url.includes('limit')) {
+          result.then(function(resp) {
+            try {
+              var cloned = resp.clone();
+              var rd = cloned.body.getReader();
+              var dec = new TextDecoder();
+              var buf = '';
+              document.dispatchEvent(new CustomEvent('__sse_connected__', {
+                detail: { transport: 'chatgpt-fetch', url: url, timestamp: Date.now() }
+              }));
+              function pump() {
+                rd.read().then(function(ch) {
+                  if (ch.done) { document.dispatchEvent(new CustomEvent('__sse_closed__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } })); return; }
+                  buf += dec.decode(ch.value, {stream: true});
+                  var lines = buf.split('\n'); buf = lines.pop();
+                  for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (!line || !line.startsWith('data: ')) continue;
+                    var js = line.substring(6);
+                    if (js === '[DONE]') { document.dispatchEvent(new CustomEvent('__sse_message_complete__', { detail: { timestamp: Date.now() } })); continue; }
+                    try {
+                      var p = JSON.parse(js);
+                      var pv = p.v ? (Array.isArray(p.v) ? p.v : [p]) : (p.p ? [p] : []);
+                      for (var j = 0; j < pv.length; j++) {
+                        if (pv[j].p === '/message/content/parts/0' && pv[j].o === 'append' && pv[j].v) {
+                          document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type:'content_delta',text:pv[j].v}), timestamp: Date.now() } }));
+                        }
+                        if (pv[j].p === '/message/status' && pv[j].o === 'replace' && pv[j].v === 'finished_successfully') {
+                          document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type:'status_change',status:'finished_successfully'}), timestamp: Date.now() } }));
+                        }
+                      }
+                    } catch(e) {}
+                  }
+                  pump();
+                }).catch(function() {});
+              }
+              pump();
+            } catch(e) {}
+          }).catch(function() {});
+        }
+        return result;
+      };
+      console.log('[SSE-Hook] ChatGPT fetch re-hooked after instrumentation overwrite');
+    }
+    // Try at 500ms, 1s, 2s, 3s, 5s after page load
+    [500, 1000, 2000, 3000, 5000].forEach(function(delay) {
+      setTimeout(rehookFetch, delay);
+    });
+  })();
+
   // Per-tab disable check
   const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
   if (localStorage.getItem(DISABLED_KEY) === 'true') {

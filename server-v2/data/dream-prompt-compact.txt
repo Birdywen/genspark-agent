@@ -1,0 +1,104 @@
+# Dream: Memory Consolidation for AI Agent System
+
+You are performing a dream — a reflective pass over an AI agent's memory stores.
+Your job: analyze recent activity, extract new lessons, identify stale/duplicate data, and produce actionable updates.
+
+## Current Memory State
+memory table: 206 entries, 430.2KB
+local_store table: 115 entries, 126.6KB
+
+### memory entries:
+### local_store entries:
+  ... (116 entries skipped)
+## Recent Failures (last 24h)
+Failure patterns: run_process: 79 fails, wechat: 4 fails, web_search: 3 fails, memory: 1 fails, eval_js: 1 fails, edit_file: 1 fails, db_query: 1 fails, ask_ai: 1 fails
+Details:
+[run_process] {"command_line":"bash /private/tmp/cmd_1775056683451.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && tail -50 logs/agent.log | grep -i 'web_search\\|search\\|err → exit non-zero
+[eval_js] {"code":"return fetch(\"https://html.duckduckgo.com/html/?q=Claude%20opus%204.6%20release\")\n.then(r=>r.text())\n.then( → Failed to fetch
+[web_search] {"q":"Claude opus 4.6 release date"} → require is not defined
+[run_process] {"command_line":"bash /private/tmp/cmd_1775038350570.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && sed -n '186,198p' sys-tools.js | cat -A","mode":"shell","com → exit non-zero
+[edit_file] {"path":"/Users/yay/workspace/genspark-agent/server-v2/sys-tools.js","edits":[{"oldText":"    const result = await evalI → Could not find exact match for edit:
+    const result = await evalInBrowser(code, 60000);
+    return
+[run_process] {"command_line":"bash /private/tmp/cmd_1775033336592.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775015551675.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/forged-benchmark && python3 -c 'import json;d=json.load(open(\"evolve-forged-v9.json\")) → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775014621595.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cd ~/workspace/genspark-agent/server-v2 && node db-stats.cjs 2>&1","mode":"shell","command":"cd ~/works → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775007546021.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+[run_process] {"command_line":"cp /tmp/db-stats.cjs ~/workspace/genspark-agent/server-v2/ && cd ~/workspace/genspark-agent/server-v2 & → exit non-zero
+[run_process] {"command_line":"bash /private/tmp/cmd_1775007494525.sh","mode":"shell","_noAutoScript":true,"command":"bash /private/tm → exit non-zero
+
+## Hot Operations (last 24h)
+run_process: 645, eval_js: 36, vfs_local_write: 31, wechat: 26, ask_ai: 20, bg_run: 16, compress: 12, web_search: 12, db_query: 7, edit_file: 5
+
+## Existing Lessons (forged slot in memory table)
+- lesson-os-permission-handling: WRONG: assuming osascript or bg_status has immediate system access
+CORRECT: handle -25211 assistive access denied by pro
+- lesson-sqlite-memory-schema: WRONG: used 'value' as column name for local_store/memory tables
+CORRECT: use 'content' column name for data storage in 
+- lesson-wechat-window-polling: WRONG: continuous retries when 'No WeChat window' is detected
+CORRECT: implement backoff or verify window state before r
+- lesson-bash-vs-python-boundary: WRONG: 用bash sed/awk处理复杂嵌套文本(XML、多行消息) → 转义地狱、解析崩溃
+CORRECT: 简单流程用bash，复杂文本解析迁移到Python(re/json/xml)
+CONTEXT: agent工具选型。ba
+- lesson-esm-cjs-interop: WRONG: 在type:module的ESM项目中用.js后缀写require语法
+CORRECT: CommonJS脚本改名.cjs，或重构为import语句
+CONTEXT: Node.js混合模块开发。package.json有ty
+- lesson-json-over-csv: WRONG: sqlcipher用.mode csv或|分隔输出 → 内容含分隔符导致解析崩溃(ValueError: not enough values to unpack)
+CORRECT: .mode json输出，天然处理特殊字符转
+- lesson-private-member-access: WRONG: from module import * 后访问 _private_var → NameError（import *忽略_开头成员）
+CORRECT: import module as m → m._private_var 通
+- lesson-sandbox-permission-bypass: WRONG: 直接读写macOS沙箱目录(~/Library/Containers/) → 弹权限窗口阻断agent
+CORRECT: 先cp到用户目录(~/workspace/)再操作本地副本，避免TCC弹窗
+CONTEXT: macOS
+- lesson-schema-first-query: WRONG: 凭记忆猜列名写SQL → no such column
+CORRECT: 先 .schema tablename 或 PRAGMA table_info('tablename') 确认真实列名
+CONTEXT: 操作未知/动态
+- lesson-evalInBrowser: evalInBrowser 桥接踩坑实录(2026-03-27 by ask_ai claude-opus-4-6):
+
+1. server端直接带cookie调API -> Cloudflare拦截(TLS/JA3指纹)
+2. 解法: 让
+- lesson-project-db: # project.db (2026-03-26) - 代码即数据架构
+71 files, 627K chars, 2 projects
+改代码=SQL UPDATE, 搜代码=SQL LIKE, 自动history触发器
+bash ext
+- lesson-sqlite-replace: # SQLite 原地编辑（不要取出来改再写回去）
+
+## 核心原则
+DB 内容修改 → sqlite3 原地 SQL，零中间文件。
+
+## 常用操作
+简单替换: UPDATE table SET content = REPLACE(con
+- lesson-footer-is-fragment: 99-footer.js 是 build 模块片段，不是独立 JS 文件。单独 node -c 永远报错。验证语法只能用: bash extension/build.sh && node -c extension/content.js
+
+## Omega Platform Lessons (from omega-lessons slot)
+- lesson-001: gemini-3-flash 在 apipod 上渠道不可用，遇到空响应时换 gpt-4o 或 deepseek-chat [active]
+- lesson-002: wechat send 参数是 action/to/content，不是 message [active]
+- lesson-003: ΩCODE 块必须放在回复最后，发完就停，不要在后面加文字 [active]
+
+---
+
+Respond with ONLY valid JSON (no markdown fences):
+{
+  "new_lessons": [
+    {"key": "lesson-xxx", "content": "WRONG: ... → CORRECT: ...\nCONTEXT: ..."}
+  ],
+  "stale_entries": [
+    {"table": "memory|local_store", "slot": "...", "key": "...", "reason": "..."}
+  ],
+  "duplicate_merges": [
+    {"keep": {"table":"...","slot":"...","key":"..."}, "remove": {"table":"...","slot":"...","key":"..."}, "reason": "..."}
+  ],
+  "summary": "One paragraph summary of this dream cycle's findings"
+}
+
+Rules:
+1. Only create new_lessons for REAL failure patterns visible in the data above
+2. Mark entries stale only if clearly outdated (old session states, superseded versions)
+3. Merge duplicates only when two entries serve the exact same purpose
+4. Be conservative — when in doubt, keep it
+5. key names for new_lessons must start with "lesson-"
+6. Respond with ONLY the JSON object, nothing else

@@ -1061,6 +1061,7 @@ ${toolSummary}
 
 
   function executeToolCall(tool, callHash) {
+    console.log('[Agent-DEBUG] executeToolCall:', tool.name, callHash);
     clearToolCallDetection();
     const callId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     
@@ -2258,6 +2259,7 @@ ${tip}
         break;
 
       case 'tool_result':
+        console.log('[Agent-DEBUG] tool_result received:', msg.tool, msg.id, typeof msg.result, String(msg.result).substring(0,100));
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
         if (state.executedCalls.has(resultHash)) {

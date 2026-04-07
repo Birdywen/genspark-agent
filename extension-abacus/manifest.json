@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "Abacus AI Agent Bridge",
+  "version": "1.0.0",
+  "description": "将 Abacus AI 聊天窗口转变为 AI Agent 运行时",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "scripting",
+    "clipboardWrite",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://apps.abacus.ai/*",
+    "https://*.abacus.ai/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://apps.abacus.ai/chatllm/*"
+      ],
+      "js": [
+        "sse-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://apps.abacus.ai/chatllm/*"
+      ],
+      "js": [
+        "video-generator.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://apps.abacus.ai/chatllm/*"
+      ],
+      "js": [
+        "fetch-hook.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "panel-enhancer.js",
+        "video-generator.js",
+        "sse-hook.js",
+        "fetch-hook.js"
+      ],
+      "matches": [
+        "https://apps.abacus.ai/*"
+      ]
+    }
+  ]
+}
