@@ -37,6 +37,7 @@ import SelfValidator from './self-validator.js';
 import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
+import { createAiBridge } from './ai-bridge.js';
 import http from "http";
 import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
@@ -1121,7 +1122,16 @@ async function main() {
             ws.send(JSON.stringify({ type: 'task_status_result', ...status }));
             break;
           
-          // ── 委托 ws-handlers 处理 ──
+          case 'ai_text': {
+            if (!global._aiBridge) {
+              const { createAiBridge: cab } = await import('./ai-bridge.js');
+              global._aiBridge = cab({ handleToolCall, taskEngine, logger });
+            }
+            await global._aiBridge(ws, msg);
+            break;
+          }
+
+                    // ── 委托 ws-handlers 处理 ──
           default: {
             if (wsHandlers[msg.type]) {
               await wsHandlers[msg.type](msg);

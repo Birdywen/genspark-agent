@@ -256,7 +256,7 @@ function sendToTab(tabId, message) {
 // 广播给所有 Genspark Tab
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
-  chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
+  chrome.tabs.query({ url: ['https://www.genspark.ai/*', 'https://genspark.ai/*', 'https://vear.com/*', 'https://www.vear.com/*'] }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
     tabs.forEach((tab) => {
       chrome.tabs.sendMessage(tab.id, message).catch((e) => {
