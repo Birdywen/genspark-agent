@@ -384,8 +384,10 @@ handlers.set('aidrive', async (params) => {
     // GSK API blocks python/node fetch (Cloudflare), must use curl
     const jsonBody = JSON.stringify(body).replace(/'/g, "'\"'\"'");
     const cmd = `curl -s -X POST 'https://www.genspark.ai/api/tool_cli/aidrive' -H 'Content-Type: application/json' -H 'X-Api-Key: ${getGskApiKey()}' -d '${jsonBody}'`;
-    const result = execSync(cmd, { encoding: 'utf8', timeout: 60000, shell: true });
-    const data = JSON.parse(result);
+    const result = execSync(cmd, { encoding: 'utf8', timeout: 120000, shell: true });
+    // API may return multiple JSON lines (heartbeat + result), take last valid one
+    const lines = result.trim().split('\n').filter(l => l.startsWith('{'));
+    const data = JSON.parse(lines[lines.length - 1]);
     if (data.status !== 'ok') return { success: false, error: data.message || 'API error' };
     return { success: true, result: data.session_state?.aidrive_result || data.data };
   } catch (e) {
