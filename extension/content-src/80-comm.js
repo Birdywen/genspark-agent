@@ -502,17 +502,6 @@
           log('终端结果，跳过聊天框注入:', msg.id);
           break;
         }
-        // 存档检查命令不注入聊天框，但 digest 结果需要注入
-        if (msg.id && msg.id.startsWith('save_check_')) {
-          log('存档检查结果，跳过聊天框注入:', msg.id);
-          break;
-        }
-        if (msg.id && msg.id.startsWith('save_') && msg.success && msg.result) {
-          log('存档完成，注入 digest 结果到聊天框');
-          const digestText = '💾 **项目上下文已更新：**\n\n' + msg.result;
-          sendMessageSafe(digestText);
-          break;
-        }
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
         if (state.executedCalls.has(resultHash)) {

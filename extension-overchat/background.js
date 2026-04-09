@@ -431,8 +431,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             world: world,
             func: async (code) => {
               try {
-                const fn = new Function(code);
-                let result = fn();
+                let result = eval(code);
                 if (result && typeof result.then === 'function') {
                   result = await result;
                 }
@@ -737,8 +736,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             target: { tabId: targetTab.id },
             func: async (codeStr) => {
               try {
-                const fn = new Function(codeStr);
-                const result = fn();
+                let result = eval(codeStr);
                 // If result is a Promise, await it
                 if (result && typeof result.then === 'function') {
                   return await result;

@@ -316,7 +316,7 @@ function log(...args) {
           // Include message context in hash so same command in different messages can execute
           // Unified hash format: shared between SSE and DOM paths to prevent duplicate execution
           // Use round count as message context so same command in different rounds can execute
-          const paramStr = JSON.stringify(tool.params).substring(0, 200);
+          const _fullParamStr = JSON.stringify(tool.params); const paramStr = _fullParamStr.substring(0, 200) + ":len=" + _fullParamStr.length;
           const roundCtx = state.roundCount || 0;
           const callHash = 'cmd:' + roundCtx + ':' + tool.name + ':' + paramStr;
           if (!state.executedCalls.has(callHash)) {
@@ -1457,7 +1457,7 @@ ${toolSummary}
     
     for (const tool of toolCalls) {
       // Unified hash format: shared between SSE and DOM paths to prevent duplicate execution
-      const paramStr = JSON.stringify(tool.params).substring(0, 200);
+      const _fullParamStr = JSON.stringify(tool.params); const paramStr = _fullParamStr.substring(0, 200) + ":len=" + _fullParamStr.length;
       const roundCtx = state.roundCount || 0;
       const callHash = `cmd:${roundCtx}:${tool.name}:${paramStr}`;
       

@@ -371,7 +371,6 @@
     
     // 加载面板增强模块
     loadPanelEnhancer();
-    // VideoGenerator 已通过 manifest content_scripts 自动加载
 
     // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();
@@ -401,20 +400,6 @@
     }, 2000);
     
     // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
-    let lastCheckedUserMsgCount = 0;
-    setInterval(() => {
-      const userMessages = document.querySelectorAll('.conversation-statement.user');
-      if (userMessages.length > lastCheckedUserMsgCount) {
-        const lastUserMsg = userMessages[userMessages.length - 1];
-        const text = lastUserMsg.innerText || '';
-        // 排除跨 Tab 消息的内容
-        if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
-          detectAgentId(text);
-
-        }
-        lastCheckedUserMsgCount = userMessages.length;
-      }
-    }, 1000);
 
     setTimeout(() => {
       chrome.runtime.sendMessage({ type: 'GET_WS_STATUS' }, resp => {
@@ -438,14 +423,11 @@
     addLog('🚀 Agent v34 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
-    // 恢复之前保存的 Agent 身份
-    restoreAgentId();
     
     // 启动 AI 响应超时监控
     startWakeupMonitor();
     
     // 初始化 Agent ID 显示
-    setTimeout(updateAgentIdDisplay, 100);
   }
 
   if (document.readyState === 'loading') {

@@ -8,7 +8,7 @@
     panel.innerHTML = `
       <div id="agent-header">
         <span id="agent-title">🤖 Agent v34</span>
-        <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <span id="agent-id" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
       </div>
@@ -20,13 +20,9 @@
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-terminal" title="迷你终端">⌨️ 终端</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
-        <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">💻 本地</button>
         <button id="agent-reload-ext" title="重载扩展">♻️</button>
-        <button id="agent-list" title="查看在线Agent">👥</button>
-        <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
         <button id="agent-compress" title="上下文压缩：用预设总结替换当前对话">🗜️ 压缩</button>
-        <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -144,16 +140,12 @@
       #agent-actions button:hover { background: #4b5563; }
       #agent-copy-prompt { background: #3730a3 !important; }
       #agent-copy-prompt:hover { background: #4338ca !important; }
-      #agent-save { background: #065f46 !important; }
-      #agent-save:hover { background: #047857 !important; }
       #agent-compress { background: #92400e !important; }
       #agent-compress:hover { background: #b45309 !important; }
       #agent-compress.ready { background: #dc2626 !important; animation: pulse-compress 1.5s infinite; }
       #agent-compress.warning { background: #ea580c !important; animation: pulse-warning 3s infinite; }
       @keyframes pulse-compress { 0%,100%{opacity:1} 50%{opacity:0.6} }
       @keyframes pulse-warning { 0%,100%{opacity:1} 50%{opacity:0.7} }
-      #agent-video { background: #dc2626 !important; }
-      #agent-video:hover { background: #ef4444 !important; }
       #agent-terminal { background: #7c3aed !important; }
       #agent-terminal:hover { background: #8b5cf6 !important; }
       #mini-terminal {
@@ -1561,95 +1553,6 @@ ${conversationText}
       }
     }, 5000);
 
-    document.getElementById('agent-save').onclick = () => {
-      addLog('💾 存档中...', 'info');
-      const saveBtn = document.getElementById('agent-save');
-      saveBtn.disabled = true;
-      saveBtn.textContent = '⏳';
-      
-      const historyPath = '/Users/yay/workspace/genspark-agent/server-v2/command-history.json';
-      
-      // 提取对话内容（最近 30 条消息）
-      function extractConversation() {
-        const msgs = document.querySelectorAll('.conversation-statement');
-        const lines = [];
-        const recent = Array.from(msgs).slice(-30);
-        for (const msg of recent) {
-          const isUser = msg.classList.contains('user');
-          const isAI = msg.classList.contains('assistant');
-          const contentEl = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
-          let text = (contentEl ? contentEl.innerText : msg.innerText) || '';
-          // 截断工具结果，只保留前 200 字符
-          text = text.replace(/\[执行结果\][\s\S]{200,}/g, (m) => m.substring(0, 200) + '...(截断)');
-          // 截断过长消息
-          if (text.length > 1000) text = text.substring(0, 1000) + '...(截断)';
-          if (isUser) lines.push('## 用户\n' + text);
-          else if (isAI) lines.push('## AI\n' + text);
-        }
-        return lines.join('\n\n');
-      }
-      
-      const conversation = extractConversation();
-      
-      // 先查活跃项目
-      chrome.runtime.sendMessage({
-        type: 'SEND_TO_SERVER',
-        payload: {
-          type: 'tool_call',
-          id: 'save_check_' + Date.now(),
-          tool: 'run_command',
-          params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js status' }
-        }
-      }, (statusResp) => {
-        let project = 'genspark-agent';
-        if (statusResp && statusResp.result) {
-          const match = String(statusResp.result).match(/当前项目:\s*(\S+)/);
-          if (match && match[1] !== '(未设置)') project = match[1];
-        }
-        
-        const convPath = '/Users/yay/workspace/.agent_memory/projects/' + project + '/conversation_summary.md';
-        const convContent = '# 对话记录 - ' + project + '\n> ' + new Date().toISOString().substring(0, 16) + '\n\n' + conversation;
-        
-        // 步骤1: 保存对话内容
-        chrome.runtime.sendMessage({
-          type: 'SEND_TO_SERVER',
-          payload: {
-            type: 'tool_call',
-            id: 'save_conv_' + Date.now(),
-            tool: 'write_file',
-            params: { path: convPath, content: convContent }
-          }
-        }, () => {
-          // 步骤2: 生成 digest
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: {
-              type: 'tool_call',
-              id: 'save_' + Date.now(),
-              tool: 'run_command',
-              params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
-            }
-          }, (resp) => {
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 存档';
-            if (resp && resp.success) {
-              addLog('💾 存档成功！项目: ' + project + ' (含对话记录)', 'success');
-            } else {
-              addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
-            }
-          });
-        });
-      });
-    };
-
-    document.getElementById('agent-video').onclick = () => {
-      if (window.VideoGenerator) {
-        window.VideoGenerator.showTopicDialog(addLog);
-      } else {
-        addLog('❌ VideoGenerator 模块未加载，请刷新页面', 'error');
-      }
-    };
-
     document.getElementById('agent-clear').onclick = () => {
       document.getElementById('agent-logs').innerHTML = '';
       state.executedCalls.clear();
@@ -1874,21 +1777,6 @@ ${conversationText}
       addLog('🔄 重连中...', 'info');
     };
 
-    // 刷新工具列表
-    document.getElementById('agent-reload-tools').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'RELOAD_TOOLS' }, (resp) => {
-        if (chrome.runtime.lastError) {
-          addLog('❌ 发送刷新请求失败', 'error');
-          return;
-        }
-        if (resp?.success) {
-          addLog('🔧 正在刷新工具列表...', 'info');
-        } else {
-          addLog('❌ ' + (resp?.error || '刷新失败'), 'error');
-        }
-      });
-    };
-
     // 切换本地/云端服务器
     document.getElementById('agent-reload-ext').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RELOAD_EXTENSION' });
@@ -1964,41 +1852,7 @@ ${conversationText}
     };
     // 初始化显示
     updateRoundDisplay();
-    // 查看在线 Agent 列表
-    document.getElementById('agent-list').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
-        if (chrome.runtime.lastError) {
-          addLog(`❌ 查询失败: ${chrome.runtime.lastError.message}`, 'error');
-          return;
-        }
-        if (resp?.success && resp.agents) {
-          if (resp.agents.length === 0) {
-            addLog('📭 暂无在线 Agent', 'info');
-          } else {
-            const list = resp.agents.map(a => `${a.agentId}(Tab:${a.tabId})`).join(', ');
-            addLog(`👥 在线: ${list}`, 'info');
-          }
-        } else {
-          addLog('❌ 查询失败', 'error');
-        }
-      });
-    };
-
-    // 点击 Agent ID 也显示在线列表
-    document.getElementById('agent-id').onclick = () => {
-      document.getElementById('agent-list').click();
-    };
-
     makeDraggable(panel);
-  }
-
-  // 更新面板上的 Agent ID 显示
-  function updateAgentIdDisplay() {
-    const el = document.getElementById('agent-id');
-    if (el) {
-      el.textContent = agentId ? `[${agentId}]` : '[未设置]';
-      el.style.color = agentId ? '#10b981' : '#9ca3af';
-    }
   }
 
   function makeDraggable(el) {

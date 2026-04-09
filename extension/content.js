@@ -140,7 +140,6 @@
     document.head.appendChild(script);
   }
 
-  // VideoGenerator 通过 manifest.json content_scripts 在 content.js 之前加载，无需手动加载
 
 
   
@@ -2200,7 +2199,7 @@ ${tip}${contextInfo}
     panel.innerHTML = `
       <div id="agent-header">
         <span id="agent-title">🤖 Agent v34</span>
-        <span id="agent-id" title="点击查看在线Agent" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:4px"></span>
+        <span id="agent-id" style="font-size:10px;color:#9ca3af;margin-left:4px"></span>
         <span id="agent-status">初始化</span>
         <span id="agent-round" title="点击重置轮次" style="cursor:pointer;font-size:10px;color:#9ca3af;margin-left:6px">R:0</span>
       </div>
@@ -2212,13 +2211,9 @@ ${tip}${contextInfo}
         <button id="agent-clear" title="清除日志">🗑️</button>
         <button id="agent-terminal" title="迷你终端">⌨️ 终端</button>
         <button id="agent-reconnect" title="重连服务器">🔄</button>
-        <button id="agent-reload-tools" title="刷新工具列表">🔧</button>
         <button id="agent-switch-server" title="切换本地/云端">💻 本地</button>
         <button id="agent-reload-ext" title="重载扩展">♻️</button>
-        <button id="agent-list" title="查看在线Agent">👥</button>
-        <button id="agent-save" title="存档：保存当前进度到项目记忆">💾 存档</button>
         <button id="agent-compress" title="上下文压缩：用预设总结替换当前对话">🗜️ 压缩</button>
-        <button id="agent-video" title="生成视频：选题→Opus Pro→YouTube">🎬 视频</button>
         <button id="agent-minimize" title="最小化">➖</button>
       </div>
     `;
@@ -2336,16 +2331,12 @@ ${tip}${contextInfo}
       #agent-actions button:hover { background: #4b5563; }
       #agent-copy-prompt { background: #3730a3 !important; }
       #agent-copy-prompt:hover { background: #4338ca !important; }
-      #agent-save { background: #065f46 !important; }
-      #agent-save:hover { background: #047857 !important; }
       #agent-compress { background: #92400e !important; }
       #agent-compress:hover { background: #b45309 !important; }
       #agent-compress.ready { background: #dc2626 !important; animation: pulse-compress 1.5s infinite; }
       #agent-compress.warning { background: #ea580c !important; animation: pulse-warning 3s infinite; }
       @keyframes pulse-compress { 0%,100%{opacity:1} 50%{opacity:0.6} }
       @keyframes pulse-warning { 0%,100%{opacity:1} 50%{opacity:0.7} }
-      #agent-video { background: #dc2626 !important; }
-      #agent-video:hover { background: #ef4444 !important; }
       #agent-terminal { background: #7c3aed !important; }
       #agent-terminal:hover { background: #8b5cf6 !important; }
       #mini-terminal {
@@ -3753,95 +3744,6 @@ ${conversationText}
       }
     }, 5000);
 
-    document.getElementById('agent-save').onclick = () => {
-      addLog('💾 存档中...', 'info');
-      const saveBtn = document.getElementById('agent-save');
-      saveBtn.disabled = true;
-      saveBtn.textContent = '⏳';
-      
-      const historyPath = '/Users/yay/workspace/genspark-agent/server-v2/command-history.json';
-      
-      // 提取对话内容（最近 30 条消息）
-      function extractConversation() {
-        const msgs = document.querySelectorAll('.conversation-statement');
-        const lines = [];
-        const recent = Array.from(msgs).slice(-30);
-        for (const msg of recent) {
-          const isUser = msg.classList.contains('user');
-          const isAI = msg.classList.contains('assistant');
-          const contentEl = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
-          let text = (contentEl ? contentEl.innerText : msg.innerText) || '';
-          // 截断工具结果，只保留前 200 字符
-          text = text.replace(/\[执行结果\][\s\S]{200,}/g, (m) => m.substring(0, 200) + '...(截断)');
-          // 截断过长消息
-          if (text.length > 1000) text = text.substring(0, 1000) + '...(截断)';
-          if (isUser) lines.push('## 用户\n' + text);
-          else if (isAI) lines.push('## AI\n' + text);
-        }
-        return lines.join('\n\n');
-      }
-      
-      const conversation = extractConversation();
-      
-      // 先查活跃项目
-      chrome.runtime.sendMessage({
-        type: 'SEND_TO_SERVER',
-        payload: {
-          type: 'tool_call',
-          id: 'save_check_' + Date.now(),
-          tool: 'run_command',
-          params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js status' }
-        }
-      }, (statusResp) => {
-        let project = 'genspark-agent';
-        if (statusResp && statusResp.result) {
-          const match = String(statusResp.result).match(/当前项目:\s*(\S+)/);
-          if (match && match[1] !== '(未设置)') project = match[1];
-        }
-        
-        const convPath = '/Users/yay/workspace/.agent_memory/projects/' + project + '/conversation_summary.md';
-        const convContent = '# 对话记录 - ' + project + '\n> ' + new Date().toISOString().substring(0, 16) + '\n\n' + conversation;
-        
-        // 步骤1: 保存对话内容
-        chrome.runtime.sendMessage({
-          type: 'SEND_TO_SERVER',
-          payload: {
-            type: 'tool_call',
-            id: 'save_conv_' + Date.now(),
-            tool: 'write_file',
-            params: { path: convPath, content: convContent }
-          }
-        }, () => {
-          // 步骤2: 生成 digest
-          chrome.runtime.sendMessage({
-            type: 'SEND_TO_SERVER',
-            payload: {
-              type: 'tool_call',
-              id: 'save_' + Date.now(),
-              tool: 'run_command',
-              params: { command: 'node /Users/yay/workspace/.agent_memory/memory_manager_v2.js digest ' + project + ' ' + historyPath }
-            }
-          }, (resp) => {
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 存档';
-            if (resp && resp.success) {
-              addLog('💾 存档成功！项目: ' + project + ' (含对话记录)', 'success');
-            } else {
-              addLog('❌ 存档失败: ' + (resp?.error || '未知错误'), 'error');
-            }
-          });
-        });
-      });
-    };
-
-    document.getElementById('agent-video').onclick = () => {
-      if (window.VideoGenerator) {
-        window.VideoGenerator.showTopicDialog(addLog);
-      } else {
-        addLog('❌ VideoGenerator 模块未加载，请刷新页面', 'error');
-      }
-    };
-
     document.getElementById('agent-clear').onclick = () => {
       document.getElementById('agent-logs').innerHTML = '';
       state.executedCalls.clear();
@@ -4066,21 +3968,6 @@ ${conversationText}
       addLog('🔄 重连中...', 'info');
     };
 
-    // 刷新工具列表
-    document.getElementById('agent-reload-tools').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'RELOAD_TOOLS' }, (resp) => {
-        if (chrome.runtime.lastError) {
-          addLog('❌ 发送刷新请求失败', 'error');
-          return;
-        }
-        if (resp?.success) {
-          addLog('🔧 正在刷新工具列表...', 'info');
-        } else {
-          addLog('❌ ' + (resp?.error || '刷新失败'), 'error');
-        }
-      });
-    };
-
     // 切换本地/云端服务器
     document.getElementById('agent-reload-ext').onclick = () => {
       chrome.runtime.sendMessage({ type: 'RELOAD_EXTENSION' });
@@ -4156,41 +4043,7 @@ ${conversationText}
     };
     // 初始化显示
     updateRoundDisplay();
-    // 查看在线 Agent 列表
-    document.getElementById('agent-list').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'GET_REGISTERED_AGENTS' }, (resp) => {
-        if (chrome.runtime.lastError) {
-          addLog(`❌ 查询失败: ${chrome.runtime.lastError.message}`, 'error');
-          return;
-        }
-        if (resp?.success && resp.agents) {
-          if (resp.agents.length === 0) {
-            addLog('📭 暂无在线 Agent', 'info');
-          } else {
-            const list = resp.agents.map(a => `${a.agentId}(Tab:${a.tabId})`).join(', ');
-            addLog(`👥 在线: ${list}`, 'info');
-          }
-        } else {
-          addLog('❌ 查询失败', 'error');
-        }
-      });
-    };
-
-    // 点击 Agent ID 也显示在线列表
-    document.getElementById('agent-id').onclick = () => {
-      document.getElementById('agent-list').click();
-    };
-
     makeDraggable(panel);
-  }
-
-  // 更新面板上的 Agent ID 显示
-  function updateAgentIdDisplay() {
-    const el = document.getElementById('agent-id');
-    if (el) {
-      el.textContent = agentId ? `[${agentId}]` : '[未设置]';
-      el.style.color = agentId ? '#10b981' : '#9ca3af';
-    }
   }
 
   function makeDraggable(el) {
@@ -4427,8 +4280,8 @@ ${conversationText}
         sendMessageSafe(`**[批量执行错误]** ${msg.error}`);
         break;
 
-      // ===== 浏览器工具反向调用：已迁移到 background.js handleBrowserToolCall =====
-      case 'browser_tool_call_DISABLED': {
+      // ===== 浏览器工具反向调用（来自 ΩCODE steps 中的 js_flow/eval_js/list_tabs）=====
+      case 'browser_tool_call': {
         const { callId, tool: bTool, params: bParams } = msg;
         // Red switch: disabled tab ignores browser tool calls
         const dKeyBtc = 'agent_disabled_' + location.href.split('?')[1];
@@ -4780,17 +4633,6 @@ ${conversationText}
           log('终端结果，跳过聊天框注入:', msg.id);
           break;
         }
-        // 存档检查命令不注入聊天框，但 digest 结果需要注入
-        if (msg.id && msg.id.startsWith('save_check_')) {
-          log('存档检查结果，跳过聊天框注入:', msg.id);
-          break;
-        }
-        if (msg.id && msg.id.startsWith('save_') && msg.success && msg.result) {
-          log('存档完成，注入 digest 结果到聊天框');
-          const digestText = '💾 **项目上下文已更新：**\n\n' + msg.result;
-          sendMessageSafe(digestText);
-          break;
-        }
         // 去重：用 tool + 结果内容生成 hash
         const resultHash = `result:${msg.tool}:${msg.id || ''}:${JSON.stringify(msg.result || msg.error).slice(0,100)}`;
         if (state.executedCalls.has(resultHash)) {
@@ -4907,107 +4749,6 @@ ${conversationText}
 
   // ============== 初始化 ==============
 
-  // ============== 自动检查任务 ==============
-
-  let autoCheckTimer = null;
-  let agentId = null;
-
-  // ============== 跨 Tab 通信 ==============
-
-  let heartbeatTimer = null;
-  const HEARTBEAT_INTERVAL = 30000; // 30秒心跳
-
-  // 向 background 注册（内部函数，不显示日志）
-  function doRegister(id, silent = false) {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({
-        type: 'REGISTER_AGENT',
-        agentId: id
-      }, (resp) => {
-        if (chrome.runtime.lastError) {
-          if (!silent) addLog(`❌ 注册失败: ${chrome.runtime.lastError.message}`, 'error');
-          resolve(false);
-        } else if (resp?.success) {
-          if (!silent) addLog(`🏷️ 已注册为 ${id}`, 'success');
-          resolve(true);
-        } else {
-          if (!silent) addLog(`❌ 注册失败: ${resp?.error}`, 'error');
-          resolve(false);
-        }
-      });
-    });
-  }
-
-  function registerAsAgent(id) {
-    agentId = id;
-    CONFIG.AGENT_ID = id;
-    
-    // 保存到 sessionStorage（每个 Tab 独立）和 chrome.storage（持久化备份）
-    sessionStorage.setItem('agentId', id);
-    chrome.storage.local.set({ ['agentId_' + id]: true }, () => {
-      console.log('[Agent] 身份已保存:', id);
-    });
-    
-    doRegister(id);
-    startHeartbeat();
-  }
-
-  // 心跳机制：定期重新注册，防止 background 重启后丢失
-  function startHeartbeat() {
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-    heartbeatTimer = setInterval(() => {
-      if (agentId) {
-        doRegister(agentId, true); // 静默注册
-        console.log('[Agent] 💓 心跳注册:', agentId);
-      }
-    }, HEARTBEAT_INTERVAL);
-    console.log('[Agent] 心跳已启动，间隔', HEARTBEAT_INTERVAL/1000, '秒');
-  }
-
-  // Tab 可见性变化时重新注册
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && agentId) {
-      console.log('[Agent] Tab 恢复可见，重新注册');
-      doRegister(agentId, true);
-    }
-  });
-
-  // 从 storage 恢复 Agent ID
-  function restoreAgentId() {
-    // 优先从 sessionStorage 读取（Tab 独立）
-    const savedId = sessionStorage.getItem('agentId');
-    if (savedId) {
-      agentId = savedId;
-      CONFIG.AGENT_ID = savedId;
-      addLog(`🔄 已恢复身份: ${savedId}`, 'info');
-      doRegister(savedId);
-      startHeartbeat();
-      updateAgentIdDisplay();
-    }
-  }
-
-  // 发送前确保自己已注册，然后发送消息
-  async function sendToAgent(toAgentId, message) {
-    // 先确保自己已注册
-    if (agentId) {
-      await doRegister(agentId, true);
-    }
-    
-    chrome.runtime.sendMessage({
-      type: 'CROSS_TAB_SEND',
-      to: toAgentId,
-      message: message
-    }, (resp) => {
-      if (chrome.runtime.lastError) {
-        addLog(`❌ 发送失败: ${chrome.runtime.lastError.message}`, 'error');
-      } else if (resp?.success) {
-        addLog(`📨 已发送给 ${toAgentId}`, 'success');
-      } else {
-        addLog(`❌ 发送失败: ${resp?.error}`, 'error');
-      }
-    });
-  }
-
 
 
   // ============== AI 响应超时唤醒 ==============
@@ -5052,52 +4793,6 @@ ${conversationText}
     sendMessageSafe(msg);
   }
   
-  function startAutoCheck() {
-    if (!CONFIG.AUTO_CHECK_ENABLED) return;
-    if (autoCheckTimer) clearInterval(autoCheckTimer);
-    
-    autoCheckTimer = setInterval(() => {
-      if (state.agentRunning) return;  // 正在执行中，跳过
-      if (!agentId) return;  // 未设置 Agent ID，跳过
-      if (!state.wsConnected) return;  // 未连接，跳过
-      
-      // 检查是否有待处理任务
-      addLog(`🔍 自动检查任务 (${agentId})`, 'info');
-      sendMessageSafe(`检查是否有分配给我的任务：\n\`\`\`\nΩCODE\n{"tool":"run_process","params":{"command_line":"node /Users/yay/workspace/.agent_hub/task_manager.js check ${agentId}","mode":"shell"}}\nΩCODEEND"}}\n\`\`\``);
-    }, CONFIG.AUTO_CHECK_INTERVAL);
-    
-    addLog(`⏰ 自动检查已启动 (${CONFIG.AUTO_CHECK_INTERVAL/1000}秒)`, 'info');
-  }
-
-  function setAgentId(id) {
-    agentId = id;
-    CONFIG.AGENT_ID = id;
-    registerAsAgent(id);  // 向 background.js 注册
-    updateAgentIdDisplay();
-    startAutoCheck();
-  }
-
-  // 监听页面内容，检测 Agent ID 设置
-  function detectAgentId(text) {
-    // 匹配 "你是 xxx_agent" 或 "I am xxx_agent" 等模式
-    const patterns = [
-      /你是\s*[`'"]?(\w+_agent)[`'"]?/i,
-      /我是\s*[`'"]?(\w+_agent)[`'"]?/i,
-      /I am\s*[`'"]?(\w+_agent)[`'"]?/i,
-      /agent.?id[：:=]\s*[`'"]?(\w+_agent)[`'"]?/i,
-      /设置.*身份.*[`'"]?(\w+_agent)[`'"]?/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match && match[1] && match[1] !== agentId) {
-        setAgentId(match[1]);
-        return true;
-      }
-    }
-    return false;
-  }
-
   // ============== SSE 原始数据拦截 ==============
   // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 SSE delta
   // 拼接后直接解析 ΩCODE 命令，避免 DOM 渲染导致的转义问题
@@ -5471,7 +5166,6 @@ ${conversationText}
     
     // 加载面板增强模块
     loadPanelEnhancer();
-    // VideoGenerator 已通过 manifest content_scripts 自动加载
 
     // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();
@@ -5501,20 +5195,6 @@ ${conversationText}
     }, 2000);
     
     // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
-    let lastCheckedUserMsgCount = 0;
-    setInterval(() => {
-      const userMessages = document.querySelectorAll('.conversation-statement.user');
-      if (userMessages.length > lastCheckedUserMsgCount) {
-        const lastUserMsg = userMessages[userMessages.length - 1];
-        const text = lastUserMsg.innerText || '';
-        // 排除跨 Tab 消息的内容
-        if (!text.includes('[来自') && !text.includes('[跨Tab通信]')) {
-          detectAgentId(text);
-
-        }
-        lastCheckedUserMsgCount = userMessages.length;
-      }
-    }, 1000);
 
     setTimeout(() => {
       chrome.runtime.sendMessage({ type: 'GET_WS_STATUS' }, resp => {
@@ -5538,14 +5218,11 @@ ${conversationText}
     addLog('🚀 Agent v34 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
-    // 恢复之前保存的 Agent 身份
-    restoreAgentId();
     
     // 启动 AI 响应超时监控
     startWakeupMonitor();
     
     // 初始化 Agent ID 显示
-    setTimeout(updateAgentIdDisplay, 100);
   }
 
   if (document.readyState === 'loading') {

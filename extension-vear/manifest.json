@@ -5,6 +5,7 @@
   "description": "将 Vear.com 聊天窗口转变为 AI Agent 运行时",
   "permissions": [
     "activeTab",
+    "tabs",
     "storage",
     "scripting"
   ],
@@ -13,7 +14,7 @@
     "https://www.vear.com/*",
     "https://www.genspark.ai/*",
     "https://genspark.ai/*",
-    "<all_urls>"
+    "https://www.google.com/*"
   ],
   "background": {
     "service_worker": "background.js"

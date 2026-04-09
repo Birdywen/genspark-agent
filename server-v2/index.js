@@ -179,8 +179,8 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           reject: (e) => { clearTimeout(timer); browserToolPending.delete(callId); reject(e); },
           timeout: timer, _tool: 'eval_js', _code: jsCode.substring(0, 500)
         });
-        if (browserWs && browserWs.readyState === 1) {
-          browserWs.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: 'eval_js', params: { code: jsCode } }));
+        if (global._browserWs && global._browserWs.readyState === 1) {
+          global._browserWs.send(JSON.stringify({ type: 'browser_tool_call', callId, tool: 'eval_js', params: { code: jsCode } }));
         } else {
           reject(new Error('浏览器扩展未连接'));
         }
@@ -404,7 +404,7 @@ async function handleToolCall(ws, message, isRetry = false, originalId = null) {
           }
           // 重试更新
           if (isRetry && originalId) {
-            history.updateById(originalId, { success: true, resultPreview: (result || '').substring(0, 5000), retriedAt: new Date().toISOString(), error: null });
+            history.updateById(originalId, { success: true, resultPreview: (typeof result === 'string' ? result : JSON.stringify(result ?? '', null, 2)).substring(0, 5000), retriedAt: new Date().toISOString(), error: null });
           }
           const errorMsg = success ? null : (result || r?.error || r?.errorType || '执行失败(无详情)');
           const historyId = isRetry ? originalId : history.add(tool, params, success, (result || '').slice(0, 5000), errorMsg);
@@ -763,7 +763,7 @@ async function main() {
           const tool = data.tool || 'eval_js';
           const params = data.params || {};
           const success = data.success !== false;
-          const resultPreview = (data.result || '').substring(0, 5000);
+          const resultPreview = (typeof data.result === 'string' ? data.result : JSON.stringify(data.result ?? '', null, 2)).substring(0, 5000);
           const error = data.error || null;
           const hid = history.add(tool, params, success, resultPreview, error);
           res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});

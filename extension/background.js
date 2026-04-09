@@ -37,8 +37,6 @@ const pendingCallsByTab = new Map(); // callId -> tabId
 const processedResults = new Set();
 
 // 记录每个 Agent 对应的 Tab
-const agentTabs = new Map(); // agentId -> tabId
-const tabAgents = new Map(); // tabId -> agentId
 
 // 服务器地址配置（可切换本地/云端）
 const SERVERS = {
@@ -345,82 +343,12 @@ function flushPendingQueue() {
 // ============== 跨 Tab 通信 ==============
 
 // 注册 Agent
-function registerAgent(agentId, tabId) {
-  // 清理旧的映射
-  const oldTabId = agentTabs.get(agentId);
-  if (oldTabId && oldTabId !== tabId) {
-    tabAgents.delete(oldTabId);
-  }
-  const oldAgentId = tabAgents.get(tabId);
-  if (oldAgentId && oldAgentId !== agentId) {
-    agentTabs.delete(oldAgentId);
-  }
-  
-  agentTabs.set(agentId, tabId);
-  tabAgents.set(tabId, agentId);
-  console.log('[BG] 注册 Agent:', agentId, '-> Tab:', tabId);
-  console.log('[BG] 当前 Agents:', Array.from(agentTabs.entries()));
-}
-
 // Track last send time per agent to prevent spam
 const lastSendTimes = new Map();
 const SEND_COOLDOWN_MS = 10000; // 10 seconds
 
 // 发送跨 Tab 消息
-function sendCrossTabMessage(fromAgentId, toAgentId, message) {
-  // Check cooldown
-  const lastSend = lastSendTimes.get(fromAgentId) || 0;
-  const now = Date.now();
-  const timeSinceLastSend = now - lastSend;
-  
-  if (timeSinceLastSend < SEND_COOLDOWN_MS) {
-    const waitTime = Math.ceil((SEND_COOLDOWN_MS - timeSinceLastSend) / 1000);
-    console.log(`[BG] ${fromAgentId} 发送过于频繁，需等待 ${waitTime} 秒`);
-    return { 
-      success: false, 
-      error: `请等待 ${waitTime} 秒后再发送`,
-      cooldown: waitTime
-    };
-  }
-  
-  let targetTabId = agentTabs.get(toAgentId);
-  
-  // 支持 tab_xxx 格式直接路由到对应 tabId
-  if (!targetTabId && toAgentId.startsWith('tab_')) {
-    targetTabId = parseInt(toAgentId.replace('tab_', ''), 10);
-    console.log('[BG] 使用 tabId 直接路由:', targetTabId);
-  }
-  
-  if (!targetTabId) {
-    console.log('[BG] 目标 Agent 未注册:', toAgentId);
-    return { success: false, error: 'Agent not found: ' + toAgentId };
-  }
-  
-  // Update last send time
-  lastSendTimes.set(fromAgentId, now);
-  
-  console.log('[BG] 跨 Tab 消息:', fromAgentId, '->', toAgentId, '(Tab:', targetTabId, ')');
-  
-  sendToTab(targetTabId, {
-    type: 'CROSS_TAB_MESSAGE',
-    from: fromAgentId,
-    to: toAgentId,
-    message: message,
-    timestamp: Date.now()
-  });
-  
-  return { success: true, targetTabId };
-}
-
 // 获取所有已注册的 Agent
-function getRegisteredAgents() {
-  const agents = [];
-  for (const [agentId, tabId] of agentTabs) {
-    agents.push({ agentId, tabId });
-  }
-  return agents;
-}
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
@@ -880,16 +808,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       break;
 
-    case 'RELOAD_TOOLS':
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'reload_tools' }));
-        console.log('[BG] 发送 reload_tools 请求');
-        sendResponse({ success: true, message: '已发送刷新请求' });
-      } else {
-        sendResponse({ success: false, error: '未连接到服务器' });
-      }
-      break;
-    
     case 'RESTART_SERVER':
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'restart_server' }));
@@ -1061,25 +979,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // ===== 跨 Tab 通信 =====
     
-    case 'REGISTER_AGENT':
-      if (message.agentId && sender.tab?.id) {
-        registerAgent(message.agentId, sender.tab.id);
-        sendResponse({ success: true, tabId: sender.tab.id });
-      } else {
-        sendResponse({ success: false, error: 'Missing agentId or tabId' });
-      }
-      break;
-    
-    case 'CROSS_TAB_SEND':
-      if (message.to && message.message) {
-        const fromAgent = tabAgents.get(sender.tab?.id) || 'tab_' + sender.tab.id;
-        const result = sendCrossTabMessage(fromAgent, message.to, message.message);
-        sendResponse(result);
-      } else {
-        sendResponse({ success: false, error: 'Missing to or message' });
-      }
-      break;
-    
     case 'EVAL_IN_TAB':
       // Execute code in a tab matching the given URL pattern
       (async () => {
@@ -1144,22 +1043,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'RELOAD_EXTENSION':
       chrome.runtime.reload();
-      break;
-
-    case 'GET_REGISTERED_AGENTS':
-      sendResponse({ success: true, agents: getRegisteredAgents() });
-      break;
-    
-    case 'UNREGISTER_AGENT':
-      if (sender.tab?.id) {
-        const agentId = tabAgents.get(sender.tab.id);
-        if (agentId) {
-          agentTabs.delete(agentId);
-          tabAgents.delete(sender.tab.id);
-          console.log('[BG] 注销 Agent:', agentId);
-        }
-        sendResponse({ success: true });
-      }
       break;
 
     case 'UPLOAD_PAYLOAD': {
@@ -1228,7 +1111,15 @@ async function handleBrowserToolCall(data) {
     if (!tabId) throw new Error('No target tab found');
     const results = await chrome.scripting.executeScript({
       target: { tabId },
-      func: (c) => { try { const r = eval(c); return (r === undefined ? '(undefined)' : r); } catch(e) { return 'Error: ' + e.message; } },
+      func: async (c) => {
+        try {
+          const needsReturn = !/^\s*(return|var |let |const |if[ (]|for[ (]|while[ (]|throw |class |function |switch[ (]|try[ {])/.test(c) && !/;.*\S/.test(c);
+          const fn = new Function(needsReturn ? 'return (' + c + ')' : c);
+          let result = fn();
+          if (result && typeof result.then === 'function') result = await result;
+          return (typeof result === 'object') ? JSON.stringify(result, null, 2) : String(result === undefined ? '(undefined)' : result);
+        } catch(e) { return 'Error: ' + e.message; }
+      },
       args: [code],
       world: 'MAIN'
     });
@@ -1268,11 +1159,4 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
   }
   
-  // 清理 Agent 注册
-  const agentId = tabAgents.get(tabId);
-  if (agentId) {
-    agentTabs.delete(agentId);
-    tabAgents.delete(tabId);
-    console.log('[BG] 清理已关闭 Tab 的 Agent:', agentId);
-  }
 });

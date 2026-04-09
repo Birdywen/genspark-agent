@@ -1,5 +1,6 @@
 // sys-tools.js — 自定义工具，不走 MCP
 import { execSync, exec as _exec } from 'child_process';
+import { readFileSync } from 'fs';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -103,8 +104,7 @@ handlers.set('gen_image', async (params, context) => {
     'window.__imgState={tid:null,url:null,err:null,st:"sending"};',
     'fetch("/api/agent/ask_proxy",{method:"POST",headers:{"Content-Type":"application/json"},',
     'body:JSON.stringify({messages:[{role:"user",content:'+prompt+'}],',
-    'type:"image_generation_agent",auto_prompt:null,model:"'+model+'",',
-    'project_id:"7e6cbd20-270d-43aa-afe0-331d1c6d7f52"})})',
+    'type:"image_generation_agent",auto_prompt:null,model:"'+model+'"})})',
     '.then(function(r){var rd=r.body.getReader(),dc=new TextDecoder(),b="";',
     'function p(){return rd.read().then(function(rs){if(rs.done){window.__imgState.err="no tid";window.__imgState.st="failed";return}',
     'b+=dc.decode(rs.value);var m=b.match(/task_id.*?([a-f0-9-]{36})/);',
@@ -141,56 +141,66 @@ handlers.set('gen_image', async (params, context) => {
 });
 
 
+// ===== GSK API config =====
+let _gskApiKey = null;
+function getGskApiKey() {
+  if (_gskApiKey) return _gskApiKey;
+  try {
+    const cfg = JSON.parse(readFileSync(path.join(process.env.HOME || '', '.genspark-tool-cli', 'config.json'), 'utf8'));
+    _gskApiKey = cfg.api_key;
+  } catch(e) { _gskApiKey = process.env.GSK_API_KEY || ''; }
+  return _gskApiKey;
+}
+
 handlers.set('web_search', async (params) => {
   const q = params.q || params.query || '';
   if (!q) return { success: false, error: 'No query provided' };
   try {
-    const url = 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q);
-    const raw = execSync('curl -s "' + url + '" -H "User-Agent: Mozilla/5.0"', { timeout: 30000, encoding: 'utf8' });
-    const results = [];
-    const parts = raw.split('result__a');
-    for (let i = 1; i < parts.length && results.length < 8; i++) {
-      const hrefM = parts[i].match(/href="([^"]+)"/);
-      const textM = parts[i].match(/>([^<]+)/);
-      const snipM = parts[i].match(/result__snippet[^>]*>([^<]*)/);
-      if (hrefM && textM) {
-        let href = hrefM[1];
-        const uddg = href.match(/uddg=([^&]+)/);
-        if (uddg) href = decodeURIComponent(uddg[1]);
-        results.push({ url: href, title: textM[1].trim(), snippet: snipM ? snipM[1].trim() : '' });
-      }
-    }
+    const resp = await fetch('https://www.genspark.ai/api/tool_cli/web_search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': getGskApiKey() },
+      body: JSON.stringify({ q }),
+      signal: AbortSignal.timeout(30000)
+    });
+    const data = await resp.json();
+    if (data.status !== 'ok') return { success: false, error: data.message || 'API error' };
+    const results = (data.data?.organic_results || []).slice(0, 10).map(r => ({
+      url: r.link, title: r.title, snippet: r.snippet
+    }));
     return { success: true, query: q, results };
   } catch(e) {
     return { success: false, error: e.message };
   }
 });
 
-// ask_ai: 通过 evalInBrowser 桥接 ask_proxy (ai_chat模式，不扣积分)
-handlers.set('ask_ai', async (params, context) => {
-  const { evalInBrowser } = context;
-  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
-  const messages = params.messages || [{ role: 'user', content: params.prompt || '' }];
-  const model = params.model || 'gpt-5.4';
-  const projectId = params.project_id || 'face262c-60a3-49a7-b4a2-5c2f9d305316';
-  const body = {
-    ai_chat_model: model,
-    ai_chat_enable_search: false,
-    ai_chat_disable_personalization: true,
-    use_moa_proxy: false,
-    moa_models: [],
-    type: 'ai_chat',
-    project_id: projectId,
-    messages: messages.map(m => ({ role: m.role, id: crypto.randomUUID(), content: m.content })),
-    user_s_input: messages[messages.length - 1].content,
-    is_private: true,
-    push_token: ''
-  };
-  const bodyJson = JSON.stringify(body).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const code = `return fetch('/api/agent/ask_proxy',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:'${bodyJson}'}).then(r=>r.text()).then(raw=>{var t='';raw.split('\\n').forEach(l=>{if(l.includes('message_field_delta')){try{var o=JSON.parse(l.replace(/^data:\\s*/,''));if(o.delta)t+=o.delta}catch(e){}}});return t})`;
+// ask_ai: 通过 gsk API agent_ask (server端直调，不依赖浏览器)
+handlers.set('ask_ai', async (params) => {
+  const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
+  if (!prompt) return { success: false, error: 'prompt or messages required' };
+  const model = params.model || null;
+  const body = { message: prompt, task_type: 'super_agent' };
+  if (model) body.use_model = model;
   try {
-    const result = await evalInBrowser(code, 300000);
-    return { success: true, result };
+    const resp = await fetch('https://www.genspark.ai/api/tool_cli/agent_ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': getGskApiKey() },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120000)
+    });
+    const raw = await resp.text();
+    let result = '', projectId = null;
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+        if (obj.project_id && !projectId) projectId = obj.project_id;
+        if (obj.delta) result += obj.delta;
+        if (obj.data?.result_content?.last_message) {
+          result = obj.data.result_content.last_message.join('\n');
+        }
+      } catch(e) { /* skip non-JSON lines */ }
+    }
+    return { success: true, result, project_id: projectId };
   } catch (e) {
     return { success: false, error: e.message };
   }
@@ -298,10 +308,17 @@ handlers.set('server_status', async () => {
 // ===== server_restart: 热重启 =====
 handlers.set('server_restart', async () => {
   try {
-    const resp = await fetch('http://127.0.0.1:8767/restart');
+    // 方案1: 尝试 watchdog
+    const resp = await fetch('http://127.0.0.1:8767/restart', { signal: AbortSignal.timeout(2000) });
     return { success: true, result: await resp.text() };
   } catch (e) {
-    return { success: false, error: e.message };
+    // 方案2: watchdog 未运行，用 spawn 启动新进程后延迟自杀
+    const { spawn } = await import('child_process');
+    const child = spawn('bash', ['-c', 
+      'sleep 2 && lsof -ti:8765,8766 2>/dev/null | xargs kill -9 2>/dev/null; sleep 1; cd /Users/yay/workspace/genspark-agent/server-v2 && nohup node index.js > /tmp/agent-server.log 2>&1 &'
+    ], { detached: true, stdio: 'ignore' });
+    child.unref();
+    return { success: true, result: 'Restart scheduled in 2s (watchdog unavailable). New process will start automatically.' };
   }
 });
 
@@ -543,7 +560,7 @@ export function buildBrowserToolCode(tool, params) {
       '(function(){',
       'var s={tid:null,url:null,err:null,st:"sending"};',
       'window.__imgState=s;',
-      'fetch("/api/agent/ask_proxy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:'+prompt+'}],type:"image_generation_agent",auto_prompt:null,model:"'+model+'",project_id:"7e6cbd20-270d-43aa-afe0-331d1c6d7f52"})})',
+      'fetch("/api/agent/ask_proxy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:'+prompt+'}],type:"image_generation_agent",auto_prompt:null,model:"'+model+'"})})' ,
       '.then(function(r){var rd=r.body.getReader(),dc=new TextDecoder(),b="";',
       'function p(){return rd.read().then(function(rs){if(rs.done){s.err="no tid";s.st="failed";return}',
       'b+=dc.decode(rs.value);var m=b.match(/task_id.*?([a-f0-9-]{36})/);',

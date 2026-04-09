@@ -140,7 +140,6 @@
     document.head.appendChild(script);
   }
 
-  // VideoGenerator 通过 manifest.json content_scripts 在 content.js 之前加载，无需手动加载
 
 
   

@@ -57,7 +57,6 @@
         "https://www.genspark.ai/agents*"
       ],
       "js": [
-        "video-generator.js",
         "content.js"
       ],
       "css": [
