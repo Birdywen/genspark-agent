@@ -167,8 +167,64 @@ handlers.set('web_search', async (params) => {
     const results = (data.data?.organic_results || []).slice(0, 10).map(r => ({
       url: r.link, title: r.title, snippet: r.snippet
     }));
-    return { success: true, query: q, results };
+    return { success: true, result: { query: q, results } };
   } catch(e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// ===== crawler: Diffbot (structured JSON) + GSK (markdown) =====
+const DIFFBOT_TOKEN = '0a1ccea6c5a3a8845558aebd8204c454';
+handlers.set('crawler', async (params) => {
+  const url = params.url;
+  if (!url) return { success: false, error: 'url is required' };
+  const mode = params.mode || 'diffbot'; // diffbot | gsk | both
+  const timeout = params.timeout || 30000;
+
+  const doDiffbot = async (type) => {
+    const t = type || 'article'; // article | analyze | discussion
+    const apiUrl = `https://api.diffbot.com/v3/${t}?token=${DIFFBOT_TOKEN}&url=${encodeURIComponent(url)}&timeout=${timeout}`;
+    const resp = await fetch(apiUrl, { signal: AbortSignal.timeout(timeout + 5000) });
+    const data = await resp.json();
+    if (data.error) return { success: false, error: data.error };
+    const obj = (data.objects || [])[0] || {};
+    return {
+      success: true, result: {
+        title: obj.title, author: obj.author, date: obj.date,
+        text: (obj.text || '').substring(0, 15000),
+        tags: (obj.tags || []).slice(0, 10).map(t => t.label),
+        images: (obj.images || []).slice(0, 5).map(i => ({ url: i.url, caption: i.caption })),
+        sentiment: obj.sentiment, siteName: obj.siteName, pageUrl: obj.pageUrl,
+        type: obj.type, humanLanguage: obj.humanLanguage
+      }
+    };
+  };
+
+  const doGsk = async () => {
+    const resp = await fetch('https://www.genspark.ai/api/tool_cli/crawler', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': getGskApiKey() },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(timeout + 5000)
+    });
+    const data = await resp.json();
+    if (data.status !== 'ok') return { success: false, error: data.message || 'GSK crawler error' };
+    const text = data.data?.result || data.data?.markdown || data.data?.content || (typeof data.data === 'string' ? data.data : JSON.stringify(data.data));
+    return { success: true, result: { text: text.substring(0, 20000) } };
+  };
+
+  try {
+    if (mode === 'gsk') return await doGsk();
+    if (mode === 'both') {
+      const [db, gs] = await Promise.allSettled([doDiffbot(params.type), doGsk()]);
+      return { success: true, result: {
+        diffbot: db.status === 'fulfilled' ? db.value.result : { error: db.reason?.message },
+        gsk: gs.status === 'fulfilled' ? gs.value.result : { error: gs.reason?.message }
+      }};
+    }
+    // default: diffbot
+    return await doDiffbot(params.type);
+  } catch (e) {
     return { success: false, error: e.message };
   }
 });
