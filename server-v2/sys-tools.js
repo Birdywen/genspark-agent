@@ -177,8 +177,8 @@ handlers.set('web_search', async (params) => {
 const DIFFBOT_TOKEN = '0a1ccea6c5a3a8845558aebd8204c454';
 handlers.set('crawler', async (params) => {
   const url = params.url;
-  if (!url) return { success: false, error: 'url is required' };
-  const mode = params.mode || 'diffbot'; // diffbot | gsk | both
+  const mode = params.mode || 'diffbot'; // diffbot | gsk | both | kg | enhance | nl
+  if (!url && !['kg','enhance','nl'].includes(mode)) return { success: false, error: 'url is required' };
   const timeout = params.timeout || 30000;
 
   const doDiffbot = async (type) => {
@@ -213,8 +213,55 @@ handlers.set('crawler', async (params) => {
     return { success: true, result: { text: text.substring(0, 20000) } };
   };
 
+  // Knowledge Graph search (DQL syntax: strict:name:"X" type:Y)
+  const doKG = async (query, size) => {
+    const s = size || 3;
+    const apiUrl = `https://kg.diffbot.com/kg/v3/dql?token=${DIFFBOT_TOKEN}&query=${encodeURIComponent(query)}&size=${s}`;
+    const resp = await fetch(apiUrl, { signal: AbortSignal.timeout(timeout + 5000) });
+    const data = await resp.json();
+    if (data.error) return { success: false, error: data.error };
+    const entities = (data.data || []).map(d => {
+      const e = d.entity || {};
+      return { name: e.name, type: (e.types||[]).join(', '), description: (e.description||'').substring(0,300), diffbotUri: e.diffbotUri, score: d.score };
+    });
+    return { success: true, result: { hits: data.hits, entities } };
+  };
+
+  // Enhance: enrich person/org
+  const doEnhance = async (type, name) => {
+    const apiUrl = `https://kg.diffbot.com/kg/v3/enhance?token=${DIFFBOT_TOKEN}&type=${type||'Person'}&name=${encodeURIComponent(name)}&size=1`;
+    const resp = await fetch(apiUrl, { signal: AbortSignal.timeout(timeout + 5000) });
+    const data = await resp.json();
+    const e = (data.data||[{}])[0]?.entity || {};
+    if (!e.name) return { success: false, error: 'No entity found' };
+    return { success: true, result: {
+      name: e.name, description: (e.description||'').substring(0,500),
+      types: e.types, employments: (e.employments||[]).slice(0,5).map(j=>({employer:j.employer?.name,title:j.categories?.map(c=>c.name).join(', '),isCurrent:j.isCurrent})),
+      educations: e.educations, skills: (e.skills||[]).slice(0,10).map(s=>s.name||s),
+      location: e.location, image: e.image, importance: e.importance
+    }};
+  };
+
+  // Natural Language: NER
+  const doNL = async (text) => {
+    const resp = await fetch(`https://nl.diffbot.com/v1/?token=${DIFFBOT_TOKEN}&lang=${params.lang||'en'}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: text, format: 'plain text' }),
+      signal: AbortSignal.timeout(timeout + 5000)
+    });
+    const data = await resp.json();
+    const entities = (data.entities || []).map(e => ({
+      name: e.name, type: (e.allTypes||[]).map(t=>t.name).join(', '),
+      confidence: e.confidence, salience: e.salience, uri: e.diffbotUri
+    }));
+    return { success: true, result: { entities } };
+  };
+
   try {
     if (mode === 'gsk') return await doGsk();
+    if (mode === 'kg') return await doKG(params.query || params.q, params.size);
+    if (mode === 'enhance') return await doEnhance(params.type, params.name || params.url);
+    if (mode === 'nl') return await doNL(params.text || params.url);
     if (mode === 'both') {
       const [db, gs] = await Promise.allSettled([doDiffbot(params.type), doGsk()]);
       return { success: true, result: {
