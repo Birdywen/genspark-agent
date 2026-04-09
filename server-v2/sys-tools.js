@@ -309,6 +309,51 @@ handlers.set('odin', async (params) => {
     case 'classify': return odinFetch('/tools/ai/classify', { text: params.text, categories: params.categories });
     case 'chat': return odinFetch('/v3/chat/message', { message: params.message, chat_id: params.chat_id, agent_id: params.agent_id }, 120000);
     case 'workflow': return odinFetch('/tools/execute-workflow', { tool_id: params.tool_id || params.workflow_id, inputs: params.inputs || {} }, 300000);
+    case 'code': {
+      const sub = params.sub || 'execute'; // create|list|execute|publish|get|update|delete|versions|history
+      const hdr = { 'Content-Type': 'application/json', 'X-API-KEY': ODIN_KEY, 'X-API-SECRET': ODIN_SECRET };
+      const base = 'https://api.getodin.ai/code-scripts';
+      if (sub === 'create') {
+        const r = await odinFetch('/code-scripts', { name: params.name, description: params.description, script: params.script, runtime: params.runtime || 'python3.11', entry_point: params.entry_point || 'main', dependencies: params.dependencies || [] });
+        return r;
+      }
+      if (sub === 'list') {
+        const resp = await fetch(`${base}?project_id=${ODIN_PROJECT}&limit=${params.limit||20}`, { headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'execute') {
+        const sid = params.script_id || params.id;
+        if (!sid) return { success: false, error: 'script_id required' };
+        const resp = await fetch(`${base}/${sid}/execute`, { method: 'POST', headers: hdr, body: JSON.stringify({ args: params.args || [], kwargs: params.kwargs || {} }), signal: AbortSignal.timeout(params.timeout || 120000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'publish') {
+        const sid = params.script_id || params.id;
+        const resp = await fetch(`${base}/${sid}/publish`, { method: 'POST', headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'get') {
+        const sid = params.script_id || params.id;
+        const resp = await fetch(`${base}/${sid}`, { headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'delete') {
+        const sid = params.script_id || params.id;
+        const resp = await fetch(`${base}/${sid}`, { method: 'DELETE', headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'versions') {
+        const sid = params.script_id || params.id;
+        const resp = await fetch(`${base}/${sid}/versions`, { headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      if (sub === 'history') {
+        const sid = params.script_id || params.id;
+        const resp = await fetch(`${base}/${sid}/executions?page_size=${params.limit||10}`, { headers: hdr, signal: AbortSignal.timeout(10000) });
+        return { success: true, result: await resp.json() };
+      }
+      return { success: false, error: `unknown sub: ${sub}. Use: create|list|execute|publish|get|update|delete|versions|history` };
+    }
     case 'agents': {
       const resp = await fetch(`https://api.getodin.ai/agents/${ODIN_PROJECT}/list`, { headers: { 'X-API-KEY': ODIN_KEY, 'X-API-SECRET': ODIN_SECRET }, signal: AbortSignal.timeout(10000) });
       return { success: true, result: await resp.json() };
