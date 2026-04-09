@@ -276,6 +276,51 @@ handlers.set('crawler', async (params) => {
   }
 });
 
+// ===== odin: Odin AI platform API (免费无限调用) =====
+const ODIN_KEY = '1b58a5f7-422c-40dc-a7ad-b9cd6b25b70d';
+const ODIN_SECRET = 'BllRMdU9xB2g/RLHpP3tnJBhR2TIpLtBGZ/ikWe3fGo=';
+const ODIN_PROJECT = '757769dcf6c444b1b12067';
+const odinFetch = async (endpoint, body, timeout = 60000) => {
+  const resp = await fetch(`https://api.getodin.ai${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-KEY': ODIN_KEY, 'X-API-SECRET': ODIN_SECRET },
+    body: JSON.stringify({ project_id: ODIN_PROJECT, ...body }),
+    signal: AbortSignal.timeout(timeout)
+  });
+  const data = await resp.json();
+  if (data.detail) return { success: false, error: typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail).substring(0, 300) };
+  return { success: true, result: data };
+};
+handlers.set('odin', async (params) => {
+  const action = params.action;
+  if (!action) return { success: false, error: 'action required: search|summarize|translate|classify|chat|workflow|agents' };
+  switch (action) {
+    case 'search': {
+      const body = { query: params.query || params.q, max_results: params.max_results || 5, download_pages: params.download_pages !== false, search_type: params.search_type || 'google' };
+      if (params.website_white_list) body.website_white_list = params.website_white_list;
+      if (params.date_range_start) { body.limit_date_range = true; body.date_range_start = params.date_range_start; body.date_range_end = params.date_range_end; }
+      const r = await odinFetch('/project/search/google', body);
+      if (!r.success) return r;
+      const results = (r.result.results || []).map(a => ({ title: a.title, url: a.url, author: a.author, date: a.publish_date, text: (a.markdown_content || '').substring(0, 8000) }));
+      return { success: true, result: { count: results.length, results } };
+    }
+    case 'summarize': return odinFetch('/tools/ai/summarize', { text: params.text, instructions: params.instructions || 'Summarize concisely' });
+    case 'translate': return odinFetch('/tools/ai/translate', { texts: Array.isArray(params.texts) ? params.texts : [params.text || params.texts], input_language: params.from || params.input_language || 'auto', target_language: params.to || params.target_language || 'zh', translation_tone: params.tone });
+    case 'classify': return odinFetch('/tools/ai/classify', { text: params.text, categories: params.categories });
+    case 'chat': return odinFetch('/v3/chat/message', { message: params.message, chat_id: params.chat_id, agent_id: params.agent_id }, 120000);
+    case 'workflow': return odinFetch('/tools/execute-workflow', { tool_id: params.tool_id || params.workflow_id, inputs: params.inputs || {} }, 300000);
+    case 'agents': {
+      const resp = await fetch(`https://api.getodin.ai/agents/${ODIN_PROJECT}/list`, { headers: { 'X-API-KEY': ODIN_KEY, 'X-API-SECRET': ODIN_SECRET }, signal: AbortSignal.timeout(10000) });
+      return { success: true, result: await resp.json() };
+    }
+    case 'workflows': {
+      const resp = await fetch('https://api.getodin.ai/workflows/active', { headers: { 'X-API-KEY': ODIN_KEY, 'X-API-SECRET': ODIN_SECRET }, signal: AbortSignal.timeout(10000) });
+      return { success: true, result: await resp.json() };
+    }
+    default: return { success: false, error: `unknown action: ${action}. Use: search|summarize|translate|classify|chat|workflow|agents|workflows` };
+  }
+});
+
 // ask_ai: 通过 gsk API agent_ask (server端直调，不依赖浏览器)
 handlers.set('ask_ai', async (params) => {
   const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
