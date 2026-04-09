@@ -171,8 +171,10 @@ class Safety {
     this.logger.info(`[Safety] checkOperation: operation=${operation}`);
 
     const isRemoteTool = operation.startsWith('ssh-');
+    // API tools use 'path' as remote/virtual path, not local filesystem
+    const isApiTool = ['aidrive', 'odin', 'crawler', 'web_search'].includes(operation);
 
-    if (params.path && !isRemoteTool) {
+    if (params.path && !isRemoteTool && !isApiTool) {
       const pathCheck = this.isPathAllowed(params.path);
       if (!pathCheck.allowed) return { allowed: false, reason: pathCheck.reason };
     }
