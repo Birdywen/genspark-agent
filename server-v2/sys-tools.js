@@ -174,7 +174,7 @@ handlers.set('web_search', async (params) => {
 });
 
 // ===== crawler: Diffbot (structured JSON) + GSK (markdown) =====
-const DIFFBOT_TOKEN = '0a1ccea6c5a3a8845558aebd8204c454';
+const DIFFBOT_TOKEN = process.env.DIFFBOT_TOKEN || '0a1ccea6c5a3a8845558aebd8204c454';
 handlers.set('crawler', async (params) => {
   const url = params.url;
   const mode = params.mode || 'diffbot'; // diffbot | gsk | both | kg | enhance | nl
@@ -277,9 +277,9 @@ handlers.set('crawler', async (params) => {
 });
 
 // ===== odin: Odin AI platform API (免费无限调用) =====
-const ODIN_KEY = '1b58a5f7-422c-40dc-a7ad-b9cd6b25b70d';
-const ODIN_SECRET = 'BllRMdU9xB2g/RLHpP3tnJBhR2TIpLtBGZ/ikWe3fGo=';
-const ODIN_PROJECT = '757769dcf6c444b1b12067';
+const ODIN_KEY = process.env.ODIN_API_KEY || '';
+const ODIN_SECRET = process.env.ODIN_API_SECRET || '';
+const ODIN_PROJECT = process.env.ODIN_PROJECT_ID || '';
 const odinFetch = async (endpoint, body, timeout = 60000) => {
   const resp = await fetch(`https://api.getodin.ai${endpoint}`, {
     method: 'POST',
