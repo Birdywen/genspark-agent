@@ -366,6 +366,33 @@ handlers.set('odin', async (params) => {
   }
 });
 
+// ===== aidrive: GSK AI Drive file storage =====
+handlers.set('aidrive', async (params) => {
+  const action = params.action;
+  if (!action) return { success: false, error: 'action required: ls|mkdir|rm|move|upload|download_file|download_video|download_audio|get_readable_url' };
+  const body = { action };
+  if (params.path) body.path = params.path;
+  if (params.target_path) body.target_path = params.target_path;
+  if (params.target_folder) body.target_folder = params.target_folder;
+  if (params.filter_type) body.filter_type = params.filter_type;
+  if (params.file_type) body.file_type = params.file_type;
+  if (params.file_url) body.file_url = params.file_url;
+  if (params.video_url) body.video_url = params.video_url;
+  if (params.audio_url) body.audio_url = params.audio_url;
+  if (params.url) body.file_url = params.url; // alias
+  try {
+    // GSK API blocks python/node fetch (Cloudflare), must use curl
+    const jsonBody = JSON.stringify(body).replace(/'/g, "'\"'\"'");
+    const cmd = `curl -s -X POST 'https://www.genspark.ai/api/tool_cli/aidrive' -H 'Content-Type: application/json' -H 'X-Api-Key: ${getGskApiKey()}' -d '${jsonBody}'`;
+    const result = execSync(cmd, { encoding: 'utf8', timeout: 60000, shell: true });
+    const data = JSON.parse(result);
+    if (data.status !== 'ok') return { success: false, error: data.message || 'API error' };
+    return { success: true, result: data.session_state?.aidrive_result || data.data };
+  } catch (e) {
+    return { success: false, error: e.message?.substring(0, 500) };
+  }
+});
+
 // ask_ai: 通过 gsk API agent_ask (server端直调，不依赖浏览器)
 handlers.set('ask_ai', async (params) => {
   const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
