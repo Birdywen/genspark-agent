@@ -687,7 +687,7 @@ handlers.set('local_store', async (params) => {
   }
 });
 
-// ===== compress: 压缩当前对话 + 知识注入 =====
+// ===== compress: 压缩当前对话 =====
 handlers.set('compress', async (params, context) => {
   const { evalInBrowser } = context;
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
@@ -697,104 +697,131 @@ handlers.set('compress', async (params, context) => {
   const code = `return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun}}) : 'error: __shortcuts not loaded'`;
   try {
     const result = await evalInBrowser(code, 120000);
-    if (dryRun || !result || result.error) return { success: true, result };
-    const resultObj = typeof result === 'string' ? JSON.parse(result) : result;
+    return { success: true, result };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
 
-    // === 压缩成功，注入知识 ===
-    // Database already imported at top
-    // path already imported at top
-    const db = new Database(path.join(__dirname, 'data', 'agent.db'));
+// ===== inject: 向当前对话注入知识 =====
+handlers.set('inject', async (params, context) => {
+  const { evalInBrowser } = context;
+  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
 
-    // 1. 读 restore prompt 模板
-    const tplRow = db.prepare("SELECT content FROM local_store WHERE key='compress-restore-prompt'").get();
-    let restorePrompt = tplRow ? tplRow.content : 'Context restored. Compressed.';
-    const midCount = result.compressed || 0;
-    restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
+  const action = params.action || 'inject'; // inject | update | clear | preview
+  const dbPath = path.join(__dirname, 'data', 'agent.db');
+  const db = new Database(dbPath);
 
-    // 2. 读最近经验教训 (最新10条)
-    const lessons = db.prepare(
-      "SELECT key, substr(content,1,150) as summary FROM memory WHERE slot='forged' AND key LIKE 'lesson-%' ORDER BY key DESC LIMIT 10"
+  try {
+    if (action === 'clear') {
+      db.close();
+      // 删除所有 injected- 开头的 messages
+      const clearCode = `
+        var pid = new URLSearchParams(window.location.search).get('id');
+        if (!pid) return {error:'no pid'};
+        return window.readSlotFull(pid).then(function(data) {
+          var ss = data.session_state || {messages:[]};
+          var before = ss.messages.length;
+          ss.messages = ss.messages.filter(function(m) { return !m.id || !m.id.startsWith('injected-'); });
+          var after = ss.messages.length;
+          return fetch('/api/project/update', {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
+          }).then(function(r){return r.json()}).then(function(d){
+            return {cleared: before - after, remaining: after};
+          });
+        });
+      `;
+      const result = await evalInBrowser(clearCode, 30000);
+      return { success: true, action: 'clear', result };
+    }
+
+    // 构建注入内容
+    const sections = [];
+
+    // 1. 核心规则
+    const rulesRow = db.prepare("SELECT content FROM memory WHERE slot='forged' AND key='schema-rules'").get();
+    if (rulesRow) {
+      try {
+        const rules = JSON.parse(rulesRow.content);
+        if (rules.daily && rules.daily.length > 0) {
+          sections.push('### 核心规则\n' + rules.daily.map(r => '- ' + r).join('\n'));
+        }
+      } catch(e) {}
+    }
+
+    // 2. 当前项目上下文
+    const plans = db.prepare(
+      "SELECT key, substr(content,1,200) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
     ).all();
+    if (plans.length > 0) {
+      sections.push('### 当前项目上下文\n' + plans.map(p => '- **' + p.key + '**: ' + p.preview).join('\n'));
+    }
 
-    // 3. 读最近7天高频错误
+    // 3. 近7天高频错误
     const errors = db.prepare(
       "SELECT tool, substr(error,1,60) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND timestamp>=date('now','-7 day') GROUP BY tool, substr(error,1,60) ORDER BY cnt DESC LIMIT 5"
     ).all();
+    if (errors.length > 0) {
+      sections.push('### 近7天高频错误\n' + errors.map(e => '- ' + e.tool + '(' + e.cnt + '次): ' + e.err).join('\n'));
+    }
 
-    // 4. 读当前活跃的 memory 条目 (最近更新的 forged 计划/上下文)
-    const recentContext = db.prepare(
-      "SELECT key, substr(content,1,200) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
+    // 4. 最近经验教训
+    const lessons = db.prepare(
+      "SELECT key, substr(content,1,150) as summary FROM memory WHERE slot='forged' AND key LIKE 'lesson-%' ORDER BY key DESC LIMIT 10"
     ).all();
+    if (lessons.length > 0) {
+      sections.push('### 最近经验教训\n' + lessons.map(l => '- ' + l.summary).join('\n'));
+    }
 
-    // 5. 读可用脚本索引
+    // 5. 可用脚本
     const scripts = db.prepare(
       "SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15"
     ).all();
+    if (scripts.length > 0) {
+      sections.push('### 可用脚本\n' + scripts.map(s => s.key.replace('script/','')).join(', '));
+    }
 
-    // 6. 读 forged 核心规则摘要 (schema-rules 的 daily 字段)
-    const rulesRow = db.prepare("SELECT content FROM memory WHERE slot='forged' AND key='schema-rules'").get();
-    let dailyRules = [];
-    if (rulesRow) {
-      try { dailyRules = JSON.parse(rulesRow.content).daily || []; } catch(e) {}
+    // 6. 自定义内容
+    if (params.extra) {
+      sections.push('### 补充\n' + params.extra);
     }
 
     db.close();
 
-    // 7. 拼装知识注入内容
-    const knowledgeLines = ['\n---\n## 知识补充 (compress自动注入)'];
+    const content = '## VFS Context (知识注入)\n' + sections.join('\n\n');
 
-    if (dailyRules.length > 0) {
-      knowledgeLines.push('\n### 核心规则');
-      dailyRules.forEach(r => knowledgeLines.push('- ' + r));
+    if (action === 'preview') {
+      return { success: true, action: 'preview', content, chars: content.length };
     }
 
-    if (recentContext.length > 0) {
-      knowledgeLines.push('\n### 当前项目上下文');
-      recentContext.forEach(c => knowledgeLines.push('- **' + c.key + '**: ' + c.preview));
-    }
-
-    if (errors.length > 0) {
-      knowledgeLines.push('\n### 近7天高频错误');
-      errors.forEach(e => knowledgeLines.push('- ' + e.tool + '(' + e.cnt + '次): ' + e.err));
-    }
-
-    if (lessons.length > 0) {
-      knowledgeLines.push('\n### 最近经验教训');
-      lessons.forEach(l => knowledgeLines.push('- ' + l.key + ': ' + l.summary));
-    }
-
-    if (scripts.length > 0) {
-      knowledgeLines.push('\n### 可用脚本');
-      knowledgeLines.push(scripts.map(s => s.key.replace('script/','')).join(', '));
-    }
-
-    restorePrompt += knowledgeLines.join('\n');
-
-    // 8. 追加为 user message 到对话末尾
+    // inject or update: 先清旧的再注入新的
     const injectCode = `
       var pid = new URLSearchParams(window.location.search).get('id');
       if (!pid) return {error:'no pid'};
-      return fetch('/api/project/update', {
-        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-        body: JSON.stringify({id:pid, request_not_update_permission:true})
-      }).then(r=>r.json()).then(d=>{
-        var ss = d.data.session_state;
-        ss.messages.push({
-          id: 'compress-inject-' + Date.now(),
+      return window.readSlotFull(pid).then(function(data) {
+        var ss = data.session_state || {messages:[]};
+        // 清除旧的注入
+        ss.messages = ss.messages.filter(function(m) { return !m.id || !m.id.startsWith('injected-'); });
+        // 注入新的到前面(forged后面)
+        ss.messages.unshift({
+          id: 'injected-knowledge-' + Date.now(),
           role: 'user',
-          content: ${JSON.stringify(restorePrompt)}
+          content: ${JSON.stringify(content)}
         });
         return fetch('/api/project/update', {
           method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
           body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
-        }).then(r2=>r2.json()).then(d2=>({injected:true, totalMsgs:d2.data.session_state.messages.length}));
+        }).then(function(r){return r.json()}).then(function(d){
+          var cnt = d.data && d.data.session_state ? d.data.session_state.messages.length : -1;
+          return {injected:true, totalMsgs:cnt};
+        });
       });
     `;
-    const injectResult = await evalInBrowser(injectCode, 30000);
-    resultObj.knowledgeInjected = injectResult;
-
-    return { success: true, result: resultObj };
+    const result = await evalInBrowser(injectCode, 30000);
+    return { success: true, action, result, chars: content.length };
   } catch (e) {
+    db.close();
     return { success: false, error: e.message };
   }
 });
