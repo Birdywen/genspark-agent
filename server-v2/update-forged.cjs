@@ -114,14 +114,37 @@ if (dryRun) {
 
   // 同时生成 inject-knowledge（供 compress 弹窗使用）
   const knowledgeParts = [];
+  const db3 = new Database(dbPath);
 
-  // 近7天高频错误
+  // 1. 工具健康度（7天成功率最低5个）
+  const toolHealth = db3.prepare(
+    "SELECT tool, ROUND(100.0*SUM(CASE WHEN success=1 THEN 1 ELSE 0 END)/COUNT(*),1) as rate, COUNT(*) as total FROM commands WHERE timestamp>=date('now','-7 day') GROUP BY tool HAVING total>=5 ORDER BY rate ASC LIMIT 5"
+  ).all();
+  if (toolHealth.length > 0) {
+    knowledgeParts.push('## 工具健康度(7天)');
+    toolHealth.forEach(t => knowledgeParts.push('- ' + t.tool + ': ' + t.rate + '%成功 (' + t.total + '次)'));
+  }
+
+  // 2. 近7天高频错误
   if (forgedJson.errors_7d.length > 0) {
-    knowledgeParts.push('## 近7天高频错误');
+    knowledgeParts.push('\n## 近7天高频错误');
     forgedJson.errors_7d.forEach(e => knowledgeParts.push('- ' + e.tool + '(' + e.cnt + '次): ' + (e.err || 'null')));
   }
 
-  // 最近经验教训（取最新5条）
+  // 3. Playbook速查（正确/错误方法）
+  const playbooks = db3.prepare(
+    "SELECT keyword, correct_method, wrong_method FROM playbook ORDER BY priority DESC, query_count DESC LIMIT 8"
+  ).all();
+  if (playbooks.length > 0) {
+    knowledgeParts.push('\n## Playbook速查');
+    playbooks.forEach(p => {
+      let line = '- ' + p.keyword + ': ✓ ' + p.correct_method;
+      if (p.wrong_method) line += ' (✗ ' + p.wrong_method + ')';
+      knowledgeParts.push(line);
+    });
+  }
+
+  // 4. 最近经验教训
   if (forgedJson.lessons.length > 0) {
     knowledgeParts.push('\n## 最近经验教训');
     forgedJson.lessons.slice(0, 8).forEach(l => {
@@ -130,17 +153,31 @@ if (dryRun) {
     });
   }
 
-  // 当前计划
+  // 5. 今日操作概览
+  const todayOps = db3.prepare(
+    "SELECT tool, COUNT(*) as cnt, SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as ok FROM commands WHERE timestamp>=date('now') GROUP BY tool ORDER BY cnt DESC LIMIT 8"
+  ).all();
+  if (todayOps.length > 0) {
+    knowledgeParts.push('\n## 今日操作概览');
+    todayOps.forEach(t => knowledgeParts.push('- ' + t.tool + ': ' + t.ok + '/' + t.cnt + '次'));
+  }
+
+  // 6. 当前计划
   if (forgedJson.context && forgedJson.context.plans.length > 0) {
     knowledgeParts.push('\n## 当前计划');
     forgedJson.context.plans.forEach(p => knowledgeParts.push('- ' + p.key + ': ' + p.preview.substring(0, 400)));
   }
 
-  // 可用脚本
-  if (forgedJson.context && forgedJson.context.scripts.length > 0) {
-    knowledgeParts.push('\n## 可用脚本');
-    knowledgeParts.push(forgedJson.context.scripts.join(', '));
+  // 7. 可用脚本索引
+  const allScripts = db3.prepare(
+    "SELECT key FROM local_store WHERE slot='script' ORDER BY key"
+  ).all();
+  if (allScripts.length > 0) {
+    knowledgeParts.push('\n## 可用脚本(' + allScripts.length + '个)');
+    knowledgeParts.push(allScripts.map(s => s.key).join(', '));
   }
+
+  db3.close();
 
   const knowledgeContent = knowledgeParts.join('\n');
   db2 = new Database(dbPath);
