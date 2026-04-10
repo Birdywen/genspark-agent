@@ -78,24 +78,27 @@
 
     // Clear and set content
     if (input.matches('div[contenteditable]')) {
-      // contenteditable div - use clipboard paste for long text reliability
       input.focus();
       input.innerHTML = '';
       
-      // Method: Clipboard paste (handles long text without truncation)
-      const dt = new DataTransfer();
-      dt.setData('text/plain', text);
-      const pasteEvent = new ClipboardEvent('paste', {
-        clipboardData: dt,
-        bubbles: true,
-        cancelable: true
-      });
-      const handled = !input.dispatchEvent(pasteEvent);
+      // Method 1: execCommand insertText (Vue/React compatible)
+      // For long text, insert in chunks to avoid browser truncation
+      const CHUNK = 4000;
+      if (text.length <= CHUNK) {
+        document.execCommand('insertText', false, text);
+      } else {
+        // Chunk insert for long text
+        for (let i = 0; i < text.length; i += CHUNK) {
+          document.execCommand('insertText', false, text.slice(i, i + CHUNK));
+        }
+      }
       
-      if (!handled || !input.textContent) {
-        // Fallback: direct textContent + input event
-        console.log('[VearAgent] paste not handled, using textContent fallback');
-        input.textContent = text;
+      // Verify and fallback if execCommand failed
+      if (!input.textContent || input.textContent.length < text.length * 0.9) {
+        console.log('[VearAgent] execCommand incomplete (' + (input.textContent||'').length + '/' + text.length + '), using innerHTML fallback');
+        // Escape HTML and preserve newlines
+        const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,"<br>");
+        input.innerHTML = escaped;
       }
       
       // Dispatch input event for framework reactivity
