@@ -59,7 +59,7 @@ function buildLessons() {
 // === 动态: errors ===
 function buildErrors() {
   return db.prepare(
-    "SELECT tool, substr(error,1,50) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND timestamp>=date('now','-7 day') GROUP BY tool, err ORDER BY cnt DESC LIMIT 8"
+    "SELECT tool, substr(error,1,50) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND error IS NOT NULL AND error != '' AND timestamp>=date('now','-7 day') GROUP BY tool, err ORDER BY cnt DESC LIMIT 8"
   ).all();
 }
 
