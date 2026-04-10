@@ -36,8 +36,49 @@
     wsConnected: false,
     roundCount: parseInt(localStorage.getItem('vear_agent_round_count') || '0'),
     lastCid: null,
-    processedCids: new Set()
+    processedCids: new Set(),
+    extensionValid: true
   };
+
+  // === Chrome API Safety Wrapper ===
+  function safeChromeMessage(msg) {
+    try {
+      if (chrome.runtime && chrome.runtime.id) {
+        chrome.runtime.sendMessage(msg);
+        return true;
+      }
+    } catch(e) {
+      if (e.message.includes('Extension context invalidated')) {
+        console.warn('[VearAgent] Extension context lost, using fallback channel');
+        state.extensionValid = false;
+      } else {
+        console.error('[VearAgent] chrome.runtime.sendMessage error:', e.message);
+      }
+    }
+    return false;
+  }
+
+  // === Fallback: Direct WS to server-v2 (bypass extension) ===
+  let fallbackWs = null;
+  function getFallbackWs() {
+    if (fallbackWs && fallbackWs.readyState === 1) return fallbackWs;
+    try {
+      fallbackWs = new WebSocket('ws://localhost:8765');
+      fallbackWs.onopen = () => console.log('[VearAgent] Fallback WS connected');
+      fallbackWs.onmessage = (evt) => {
+        try {
+          const data = JSON.parse(evt.data);
+          if (data.type === 'tool_result' || data.type === 'inject_result') {
+            console.log('[VearAgent] Fallback WS got result, tool:', data.tool, 'len:', (data.result||'').length);
+            handleToolResult(data);
+          }
+        } catch(e) {}
+      };
+      fallbackWs.onerror = () => { fallbackWs = null; };
+      fallbackWs.onclose = () => { fallbackWs = null; };
+      return fallbackWs;
+    } catch(e) { return null; }
+  }
 
   // === Status Panel ===
   const panelEl = document.createElement('div');
@@ -47,7 +88,8 @@
 
   function updateStatus() {
     const ws = state.wsConnected ? '🟢' : '🔴';
-    panelEl.textContent = ws + ' R' + state.roundCount;
+    const ctx = state.extensionValid ? '' : ' ⚡fb';
+    panelEl.textContent = ws + ' R' + state.roundCount + ctx;
   }
   updateStatus();
 
@@ -68,93 +110,24 @@
     if (i) i.style.display = 'none';
   }
 
-  // === Send Message to Chat ===
+  // === Send Message to Vear Chat via WS bridge ===
   function sendMessage(text) {
     if (!text) return;
-    
-    // Send via WS bridge + show in UI
     console.log('[VearAgent] sendMessage via WS bridge (' + text.length + ' chars)');
-    
+
     // Inject a visual bubble in chat so user can see the tool result
     try {
       const chatArea = document.querySelector('.chat-messages, .conversation-content, [class*="message-list"], [class*="chat-content"]');
       if (chatArea) {
         const bubble = document.createElement('div');
         bubble.style.cssText = 'margin:8px 16px;padding:10px 14px;background:#e8f4e8;border-radius:12px;border:1px solid #c3e6c3;font-size:13px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;opacity:0.85;';
-        bubble.textContent = text.length > 500 ? text.substring(0, 500) + '... (' + text.length + ' chars)' : text;
+        bubble.textContent = text.length > 500 ? text.substring(0, 500) + '... (' + text.length + ' chars total)' : text;
         chatArea.appendChild(bubble);
         chatArea.scrollTop = chatArea.scrollHeight;
       }
     } catch(e) { console.log('[VearAgent] UI inject failed:', e.message); }
-    
+
     document.dispatchEvent(new CustomEvent('__vear_ws_send__', { detail: { text: text } }));
-    return;
-    
-    const input = document.querySelector(CONFIG.SEL.INPUT);
-    if (!input) { console.error('[VearAgent] No input found'); return; }
-
-    console.log('[VearAgent] sendMessage (' + text.length + ' chars)');
-
-    // Clear and set content
-    if (input.matches('div[contenteditable]')) {
-      input.focus();
-      
-      // Try to find Vue instance and set value directly
-      const vueKey = Object.keys(input).find(k => k.startsWith('__vue'));
-      if (vueKey) {
-        console.log('[VearAgent] Found Vue instance:', vueKey);
-      }
-      
-      // Method: Select all + delete + insertText (most compatible)
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(input);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      sel.deleteFromDocument();
-      
-      // Set textContent directly and fire proper events
-      input.textContent = text;
-      
-      // Move cursor to end
-      const newRange = document.createRange();
-      newRange.selectNodeContents(input);
-      newRange.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-      
-      // Fire comprehensive events to trigger Vue/React reactivity
-      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
-      input.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: false, inputType: 'insertText', data: text }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      input.dispatchEvent(new Event('keyup', { bubbles: true }));
-      
-      console.log('[VearAgent] Set textContent (' + input.textContent.length + ' chars) + fired InputEvent');
-    } else {
-      // textarea fallback
-      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-      nativeSetter.call(input, text);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-
-    // Send via Enter key after short delay
-    setTimeout(() => {
-      console.log('[VearAgent] Dispatching Enter key');
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-      
-      // Also try clicking send button as backup
-      setTimeout(() => {
-        const sendBtn = document.querySelector(CONFIG.SEL.SEND_BTN);
-        if (sendBtn && !sendBtn.disabled) {
-          sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-          sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-          sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-          console.log('[VearAgent] Send button mouse events dispatched');
-        }
-      }, 200);
-    }, 300);
   }
 
   function sendMessageSafe(text) {
@@ -164,6 +137,19 @@
       setTimeout(() => sendMessage(text), 800);
     };
     check();
+  }
+
+  // === Handle Tool Result (shared by chrome listener + fallback WS) ===
+  function handleToolResult(msg) {
+    hideExec();
+    state.roundCount++;
+    localStorage.setItem('vear_agent_round_count', state.roundCount);
+    updateStatus();
+    const resultText = msg.text || (msg.success
+      ? ('**[执行结果]** `' + (msg.tool||'') + '` ✓ 成功:\n```\n' + (msg.result||'') + '\n```')
+      : ('**[执行结果]** `' + (msg.tool||'') + '` ✗ 失败:\n```\n' + (msg.error||'') + '\n```'));
+    console.log('[VearAgent] Injecting result (' + resultText.length + ' chars)');
+    sendMessageSafe(resultText);
   }
 
   // === WS Hook Events: 截获AI文本 → 发server ===
@@ -176,7 +162,7 @@
     const text = e.detail?.text || '';
     const cid = e.detail?.cid || null;
     if (!text) return;
-    
+
     // Skip if this is a response to our bridge message
     if (state.bridgePending) {
       state.bridgePending = false;
@@ -191,33 +177,74 @@
     state.lastCid = cid;
     console.log('[VearAgent] AI done, sending to server (' + text.length + ' chars)');
 
-    chrome.runtime.sendMessage({
+    // Try chrome API first, fallback to direct WS
+    const sent = safeChromeMessage({
       type: 'SEND_TO_SERVER',
       payload: { type: 'ai_text', text: text, source: 'vear', cid: cid }
     });
+
+    if (!sent) {
+      // Extension dead — send via fallback WS and listen for result
+      console.log('[VearAgent] Using fallback WS to send ai_text');
+      const ws = getFallbackWs();
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'ai_text', text: text, source: 'vear', cid: cid }));
+      } else {
+        // WS not ready yet, wait and retry
+        setTimeout(() => {
+          const ws2 = getFallbackWs();
+          if (ws2 && ws2.readyState === 1) {
+            ws2.send(JSON.stringify({ type: 'ai_text', text: text, source: 'vear', cid: cid }));
+          } else {
+            console.error('[VearAgent] Both chrome and fallback WS failed');
+          }
+        }, 1000);
+      }
+    }
   });
 
   document.addEventListener('__vear_ws_error__', () => { state.processedCids.clear(); });
   document.addEventListener('__vear_ws_closed__', () => { state.wsConnected = false; updateStatus(); });
 
   // === Background Messages: 收server结果 → 注入 ===
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type === 'WS_STATUS') {
-      state.wsConnected = msg.connected;
-      updateStatus();
+  try {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg.type === 'WS_STATUS') {
+        state.wsConnected = msg.connected;
+        updateStatus();
+      }
+      if (msg.type === 'inject_status') {
+        showExec(msg.detail || 'working...');
+      }
+      if (msg.type === 'inject_result' || msg.type === 'tool_result') {
+        handleToolResult(msg);
+      }
+    });
+  } catch(e) {
+    console.warn('[VearAgent] chrome.runtime.onMessage failed, using fallback only:', e.message);
+    state.extensionValid = false;
+    getFallbackWs();
+  }
+
+  // === Proactive: if extension context dies mid-session, auto-connect fallback ===
+  setInterval(() => {
+    if (!state.extensionValid && !fallbackWs) {
+      getFallbackWs();
     }
-    if (msg.type === 'inject_status') {
-      showExec(msg.detail || 'working...');
+    // Periodic check if extension is still alive
+    try {
+      if (chrome.runtime && chrome.runtime.id) {
+        state.extensionValid = true;
+      }
+    } catch(e) {
+      if (state.extensionValid) {
+        console.warn('[VearAgent] Extension context died, switching to fallback');
+        state.extensionValid = false;
+        getFallbackWs();
+        updateStatus();
+      }
     }
-    if (msg.type === 'inject_result' || msg.type === 'tool_result') {
-      hideExec();
-      state.roundCount++;
-      localStorage.setItem('vear_agent_round_count', state.roundCount);
-      updateStatus();
-      console.log('[VearAgent] Injecting result (' + (msg.text || '').length + ' chars)');
-      const resultText = msg.text || (msg.success ? ('**[执行结果]** `' + (msg.tool||'') + '` ✓ 成功:\n```\n' + (msg.result||'') + '\n```') : ('**[执行结果]** `' + (msg.tool||'') + '` ✗ 失败:\n```\n' + (msg.error||'') + '\n```')); sendMessageSafe(resultText);
-    }
-  });
+  }, 5000);
 
   console.log('[VearAgent] v2 loaded — server-side processing mode');
 })();
