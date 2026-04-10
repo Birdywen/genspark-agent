@@ -51,22 +51,22 @@ function buildLessons() {
     const c = l.content.trim();
     const wm = c.match(/WRONG:\s*(.+?)(?:\n|CORRECT)/s);
     const cm = c.match(/CORRECT:\s*(.+?)(?:\n|CONTEXT|$)/s);
-    if (wm && cm) return { wrong: wm[1].trim().substring(0,80), correct: cm[1].trim().substring(0,80) };
-    return { summary: c.split('\n')[0].substring(0,100) };
+    if (wm && cm) return { wrong: wm[1].trim().substring(0,80), correct: cm[1].trim() };
+    return { summary: c.split('\n')[0].substring(0,300) };
   });
 }
 
 // === 动态: errors ===
 function buildErrors() {
   return db.prepare(
-    "SELECT tool, substr(error,1,50) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND error IS NOT NULL AND error != '' AND timestamp>=date('now','-7 day') GROUP BY tool, err ORDER BY cnt DESC LIMIT 8"
+    "SELECT tool, substr(error,1,80) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND error IS NOT NULL AND error != '' AND timestamp>=date('now','-7 day') GROUP BY tool, err ORDER BY cnt DESC LIMIT 8"
   ).all();
 }
 
 // === 动态: context (plans + scripts) ===
 function buildContext() {
   const plans = db.prepare(
-    "SELECT key, substr(content,1,200) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
+    "SELECT key, substr(content,1,500) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
   ).all();
   const scripts = db.prepare(
     "SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15"
@@ -124,7 +124,7 @@ if (dryRun) {
   // 最近经验教训（取最新5条）
   if (forgedJson.lessons.length > 0) {
     knowledgeParts.push('\n## 最近经验教训');
-    forgedJson.lessons.slice(0, 5).forEach(l => {
+    forgedJson.lessons.slice(0, 8).forEach(l => {
       if (l.wrong) knowledgeParts.push('- ✗ ' + l.wrong + ' → ✓ ' + l.correct);
       else if (l.summary) knowledgeParts.push('- ' + l.summary);
     });
@@ -133,7 +133,7 @@ if (dryRun) {
   // 当前计划
   if (forgedJson.context && forgedJson.context.plans.length > 0) {
     knowledgeParts.push('\n## 当前计划');
-    forgedJson.context.plans.forEach(p => knowledgeParts.push('- ' + p.key + ': ' + p.preview.substring(0, 150)));
+    forgedJson.context.plans.forEach(p => knowledgeParts.push('- ' + p.key + ': ' + p.preview.substring(0, 400)));
   }
 
   // 可用脚本
