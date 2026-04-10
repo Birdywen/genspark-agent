@@ -698,10 +698,11 @@ handlers.set('compress', async (params, context) => {
   try {
     const result = await evalInBrowser(code, 120000);
     if (dryRun || !result || result.error) return { success: true, result };
+    const resultObj = typeof result === 'string' ? JSON.parse(result) : result;
 
     // === 压缩成功，注入知识 ===
-    const Database = require('better-sqlite3');
-    const path = require('path');
+    // Database already imported at top
+    // path already imported at top
     const db = new Database(path.join(__dirname, 'data', 'agent.db'));
 
     // 1. 读 restore prompt 模板
@@ -790,9 +791,9 @@ handlers.set('compress', async (params, context) => {
       });
     `;
     const injectResult = await evalInBrowser(injectCode, 30000);
-    result.knowledgeInjected = injectResult;
+    resultObj.knowledgeInjected = injectResult;
 
-    return { success: true, result };
+    return { success: true, result: resultObj };
   } catch (e) {
     return { success: false, error: e.message };
   }
