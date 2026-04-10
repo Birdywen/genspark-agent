@@ -143,6 +143,11 @@ const processManager = new ProcessManager();
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
 
+  // Store for retry (skip retry calls themselves to avoid loop)
+  if (!id || !id.startsWith('retry-')) {
+    global.__LAST_TOOL_CALL__ = { tool, params, timestamp: Date.now() };
+  }
+
   // ── 自定义 Tool 拦截（不走 MCP）──
   logger.info(`[handleToolCall] tool=${tool} isSysTool=${isSysTool(tool)} isBrowserTool2=${isBrowserTool(tool)} isBrowserNative2=${isBrowserNative(tool)}`);
   if (isSysTool(tool)) {
@@ -1137,17 +1142,21 @@ async function main() {
               const { createAiBridge: cab } = await import('./ai-bridge.js');
               global._aiBridge = cab({ handleToolCall, taskEngine, logger });
             }
-            // 优先用 ai-bridge 存的 __LAST_OMEGA__
+            // 优先级: 1) ai-bridge ΩCODE  2) handleToolCall  3) DB
             if (global.__LAST_OMEGA__ && global._aiBridge.retryLast) {
               await global._aiBridge.retryLast(ws, msg);
+            } else if (global.__LAST_TOOL_CALL__) {
+              const { tool, params } = global.__LAST_TOOL_CALL__;
+              logger.info('[Retry] Re-executing last tool_call: ' + tool);
+              await handleToolCall(ws, { type: 'tool_call', tool, params, id: 'retry-' + Date.now() });
             } else {
-              // fallback: 从 commands 表取最后一条重执行
+              // fallback: 从 commands 表取最后一条
               const last = dbApi.query("SELECT tool, params FROM commands ORDER BY id DESC LIMIT 1");
               if (last && last[0]) {
                 const tool = last[0].tool;
                 let params;
                 try { params = JSON.parse(last[0].params); } catch(e) { params = last[0].params; }
-                logger.info('[Retry] DB fallback: re-executing ' + tool + ' params=' + JSON.stringify(params).slice(0,100));
+                logger.info('[Retry] DB fallback: ' + tool);
                 await handleToolCall(ws, { type: 'tool_call', tool, params, id: 'retry-' + Date.now() });
               } else {
                 ws.send(JSON.stringify({ type: 'inject_result', text: '**[Retry]** 没有可重试的命令' }));
