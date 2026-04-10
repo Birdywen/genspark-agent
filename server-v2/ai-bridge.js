@@ -40,13 +40,13 @@ function formatResult(msg) {
     const ok = msg.batchResults.filter(r => r.success).length;
     let text = `**[批量执行完成]** ${ok === total ? '✓' : '⚠️'} 成功 (${ok}/${total})\n\n`;
     msg.batchResults.forEach((r, i) => {
-      const p = ((v => typeof v === 'string' ? v : JSON.stringify(v, null, 2))(r.result ?? r.error ?? '')).substring(0, 300);
+      const p = ((v => typeof v === 'string' ? v : JSON.stringify(v, null, 2))(r.result ?? r.error ?? '')).substring(0, 50000);
       text += `**[步骤${i}]** \`${r.tool}\` ${r.success ? '✓' : '✗'}\n\`\`\`\n${p}\n\`\`\`\n\n`;
     });
     return text.trim();
   }
   const s = msg.success ? '✓ 成功' : '✗ 失败';
-  const c = ((v => typeof v === 'string' ? v : JSON.stringify(v, null, 2))(msg.success ? (msg.result ?? '') : (msg.error ?? ''))).substring(0, 500);
+  const c = ((v => typeof v === 'string' ? v : JSON.stringify(v, null, 2))(msg.success ? (msg.result ?? '') : (msg.error ?? ''))).substring(0, 50000);
   return `**[执行结果]** \`${msg.tool}\` ${s}:\n\`\`\`\n${c}\n\`\`\``;
 }
 
