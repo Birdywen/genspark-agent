@@ -51,8 +51,8 @@ function buildLessons() {
     const c = l.content.trim();
     const wm = c.match(/WRONG:\s*(.+?)(?:\n|CORRECT)/s);
     const cm = c.match(/CORRECT:\s*(.+?)(?:\n|CONTEXT|$)/s);
-    if (wm && cm) return { wrong: wm[1].trim().substring(0,80), correct: cm[1].trim() };
-    return { summary: c.split('\n')[0].substring(0,300) };
+    if (wm && cm) return { wrong: wm[1].trim(), correct: cm[1].trim() };
+    return { summary: c.split('\n')[0].substring(0,500) };
   });
 }
 
