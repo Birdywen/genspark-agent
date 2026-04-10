@@ -17,6 +17,7 @@
 
     if (isVearSocket) {
       console.log('[Vear-WS-Hook] Intercepting WebSocket:', url);
+      window.__VEAR_WS__ = ws;
 
       var _buffer = '';
       var _currentCid = null;
@@ -46,7 +47,9 @@
           console.log('[Vear-WS-Hook] Parsed OK | t=' + t + ' cid=' + data.cid + ' keys=' + Object.keys(data).join(','));
 
           if (t === 's') {
+
             _currentCid = data.cid;
+            window.__VEAR_CURRENT_CID__ = data.cid;
             // 如果第一条无cid消息已注入，标记这个cid为已注入，避免重复
             if (_firstMsgInjected && data.cid && !_injectedCids[data.cid]) {
               _injectedCids[data.cid] = true;
@@ -59,6 +62,7 @@
           }
 
           else if (t === 'm') {
+
             if (data.cid && data.cid !== _currentCid) {
               console.log('[Vear-WS-Hook] CID changed: ' + _currentCid + ' -> ' + data.cid);
               _currentCid = data.cid;
@@ -70,6 +74,7 @@
           }
 
           else if (t === 'n') {
+
             console.log('[Vear-WS-Hook] >>> STREAM DONE cid=' + (data.cid || _currentCid) + ' buffer=' + _buffer.length + 'chars');
             console.log('[Vear-WS-Hook] Final text preview:', _buffer.slice(0, 200));
             document.dispatchEvent(new CustomEvent('__vear_ws_done__', {
@@ -129,6 +134,20 @@
   window.WebSocket.CLOSING = OrigWebSocket.CLOSING;
   window.WebSocket.CLOSED = OrigWebSocket.CLOSED;
 
+  // === Bridge: content.js can send messages via CustomEvent ===
+  document.addEventListener('__vear_ws_send__', function(e) {
+    var text = e.detail && e.detail.text;
+    if (!text || !window.__VEAR_WS__ || window.__VEAR_WS__.readyState !== 1) {
+      console.log('[Vear-WS-Hook] Cannot send: ws=' + (window.__VEAR_WS__ ? window.__VEAR_WS__.readyState : 'null'));
+      return;
+    }
+    var cid = window.__VEAR_CURRENT_CID__ || undefined;
+    var msg = { t: 'm', q: text, m: 11, ms: 11 };
+    if (cid) msg.cid = cid;
+    console.log('[Vear-WS-Hook] Sending via WS bridge, cid=' + cid + ' len=' + text.length);
+    window.__VEAR_WS__.send(JSON.stringify(msg));
+  });
+
   // === Prototype-level send 拦截：注入工具提示（改 OrigWebSocket.prototype 因为实例是 new OrigWebSocket）===
   var _injectedCids = {};
   var _firstMsgInjected = false;
@@ -138,6 +157,17 @@
       try {
         var parsed = JSON.parse(data);
         console.log('[Vear-WS-Hook] SEND t=' + parsed.t + ' cid=' + parsed.cid + ' hasQ=' + !!parsed.q + ' qLen=' + (parsed.q||'').length + ' keys=' + Object.keys(parsed).join(','));
+        if (parsed.t === 'm') {
+          // If q is empty but DOM input has content (set by agent), use DOM content
+          if (!parsed.q || parsed.q.trim() === '') {
+            var domInput = document.querySelector('div.chatq-holder[contenteditable]');
+            if (domInput && domInput.textContent && domInput.textContent.trim()) {
+              parsed.q = domInput.textContent;
+              data = JSON.stringify(parsed);
+              console.log('[Vear-WS-Hook] Replaced empty q with DOM content (' + parsed.q.length + ' chars)');
+            }
+          }
+        }
         if (parsed.t === 'm' && parsed.q) {
           // 判断是否需要注入: 第一条消息(无cid)或新cid的第一条
           var needInject = false;

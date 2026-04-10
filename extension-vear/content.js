@@ -71,39 +71,65 @@
   // === Send Message to Chat ===
   function sendMessage(text) {
     if (!text) return;
+    
+    // Send via WS bridge + show in UI
+    console.log('[VearAgent] sendMessage via WS bridge (' + text.length + ' chars)');
+    
+    // Inject a visual bubble in chat so user can see the tool result
+    try {
+      const chatArea = document.querySelector('.chat-messages, .conversation-content, [class*="message-list"], [class*="chat-content"]');
+      if (chatArea) {
+        const bubble = document.createElement('div');
+        bubble.style.cssText = 'margin:8px 16px;padding:10px 14px;background:#e8f4e8;border-radius:12px;border:1px solid #c3e6c3;font-size:13px;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;opacity:0.85;';
+        bubble.textContent = text.length > 500 ? text.substring(0, 500) + '... (' + text.length + ' chars)' : text;
+        chatArea.appendChild(bubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+    } catch(e) { console.log('[VearAgent] UI inject failed:', e.message); }
+    
+    document.dispatchEvent(new CustomEvent('__vear_ws_send__', { detail: { text: text } }));
+    return;
+    
     const input = document.querySelector(CONFIG.SEL.INPUT);
     if (!input) { console.error('[VearAgent] No input found'); return; }
 
-    console.log('[VearAgent] sendMessage: input tag=' + input.tagName + ' class=' + input.className?.substring(0, 40));
+    console.log('[VearAgent] sendMessage (' + text.length + ' chars)');
 
     // Clear and set content
     if (input.matches('div[contenteditable]')) {
       input.focus();
-      input.innerHTML = '';
       
-      // Method 1: execCommand insertText (Vue/React compatible)
-      // For long text, insert in chunks to avoid browser truncation
-      const CHUNK = 4000;
-      if (text.length <= CHUNK) {
-        document.execCommand('insertText', false, text);
-      } else {
-        // Chunk insert for long text
-        for (let i = 0; i < text.length; i += CHUNK) {
-          document.execCommand('insertText', false, text.slice(i, i + CHUNK));
-        }
+      // Try to find Vue instance and set value directly
+      const vueKey = Object.keys(input).find(k => k.startsWith('__vue'));
+      if (vueKey) {
+        console.log('[VearAgent] Found Vue instance:', vueKey);
       }
       
-      // Verify and fallback if execCommand failed
-      if (!input.textContent || input.textContent.length < text.length * 0.9) {
-        console.log('[VearAgent] execCommand incomplete (' + (input.textContent||'').length + '/' + text.length + '), using innerHTML fallback');
-        // Escape HTML and preserve newlines
-        const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,"<br>");
-        input.innerHTML = escaped;
-      }
+      // Method: Select all + delete + insertText (most compatible)
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      sel.deleteFromDocument();
       
-      // Dispatch input event for framework reactivity
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      // Set textContent directly and fire proper events
+      input.textContent = text;
+      
+      // Move cursor to end
+      const newRange = document.createRange();
+      newRange.selectNodeContents(input);
+      newRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      
+      // Fire comprehensive events to trigger Vue/React reactivity
+      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: false, inputType: 'insertText', data: text }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('keyup', { bubbles: true }));
+      
+      console.log('[VearAgent] Set textContent (' + input.textContent.length + ' chars) + fired InputEvent');
     } else {
       // textarea fallback
       const nativeSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
@@ -111,31 +137,23 @@
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Click send button after short delay
+    // Send via Enter key after short delay
     setTimeout(() => {
-      const sendBtn = document.querySelector(CONFIG.SEL.SEND_BTN);
-      console.log('[VearAgent] sendBtn:', sendBtn?.tagName, sendBtn?.className?.substring(0, 40), 'disabled:', sendBtn?.disabled);
-      if (sendBtn && !sendBtn.disabled) {
-        sendBtn.click();
-        console.log('[VearAgent] Send button clicked');
-      } else if (sendBtn && sendBtn.disabled) {
-        // Button disabled, wait and retry
-        console.log('[VearAgent] Send button disabled, retrying...');
-        setTimeout(() => {
-          if (!sendBtn.disabled) sendBtn.click();
-          else {
-            // Force Enter key
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            console.log('[VearAgent] Enter key dispatched');
-          }
-        }, 500);
-      } else {
-        // No button found, try Enter
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        console.log('[VearAgent] No send button, Enter dispatched');
-      }
+      console.log('[VearAgent] Dispatching Enter key');
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+      
+      // Also try clicking send button as backup
+      setTimeout(() => {
+        const sendBtn = document.querySelector(CONFIG.SEL.SEND_BTN);
+        if (sendBtn && !sendBtn.disabled) {
+          sendBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+          sendBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+          sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          console.log('[VearAgent] Send button mouse events dispatched');
+        }
+      }, 200);
     }, 300);
   }
 
@@ -158,6 +176,12 @@
     const text = e.detail?.text || '';
     const cid = e.detail?.cid || null;
     if (!text) return;
+    
+    // Skip if this is a response to our bridge message
+    if (state.bridgePending) {
+      state.bridgePending = false;
+      console.log('[VearAgent] Bridge response received, forwarding to server normally');
+    }
 
     const key = (cid || '') + ':' + text.length;
     if (state.processedCids.has(key)) return;
@@ -185,13 +209,13 @@
     if (msg.type === 'inject_status') {
       showExec(msg.detail || 'working...');
     }
-    if (msg.type === 'inject_result') {
+    if (msg.type === 'inject_result' || msg.type === 'tool_result') {
       hideExec();
       state.roundCount++;
       localStorage.setItem('vear_agent_round_count', state.roundCount);
       updateStatus();
       console.log('[VearAgent] Injecting result (' + (msg.text || '').length + ' chars)');
-      sendMessageSafe(msg.text || '(empty result)');
+      const resultText = msg.text || (msg.success ? ('**[执行结果]** `' + (msg.tool||'') + '` ✓ 成功:\n```\n' + (msg.result||'') + '\n```') : ('**[执行结果]** `' + (msg.tool||'') + '` ✗ 失败:\n```\n' + (msg.error||'') + '\n```')); sendMessageSafe(resultText);
     }
   });
 
