@@ -694,9 +694,15 @@ handlers.set('compress', async (params, context) => {
   const headN = params.headN || 3;
   const tailN = params.tailN || 30;
   const dryRun = params.dryRun || false;
-  const code = `return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun}}) : 'error: __shortcuts not loaded'`;
+  // 触发前端 fork-compress 按钮点击
+  const code = `
+    var btn = document.getElementById('agent-compress');
+    if (!btn) return 'error: compress button not found';
+    btn.click();
+    return 'compress triggered';
+  `;
   try {
-    const result = await evalInBrowser(code, 120000);
+    const result = await evalInBrowser(code, 5000);
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };
@@ -706,9 +712,9 @@ handlers.set('compress', async (params, context) => {
 // ===== inject: 向当前对话注入知识 =====
 handlers.set('inject', async (params, context) => {
   const { evalInBrowser } = context;
-  if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
-
   const action = params.action || 'inject'; // inject | update | clear | preview
+  // inject/update/clear need browser, preview does not
+  if (action !== 'preview' && !evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const dbPath = path.join(__dirname, 'data', 'agent.db');
   const db = new Database(dbPath);
 

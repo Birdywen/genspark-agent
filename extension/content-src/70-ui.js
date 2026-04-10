@@ -1316,36 +1316,36 @@ ${conversationText}
         // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
         // 暂时跳过，不注入空消息
 
-        // ── Section 4: Context (VFS session summary, 从 agent.db 加载) ──
-        let vfsContext = '';
-        try {
-          const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
-          const ctxRows = await ctxResp.json();
-          vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
-        } catch(e) {
-          addLog('⚠️ Context load failed: ' + e.message, 'error');
-        }
-
-        // 构造压缩摘要
+        // ── Section 4: Context (知识注入 from agent.db) ──
         const summaryParts = [
           '[Physical Compress - ' + new Date().toISOString().split('T')[0] + ']',
           'Compressed ' + midCount + ' messages (' + midSize + 'KB) into summary.',
           ''
         ];
-        if (vfsContext) {
-          // 只保留最新一层 context
-          const ctxLines = vfsContext.split('\n');
-          let lastSessionIdx = -1;
-          for (let ci = ctxLines.length - 1; ci >= 0; ci--) {
-            if (ctxLines[ci].match(/^## Session \d+ Summary/) || ctxLines[ci].match(/^\[Session \d+/) || ctxLines[ci].match(/^\[Physical Compress/)) {
-              lastSessionIdx = ci;
-              break;
-            }
+
+        // 从服务端读取动态知识
+        try {
+          addLog('📚 Loading knowledge from agent.db...', 'info');
+          const kjResp = await fetch('http://127.0.0.1:8766/local/read?slot=inject-knowledge&key=default');
+          const kjData = await kjResp.json();
+          const kjContent = kjData.content || '';
+          if (kjContent) {
+            summaryParts.push(kjContent);
+            addLog('✅ Knowledge loaded: ' + kjContent.length + ' chars', 'success');
           }
-          let trimmedCtx = lastSessionIdx > 0 ? ctxLines.slice(lastSessionIdx).join('\n') : vfsContext;
-          if (trimmedCtx.length > 2000) trimmedCtx = trimmedCtx.substring(0, 2000) + '\n...(truncated)';
-          summaryParts.push('## VFS Context (Session Memory)', trimmedCtx);
+        } catch(e) {
+          addLog('⚠️ Knowledge load failed: ' + e.message, 'error');
         }
+
+        // 读 session-state 上下文
+        try {
+          const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
+          const ctxRows = await ctxResp.json();
+          const vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
+          if (vfsContext && !vfsContext.startsWith('[Physical Compress')) {
+            summaryParts.push('## Session Context', vfsContext.substring(0, 2000));
+          }
+        } catch(e) {}
 
 
         const contextSummary = summaryParts.join('\n');

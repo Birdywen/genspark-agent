@@ -63,6 +63,24 @@ function buildErrors() {
   ).all();
 }
 
+// === 动态: context (plans + scripts) ===
+function buildContext() {
+  const plans = db.prepare(
+    "SELECT key, substr(content,1,200) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
+  ).all();
+  const scripts = db.prepare(
+    "SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15"
+  ).all();
+  const sessionCtx = db.prepare(
+    "SELECT substr(content,1,1000) as preview FROM memory WHERE slot='context' AND key='session-state'"
+  ).get();
+  return {
+    plans: plans.map(p => ({ key: p.key, preview: p.preview })),
+    scripts: scripts.map(s => s.key.replace('script/','')),
+    session: sessionCtx ? sessionCtx.preview : null
+  };
+}
+
 // === 组装 ===
 const forgedJson = {
   meta: getSchema('schema-meta'),
@@ -70,6 +88,7 @@ const forgedJson = {
   sys_tools: buildSysTools(),
   lessons: buildLessons(),
   errors_7d: buildErrors(),
+  context: buildContext(),
   params: getSchema('schema-params'),
   infra: getSchema('schema-infra')
 };
@@ -92,5 +111,46 @@ if (dryRun) {
   ];
   db.prepare("UPDATE memory SET content=? WHERE slot='toolkit' AND key='_forged:experience-dialogues'").run(JSON.stringify(dialogues));
   console.log('Updated forged dialogue!');
+
+  // 同时生成 inject-knowledge（供 compress 弹窗使用）
+  const knowledgeParts = [];
+
+  // 近7天高频错误
+  if (forgedJson.errors_7d.length > 0) {
+    knowledgeParts.push('## 近7天高频错误');
+    forgedJson.errors_7d.forEach(e => knowledgeParts.push('- ' + e.tool + '(' + e.cnt + '次): ' + (e.err || 'null')));
+  }
+
+  // 最近经验教训（取最新5条）
+  if (forgedJson.lessons.length > 0) {
+    knowledgeParts.push('\n## 最近经验教训');
+    forgedJson.lessons.slice(0, 5).forEach(l => {
+      if (l.wrong) knowledgeParts.push('- ✗ ' + l.wrong + ' → ✓ ' + l.correct);
+      else if (l.summary) knowledgeParts.push('- ' + l.summary);
+    });
+  }
+
+  // 当前计划
+  if (forgedJson.context && forgedJson.context.plans.length > 0) {
+    knowledgeParts.push('\n## 当前计划');
+    forgedJson.context.plans.forEach(p => knowledgeParts.push('- ' + p.key + ': ' + p.preview.substring(0, 150)));
+  }
+
+  // 可用脚本
+  if (forgedJson.context && forgedJson.context.scripts.length > 0) {
+    knowledgeParts.push('\n## 可用脚本');
+    knowledgeParts.push(forgedJson.context.scripts.join(', '));
+  }
+
+  const knowledgeContent = knowledgeParts.join('\n');
+  db2 = new Database(dbPath);
+  const existsKJ = db2.prepare("SELECT 1 FROM local_store WHERE slot='inject-knowledge'").get();
+  if (existsKJ) {
+    db2.prepare("UPDATE local_store SET content=? WHERE slot='inject-knowledge'").run(knowledgeContent);
+  } else {
+    db2.prepare("INSERT INTO local_store(slot,key,content) VALUES('inject-knowledge','default',?)").run(knowledgeContent);
+  }
+  db2.close();
+  console.log('Updated inject-knowledge: ' + knowledgeContent.length + ' chars');
 }
 db.close();
