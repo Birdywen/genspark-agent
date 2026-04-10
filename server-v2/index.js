@@ -759,6 +759,31 @@ async function main() {
         proxyRes.pipe(res);
       });
       proxyReq.on('error', (e) => { res.writeHead(502); res.end(JSON.stringify({error:e.message})); });
+    } else if (url.pathname === '/nlp/score' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', async () => {
+        try {
+          const { messages } = JSON.parse(body);
+          if (!messages || !Array.isArray(messages)) {
+            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+            res.end(JSON.stringify({error:'messages array required'}));
+            return;
+          }
+          const { createRequire } = await import('module');
+          const require = createRequire(import.meta.url);
+          const { scoreMessages } = require('./nlp-scorer.cjs');
+          const scores = await scoreMessages(messages, { token: process.env.DIFFBOT_TOKEN });
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ scores }));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error: e.message}));
+        }
+      });
+    } else if (url.pathname === '/nlp/score' && req.method === 'OPTIONS') {
+      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
     } else if (url.pathname === '/log' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);

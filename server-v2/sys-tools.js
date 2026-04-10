@@ -687,22 +687,65 @@ handlers.set('local_store', async (params) => {
   }
 });
 
-// ===== compress: 压缩当前对话 =====
+// ===== compress: 压缩当前对话 (NLP-aware v4) =====
 handlers.set('compress', async (params, context) => {
   const { evalInBrowser } = context;
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const headN = params.headN || 3;
   const tailN = params.tailN || 30;
   const dryRun = params.dryRun || false;
-  // 触发前端 fork-compress 按钮点击
+  const useNLP = params.useNLP !== false; // default true
+  // 清除缓存确保加载最新脚本，然后调用 __shortcuts.compress
   const code = `
-    var btn = document.getElementById('agent-compress');
-    if (!btn) return 'error: compress button not found';
-    btn.click();
-    return 'compress triggered';
+    if (window.__shortcuts) { window.__shortcuts._cache = {}; }
+    return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun},useNLP:${useNLP}}) : 'error: __shortcuts not loaded';
   `;
   try {
-    const result = await evalInBrowser(code, 5000);
+    const result = await evalInBrowser(code, 120000);
+    if (dryRun || !result || result.error) return { success: true, result };
+
+    // === 压缩成功后，注入知识 ===
+    const db = new Database(path.join(__dirname, 'data', 'agent.db'));
+    try {
+      const tplRow = db.prepare("SELECT content FROM local_store WHERE slot='guide' AND key='compress-restore-prompt'").get();
+      let restorePrompt = tplRow ? tplRow.content : 'Context restored. Compressed.';
+      const midCount = result.compressed || 0;
+      restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
+
+      const lessons = db.prepare("SELECT key, substr(content,1,150) as summary FROM memory WHERE slot='forged' AND key LIKE 'lesson-%' ORDER BY key DESC LIMIT 10").all();
+      const errors = db.prepare("SELECT tool, substr(error,1,60) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND timestamp>=date('now','-7 day') GROUP BY tool, substr(error,1,60) ORDER BY cnt DESC LIMIT 5").all();
+      const scripts = db.prepare("SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15").all();
+      const rulesRow = db.prepare("SELECT content FROM memory WHERE slot='forged' AND key='schema-rules'").get();
+      let dailyRules = [];
+      if (rulesRow) { try { dailyRules = JSON.parse(rulesRow.content).daily || []; } catch(e) {} }
+
+      const lines = ['\n---\n## 知识补充 (compress自动注入)'];
+      if (dailyRules.length) { lines.push('\n### 核心规则'); dailyRules.forEach(r => lines.push('- ' + r)); }
+      if (errors.length) { lines.push('\n### 近7天高频错误'); errors.forEach(e => lines.push('- ' + e.tool + '(' + e.cnt + '次): ' + e.err)); }
+      if (lessons.length) { lines.push('\n### 最近经验教训'); lessons.forEach(l => lines.push('- ' + l.key + ': ' + l.summary)); }
+      if (scripts.length) { lines.push('\n### 可用脚本'); lines.push(scripts.map(s => s.key.replace('script/','')).join(', ')); }
+      restorePrompt += lines.join('\n');
+
+      // 注入到对话末尾
+      const injectCode = `
+        var pid = new URLSearchParams(window.location.search).get('id');
+        if (!pid) return {error:'no pid'};
+        return fetch('/api/project/update', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({id:pid, request_not_update_permission:true})
+        }).then(r=>r.json()).then(d=>{
+          var ss = d.data.session_state;
+          ss.messages.push({ id:'compress-inject-'+Date.now(), role:'user', content:${JSON.stringify(restorePrompt)} });
+          return fetch('/api/project/update', {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
+          }).then(r2=>r2.json()).then(d2=>({injected:true, totalMsgs:d2.data.session_state.messages.length}));
+        });
+      `;
+      const injectResult = await evalInBrowser(injectCode, 30000);
+      result.knowledgeInjected = injectResult;
+    } finally { db.close(); }
+
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };
