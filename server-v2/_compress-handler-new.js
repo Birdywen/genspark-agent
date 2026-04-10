@@ -21,7 +21,7 @@ handlers.set('compress', async (params, context) => {
     const midCount = result.compressed || 0;
     restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
 
-    // 2. 读最近的 lessons (最新10条)
+    // 2. 读最近经验教训 (最新10条)
     const lessons = db.prepare(
       "SELECT key, substr(content,1,150) as summary FROM memory WHERE slot='forged' AND key LIKE 'lesson-%' ORDER BY key DESC LIMIT 10"
     ).all();
@@ -31,39 +31,56 @@ handlers.set('compress', async (params, context) => {
       "SELECT tool, substr(error,1,60) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND timestamp>=date('now','-7 day') GROUP BY tool, substr(error,1,60) ORDER BY cnt DESC LIMIT 5"
     ).all();
 
-    // 4. 读当前活跃 skills
-    const skills = db.prepare(
-      "SELECT key, substr(content,1,100) as preview FROM memory WHERE slot='forged' AND key LIKE 'schema-%' ORDER BY key"
+    // 4. 读当前活跃的 memory 条目 (最近更新的 forged 计划/上下文)
+    const recentContext = db.prepare(
+      "SELECT key, substr(content,1,200) as preview FROM memory WHERE slot='forged' AND key LIKE 'plan-%' ORDER BY rowid DESC LIMIT 3"
     ).all();
 
-    // 5. 读最近操作摘要 (今天的命令统计)
-    const todayStats = db.prepare(
-      "SELECT tool, COUNT(*) as cnt, SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as ok FROM commands WHERE timestamp>=date('now') GROUP BY tool ORDER BY cnt DESC LIMIT 10"
+    // 5. 读可用脚本索引
+    const scripts = db.prepare(
+      "SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15"
     ).all();
+
+    // 6. 读 forged 核心规则摘要 (schema-rules 的 daily 字段)
+    const rulesRow = db.prepare("SELECT content FROM memory WHERE slot='forged' AND key='schema-rules'").get();
+    let dailyRules = [];
+    if (rulesRow) {
+      try { dailyRules = JSON.parse(rulesRow.content).daily || []; } catch(e) {}
+    }
 
     db.close();
 
-    // 6. 拼装知识注入内容
+    // 7. 拼装知识注入内容
     const knowledgeLines = ['\n---\n## 知识补充 (compress自动注入)'];
 
-    if (todayStats.length > 0) {
-      knowledgeLines.push('\n### 今日操作统计');
-      knowledgeLines.push(todayStats.map(s => `${s.tool}: ${s.ok}/${s.cnt}`).join(' | '));
+    if (dailyRules.length > 0) {
+      knowledgeLines.push('\n### 核心规则');
+      dailyRules.forEach(r => knowledgeLines.push('- ' + r));
+    }
+
+    if (recentContext.length > 0) {
+      knowledgeLines.push('\n### 当前项目上下文');
+      recentContext.forEach(c => knowledgeLines.push('- **' + c.key + '**: ' + c.preview));
     }
 
     if (errors.length > 0) {
       knowledgeLines.push('\n### 近7天高频错误');
-      errors.forEach(e => knowledgeLines.push(`- ${e.tool}(${e.cnt}次): ${e.err}`));
+      errors.forEach(e => knowledgeLines.push('- ' + e.tool + '(' + e.cnt + '次): ' + e.err));
     }
 
     if (lessons.length > 0) {
       knowledgeLines.push('\n### 最近经验教训');
-      lessons.forEach(l => knowledgeLines.push(`- ${l.key}: ${l.summary}`));
+      lessons.forEach(l => knowledgeLines.push('- ' + l.key + ': ' + l.summary));
+    }
+
+    if (scripts.length > 0) {
+      knowledgeLines.push('\n### 可用脚本');
+      knowledgeLines.push(scripts.map(s => s.key.replace('script/','')).join(', '));
     }
 
     restorePrompt += knowledgeLines.join('\n');
 
-    // 7. 追加为 user message 到对话末尾
+    // 8. 追加为 user message 到对话末尾
     const injectCode = `
       var pid = new URLSearchParams(window.location.search).get('id');
       if (!pid) return {error:'no pid'};
