@@ -78,12 +78,27 @@
 
     // Clear and set content
     if (input.matches('div[contenteditable]')) {
-      // contenteditable div (Vear uses this)
+      // contenteditable div - use clipboard paste for long text reliability
       input.focus();
       input.innerHTML = '';
-      // Use insertText command for React/Vue compatibility
-      document.execCommand('insertText', false, text);
-      // Also dispatch input event
+      
+      // Method: Clipboard paste (handles long text without truncation)
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      const pasteEvent = new ClipboardEvent('paste', {
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true
+      });
+      const handled = !input.dispatchEvent(pasteEvent);
+      
+      if (!handled || !input.textContent) {
+        // Fallback: direct textContent + input event
+        console.log('[VearAgent] paste not handled, using textContent fallback');
+        input.textContent = text;
+      }
+      
+      // Dispatch input event for framework reactivity
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
     } else {
