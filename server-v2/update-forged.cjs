@@ -125,12 +125,6 @@ if (dryRun) {
     toolHealth.forEach(t => knowledgeParts.push('- ' + t.tool + ': ' + t.rate + '%成功 (' + t.total + '次)'));
   }
 
-  // 2. 近7天高频错误
-  if (forgedJson.errors_7d.length > 0) {
-    knowledgeParts.push('\n## 近7天高频错误');
-    forgedJson.errors_7d.forEach(e => knowledgeParts.push('- ' + e.tool + '(' + e.cnt + '次): ' + (e.err || 'null')));
-  }
-
   // 3. Playbook速查（正确/错误方法）
   const playbooks = db3.prepare(
     "SELECT keyword, correct_method, wrong_method FROM playbook ORDER BY priority DESC, query_count DESC LIMIT 8"
@@ -141,15 +135,6 @@ if (dryRun) {
       let line = '- ' + p.keyword + ': ✓ ' + p.correct_method;
       if (p.wrong_method) line += ' (✗ ' + p.wrong_method + ')';
       knowledgeParts.push(line);
-    });
-  }
-
-  // 4. 最近经验教训
-  if (forgedJson.lessons.length > 0) {
-    knowledgeParts.push('\n## 最近经验教训');
-    forgedJson.lessons.slice(0, 8).forEach(l => {
-      if (l.wrong) knowledgeParts.push('- ✗ ' + l.wrong + ' → ✓ ' + l.correct);
-      else if (l.summary) knowledgeParts.push('- ' + l.summary);
     });
   }
 
