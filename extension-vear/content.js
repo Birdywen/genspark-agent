@@ -83,13 +83,40 @@
   // === Status Panel ===
   const panelEl = document.createElement('div');
   panelEl.id = 'vear-agent-panel';
-  panelEl.style.cssText = 'position:fixed;bottom:110px;right:12px;z-index:99999;background:#1a1a2e;color:#a0a0b0;padding:6px 10px;border-radius:6px;font-size:11px;font-family:monospace;border:1px solid #333;max-width:200px;';
+  panelEl.style.cssText = 'position:fixed;bottom:110px;right:12px;z-index:99999;background:#1a1a2e;color:#a0a0b0;padding:6px 10px;border-radius:6px;font-size:11px;font-family:monospace;border:1px solid #333;max-width:200px;display:flex;align-items:center;gap:6px;';
   document.body.appendChild(panelEl);
+
+  const statusSpan = document.createElement('span');
+  panelEl.appendChild(statusSpan);
+
+  // === Retry Button ===
+  const retryBtn = document.createElement('button');
+  retryBtn.textContent = '⟳';
+  retryBtn.title = 'Retry last ΩCODE';
+  retryBtn.style.cssText = 'background:#2d2d44;color:#facc15;border:1px solid #555;border-radius:4px;cursor:pointer;font-size:13px;padding:1px 5px;line-height:1;';
+  retryBtn.onclick = () => {
+    retryBtn.textContent = '⏳';
+    const msg = { type: 'retry_last' };
+    const sent = safeChromeMessage({ type: 'SEND_TO_SERVER', payload: msg });
+    if (!sent) {
+      const ws = getFallbackWs();
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify(msg));
+      } else {
+        setTimeout(() => {
+          const ws2 = getFallbackWs();
+          if (ws2 && ws2.readyState === 1) ws2.send(JSON.stringify(msg));
+        }, 1000);
+      }
+    }
+    setTimeout(() => { retryBtn.textContent = '⟳'; }, 3000);
+  };
+  panelEl.appendChild(retryBtn);
 
   function updateStatus() {
     const ws = state.wsConnected ? '🟢' : '🔴';
     const ctx = state.extensionValid ? '' : ' ⚡fb';
-    panelEl.textContent = ws + ' R' + state.roundCount + ctx;
+    statusSpan.textContent = ws + ' R' + state.roundCount + ctx;
   }
   updateStatus();
 
