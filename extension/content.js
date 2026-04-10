@@ -52,6 +52,25 @@
       }
     };
     document.body.appendChild(btn);
+
+    // Retry button — re-execute last ΩCODE
+    const retryBtn = document.createElement('div');
+    retryBtn.id = 'agent-retry-btn';
+    retryBtn.innerHTML = '⟳';
+    retryBtn.title = 'Retry last ΩCODE';
+    retryBtn.style.cssText = 'position:fixed;bottom:70px;right:50px;z-index:99999;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;background:#1a1a2e;border:1px solid #333;box-shadow:0 2px 8px rgba(0,0,0,0.3);opacity:0.7;transition:opacity 0.2s;color:#facc15;';
+    retryBtn.onmouseenter = () => retryBtn.style.opacity = '1';
+    retryBtn.onmouseleave = () => retryBtn.style.opacity = '0.7';
+    retryBtn.onclick = () => {
+      retryBtn.innerHTML = '⏳';
+      try {
+        chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'retry_last' } });
+      } catch(e) {
+        console.error('[Agent] Retry send failed:', e.message);
+      }
+      setTimeout(() => { retryBtn.innerHTML = '⟳'; }, 3000);
+    };
+    document.body.appendChild(retryBtn);
   }, 2000);
 
   if (isDisabled) {
@@ -4625,6 +4644,16 @@ ${conversationText}
 
       case 'replay_error':
         addLog(`❌ 回放错误: ${msg.error}`, 'error');
+        break;
+
+      case 'inject_result':
+        // Retry result from ai-bridge
+        if (msg.text) {
+          addLog('🔄 Retry结果: ' + (msg.text || '').substring(0, 80), 'result');
+          hideExecutingIndicator();
+          sendMessageSafe(msg.text);
+          incrementRound();
+        }
         break;
 
       case 'tool_result':
