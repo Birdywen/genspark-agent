@@ -1132,10 +1132,26 @@ async function main() {
           }
 
           case 'retry_last': {
-            if (!global._aiBridge || !global._aiBridge.retryLast) {
-              ws.send(JSON.stringify({ type: 'inject_result', text: '**[Retry]** AiBridge 未初始化' }));
-            } else {
+            // 确保 ai-bridge 已初始化
+            if (!global._aiBridge) {
+              const { createAiBridge: cab } = await import('./ai-bridge.js');
+              global._aiBridge = cab({ handleToolCall, taskEngine, logger });
+            }
+            // 优先用 ai-bridge 存的 __LAST_OMEGA__
+            if (global.__LAST_OMEGA__ && global._aiBridge.retryLast) {
               await global._aiBridge.retryLast(ws, msg);
+            } else {
+              // fallback: 从 commands 表取最后一条重执行
+              const last = dbApi.query("SELECT tool, params FROM commands ORDER BY id DESC LIMIT 1");
+              if (last && last[0]) {
+                const tool = last[0].tool;
+                let params;
+                try { params = JSON.parse(last[0].params); } catch(e) { params = last[0].params; }
+                logger.info('[Retry] DB fallback: re-executing ' + tool + ' params=' + JSON.stringify(params).slice(0,100));
+                await handleToolCall(ws, { type: 'tool_call', tool, params, id: 'retry-' + Date.now() });
+              } else {
+                ws.send(JSON.stringify({ type: 'inject_result', text: '**[Retry]** 没有可重试的命令' }));
+              }
             }
             break;
           }
