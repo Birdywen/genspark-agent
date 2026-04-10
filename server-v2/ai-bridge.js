@@ -54,8 +54,9 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
   const processed = new Set();
   const bus = new EventEmitter();
 
-  // callTool: 用 proxyWs 拦截 handleToolCall 的 ws.send 输出
-  // 对浏览器工具，proxyWs 透传 browserWs 相关调用，只拦截 tool_result
+  // === Last ΩCODE storage for retry ===
+  global.__LAST_OMEGA__ = null;
+
   function callTool(realWs, tool, params) {
     return new Promise((resolve) => {
       const callId = `ai-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
@@ -74,23 +75,20 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
         resolve(resp);
       });
 
-      // proxyWs: 拦截 tool_result，其他消息透传给真实 ws
       const proxyWs = {
         send: (data) => {
           try {
             const resp = JSON.parse(data);
             if (resp.type === 'tool_result' && resp.id === callId) {
               setImmediate(() => bus.emit(callId, resp));
-              return; // 不转发给真实 ws，避免 background 重复处理
+              return;
             }
           } catch(e) {}
-          // 非 tool_result 消息透传（如 browser_tool_call 等）
           if (realWs && realWs.readyState === 1) {
             realWs.send(data);
           }
         },
         readyState: 1,
-        // 代理 on/removeListener 给真实 ws（浏览器工具需要监听 browser_tool_result）
         on: realWs.on ? realWs.on.bind(realWs) : () => {},
         removeListener: realWs.removeListener ? realWs.removeListener.bind(realWs) : () => {},
         once: realWs.once ? realWs.once.bind(realWs) : () => {}
@@ -107,25 +105,9 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
     });
   }
 
-  return async function onAiText(ws, msg) {
-    const { text, source, cid } = msg;
-    if (!text) return;
-
-    const hash = text.length + ':' + text.slice(-80);
-    if (processed.has(hash)) return;
-    processed.add(hash);
-    setTimeout(() => processed.delete(hash), 30000);
-
-    const parsed = parseOmegaCode(text);
-    if (!parsed) return;
-    if (parsed.error) {
-      logger.error(`[AiBridge][${source}] ${parsed.error}`);
-      ws.send(JSON.stringify({ type: 'inject_result', cid, text: `**[ΩCODE 解析错误]** ${parsed.error}` }));
-      return;
-    }
-
-    const cmd = parsed.parsed;
-    logger.info(`[AiBridge][${source}] ΩCODE: ${cmd.tool || 'batch(' + cmd.steps?.length + ')'}`);
+  // === Execute a parsed ΩCODE command ===
+  async function executeCmd(ws, cmd, cid, source) {
+    logger.info(`[AiBridge][${source}] ΩCODE: ${cmd.tool || 'batch(' + cmd.steps?.length + ')'}`); 
     ws.send(JSON.stringify({ type: 'inject_status', cid, status: 'executing', detail: cmd.tool || 'batch' }));
 
     try {
@@ -143,16 +125,69 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
             success: result.success
           }));
         }
-        ws.send(JSON.stringify({ type: 'inject_result', cid, text: formatResult({ batchResults: results }) }));
+        const text = formatResult({ batchResults: results });
+        ws.send(JSON.stringify({ type: 'inject_result', cid, text }));
+        return text;
       } else {
         const result = await callTool(ws, cmd.tool, cmd.params);
-        ws.send(JSON.stringify({ type: 'inject_result', cid, text: formatResult(result) }));
+        const text = formatResult(result);
+        ws.send(JSON.stringify({ type: 'inject_result', cid, text }));
+        return text;
       }
     } catch (e) {
       logger.error(`[AiBridge][${source}] Error:`, e.message);
-      ws.send(JSON.stringify({ type: 'inject_result', cid, text: `**[执行错误]** ${e.message}` }));
+      const text = `**[执行错误]** ${e.message}`;
+      ws.send(JSON.stringify({ type: 'inject_result', cid, text }));
+      return text;
     }
-  };
+  }
+
+  // === Main handler for ai_text ===
+  async function onAiText(ws, msg) {
+    const { text, source, cid } = msg;
+    if (!text) return;
+
+    const hash = text.length + ':' + text.slice(-80);
+    if (processed.has(hash)) return;
+    processed.add(hash);
+    setTimeout(() => processed.delete(hash), 30000);
+
+    const parsed = parseOmegaCode(text);
+    if (!parsed) return;
+    if (parsed.error) {
+      logger.error(`[AiBridge][${source}] ${parsed.error}`);
+      ws.send(JSON.stringify({ type: 'inject_result', cid, text: `**[ΩCODE 解析错误]** ${parsed.error}` }));
+      return;
+    }
+
+    const cmd = parsed.parsed;
+
+    // Store for retry
+    global.__LAST_OMEGA__ = {
+      cmd,
+      source: source || 'unknown',
+      cid,
+      rawText: text,
+      timestamp: Date.now()
+    };
+
+    await executeCmd(ws, cmd, cid, source || 'ai');
+  }
+
+  // === Retry last ΩCODE ===
+  async function retryLast(ws, msg) {
+    const last = global.__LAST_OMEGA__;
+    if (!last) {
+      ws.send(JSON.stringify({ type: 'inject_result', cid: msg.cid, text: '**[Retry]** 没有可重试的 ΩCODE' }));
+      return;
+    }
+    const age = Date.now() - last.timestamp;
+    logger.info(`[AiBridge] Retrying last ΩCODE (${last.cmd.tool || 'batch'}, age: ${Math.round(age/1000)}s)`);
+    await executeCmd(ws, last.cmd, msg.cid || last.cid, 'retry');
+  }
+
+  onAiText.retryLast = retryLast;
+  return onAiText;
 }
 
 export { createAiBridge, parseOmegaCode, formatResult };

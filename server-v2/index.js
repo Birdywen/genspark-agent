@@ -1131,6 +1131,15 @@ async function main() {
             break;
           }
 
+          case 'retry_last': {
+            if (!global._aiBridge || !global._aiBridge.retryLast) {
+              ws.send(JSON.stringify({ type: 'inject_result', text: '**[Retry]** AiBridge 未初始化' }));
+            } else {
+              await global._aiBridge.retryLast(ws, msg);
+            }
+            break;
+          }
+
                     // ── 委托 ws-handlers 处理 ──
           default: {
             if (wsHandlers[msg.type]) {
