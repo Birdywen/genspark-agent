@@ -84,6 +84,7 @@ function buildContext() {
 // === 组装 ===
 const forgedJson = {
   meta: getSchema('schema-meta'),
+  philosophy: getSchema('schema-philosophy'),
   rules: getSchema('schema-rules'),
   sys_tools: buildSysTools(),
   lessons: buildLessons(),
