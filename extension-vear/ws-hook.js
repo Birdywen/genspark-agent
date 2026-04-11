@@ -25,10 +25,10 @@
 
       var _connUrl = url;
       var _connInterval = setInterval(function() {
-        document.dispatchEvent(new CustomEvent('__vear_ws_connected__', { detail: { url: _connUrl, timestamp: Date.now() } }));
+        window.postMessage({ type: '__vear_ws_connected__',  url: _connUrl, timestamp: Date.now()  }, '*');
       }, 300);
       setTimeout(function() { clearInterval(_connInterval); }, 5000);
-      document.dispatchEvent(new CustomEvent('__vear_ws_connected__', { detail: { url: _connUrl, timestamp: Date.now() } }));
+      window.postMessage({ type: '__vear_ws_connected__',  url: _connUrl, timestamp: Date.now()  }, '*');
 
       ws.addEventListener('message', function(event) {
         _msgCount++;
@@ -56,9 +56,7 @@
             }
             _buffer = '';
             console.log('[Vear-WS-Hook] >>> STREAM START cid=' + data.cid);
-            document.dispatchEvent(new CustomEvent('__vear_ws_start__', {
-              detail: { cid: data.cid, sid: data.sid, timestamp: Date.now() }
-            }));
+            window.postMessage({ type: '__vear_ws_start__',  cid: data.cid, sid: data.sid, timestamp: Date.now()  }, '*');
           }
 
           else if (t === 'm') {
@@ -77,26 +75,22 @@
 
             console.log('[Vear-WS-Hook] >>> STREAM DONE cid=' + (data.cid || _currentCid) + ' buffer=' + _buffer.length + 'chars');
             console.log('[Vear-WS-Hook] Final text preview:', _buffer.slice(0, 200));
-            document.dispatchEvent(new CustomEvent('__vear_ws_done__', {
-              detail: {
+            window.postMessage({ type: '__vear_ws_done__', 
                 cid: data.cid || _currentCid,
                 sid: data.sid,
                 text: _buffer,
                 timestamp: Date.now()
-              }
-            }));
+               }, '*');
             _buffer = '';
           }
 
           else if (t === 'e' || t === 'err') {
             console.error('[Vear-WS-Hook] >>> ERROR:', data.c || JSON.stringify(data));
-            document.dispatchEvent(new CustomEvent('__vear_ws_error__', {
-              detail: {
+            window.postMessage({ type: '__vear_ws_error__', 
                 cid: data.cid,
                 message: data.c || JSON.stringify(data),
                 timestamp: Date.now()
-              }
-            }));
+               }, '*');
             _buffer = '';
           }
 
@@ -115,9 +109,7 @@
 
       ws.addEventListener('close', function(event) {
         console.log('[Vear-WS-Hook] WebSocket CLOSED | code=' + event.code + ' reason=' + event.reason + ' total msgs=' + _msgCount);
-        document.dispatchEvent(new CustomEvent('__vear_ws_closed__', {
-          detail: { timestamp: Date.now() }
-        }));
+        window.postMessage({ type: '__vear_ws_closed__',  timestamp: Date.now()  }, '*');
       });
 
       ws.addEventListener('error', function(event) {
