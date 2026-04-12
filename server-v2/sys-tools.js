@@ -408,10 +408,12 @@ handlers.set('ask_ai', async (params) => {
   catch(e) { return { success: false, error: 'config not found: ' + cfgPath }; }
 
   const models = {
-    'opus': {md:16,mds:1}, 'sonnet': {md:17,mds:1}, 'haiku': {md:18,mds:1},
-    'gpt5': {md:7,mds:1}, 'gpt-5-nano': {md:22,mds:1},
-    'gemini': {md:9,mds:1}, 'grok': {md:12,mds:1},
-    'deepseek-v3': {md:19,mds:3}, 'deepseek-r1': {md:20,mds:3}
+    'opus': {md:11,mds:11}, 'sonnet': {md:11,mds:10}, 'haiku': {md:11,mds:7},
+    'opus-4.5': {md:11,mds:9}, 'sonnet-4.5': {md:11,mds:8},
+    'gpt5': {md:12,mds:19}, 'gpt-5-nano': {md:12,mds:15}, 'gpt-5-mini': {md:12,mds:14},
+    'gemini': {md:13,mds:6}, 'gemini-3.0': {md:13,mds:5},
+    'grok': {md:14,mds:6}, 'grok-4': {md:14,mds:5},
+    'deepseek-v3': {md:16,mds:1}, 'deepseek-r1': {md:16,mds:2}
   };
   const m = models[model] || models['haiku'];
   const ts = String(Date.now());
