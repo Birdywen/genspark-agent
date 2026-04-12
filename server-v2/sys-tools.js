@@ -1,5 +1,5 @@
 // sys-tools.js — 自定义工具，不走 MCP
-import { execSync, exec as _exec } from 'child_process';
+import { execSync, exec as _exec, execFile as _execFile } from 'child_process';
 import { readFileSync } from 'fs';
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -395,37 +395,64 @@ handlers.set('aidrive', async (params) => {
   }
 });
 
-// ask_ai: 通过 gsk API agent_ask (server端直调，不依赖浏览器)
+// ask_ai: direct WebSocket to vear (free multi-model gateway)
 handlers.set('ask_ai', async (params) => {
   const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
   if (!prompt) return { success: false, error: 'prompt or messages required' };
-  const model = params.model || null;
-  const body = { message: prompt, task_type: 'super_agent' };
-  if (model) body.use_model = model;
-  try {
-    const resp = await fetch('https://www.genspark.ai/api/tool_cli/agent_ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': getGskApiKey() },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120000)
+  const model = params.model || 'haiku';
+  const timeout = params.timeout || 60000;
+
+  const cfgPath = process.env.HOME + '/.config/genspark/config.json';
+  let cfg;
+  try { cfg = JSON.parse(readFileSync(cfgPath, 'utf8')); }
+  catch(e) { return { success: false, error: 'config not found: ' + cfgPath }; }
+
+  const models = {
+    'opus': {md:16,mds:1}, 'sonnet': {md:17,mds:1}, 'haiku': {md:18,mds:1},
+    'gpt5': {md:7,mds:1}, 'gpt-5-nano': {md:22,mds:1},
+    'gemini': {md:9,mds:1}, 'grok': {md:12,mds:1},
+    'deepseek-v3': {md:19,mds:3}, 'deepseek-r1': {md:20,mds:3}
+  };
+  const m = models[model] || models['haiku'];
+  const ts = String(Date.now());
+  const rand = Array.from({length:11}, () => Math.floor(Math.random()*10)).join('');
+  const mid = 'udpxpnmk' + ts.slice(-8) + rand + ts.slice(-3);
+
+  const WebSocket = (await import('ws')).default;
+  return new Promise((resolve) => {
+    let result = '', resolved = false, cid = null;
+    const done = (val) => { if (!resolved) { resolved = true; clearTimeout(timer); try { ws.close(); } catch(e) {} resolve(val); } };
+    const timer = setTimeout(() => done({ success: false, error: 'timeout ' + timeout + 'ms' }), timeout);
+
+    const ws = new WebSocket(cfg.ws_url || 'wss://vear.com/conversation/go', {
+      headers: {
+        Cookie: cfg.cookies,
+        Origin: 'https://vear.com',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      }
     });
-    const raw = await resp.text();
-    let result = '', projectId = null;
-    for (const line of raw.split('\n')) {
-      if (!line.trim()) continue;
+
+    ws.on('open', () => {
+      ws.send(JSON.stringify({ uid: cfg.uid, mid, q: prompt, m: m.md, ms: m.mds, t: 'm' }));
+    });
+
+    ws.on('message', (data) => {
       try {
-        const obj = JSON.parse(line);
-        if (obj.project_id && !projectId) projectId = obj.project_id;
-        if (obj.delta) result += obj.delta;
-        if (obj.data?.result_content?.last_message) {
-          result = obj.data.result_content.last_message.join('\n');
+        const msg = JSON.parse(data.toString());
+        if (msg.cid && !cid) cid = msg.cid;
+        if (msg.t === 'm' && msg.c) result += msg.c;
+        if (msg.t === 'n') {
+          done({ success: true, result: result.trim(), model, cid });
         }
-      } catch(e) { /* skip non-JSON lines */ }
-    }
-    return { success: true, result, project_id: projectId };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+        if (msg.t === 'e' || msg.t === 'err') {
+          done({ success: false, error: msg.c || 'server error', model });
+        }
+      } catch(e) {}
+    });
+
+    ws.on('error', (e) => done({ success: false, error: e.message }));
+    ws.on('close', () => done(result ? { success: true, result: result.trim(), model, cid } : { success: false, error: 'ws closed without response' }));
+  });
 });
 
 // datawrapper custom tool handler
