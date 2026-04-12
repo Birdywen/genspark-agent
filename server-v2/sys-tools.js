@@ -397,7 +397,8 @@ handlers.set('aidrive', async (params) => {
 
 // ask_ai: direct WebSocket to vear (free multi-model gateway)
 handlers.set('ask_ai', async (params) => {
-  const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
+  let prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
+  if (params.system) prompt = '[System Instructions]\n' + params.system + '\n\n' + prompt;
   if (!prompt) return { success: false, error: 'prompt or messages required' };
   const model = params.model || 'sonnet';
   const timeout = params.timeout || 60000;
