@@ -734,7 +734,7 @@ handlers.set('compress', async (params, context) => {
     return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun},useNLP:${useNLP}}) : 'error: __shortcuts not loaded';
   `;
   try {
-    const result = await evalInBrowser(code, 120000);
+    let result = await evalInBrowser(code, 120000);
     if (dryRun || !result || result.error) return { success: true, result };
 
     // === 压缩成功后，注入知识 ===
@@ -800,7 +800,7 @@ handlers.set('compress', async (params, context) => {
         });
       `;
       const injectResult = await evalInBrowser(injectCode, 30000);
-      if (typeof result === 'string') { try { result = JSON.parse(result); } catch(e) { result = { raw: result }; } }
+      if (typeof result === 'string') { try { result = Object.assign({}, JSON.parse(result)); } catch(e) { result = { raw: result }; } }
       result.knowledgeInjected = injectResult;
     } finally { db.close(); }
 
