@@ -800,6 +800,7 @@ handlers.set('compress', async (params, context) => {
         });
       `;
       const injectResult = await evalInBrowser(injectCode, 30000);
+      if (typeof result === 'string') { try { result = JSON.parse(result); } catch(e) { result = { raw: result }; } }
       result.knowledgeInjected = injectResult;
     } finally { db.close(); }
 
