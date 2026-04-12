@@ -52,25 +52,6 @@
       }
     };
     document.body.appendChild(btn);
-
-    // Retry button — re-execute last ΩCODE
-    const retryBtn = document.createElement('div');
-    retryBtn.id = 'agent-retry-btn';
-    retryBtn.innerHTML = '⟳';
-    retryBtn.title = 'Retry last ΩCODE';
-    retryBtn.style.cssText = 'position:fixed;bottom:70px;right:50px;z-index:99999;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;background:#1a1a2e;border:1px solid #333;box-shadow:0 2px 8px rgba(0,0,0,0.3);opacity:0.7;transition:opacity 0.2s;color:#facc15;';
-    retryBtn.onmouseenter = () => retryBtn.style.opacity = '1';
-    retryBtn.onmouseleave = () => retryBtn.style.opacity = '0.7';
-    retryBtn.onclick = () => {
-      retryBtn.innerHTML = '⏳';
-      try {
-        chrome.runtime.sendMessage({ type: 'SEND_TO_SERVER', payload: { type: 'retry_last' } });
-      } catch(e) {
-        console.error('[Agent] Retry send failed:', e.message);
-      }
-      setTimeout(() => { retryBtn.innerHTML = '⟳'; }, 3000);
-    };
-    document.body.appendChild(retryBtn);
   }, 2000);
 
   if (isDisabled) {
@@ -3526,28 +3507,58 @@ ${conversationText}
         // TODO: 未来从 skills/ 目录读取已加载 skill 摘要
         // 暂时跳过，不注入空消息
 
-        // ── Section 4: Context (知识注入 from agent.db) ──
+        // ── Section 4: Context (模块化动态加载 from agent.db) ──
         const summaryParts = [
           '[Physical Compress - ' + new Date().toISOString().split('T')[0] + ']',
           'Compressed ' + midCount + ' messages (' + midSize + 'KB) into summary.',
           ''
         ];
 
-        // 从服务端读取动态知识
+        // 加载模块配置
+        let compressModules = [];
         try {
-          addLog('📚 Loading knowledge from agent.db...', 'info');
-          const kjResp = await fetch('http://127.0.0.1:8766/local/read?slot=inject-knowledge&key=default');
-          const kjData = await kjResp.json();
-          const kjContent = kjData.content || '';
-          if (kjContent) {
-            summaryParts.push(kjContent);
-            addLog('✅ Knowledge loaded: ' + kjContent.length + ' chars', 'success');
+          addLog('📚 Loading compress modules config...', 'info');
+          const cmResp = await fetch('http://127.0.0.1:8766/local/read?slot=config&key=compress-modules');
+          const cmData = await cmResp.json();
+          if (cmData && cmData.content) {
+            compressModules = JSON.parse(cmData.content);
+            addLog('✅ Found ' + compressModules.length + ' modules (' + compressModules.filter(m=>m.enabled).length + ' enabled)', 'success');
           }
         } catch(e) {
-          addLog('⚠️ Knowledge load failed: ' + e.message, 'error');
+          addLog('⚠️ Module config load failed: ' + e.message + ', using fallback', 'error');
         }
 
-        // 读 session-state 上下文
+        // 逐个执行 enabled 模块，通过 /tool API 实时获取
+        for (const mod of compressModules.filter(m => m.enabled)) {
+          try {
+            addLog('⏳ Loading module: ' + mod.label + '...', 'info');
+            const modResp = await fetch('http://127.0.0.1:8766/tool', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tool: mod.source.tool, params: { ...mod.source.params, _timeout: 15000 } })
+            });
+            const modData = await modResp.json();
+            const modContent = modData.result || modData.raw || JSON.stringify(modData);
+            if (modContent && modContent.length > 0) {
+              summaryParts.push('## ' + mod.label, modContent.substring(0, 3000), '');
+              addLog('✅ ' + mod.label + ': ' + modContent.length + ' chars', 'success');
+            }
+          } catch(e) {
+            addLog('⚠️ Module ' + mod.label + ' failed: ' + e.message, 'error');
+          }
+        }
+
+        // Fallback: 如果没有模块配置，用旧逻辑
+        if (compressModules.length === 0) {
+          try {
+            const kjResp = await fetch('http://127.0.0.1:8766/local/read?slot=inject-knowledge&key=default');
+            const kjData = await kjResp.json();
+            const kjContent = kjData.content || '';
+            if (kjContent) summaryParts.push(kjContent);
+          } catch(e) {}
+        }
+
+        // 读 session-state 上下文（始终加载）
         try {
           const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
           const ctxRows = await ctxResp.json();
@@ -3557,11 +3568,10 @@ ${conversationText}
           }
         } catch(e) {}
 
-
         const contextSummary = summaryParts.join('\n');
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: contextSummary });
-        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved.\n\n请先运行以下命令恢复上下文：\ncd ~/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "SELECT timestamp,tool,CASE WHEN success=1 THEN \'✓\' ELSE \'✗ \'||substr(error,1,80) END as result,substr(params,1,200) FROM commands WHERE timestamp >= date(\'now\',\'-1 day\') ORDER BY id DESC LIMIT 80"\n\n常用查询索引（按需使用）：\n- 经验教训/工作规则: node dbfile.cjs get local_store guide cheatsheet\n- DB手册(表结构+SQL): node dbfile.cjs get local_store guide agent-db-manual\n- 可用脚本列表: node dbfile.cjs list local_store script\n- Skill模块: node dbfile.cjs list memory forged' });
-        addLog('📝 Section 4: Context (' + contextSummary.length + ' chars)', 'success');
+        newMsgs.push({ id: crypto.randomUUID(), role: 'user', content: 'Context restored. ' + midCount + ' messages compressed. Recent ' + TAIL_KEEP + ' messages preserved.\n\n请先运行以下命令恢复上下文：\ncd ~/workspace/genspark-agent/server-v2 && sqlite3 data/agent.db "SELECT timestamp,tool,CASE WHEN success=1 THEN '✓' ELSE '✗ '||substr(error,1,80) END as result,substr(params,1,200) FROM commands WHERE timestamp >= date('now','-1 day') ORDER BY id DESC LIMIT 80"' });
+        addLog('📝 Section 4: Context (' + contextSummary.length + ' chars, modules: ' + compressModules.filter(m=>m.enabled).length + ')', 'success');
 
         // ── Tail: 保留最近 TAIL_KEEP 条原样 ──
         tailMsgs.forEach(m => {
@@ -4644,16 +4654,6 @@ ${conversationText}
 
       case 'replay_error':
         addLog(`❌ 回放错误: ${msg.error}`, 'error');
-        break;
-
-      case 'inject_result':
-        // Retry result from ai-bridge
-        if (msg.text) {
-          addLog('🔄 Retry结果: ' + (msg.text || '').substring(0, 80), 'result');
-          hideExecutingIndicator();
-          sendMessageSafe(msg.text);
-          incrementRound();
-        }
         break;
 
       case 'tool_result':
