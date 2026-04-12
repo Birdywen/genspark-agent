@@ -745,18 +745,33 @@ handlers.set('compress', async (params, context) => {
       const midCount = result.compressed || 0;
       restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
 
-      const lessons = db.prepare("SELECT key, substr(content,1,150) as summary FROM memory WHERE slot='forged' AND key LIKE 'lesson-%' ORDER BY key DESC LIMIT 10").all();
-      const errors = db.prepare("SELECT tool, substr(error,1,60) as err, COUNT(*) as cnt FROM commands WHERE success=0 AND timestamp>=date('now','-7 day') GROUP BY tool, substr(error,1,60) ORDER BY cnt DESC LIMIT 5").all();
-      const scripts = db.prepare("SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15").all();
-      const rulesRow = db.prepare("SELECT content FROM memory WHERE slot='forged' AND key='schema-rules'").get();
-      let dailyRules = [];
-      if (rulesRow) { try { dailyRules = JSON.parse(rulesRow.content).daily || []; } catch(e) {} }
+      // Gold nuggets: real operational context, not stats (forged already has those)
+      // 1. Last 20 successful operations with params (what were we doing?)
+      const recentOps = db.prepare("SELECT timestamp, tool, substr(params,1,200) as params, substr(result,1,100) as result FROM commands WHERE success=1 AND timestamp>=datetime('now','-4 hours') ORDER BY id DESC LIMIT 20").all();
+      // 2. Last 5 failed operations (what went wrong?)
+      const recentFails = db.prepare("SELECT timestamp, tool, substr(params,1,150) as params, substr(error,1,100) as err FROM commands WHERE success=0 AND timestamp>=datetime('now','-4 hours') ORDER BY id DESC LIMIT 5").all();
+      // 3. Recent git commits (what did we ship?)
+      const gitLog = db.prepare("SELECT timestamp, substr(result,1,200) as result FROM commands WHERE tool='git_commit' AND success=1 ORDER BY id DESC LIMIT 5").all();
+      // 4. Active plans/tasks from memory
+      const plans = db.prepare("SELECT key, substr(content,1,200) as summary FROM memory WHERE slot='plan' ORDER BY updated_at DESC LIMIT 3").all();
 
-      const lines = ['\n---\n## 知识补充 (compress自动注入)'];
-      if (dailyRules.length) { lines.push('\n### 核心规则'); dailyRules.forEach(r => lines.push('- ' + r)); }
-      if (errors.length) { lines.push('\n### 近7天高频错误'); errors.forEach(e => lines.push('- ' + e.tool + '(' + e.cnt + '次): ' + e.err)); }
-      if (lessons.length) { lines.push('\n### 最近经验教训'); lessons.forEach(l => lines.push('- ' + l.key + ': ' + l.summary)); }
-      if (scripts.length) { lines.push('\n### 可用脚本'); lines.push(scripts.map(s => s.key.replace('script/','')).join(', ')); }
+      const lines = ['\n---\n## 操作上下文 (compress自动恢复 — forged已覆盖规则/统计)'];
+      if (recentOps.length) {
+        lines.push('\n### 最近操作 (倒序)');
+        recentOps.forEach(op => lines.push('- [' + op.timestamp.slice(11,19) + '] ' + op.tool + ': ' + (op.params || '').slice(0,120)));
+      }
+      if (recentFails.length) {
+        lines.push('\n### 最近失败');
+        recentFails.forEach(f => lines.push('- [' + f.timestamp.slice(11,19) + '] ' + f.tool + ': ' + f.err));
+      }
+      if (gitLog.length) {
+        lines.push('\n### 最近提交');
+        gitLog.forEach(g => lines.push('- ' + (g.result || '').replace(/\n/g,' ').slice(0,150)));
+      }
+      if (plans.length) {
+        lines.push('\n### 当前计划');
+        plans.forEach(p => lines.push('- ' + p.key + ': ' + p.summary));
+      }
       restorePrompt += lines.join('\n');
 
       // 注入到对话末尾
