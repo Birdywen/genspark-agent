@@ -447,6 +447,9 @@ handlers.set('ask_ai', async (params) => {
         if (msg.t === 'n') {
           done({ success: true, result: result.trim(), model, cid });
         }
+        if (msg.t === 'b') {
+          done({ success: false, error: 'RATE_LIMIT: ' + (msg.c || 'blocked') + ' — switch VPN node and retry', model });
+        }
         if (msg.t === 'e' || msg.t === 'err') {
           done({ success: false, error: msg.c || 'server error', model });
         }
