@@ -399,7 +399,7 @@ handlers.set('aidrive', async (params) => {
 handlers.set('ask_ai', async (params) => {
   const prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
   if (!prompt) return { success: false, error: 'prompt or messages required' };
-  const model = params.model || 'haiku';
+  const model = params.model || 'sonnet';
   const timeout = params.timeout || 60000;
 
   const cfgPath = process.env.HOME + '/.config/genspark/config.json';
@@ -415,7 +415,7 @@ handlers.set('ask_ai', async (params) => {
     'grok': {md:14,mds:6}, 'grok-4': {md:14,mds:5},
     'deepseek-v3': {md:16,mds:1}, 'deepseek-r1': {md:16,mds:2}
   };
-  const m = models[model] || models['haiku'];
+  const m = models[model] || models['sonnet'];
   const ts = String(Date.now());
   const rand = Array.from({length:11}, () => Math.floor(Math.random()*10)).join('');
   const mid = 'udpxpnmk' + ts.slice(-8) + rand + ts.slice(-3);
