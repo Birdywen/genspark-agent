@@ -745,33 +745,42 @@ handlers.set('compress', async (params, context) => {
       const midCount = result.compressed || 0;
       restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
 
-      // Gold nuggets: real operational context, not stats (forged already has those)
-      // 1. Last 20 successful operations with params (what were we doing?)
-      const recentOps = db.prepare("SELECT timestamp, tool, substr(params,1,200) as params, substr(result,1,100) as result FROM commands WHERE success=1 AND timestamp>=datetime('now','-4 hours') ORDER BY id DESC LIMIT 20").all();
-      // 2. Last 5 failed operations (what went wrong?)
-      const recentFails = db.prepare("SELECT timestamp, tool, substr(params,1,150) as params, substr(error,1,100) as err FROM commands WHERE success=0 AND timestamp>=datetime('now','-4 hours') ORDER BY id DESC LIMIT 5").all();
-      // 3. Recent git commits (what did we ship?)
-      const gitLog = db.prepare("SELECT timestamp, substr(result,1,200) as result FROM commands WHERE tool='git_commit' AND success=1 ORDER BY id DESC LIMIT 5").all();
-      // 4. Active plans/tasks from memory
-      const plans = db.prepare("SELECT key, substr(content,1,200) as summary FROM memory WHERE slot='plan' ORDER BY updated_at DESC LIMIT 3").all();
+      // Meta-index: teach HOW to query, not WHAT was queried (forged has rules/stats)
+      // 1. DB schema map
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+      const schemaMap = tables.map(t => {
+        const cols = db.prepare('PRAGMA table_info(' + t.name + ')').all();
+        const cnt = db.prepare('SELECT COUNT(*) as c FROM ' + t.name).get();
+        return t.name + '(' + cnt.c + '): ' + cols.map(c => c.name).join(',');
+      });
+      // 2. Memory slot index
+      const slots = db.prepare("SELECT slot, COUNT(*) as cnt FROM memory GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
+      // 3. Local_store slot index
+      const lsSlots = db.prepare("SELECT slot, COUNT(*) as cnt FROM local_store GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
+      // 4. Last 5 git commits (what did we ship recently?)
+      const gitLog = db.prepare("SELECT substr(result_preview,1,150) as r FROM commands WHERE tool='git_commit' AND success=1 ORDER BY id DESC LIMIT 5").all();
+      // 5. Last task context (what were we doing?)
+      const lastOps = db.prepare("SELECT tool, substr(params,1,120) as p FROM commands WHERE success=1 ORDER BY id DESC LIMIT 10").all();
 
-      const lines = ['\n---\n## 操作上下文 (compress自动恢复 — forged已覆盖规则/统计)'];
-      if (recentOps.length) {
-        lines.push('\n### 最近操作 (倒序)');
-        recentOps.forEach(op => lines.push('- [' + op.timestamp.slice(11,19) + '] ' + op.tool + ': ' + (op.params || '').slice(0,120)));
-      }
-      if (recentFails.length) {
-        lines.push('\n### 最近失败');
-        recentFails.forEach(f => lines.push('- [' + f.timestamp.slice(11,19) + '] ' + f.tool + ': ' + f.err));
-      }
+      const lines = ['\n---\n## 元数据索引 (compress恢复 — 知道怎么查比记住内容重要)'];
+      lines.push('\n### DB表结构');
+      schemaMap.forEach(s => lines.push('- ' + s));
+      lines.push('\n### Memory索引 (slot: count)');
+      slots.forEach(s => lines.push('- ' + s.slot + ': ' + s.cnt));
+      lines.push('\n### LocalStore索引');
+      lsSlots.forEach(s => lines.push('- ' + s.slot + ': ' + s.cnt));
       if (gitLog.length) {
         lines.push('\n### 最近提交');
-        gitLog.forEach(g => lines.push('- ' + (g.result || '').replace(/\n/g,' ').slice(0,150)));
+        gitLog.forEach(g => lines.push('- ' + (g.r || '').replace(/\n/g,' ').slice(0,120)));
       }
-      if (plans.length) {
-        lines.push('\n### 当前计划');
-        plans.forEach(p => lines.push('- ' + p.key + ': ' + p.summary));
-      }
+      lines.push('\n### 最近操作(10条)');
+      lastOps.forEach(op => lines.push('- ' + op.tool + ': ' + (op.p || '').slice(0,100)));
+      lines.push('\n### 常用查询');
+      lines.push('- 表结构: PRAGMA table_info(表名)');
+      lines.push('- 经验教训: SELECT key,substr(content,1,100) FROM memory WHERE slot=\'forged\' AND key LIKE \'lesson-%\'');
+      lines.push('- 可用脚本: node dbfile.cjs list local_store script');
+      lines.push('- 操作历史: SELECT * FROM commands WHERE tool=\'xxx\' ORDER BY id DESC LIMIT 10');
+      lines.push('- Memory查: SELECT slot,key,substr(content,1,80) FROM memory WHERE key LIKE \'%keyword%\'');
       restorePrompt += lines.join('\n');
 
       // 注入到对话末尾
