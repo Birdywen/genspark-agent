@@ -107,10 +107,13 @@ export default {
       // 兼容: content.js 解析器把 freeLines 放到 params.code，转为 stdin
       if (params.code && !params.stdin) { params.stdin = params.code; }
       const args = [];
+      // timeout 单位修正: <1000 视为秒，自动转毫秒
+      let timeoutMs = params.timeout || 30000;
+      if (timeoutMs > 0 && timeoutMs < 1000) timeoutMs = timeoutMs * 1000;
       const opts = {
         cwd: params.cwd || '/Users/yay/workspace',
         shell: true,
-        timeout: params.timeout || 30000
+        timeout: timeoutMs
       };
 
       const proc = spawn(spawnCmd, args, opts);
@@ -136,7 +139,7 @@ export default {
         // exit code 1 for grep/diff/head/tail = no match, not error
         const cmd0 = (params.command_line || params.command || '').trim().split(/[|;&]/).pop().trim().split(/\s+/)[0].replace(/^.*\//, '');
         const softFail1 = ['grep','egrep','fgrep','diff','head','tail','find','ls'].includes(cmd0);
-        const success = code === 0 || (code === 1 && softFail1);
+        const success = code === 0 || (code === 1 && softFail1) || (code === null && output.length > 0);  // null=timeout-killed but output received
         const historyId = _addToHistory('run_process', params, success, output.slice(0, 200));
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
