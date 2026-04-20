@@ -15,8 +15,15 @@ const args = process.argv.slice(2);
 const cmd = args[0];
 
 if (cmd === 'query') {
-  const rows = db.prepare(args[1]).all();
-  console.log(JSON.stringify(rows, null, 2));
+  const sql = args[1].trim().toUpperCase();
+  const isRead = sql.startsWith('SELECT') || sql.startsWith('PRAGMA') || sql.startsWith('EXPLAIN');
+  if (isRead) {
+    const rows = db.prepare(args[1]).all();
+    console.log(JSON.stringify(rows, null, 2));
+  } else {
+    const result = db.prepare(args[1]).run();
+    console.log(JSON.stringify({ changes: result.changes, lastInsertRowid: Number(result.lastInsertRowid) }));
+  }
 
 } else if (cmd === 'get') {
   const table = args[1] || 'local_store';
