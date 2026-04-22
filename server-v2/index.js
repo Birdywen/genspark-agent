@@ -871,7 +871,7 @@ async function main() {
     ws.on('message', async data => {
       try {
         const msg = JSON.parse(data.toString());
-        logger.info("[WS-MSG] type:"+msg.type+" tool:"+(msg.tool||"N/A")+" id:"+(msg.id||"N/A")+" keys:"+Object.keys(msg).join(','));
+        if(msg.type !== 'ping') logger.info("[WS-MSG] type:"+msg.type+" tool:"+(msg.tool||"N/A")+" id:"+(msg.id||"N/A")+" keys:"+Object.keys(msg).join(','));
         
         switch (msg.type) {
           case 'identify': {
