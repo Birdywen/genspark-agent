@@ -30,7 +30,7 @@ function _getRecentSuccess(tool, limit, failedParams) {
 
 export default {
   name: 'shell',
-  tools: ['run_process'],
+  tools: ['run_process', 'run_command', 'shell'],
 
   async init(deps) {
     if (deps) {
@@ -51,7 +51,7 @@ export default {
     const id = message ? message.id : null;
 
     let r;
-    if (tool === 'run_command' || tool === 'run_process') {
+    if (tool === 'run_command' || tool === 'run_process' || tool === 'shell') {
       r = await this._handleRunCommand(params, trace, ws, id, message);
     }
 
