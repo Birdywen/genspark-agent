@@ -22,7 +22,7 @@ pkill -f "node.*index.js" 2>/dev/null
 sleep 1
 
 # 启动 Watchdog（后台）
-echo "Starting watchdog on port 8766..."
+echo "Starting watchdog on port 8767..."
 nohup node watchdog.js > logs/watchdog.log 2>&1 &
 WATCHDOG_PID=$!
 echo "Watchdog PID: $WATCHDOG_PID"
@@ -31,7 +31,7 @@ echo "Watchdog PID: $WATCHDOG_PID"
 sleep 2
 
 # 启动主服务器
-echo "Starting main server on port 8765..."
+echo "Starting main server on port 8765 (HTTP 8766)..."
 nohup node index.js > logs/main.log 2>&1 &
 MAIN_PID=$!
 echo "Main server PID: $MAIN_PID"
@@ -42,11 +42,11 @@ echo $MAIN_PID > main_pid.txt
 
 echo ""
 echo "=== Started ==="
-echo "Watchdog: http://localhost:8766 (PID: $WATCHDOG_PID)"
+echo "Watchdog: http://localhost:8767 (PID: $WATCHDOG_PID)"
 echo "Main:     http://localhost:8765 (PID: $MAIN_PID)"
 echo ""
 echo "To restart main server:"
-echo "  curl http://localhost:8766/restart"
+echo "  curl http://localhost:8767/restart"
 echo "  OR touch /tmp/genspark-restart-trigger"
 echo ""
 echo "Logs:"
