@@ -322,6 +322,11 @@
     localStorage.setItem('vear_agent_round_count', state.roundCount);
     updateStatus();
 
+    // Create a promise that WS hook can resolve (fast path)
+    let wsResolve = null;
+    const wsPromise = new Promise((resolve) => { wsResolve = resolve; });
+    state._wsResponseResolve = wsResolve;
+
     // Record previous response to detect new one
     const prevResponse = getLastResponse();
 
@@ -330,17 +335,23 @@
       await typeAndSend(text);
       state.lastSentText = text;
 
-      // Wait for AI response
+      // Wait for AI response: WS hook (fast) vs DOM polling (fallback) — race!
       showExec('等待AI回复...');
-      const { text: responseText, timedOut } = await waitForResponse(prevResponse);
+      const domPromise = waitForResponse(prevResponse);
+      const result = await Promise.race([
+        wsPromise.then(t => ({ text: t, timedOut: false, source: 'ws' })),
+        domPromise.then(r => ({ ...r, source: 'dom' }))
+      ]);
       hideExec();
+      state._wsResponseResolve = null;
 
-      if (timedOut) {
+      if (result.timedOut) {
         console.warn('[VearAgent] AI response timed out');
       }
 
+      const responseText = result.text;
       state.lastResponseText = responseText;
-      console.log('[VearAgent] AI response received (' + responseText.length + ' chars)');
+      console.log('[VearAgent] AI response received via ' + result.source + ' (' + responseText.length + ' chars)');
 
       // Send AI response back to server for processing
       const payload = { type: 'ai_text', text: responseText, source: 'vear' };
@@ -353,6 +364,7 @@
       }
     } catch(e) {
       console.error('[VearAgent] typeAndSend failed:', e);
+      state._wsResponseResolve = null;
     } finally {
       state.sending = false;
     }
@@ -368,9 +380,13 @@
     state.processedCids.add(key);
     setTimeout(() => state.processedCids.delete(key), 30000);
 
-    // Don't process AI text if we're currently sending a tool result
+    // If sending tool result, resolve the waiting promise (WS fast path)
     if (state.sending) {
-      console.log('[VearAgent] Ignoring AI text while sending');
+      console.log('[VearAgent] AI response captured via WS while sending');
+      if (state._wsResponseResolve) {
+        state._wsResponseResolve(text);
+        state._wsResponseResolve = null;
+      }
       return;
     }
 

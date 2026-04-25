@@ -138,7 +138,7 @@ export default class AutoHealer {
                 : '未找到匹配内容，建议 read_file 查看文件后重试'
             };
           } catch (e) {
-            this.logger?.warn(`[AutoHealer] edit_file 自愈失败: ${e.message}`);
+            this.logger?.warning(`[AutoHealer] edit_file 自愈失败: ${e.message}`);
             return { healed: false };
           }
         }
@@ -323,7 +323,7 @@ export default class AutoHealer {
     try {
       return await this.hub.call(tool, params);
     } catch (e) {
-      this.logger?.warn(`[AutoHealer] callTool ${tool} 失败: ${e.message}`);
+      this.logger?.warning(`[AutoHealer] callTool ${tool} 失败: ${e.message}`);
       return null;
     }
   }
@@ -344,7 +344,7 @@ export default class AutoHealer {
           }
         }
       } catch (e) {
-        this.logger?.warn(`[AutoHealer] 策略 ${strategy.name} 执行失败: ${e.message}`);
+        this.logger?.warning(`[AutoHealer] 策略 ${strategy.name} 执行失败: ${e.message}`);
       }
     }
 

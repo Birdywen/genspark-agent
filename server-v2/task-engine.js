@@ -595,10 +595,19 @@ class TaskEngine {
    */
   _buildSavedBinding(stepResult) {
     const parsed = this._parseMaybeJson(stepResult?.result);
+    // v4.1 (2026-04-25): 顶层 result 保持工具的原始 result（向后兼容 {{x.result|trim}}）
+    // 解析后的对象放到 output / parsed，保留两条访问路径
+    let topResult = stepResult?.result;
+    // 工具返回的 result 常常是 JSON 字符串包裹的 {handled,success,result,...}，
+    // 这种情况下取里层的 result 作为顶层（一般是用户真正想要的字符串/对象）
+    if (parsed && typeof parsed === 'object' && parsed.handled !== undefined && 'result' in parsed) {
+      topResult = parsed.result;
+    }
     return {
       // 向后兼容的顶层字段
       success: stepResult?.success === true,
-      result: parsed,
+      result: topResult,
+      parsed,
       error: stepResult?.error,
       errorType: stepResult?.errorType,
       // v4 标准化字段

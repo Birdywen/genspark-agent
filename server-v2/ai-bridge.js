@@ -106,26 +106,59 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
   }
 
   // === Execute a parsed ΩCODE command ===
+  // v4 (2026-04-25): batch 走 taskEngine.executeBatch — 启用 saveAs/when/模板/forEach/retry/onError
   async function executeCmd(ws, cmd, cid, source) {
     logger.info(`[AiBridge][${source}] ΩCODE: ${cmd.tool || 'batch(' + cmd.steps?.length + ')'}`); 
     ws.send(JSON.stringify({ type: 'inject_status', cid, status: 'executing', detail: cmd.tool || 'batch' }));
 
     try {
       if (cmd.steps && Array.isArray(cmd.steps)) {
-        const results = [];
-        for (const step of cmd.steps) {
-          const result = await callTool(ws, step.tool, step.params);
-          results.push(result);
+        if (!taskEngine) {
+          // 降级到旧循环（无控制流）
+          logger.warn('[AiBridge] taskEngine missing, fallback to legacy loop (no saveAs/when/template)');
+          const results = [];
+          for (const step of cmd.steps) {
+            const result = await callTool(ws, step.tool, step.params);
+            results.push(result);
+            ws.send(JSON.stringify({ type:'inject_status', cid, status:'step_done', step:results.length-1, total:cmd.steps.length, tool:step.tool, success:result.success }));
+          }
+          const text = formatResult({ batchResults: results });
+          ws.send(JSON.stringify({ type:'inject_result', cid, text }));
+          return text;
+        }
+
+        const batchId = `omega_${cid || Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+        const total = cmd.steps.length;
+        const onStepComplete = (r) => {
           ws.send(JSON.stringify({
             type: 'inject_status', cid,
-            status: 'step_done',
-            step: results.length - 1,
-            total: cmd.steps.length,
-            tool: step.tool,
-            success: result.success
+            status: r.skipped ? 'step_skipped' : 'step_done',
+            step: r.stepIndex,
+            total,
+            tool: r.tool || r.type,
+            success: r.success !== false,
+            skipped: !!r.skipped,
+            reason: r.reason || undefined
           }));
-        }
-        const text = formatResult({ batchResults: results });
+        };
+
+        const batchResult = await taskEngine.executeBatch(
+          batchId,
+          cmd.steps,
+          { stopOnError: cmd.stopOnError !== false, retry: cmd.retry, onError: cmd.onError, maxConcurrency: cmd.maxConcurrency },
+          onStepComplete
+        );
+
+        // 标准化为 formatResult 期望的形状
+        const batchResults = (batchResult.results || []).map(r => ({
+          success: r.success !== false && !r.skipped,
+          skipped: !!r.skipped,
+          tool: r.tool || r.type,
+          result: r.result !== undefined ? r.result : (r.output || ''),
+          error: r.error || (r.skipped ? `skipped: ${r.reason||r.when||'condition'}` : ''),
+          raw: r
+        }));
+        const text = formatResult({ batchResults, summary: { ok: batchResult.stepsCompleted, fail: batchResult.stepsFailed, skip: batchResult.stepsSkipped, total: batchResult.totalSteps } });
         ws.send(JSON.stringify({ type: 'inject_result', cid, text }));
         return text;
       } else {

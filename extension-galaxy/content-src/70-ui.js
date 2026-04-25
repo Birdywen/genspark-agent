@@ -1075,7 +1075,7 @@
         // 自动提取对话内容，调用 AI 生成摘要
         addLog('🤖 autoCompress: 提取对话内容...', 'info');
         
-        const msgs = document.querySelectorAll('.conversation-statement');
+        const msgs = document.querySelectorAll('div.group\/message');
         const lines = [];
         let totalLen = 0;
         for (const msg of msgs) {
@@ -1106,7 +1106,7 @@
 5. 最后必须包含以下段落（原样保留）：
 
 ## 临时上下文存储
-AI 可通过 eval_js 在 genspark.ai 标签页中读写临时上下文（需先 list_tabs 找到 genspark.ai 的 tabId）：
+AI 可通过 eval_js 在 chat.galaxy.ai 标签页中读写临时上下文（需先 list_tabs 找到 chat.galaxy.ai 的 tabId）：
 - 存储对话 ID: 59cdb9cb-b175-4cdd-af44-e8927d7b006a
 - 写入: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',name:'要存的内容',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return 'saved:'+d.data.name.length})
 - 读取: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return d.data.name})
@@ -1177,7 +1177,7 @@ ${conversationText}
       }
       // 压缩（重写 messages）
       const projectId2 = new URLSearchParams(location.search).get('id');
-      const firstUserBubble = document.querySelector('.conversation-statement.user .bubble');
+      const firstUserBubble = document.querySelector('div.group\/message .bubble');
       if (!firstUserBubble || !projectId2) {
         if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
         return 'failed: missing projectId or first message';
@@ -1544,7 +1544,7 @@ ${conversationText}
       let overThreshold = false;
       let nearThreshold = false;
       try {
-        const allMsgs = document.querySelectorAll('.conversation-statement');
+        const allMsgs = document.querySelectorAll('div.group\/message');
         const totalMsgs = allMsgs.length;
         let totalChars = 0;
         allMsgs.forEach(m => { totalChars += m.textContent.length; });

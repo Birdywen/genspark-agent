@@ -1,13 +1,13 @@
 // content.js v1.0.53 - REC增强 - ΩCODE统一通道 - 添加 Agent 心跳机制，确保跨 Tab 通信可靠
-(function() { console.log('=== GENSPARK AGENT v35 LOADED ===');
+(function() { console.log('=== GALAXY AGENT v35 LOADED ===');
   'use strict';
 
   // 防止脚本重复加载
-  if (window.__GENSPARK_AGENT_LOADED__) {
+  if (window.__GALAXY_AGENT_LOADED__) {
     console.log('[Agent] 已加载，跳过重复初始化');
     return;
   }
-  window.__GENSPARK_AGENT_LOADED__ = true;
+  window.__GALAXY_AGENT_LOADED__ = true;
 
   // Per-tab disable: check localStorage
   const DISABLED_KEY = 'agent_disabled_' + location.href.split('?')[1];
@@ -20,14 +20,14 @@
     btn.innerHTML = isDisabled ? '🔴' : '🟢';
     btn.title = isDisabled ? 'Agent: OFF (click to enable)' : 'Agent: ON (click to disable)';
     btn.style.cssText = 'position:fixed;bottom:70px;right:12px;z-index:99999;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;background:#1a1a2e;border:1px solid #333;box-shadow:0 2px 8px rgba(0,0,0,0.3);opacity:0.7;transition:opacity 0.2s;';
-    // 修复 Genspark 页面中文排版：去掉 justify 两端对齐
+    // 修复 Galaxy 页面中文排版：去掉 justify 两端对齐
     const fixStyle = document.createElement('style');
     fixStyle.id = 'agent-fix-justify';
     fixStyle.textContent = `
       * { text-align: left !important; text-justify: none !important; }
       p, li, div, span, td, th, pre, code, blockquote,
       .markdown-viewer, .markdown-viewer *, .bubble, .bubble *,
-      .conversation-statement, .conversation-statement *,
+      div.group\/message, div.group\/message *,
       [class*="message"], [class*="content"], [class*="chat"] {
         text-align: left !important;
         text-justify: none !important;
@@ -60,7 +60,7 @@
   }
 
   const CONFIG = {
-    SCAN_INTERVAL: 200,
+    SCAN_INTERVAL: 1000,
     TIMEOUT_MS: 600000,
     MAX_RESULT_LENGTH: 50000,
     MAX_LOGS: 50,
@@ -229,29 +229,7 @@ function log(...args) {
 
   // ============== AI 生成状态检测 ==============
   
-  function isAIGenerating() {
-    const stopBtnSelectors = [
-      'button[aria-label*="stop" i]', 'button[aria-label*="停止" i]',
-      'button.stop-button', 'button[class*="stop"]', '.stop-generating',
-      '[data-testid="stop-button"]', '.generating-indicator', '.typing-indicator'
-    ];
-    for (const sel of stopBtnSelectors) {
-      try {
-        const btn = document.querySelector(sel);
-        if (btn && btn.offsetParent !== null) return true;
-      } catch (e) {}
-    }
-    const lastMsg = document.querySelector('.conversation-statement.assistant:last-child');
-    if (lastMsg) {
-      const cl = lastMsg.className.toLowerCase();
-      if (cl.includes('streaming') || cl.includes('generating') || cl.includes('loading') || cl.includes('typing')) return true;
-      if (lastMsg.querySelectorAll('.loading, .typing, .cursor, .blink, [class*="loading"], [class*="typing"]').length > 0) return true;
-    }
-    const globalInd = document.querySelectorAll('.generating, .loading-response, [class*="generating"], [class*="streaming"]');
-    for (const el of globalInd) { if (el.offsetParent !== null) return true; }
-    return false;
-  }
-
+  // isAIGenerating: moved to 30-dom-galaxy.js catch (e) {}
   function waitForGenerationComplete(callback, maxWait = 30000) {
     const startTime = Date.now();
     const check = () => {
@@ -283,7 +261,7 @@ function log(...args) {
 
 ## 身份
 
-你连接了 **genspark-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
+你连接了 **galaxy-agent** 本地代理系统 (v1.0.52+)，可执行文件操作、命令、浏览器自动化等。
 工具调用会被本地代理拦截并执行，不要质疑可用性，直接使用。不确定时先用简单命令测试（如 echo hello）。
 
 ### 远程手机桥接 (Team Chat Bridge)
@@ -323,116 +301,16 @@ ${toolSummary}
 
 
 
-// ============== DOM 操作 (ChatGPT 专用) ==============
+// ============== DOM 操作 (Galaxy AI 专用) ==============
+// Galaxy 用 data-role="user" / data-role="assistant" 区分消息
+// data-testid="message-user" / data-testid="message-assistant"
 
-function getAIMessages() {
- return Array.from(document.querySelectorAll('article[data-testid^="conversation-turn-"]'));
-}
-
-function getLatestAIMessage() {
- const messages = getAIMessages();
- if (messages.length === 0) return { text: '', index: -1, element: null };
- const lastMsg = messages[messages.length - 1];
- const contentEl = lastMsg.querySelector('[data-message-author-role="assistant"] .markdown.prose') || 
- lastMsg.querySelector('[data-message-author-role="assistant"] .markdown') ||
- lastMsg.querySelector('[data-message-author-role="assistant"]');
- return {
- text: contentEl?.innerText || lastMsg.innerText || '',
- index: messages.length - 1,
- element: lastMsg
- };
-}
-
-function isGenerating() {
- const turns = document.querySelectorAll('article[data-testid^="conversation-turn-"]');
- if (turns.length === 0) return false;
- const lastTurn = turns[turns.length - 1];
- return lastTurn.querySelector('.result-streaming, [class*="streaming"]') !== null;
-}
-
-function isAssistantTurn(el) {
- return el.querySelector('[data-message-author-role="assistant"]') !== null;
-}
-
-function getInputBox() {
- const selectors = [
- 'div[data-placeholder="Ask anything"]',
- 'div[contenteditable="true"][data-placeholder]',
- 'div.ProseMirror[contenteditable="true"]',
- 'textarea#prompt-textarea',
- 'div[contenteditable="true"]',
- 'textarea'
- ];
- for (const sel of selectors) {
- const el = document.querySelector(sel);
- if (el && el.offsetParent !== null) return el;
- }
- return null;
-}
-
-function sendMessage(text) {
- const input = getInputBox();
- if (!input) {
- addLog('❌ 找不到输入框', 'error');
- return false;
- }
- input.focus();
- if (input.classList.contains('ProseMirror') || input.contentEditable === 'true') {
- input.innerHTML = '';
- const p = document.createElement('p');
- p.textContent = text;
- input.appendChild(p);
- input.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, data: text, inputType: 'insertText' }));
- } else {
- const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
- input.value = '';
- if (nativeSetter) nativeSetter.call(input, text);
- else input.value = text;
- input.dispatchEvent(new Event('input', { bubbles: true }));
- }
- const btnSelectors = [
- 'button[data-testid="send-button"]',
- 'button[aria-label*="Send"]',
- 'button[aria-label*="发送"]',
- 'button[type="submit"]'
- ];
- let sent = false;
- for (const sel of btnSelectors) {
- const btn = document.querySelector(sel);
- if (btn && !btn.disabled && btn.offsetParent !== null) {
- btn.click();
- addLog('📤 点击发送按钮', 'info');
- sent = true;
- break;
- }
- }
- if (!sent) {
- ['keydown', 'keypress', 'keyup'].forEach(type => {
- input.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
- });
- addLog('📤 Enter 发送', 'info');
- }
- return true;
-}
-
-function enqueueMessage(msg) {
- state.messageQueue.push(msg);
- addLog(`📥 消息入队 (队列长度: ${state.messageQueue.length})`, 'info');
- processMessageQueue();
-}
-
-function processMessageQueue() {
- if (state.isProcessingQueue || state.messageQueue.length === 0) return;
- state.isProcessingQueue = true;
- const msg = state.messageQueue.shift();
- addLog(`📤 处理队列消息 (剩余: ${state.messageQueue.length})`, 'info');
- sendMessage(msg);
- setTimeout(() => { state.isProcessingQueue = false; processMessageQueue(); }, 3000);
-}
-    // ============== DOM 操作 (Genspark 专用) ==============
-  
   function getAIMessages() {
-    return Array.from(document.querySelectorAll('.conversation-statement.assistant'));
+    return [...document.querySelectorAll('div.group\\/message[data-role="assistant"]')];
+  }
+
+  function getUserMessages() {
+    return [...document.querySelectorAll('div.group\\/message[data-role="user"]')];
   }
 
   function getLatestAIMessage() {
@@ -440,209 +318,81 @@ function processMessageQueue() {
     if (messages.length === 0) return { text: '', index: -1, element: null };
     const lastMsg = messages[messages.length - 1];
     
-    const contentEl = lastMsg.querySelector('.markdown-viewer') || 
-                      lastMsg.querySelector('.bubble .content') ||
-                      lastMsg.querySelector('.bubble');
+    // Galaxy: content is in markdown prose area
+    const contentEl = lastMsg.querySelector('.prose') ||
+                      lastMsg.querySelector('[class*="message-content"]') ||
+                      lastMsg;
     
-    return { 
-      text: contentEl?.innerText || lastMsg.innerText || '', 
+    return {
+      text: contentEl?.innerText || lastMsg.innerText || '',
       index: messages.length - 1,
       element: lastMsg
     };
   }
 
   function getInputBox() {
-    const selectors = [
-      'textarea.search-input',
-      'textarea[placeholder*="消息"]',
-      'textarea[placeholder*="message" i]',
-      'div[contenteditable="true"].search-input',
-      'div[contenteditable="true"]',
-      'textarea'
-    ];
-    
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      if (el && el.offsetParent !== null) return el;
-    }
-    return null;
-  }
-
-  // ============== 消息队列处理 ==============
-  
-  function enqueueMessage(msg) {
-    state.messageQueue.push(msg);
-    addLog(`📥 消息入队 (队列长度: ${state.messageQueue.length})`, 'info');
-    processMessageQueue();
-  }
-  
-  function processMessageQueue() {
-    if (state.isProcessingQueue || state.messageQueue.length === 0) {
-      return;
-    }
-    
-    state.isProcessingQueue = true;
-    const msg = state.messageQueue.shift();
-    
-    addLog(`📤 处理队列消息 (剩余: ${state.messageQueue.length})`, 'info');
-    sendMessageSafe(msg);
-    
-    // 等待 3 秒后处理下一条，给 AI 足够时间响应
-    setTimeout(() => {
-      state.isProcessingQueue = false;
-      processMessageQueue();
-    }, 3000);
+    return document.querySelector('textarea[placeholder="Send a message..."]') ||
+           document.querySelector('textarea');
   }
 
   function sendMessage(text) {
     const input = getInputBox();
     if (!input) {
-      addLog('❌ 找不到输入框', 'error');
+      log('sendMessage: textarea not found');
       return false;
     }
-
-    input.focus();
     
-    if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
-      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
-      input.value = "";
-      if (nativeSetter) { nativeSetter.call(input, text); } else { input.value = text; }
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-    } else {
-      input.innerHTML = '';
-      input.innerText = text;
-      input.dispatchEvent(new InputEvent('input', { 
-        bubbles: true, 
-        composed: true,
-        data: text,
-        inputType: 'insertText'
-      }));
-    }
-
-    const trySend = (attempt = 1) => {
-      const btnSelectors = [
-        '.enter-icon-wrapper',
-        'div[class*=enter-icon]',
-        'button[type="submit"]',
-        'button.send-button',
-        'button[aria-label*="send" i]',
-        'button[aria-label*="发送"]',
-        '.search-input-container button',
-        'form button:not([type="button"])'
-      ];
-      
-      // 按 Enter 发送
-      const pressEnter = () => {
-        ['keydown', 'keypress', 'keyup'].forEach(type => {
-          input.dispatchEvent(new KeyboardEvent(type, {
-            key: 'Enter',
-            code: 'Enter', 
-            keyCode: 13,
-            which: 13,
-            bubbles: true,
-            cancelable: true
-          }));
-        });
-      };
-      
-      // v31.1: 先尝试 Enter，失败后多次重试点击按钮
-      pressEnter();
-      addLog('📤 Enter 发送', 'info');
-      
-      // 检查并重试发送的函数
-      const checkAndRetry = (retryCount) => {
-        const inp = getInputBox();
-        if (!inp || !inp.value || inp.value.length <= 5) {
-          // 发送成功了
-          return;
-        }
-        
-        if (retryCount <= 0) {
-          addLog('⚠️ 发送失败，请手动点击', 'error');
-          return;
-        }
-        
-        // 尝试点击按钮
-        let clicked = false;
-        for (const sel of btnSelectors) {
-          const btn = document.querySelector(sel);
-          if (btn && !btn.disabled && btn.offsetParent !== null) {
-            btn.click();
-            clicked = true;
-            addLog(`📤 点击按钮 (剩余重试: ${retryCount - 1})`, 'info');
-            break;
-          }
-        }
-        
-        if (!clicked) {
-          // 没找到按钮，再试 Enter
-          pressEnter();
-          addLog(`📤 重试 Enter (剩余: ${retryCount - 1})`, 'info');
-        }
-        
-        // 500ms 后再检查
-        setTimeout(() => checkAndRetry(retryCount - 1), 500);
-      };
-      
-      // 300ms 后开始检查，最多重试 3 次
-      setTimeout(() => checkAndRetry(3), 300);
-      
-      return true;  // Enter 已发送
-    };
-
-    // 第一次尝试发送（延迟 800ms 等待页面就绪）
+    // Set value via native setter to trigger React state update
+    const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    nativeSet.call(input, text);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    
+    // Wait a tick then submit
     setTimeout(() => {
-      const sent = trySend(1);
-      if (!sent) {
-        // 800ms 后检查输入框是否还有内容，有则重试
-        setTimeout(() => {
-          const currentInput = getInputBox();
-          if (currentInput && currentInput.value && currentInput.value.length > 10) {
-            addLog('🔄 重试发送...', 'info');
-            trySend(2);
-            // 再次检查
-            setTimeout(() => {
-              const inp = getInputBox();
-              if (inp && inp.value && inp.value.length > 10) {
-                addLog('⚠️ 请手动点击发送', 'error');
-              } else {
-                addLog('📤 已发送', 'info');
-              }
-            }, 500);
-          } else {
-            addLog('📤 已发送(Enter)', 'info');
-          }
-        }, 800);
+      // Try form submit button
+      const form = input.closest('form');
+      const submitBtn = form?.querySelector('button[type="submit"]');
+      if (submitBtn && !submitBtn.disabled) {
+        submitBtn.click();
+        log('sendMessage: clicked submit button');
+      } else {
+        // Fallback: Enter key
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        log('sendMessage: dispatched Enter key');
       }
-    }, 800);
-
+    }, 100);
     return true;
   }
 
-  function sendMessageSafe(text) {
-    // 更新最后消息时间（用于超时唤醒检测）
-    if (typeof updateLastAiMessageTime === 'function') {
-      updateLastAiMessageTime();
-    }
+  function isAIGenerating() {
+    // Check Galaxy SSE state first
+    if (window.__galaxySSEState && window.__galaxySSEState.streaming) return true;
     
-    if (isAIGenerating()) {
-      addLog('⏳ 等待 AI 完成输出...', 'info');
-      waitForGenerationComplete(() => sendMessage(text));
-    } else {
-      // 增加延迟到 800ms，确保页面完全稳定后再发送
-      setTimeout(() => {
-        // 再次检查是否正在生成
-        if (isAIGenerating()) {
-          addLog('⏳ 检测到 AI 开始输出，等待完成...', 'info');
-          waitForGenerationComplete(() => sendMessage(text));
-        } else {
-          sendMessage(text);
-        }
-      }, 800);
+    // Check for stop button
+    const stopBtn = document.querySelector('button[aria-label*="stop" i], button[class*="stop"], [data-testid="stop-button"]');
+    if (stopBtn && stopBtn.offsetParent !== null) return true;
+    
+    // Check for streaming/loading indicators
+    const indicators = document.querySelectorAll('.generating, [class*="streaming"], [class*="generating"], .loading-response');
+    for (const el of indicators) {
+      if (el.offsetParent !== null) return true;
     }
+    return false;
   }
 
+  function waitForGenerationComplete(callback, maxWait = 60000) {
+    const start = Date.now();
+    const check = () => {
+      if (!isAIGenerating()) {
+        setTimeout(() => callback(true), 300);
+      } else if (Date.now() - start > maxWait) {
+        callback(false);
+      } else {
+        setTimeout(check, 500);
+      }
+    };
+    setTimeout(check, 1000);
+  }
   // ============== 工具调用解析 ==============
 
   function isExampleToolCall(text, matchStart) {
@@ -2157,12 +1907,12 @@ function processMessageQueue() {
       const serverChars = parseInt(_ds.serverMsgChars) || 0;
       const serverCount = parseInt(_ds.serverMsgCount) || 0;
       const hasServerData = serverChars > 0;
-      const totalMsgs = serverCount > 0 ? serverCount : document.querySelectorAll('.conversation-statement').length;
+      const totalMsgs = serverCount > 0 ? serverCount : document.querySelectorAll('div.group\/message').length;
       let totalChars = 0;
       if (hasServerData) {
         totalChars = serverChars;
       } else {
-        document.querySelectorAll('.conversation-statement').forEach(function(m) { totalChars += m.textContent.length; });
+        document.querySelectorAll('div.group\/message').forEach(function(m) { totalChars += m.textContent.length; });
       }
       
       // 加上注入prompt长度（AI实际看到的总量）
@@ -3266,7 +3016,7 @@ ${tip}${contextInfo}
         // 自动提取对话内容，调用 AI 生成摘要
         addLog('🤖 autoCompress: 提取对话内容...', 'info');
         
-        const msgs = document.querySelectorAll('.conversation-statement');
+        const msgs = document.querySelectorAll('div.group\/message');
         const lines = [];
         let totalLen = 0;
         for (const msg of msgs) {
@@ -3297,7 +3047,7 @@ ${tip}${contextInfo}
 5. 最后必须包含以下段落（原样保留）：
 
 ## 临时上下文存储
-AI 可通过 eval_js 在 genspark.ai 标签页中读写临时上下文（需先 list_tabs 找到 genspark.ai 的 tabId）：
+AI 可通过 eval_js 在 chat.galaxy.ai 标签页中读写临时上下文（需先 list_tabs 找到 chat.galaxy.ai 的 tabId）：
 - 存储对话 ID: 59cdb9cb-b175-4cdd-af44-e8927d7b006a
 - 写入: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',name:'要存的内容',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return 'saved:'+d.data.name.length})
 - 读取: eval_js 单行执行 return fetch('/api/project/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'59cdb9cb-b175-4cdd-af44-e8927d7b006a',request_not_update_permission:true})}).then(function(r){return r.json()}).then(function(d){return d.data.name})
@@ -3368,7 +3118,7 @@ ${conversationText}
       }
       // 压缩（重写 messages）
       const projectId2 = new URLSearchParams(location.search).get('id');
-      const firstUserBubble = document.querySelector('.conversation-statement.user .bubble');
+      const firstUserBubble = document.querySelector('div.group\/message .bubble');
       if (!firstUserBubble || !projectId2) {
         if (btn) { btn.disabled = false; btn.textContent = '🗜️ 压缩'; }
         return 'failed: missing projectId or first message';
@@ -3735,7 +3485,7 @@ ${conversationText}
       let overThreshold = false;
       let nearThreshold = false;
       try {
-        const allMsgs = document.querySelectorAll('.conversation-statement');
+        const allMsgs = document.querySelectorAll('div.group\/message');
         const totalMsgs = allMsgs.length;
         let totalChars = 0;
         allMsgs.forEach(m => { totalChars += m.textContent.length; });
@@ -4822,226 +4572,99 @@ ${conversationText}
     sendMessageSafe(msg);
   }
   
-  // ============== SSE 原始数据拦截 ==============
-  // 从 sse-hook.js (MAIN world) 接收未经 DOM 渲染的原始 SSE delta
-  // 拼接后直接解析 ΩCODE 命令，避免 DOM 渲染导致的转义问题
+// ============== SSE 原始数据拦截 (Galaxy AI 专用) ==============
+  // 从 sse-hook.js (MAIN world) 接收 Galaxy SSE delta
+  // Galaxy SSE format: {type:"text",content:"..."} / {type:"reasoning"} / {type:"tool_use"} / {type:"completion"}
   
   const sseState = {
-    currentText: '',          // 当前 SSE stream 拼接的完整文本
+    currentText: '',
     connected: false,
-    processedCommands: new Set(),  // 已从 SSE 处理过的命令签名
+    processedCommands: new Set(),
     lastDeltaTime: 0,
     messageId: null,
-    enabled: true,             // SSE 通道开关
-    executedInCurrentMessage: false  // 当前消息中 SSE 是否已执行过工具
+    enabled: true,
+    executedInCurrentMessage: false
   };
 
+  // Expose for isAIGenerating() check in DOM layer
+  window.__galaxySSEState = sseState;
+
   function initSSEListener() {
-    // ── ChatGPT: inject fetch stream hook into MAIN world ──
-    if (location.hostname.includes('chatgpt.com') || location.hostname.includes('openai.com')) {
-      var hookScript = document.createElement('script');
-      hookScript.textContent = '(' + function() {
-        if (window.__chatgptFetchHooked) return;
-        window.__chatgptFetchHooked = true;
-        var _f = window.fetch;
-        window.fetch = function() {
-          var args = arguments;
-          var url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
-          var r = _f.apply(this, args);
-          if (url.indexOf('backend-api') !== -1 && url.indexOf('conversation') !== -1 && url.indexOf('limit') === -1) {
-            r.then(function(resp) {
-              try {
-                var c = resp.clone();
-                var rd = c.body.getReader();
-                var dec = new TextDecoder();
-                var buf = '';
-                document.dispatchEvent(new CustomEvent('__sse_connected__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } }));
-                function pump() {
-                  rd.read().then(function(ch) {
-                    if (ch.done) { document.dispatchEvent(new CustomEvent('__sse_closed__', { detail: { transport: 'chatgpt-fetch', timestamp: Date.now() } })); return; }
-                    buf += dec.decode(ch.value, {stream: true});
-                    var lines = buf.split('\n'); buf = lines.pop();
-                    for (var i = 0; i < lines.length; i++) {
-                      var line = lines[i].trim();
-                      if (!line || line.indexOf('data: ') !== 0) continue;
-                      var js = line.substring(6);
-                      if (js === '[DONE]') { document.dispatchEvent(new CustomEvent('__sse_message_complete__', { detail: { timestamp: Date.now() } })); continue; }
-                      try {
-                        var p = JSON.parse(js);
-                        var pv = p.v ? (Array.isArray(p.v) ? p.v : [p]) : (p.p ? [p] : []);
-                        for (var j = 0; j < pv.length; j++) {
-                          if (pv[j].p === '/message/content/parts/0' && pv[j].o === 'append' && pv[j].v) {
-                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'content_delta', text: pv[j].v}), timestamp: Date.now() } }));
-                          }
-                          if (pv[j].p === '/message/status' && pv[j].o === 'replace' && pv[j].v === 'finished_successfully') {
-                            document.dispatchEvent(new CustomEvent('__sse_data__', { detail: { data: JSON.stringify({type: 'status_change', status: 'finished_successfully'}), timestamp: Date.now() } }));
-                          }
-                        }
-                      } catch(e) {}
-                    }
-                    pump();
-                  }).catch(function() {});
-                }
-                pump();
-              } catch(e) {}
-            }).catch(function() {});
-          }
-          return r;
-        };
-        console.log('[ChatGPT-Hook] Fetch stream interceptor injected from content.js');
-      } + ')();';
-      document.documentElement.appendChild(hookScript);
-      hookScript.remove();
-      addLog('🔌 ChatGPT fetch hook injected', 'info');
-    }
+    // Galaxy: SSE events come from sse-hook.js via CustomEvent
+    // No need to inject script — sse-hook.js runs in MAIN world via manifest
 
     // 监听 SSE 连接建立
-    document.addEventListener('__sse_connected__', (e) => {
+    document.addEventListener('__galaxy_sse_connected__', (e) => {
       sseState.connected = true;
       sseState.currentText = '';
-      // 保留上次的 messageId 用于比较
-      var prevMessageId = sseState.messageId;
-      sseState.messageId = null;
-      // 不清除 processedCommands 和 executedInCurrentMessage
-      // 只有在新消息到达时才重置（在 __sse_data__ 中检测 messageId 变化）
-      // sseState.processedCommands.clear();
-      // sseState.executedInCurrentMessage = false;
-      sseState._prevMessageId = prevMessageId;
-      log('SSE connected:', e.detail?.transport);
+      sseState.processedCommands.clear();
+      sseState.executedInCurrentMessage = false;
+      window.__galaxySSEState.streaming = true;
+      log('Galaxy SSE connected:', e.detail?.url);
     });
 
-    // 监听每个 SSE delta
-    document.addEventListener('__sse_data__', (e) => {
+    // 监听文本 delta
+    document.addEventListener('__galaxy_sse_delta__', (e) => {
       if (!sseState.enabled) return;
-      const raw = e.detail?.data;
-      if (!raw) return;
-
-      try {
-        const parsed = JSON.parse(raw);
+      const detail = e.detail;
+      if (!detail) return;
+      
+      if (detail.type === 'text') {
+        sseState.currentText += detail.content || '';
+        sseState.lastDeltaTime = Date.now();
         
-        // 只处理 content delta
-        if (parsed.type === 'message_field_delta' && parsed.field_name === 'content' && parsed.delta) {
-          // 检测是否是新消息（messageId 变化） → 重置执行状态
-          var newMsgId = parsed.message_id || sseState.messageId;
-          if (newMsgId && newMsgId !== sseState._prevMessageId && newMsgId !== sseState.messageId) {
-            log('SSE new message detected: ' + newMsgId + ' (prev: ' + sseState._prevMessageId + ')');
-            sseState.processedCommands.clear();
-            sseState.executedInCurrentMessage = false;
-            sseState.currentText = '';
-          }
-          sseState.currentText += parsed.delta;
-          sseState.lastDeltaTime = Date.now();
-          sseState.messageId = newMsgId;
-          
-          // 实时检测完整的 ΩCODE 命令
-          tryParseSSECommands();
-        }
-      } catch (err) {
-        // 非 JSON 数据，忽略
+        // 实时检测完整的 ΩCODE 命令
+        tryParseSSECommands();
       }
+      // reasoning type: 不拼接到 currentText（只是思考过程）
     });
 
-    // 监听 SSE 连接关闭
-    document.addEventListener('__sse_closed__', (e) => {
+    // 监听工具调用（Galaxy 原生工具，非我们的 ΩCODE）
+    document.addEventListener('__galaxy_sse_tool__', (e) => {
+      const detail = e.detail;
+      log('Galaxy tool event:', detail?.type, detail?.toolName);
+    });
+
+    // 监听完成
+    document.addEventListener('__galaxy_sse_complete__', (e) => {
       sseState.connected = false;
-      // executedInCurrentMessage 不在 SSE 关闭时重置
-      // 只在新消息的 SSE 连接建立时重置，避免长时间执行的命令被 DOM 重复执行
-      // 最后一次扫描，确保不遗漏
+      window.__galaxySSEState.streaming = false;
       if (sseState.currentText) {
         tryParseSSECommands();
       }
-      log('SSE closed, total text length:', sseState.currentText.length);
+      log('Galaxy SSE complete, text length:', sseState.currentText.length);
     });
 
-    log('SSE listener initialized');
+    // 监听关闭
+    document.addEventListener('__galaxy_sse_closed__', (e) => {
+      sseState.connected = false;
+      window.__galaxySSEState.streaming = false;
+      if (sseState.currentText) {
+        tryParseSSECommands();
+      }
+      log('Galaxy SSE closed, text length:', sseState.currentText.length);
+    });
+
+    log('Galaxy SSE listener initialized');
   }
 
-  // === SSE 通用参数完整性预检查 ===
-  // 检测 SSE 传输损坏的参数，返回 true 表示应 defer to DOM
+  // === SSE 参数完整性检查 ===
   function sseParamsLookCorrupted(call) {
     var p = call.params;
-    // SSE long-content guard: params > 500 chars likely corrupted, defer to DOM
     var paramLen = JSON.stringify(p).length;
-    // write_file / edit_file: 允许 SSE 直接处理大内容，避免 DOM 渲染截断
     var sseAllowLarge = (call.name === 'write_file' || call.name === 'edit_file' || call.name === 'vfs_write' || call.name === 'vfs_local_write' || call.name === 'vfs_save' || call.name === 'vfs_append' || call.name === 'run_process' || call.name === 'run_command');
     if (paramLen > 100 && !sseAllowLarge) {
       log("SSE pre-check: params > 100 chars (" + paramLen + "), defer to DOM for: " + call.name);
       return true;
     }
-    if (sseAllowLarge && paramLen > 100) {
-      log("SSE allow-large: " + call.name + " (" + paramLen + " chars) - SSE 直传避免 DOM 截断");
-    }
-    // eval_js / async_task: JS 语法检查
     if ((call.name === 'eval_js' || call.name === 'async_task') && p.code) {
       try { new Function(p.code); } catch (e) {
-        if (e instanceof SyntaxError) {
-          log('SSE pre-check: ' + call.name + ' code SyntaxError: ' + e.message + ', defer to DOM');
-          return true;
-        }
+        if (e instanceof SyntaxError) return true;
       }
     }
-    // run_command: command 不应含引号或换行
-    if (call.name === 'run_command' && p.command && /["'\n]/.test(p.command)) {
-      log('SSE pre-check: run_command command corrupted, defer to DOM');
-      return true;
-    }
-    // run_command: stdin 引号不配对
-    if (call.name === 'run_command' && p.stdin) {
-      var sq = (p.stdin.match(/'/g) || []).length;
-      var dq = (p.stdin.match(/"/g) || []).length;
-      if (sq % 2 !== 0 || dq % 2 !== 0) {
-        log('SSE pre-check: run_command stdin unmatched quotes, defer to DOM');
-        return true;
-      }
-    }
-    // write_file: content 不应为空
-    if (call.name === 'write_file' && !p.content && !p.contentFile) {
-      log('SSE pre-check: write_file empty content, defer to DOM');
-      return true;
-    }
-    // edit_file: edits 必须是非空数组
-    if (call.name === 'edit_file') {
-      if (!p.edits || !Array.isArray(p.edits) || p.edits.length === 0) {
-        log('SSE pre-check: edit_file edits missing/empty, defer to DOM');
-        return true;
-      }
-    }
-    // 路径完整性: path 应以 / 开头
-    if (p.path && typeof p.path === 'string' && !p.path.startsWith('/')) {
-      log('SSE pre-check: path not starting with /, defer to DOM');
-      return true;
-    }
-    // run_command stdin heredoc 未闭合检测
-    if (call.name === 'run_command' && p.stdin) {
-      var hereMatch = p.stdin.match(/<<\s*'?(\w+)'?\s*\n/);
-      if (hereMatch && p.stdin.indexOf('\n' + hereMatch[1]) === -1) {
-        log('SSE pre-check: run_command stdin heredoc unclosed (' + hereMatch[1] + '), defer to DOM');
-        return true;
-      }
-    }
-    // js_flow: steps 必须是非空数组
-    if (call.name === 'js_flow') {
-      if (!p.steps || !Array.isArray(p.steps) || p.steps.length === 0) {
-        log('SSE pre-check: js_flow steps missing/empty, defer to DOM');
-        return true;
-      }
-    }
-    // bg_run: command 引号配对检测
-    if (call.name === 'bg_run' && p.command) {
-      var bsq = (p.command.match(/'/g) || []).length;
-      var bdq = (p.command.match(/"/g) || []).length;
-      if (bsq % 2 !== 0 || bdq % 2 !== 0) {
-        log('SSE pre-check: bg_run command unmatched quotes, defer to DOM');
-        return true;
-      }
-      // bg_run: 括号配对检测
-      var opens = (p.command.match(/\(/g) || []).length;
-      var closes = (p.command.match(/\)/g) || []).length;
-      if (opens !== closes) {
-        log("SSE pre-check: bg_run unmatched parens (" + opens + " vs " + closes + "), defer to DOM");
-        return true;
-      }
-    }
+    if (call.name === 'write_file' && !p.content && !p.contentFile) return true;
+    if (call.name === 'edit_file' && (!p.edits || !Array.isArray(p.edits) || p.edits.length === 0)) return true;
+    if (p.path && typeof p.path === 'string' && !p.path.startsWith('/')) return true;
     return false;
   }
 
@@ -5049,182 +4672,79 @@ ${conversationText}
     const text = sseState.currentText;
     if (!text) return;
 
-    window.__OMEGA_WRITE_VERSION = 2;
-    // -- OMEGA WRITE: zero-escape data transport channel --
-    // Supports: \u03A9CODE, \u03A9DATA, with optional :slot=ID modifier
-    // Format: \u03A9CODE[:slot=conversationId]\n...content...\n\u03A9CODEEND
-    //         \u03A9DATA[:slot=conversationId]\n...content...\n\u03A9DATAEND
-    var omegaWritePatterns = [
-      { prefix: "\u03A9CODE", endTag: "\u03A9CODEEND", label: "OMEGACODE" }
-      // ΩDATA disabled 2026-03-26 (was truncating ΩCODE)
-    ];
-    for (var owi = 0; owi < omegaWritePatterns.length; owi++) {
-      var owp = omegaWritePatterns[owi];
-      // Find start marker: prefix must be at line start (preceded by \n or text start)
-      // and followed immediately by \n or :slot= (not arbitrary text like "legacy")
-      var owStartIdx = -1;
-      var owSearchFrom = 0;
-      while (owSearchFrom < text.length) {
-        var candidateIdx = text.indexOf(owp.prefix, owSearchFrom);
-        if (candidateIdx === -1) break;
-        // Check: must be at start of line (pos 0 or preceded by \n)
-        if (candidateIdx > 0 && text[candidateIdx - 1] !== "\n") {
-          owSearchFrom = candidateIdx + owp.prefix.length;
-          continue;
+    // Detect ΩCODE blocks
+    var prefix = "\u03A9CODE";
+    var endTag = "\u03A9CODEEND";
+    
+    var startIdx = text.indexOf(prefix);
+    if (startIdx === -1) return;
+    
+    var endIdx = text.indexOf(endTag, startIdx);
+    if (endIdx === -1) return; // still streaming
+    
+    var blockStart = text.indexOf('\n', startIdx);
+    if (blockStart === -1 || blockStart >= endIdx) return;
+    
+    var content = text.substring(blockStart + 1, endIdx).trim();
+    if (!content) return;
+    
+    // Dedup
+    var sig = 'sse:omega:' + content.substring(0, 200);
+    if (sseState.processedCommands.has(sig)) return;
+    sseState.processedCommands.add(sig);
+    
+    log('SSE ΩCODE detected (' + content.length + ' chars)');
+    
+    try {
+      var parsed = JSON.parse(content);
+      
+      if (parsed.tool && parsed.params) {
+        // Single tool call
+        var call = { name: parsed.tool, params: parsed.params };
+        if (!sseParamsLookCorrupted(call)) {
+          sseState.executedInCurrentMessage = true;
+          var callSig = 'sse:single:' + JSON.stringify({tool: call.name, params: call.params}).substring(0, 100);
+          sseState.processedCommands.add(callSig);
+          addExecutedCall(callSig);
+          executeToolCall(call.name, call.params);
         }
-        // Check: after prefix must be \n (bare marker) or : (for :slot=)
-        var afterPrefix = text[candidateIdx + owp.prefix.length];
-        if (afterPrefix === "\n" || afterPrefix === ":") {
-          owStartIdx = candidateIdx;
-          break;
-        }
-        owSearchFrom = candidateIdx + owp.prefix.length;
+      } else if (parsed.steps && Array.isArray(parsed.steps)) {
+        // Batch tool calls
+        sseState.executedInCurrentMessage = true;
+        var batchSig = 'sse:batch:' + JSON.stringify(parsed).substring(0, 100);
+        sseState.processedCommands.add(batchSig);
+        addExecutedCall(batchSig);
+        executeBatchCalls(parsed.steps);
       }
-      if (owStartIdx === -1) { log('SSE ' + owp.label + ' NOT FOUND in text (len=' + text.length + ')'); continue; }
-      var owEndMarker = "\n" + owp.endTag;
-      var owEndIdx = text.indexOf(owEndMarker, owStartIdx);
-      if (owEndIdx === -1 || owEndIdx <= owStartIdx) continue;
-      var owSig = "sse:omegawrite:" + owp.label + ":" + owStartIdx;
-      if (sseState.processedCommands.has(owSig)) continue;
-      // Parse the header line (from prefix to first newline)
-      var owHeaderEnd = text.indexOf("\n", owStartIdx);
-      if (owHeaderEnd === -1 || owHeaderEnd > owEndIdx) continue;
-      var owHeader = text.substring(owStartIdx, owHeaderEnd);
-      var owContent = text.substring(owHeaderEnd + 1, owEndIdx);
-      // Parse modifiers from header: :slot=UUID, :name=xxx, :append
-      var owSlotId = null;
-      var owSlotName = null;
-      var owAppend = false;
-      var slotMatch = owHeader.match(/:slot=([a-f0-9-]{36})/i);
-      if (slotMatch) owSlotId = slotMatch[1];
-      var nameMatch = owHeader.match(/:name=([a-zA-Z0-9_.\-]+)/);
-      if (nameMatch) owSlotName = nameMatch[1];
-      if (owHeader.indexOf(':append') !== -1) owAppend = true;
-      sseState.processedCommands.add(owSig);
-      var modStr = (owSlotId ? ' slot:' + owSlotId.substring(0,8) : '') + (owSlotName ? ' name:' + owSlotName : '') + (owAppend ? ' APPEND' : '');
-      addLog("\u26A1 " + owp.label + " captured " + owContent.length + " chars" + modStr, "tool");
-      log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
-      // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
-      try {
-        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = JSON.parse(cleanOw);
-        if (owParsed && (owParsed.tool || owParsed.steps)) {
-          addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
-          sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);
-          log('SSE ' + owp.label + ' TOOL CALL:', owParsed.tool || (owParsed.steps.length + ' steps'));
-          sseState.executedInCurrentMessage = true; sseState.lastOmegaContent = owContent;
-          if (owParsed.steps) {
-            var batchHash = 'sse:' + sseState.messageId + ':omega_batch:' + owStartIdx;
-            addExecutedCall(batchHash);
-            addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-            executeBatchCall(owParsed, batchHash);
-          } else {
-            var callHash = 'sse:' + sseState.messageId + ':omega_call:' + owStartIdx;
-            addExecutedCall(callHash);
-            addDedupKey('dedup:' + Date.now() + ':' + Math.random());
-            executeToolCall({name: owParsed.tool, params: owParsed.params || {}}, callHash);
-          }
-          continue;
-        }
-      } catch(e) { addLog('\u26A0 ' + owp.label + ' JSON parse failed: ' + e.message + ' | content preview: ' + owContent.substring(0,80), 'warning'); log(owp.label + ' parse error:', e.message, 'content:', owContent.substring(0,120)); }
-      // Resolve target: :name= uses VFS, :slot= uses raw ID, default uses code storage
-      if (owSlotName && typeof window.vfs === 'object') {
-        // VFS name-based write (with optional append)
-        (function(vfsName, content, label, append) {
-          var op = append ? window.vfs.append(vfsName, content) : window.vfs.write(vfsName, content);
-          op.then(function(result) {
-            if (result && result.error) {
-              addLog("\u274C " + label + " VFS " + vfsName + ": " + result.error, "error");
-            } else {
-              addLog("\u2705 " + label + " " + (append ? "appended" : "stored") + " " + (result.length || content.length) + " chars to vfs:" + vfsName, "success");
-            }
-          }).catch(function(e) {
-            addLog("\u274C " + label + " VFS write failed: " + e.message, "error");
-          });
-        })(owSlotName, owContent, owp.label, owAppend);
-      } else if (owSlotId) {
-        // Direct slot ID write (with optional append)
-        (function(slotId, content, label, append) {
-          var writePromise;
-          if (append) {
-            writePromise = window.readSlot(slotId).then(function(existing) {
-              return window.writeSlot(slotId, (existing || '') + content);
-            });
-          } else {
-            writePromise = window.writeSlot(slotId, content);
-          }
-          writePromise.then(function(len) {
-            addLog("\u2705 " + label + " " + (append ? "appended" : "stored") + " " + len + " chars to slot " + slotId.substring(0,8), "success");
-            log(label + (append ? " appended:" : " stored:"), len, "chars to slot", slotId);
-          }).catch(function(e) {
-            addLog("\u274C " + label + " write failed: " + e.message, "error");
-          });
-        })(owSlotId, owContent, owp.label, owAppend);
-      } else {
-        // writeCodeStorage removed - no useful purpose for tool call JSON
-        addLog("\u26A0 " + owp.label + " not executable, " + owContent.length + " chars ignored", "warning");
-      }
+    } catch (e) {
+      log('SSE ΩCODE parse error:', e.message);
     }
-
-
-
-
-
-
   }
 
-  // 检查一个命令是否已被 SSE 通道处理过（供 scanForToolCalls 判断）
   function isSSEProcessed(toolName, params) {
     const sig1 = 'sse:single:' + JSON.stringify({tool: toolName, params}).substring(0, 100);
     const sig2 = 'sse:batch:' + JSON.stringify(params).substring(0, 100);
-    // 也检查 callHash 格式（SSE 通道会同时 addExecutedCall）
     return sseState.processedCommands.has(sig1) || sseState.processedCommands.has(sig2);
   }
 
-  // Tab 保活心跳 - 防止 Chrome 休眠
+  // Tab 保活心跳
   setInterval(function() {
     document.title = document.title;
   }, 30000);
 
   function init() {
-    log('初始化 Agent v34 (Genspark)');
+    log('初始化 Galaxy Agent v1.0');
 
-    // 启动 SSE 原始数据监听（优先通道）
     initSSEListener();
-    
     createPanel();
-    
-    // 加载面板增强模块
     loadPanelEnhancer();
-
-    // 恢复扩展刷新前未完成的异步任务
     _restoreAsyncTasks();
 
-    // 页面加载后冷却期：跳过已存在的命令，只处理新产生的
     const loadTime = Date.now();
-    const loadMessageCount = document.querySelectorAll('.agent-message, .conversation-statement').length;
+    const loadMessageCount = document.querySelectorAll('div.group\\/message').length;
     window.__agentLoadState = { loadTime, loadMessageCount };
     setInterval(scanForToolCalls, CONFIG.SCAN_INTERVAL);
-
-    // Notification polling - 已移除，改用 WebSocket 实时通道
-    // 旧的 fetch http://localhost:8766/notify 会触发 CORS 错误
-    // 如需 watchdog 通知，应通过 background.js 中转
     
-    // 自动检测并点击 "Regenerate response" 按钮
-    setInterval(() => {
-      const btn = document.querySelector('[data-v-374c52ef].button');
-      if (btn && btn.textContent && btn.textContent.includes('Regenerate')) {
-        console.log('[Agent] 检测到 Regenerate response 按钮，1秒后自动点击');
-        setTimeout(() => {
-          if (btn && document.contains(btn)) {
-            btn.click();
-            console.log('[Agent] 已点击 Regenerate response 按钮');
-          }
-        }, 1000);
-      }
-    }, 2000);
-    
-    // 监听用户消息，检测 Agent ID（只检测用户自己发的消息，不检测系统注入的消息）
-
     setTimeout(() => {
       chrome.runtime.sendMessage({ type: 'GET_WS_STATUS' }, resp => {
         if (chrome.runtime.lastError) {
@@ -5237,21 +4757,16 @@ ${conversationText}
             state.availableTools = resp.tools;
             updateToolsDisplay();
           }
-          if (resp.skills) { state.availableSkills = resp.skills; }
-          if (resp.skillsPrompt) { state.skillsPrompt = resp.skillsPrompt; } try { document.dispatchEvent(new CustomEvent('__agent_skills_update__', { detail: { skillsPrompt: state.skillsPrompt } })); } catch(e) {}
+          if (resp.skillsPrompt) { state.skillsPrompt = resp.skillsPrompt; }
           updateStatus();
         }
       });
     }, 500);
 
-    addLog('🚀 Agent v34 已启动', 'success');
+    addLog('🚀 Galaxy Agent v1.0 已启动', 'success');
     addLog('💡 点击「📋 提示词」复制给AI', 'info');
     
-    
-    // 启动 AI 响应超时监控
     startWakeupMonitor();
-    
-    // 初始化 Agent ID 显示
   }
 
   if (document.readyState === 'loading') {
