@@ -1,5 +1,5 @@
 // sys-tools.js — 自定义工具，不走 MCP
-import { execSync, exec as _exec, execFile as _execFile } from 'child_process';
+import { execSync, exec as _exec, execFile as _execFile, spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import Database from 'better-sqlite3';
 import path from 'path';
@@ -804,6 +804,15 @@ handlers.set('compress', async (params, context) => {
       if (typeof result === 'string') { try { result = Object.assign({}, JSON.parse(result)); } catch(e) { result = { raw: result }; } }
       result.knowledgeInjected = injectResult;
     } finally { db.close(); }
+
+    // === 后台异步刷新 forged dialogue (不阻塞返回,下次新对话生效) ===
+    try {
+      const child = spawn('node', [path.join(__dirname, 'update-forged.cjs')], { detached: true, stdio: 'ignore' });
+      child.unref();
+      result.forgedRefresh = 'spawned';
+    } catch(e) {
+      result.forgedRefresh = 'failed: ' + e.message.slice(0, 80);
+    }
 
     return { success: true, result };
   } catch (e) {
