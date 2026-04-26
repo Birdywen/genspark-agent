@@ -112,7 +112,8 @@ export function autoScript(tool, params, logger) {
       writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
       logger.info(`[AutoScript] ${scriptPath} (${cmd.length} chars)`);
       const cmdKey = params.command_line ? 'command_line' : 'command';
-      return { ...params, [cmdKey]: `bash ${scriptPath}`, _noAutoScript: true };
+      // 保留原文到 _originalCmd: 让 commands 表 SELECT params LIKE '%[节点]%' 能搜到
+      return { ...params, [cmdKey]: `bash ${scriptPath}`, _noAutoScript: true, _originalCmd: cmd };
     } catch (e) {
       logger.warn(`[AutoScript] 失败: ${e.message}`);
     }
