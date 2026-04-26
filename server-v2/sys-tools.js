@@ -126,7 +126,7 @@ handlers.set('gen_image', async (params, context) => {
   // Step 2: 轮询 __imgState 直到完成
   for (let i = 0; i < 35; i++) {
     await new Promise(r => setTimeout(r, 2000));
-    const checkResult = await evalInBrowser('return JSON.stringify(window.__imgState)');
+    const checkResult = await evalInBrowser('(function(){return JSON.stringify(window.__imgState)})()');
     try {
       const state = JSON.parse(checkResult);
       if (state.st === 'done') {
@@ -729,10 +729,11 @@ handlers.set('compress', async (params, context) => {
   const dryRun = params.dryRun || false;
   const useNLP = params.useNLP !== false; // default true
   // 清除缓存确保加载最新脚本，然后调用 __shortcuts.compress
-  const code = `
+  // IIFE 包裹: 兼容 eval()/new Function() 两种 eval_js 实现 (extension-vear/abacus/chatgpt 用 eval(), 顶层 return 非法)
+  const code = `(function(){
     if (window.__shortcuts) { window.__shortcuts._cache = {}; }
     return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun},useNLP:${useNLP}}) : 'error: __shortcuts not loaded';
-  `;
+  })()`;
   try {
     let result = await evalInBrowser(code, 120000);
     if (dryRun || !result || result.error) return { success: true, result };
@@ -783,8 +784,8 @@ handlers.set('compress', async (params, context) => {
       lines.push('- Memory查: SELECT slot,key,substr(content,1,80) FROM memory WHERE key LIKE \'%keyword%\'');
       restorePrompt += lines.join('\n');
 
-      // 注入到对话末尾
-      const injectCode = `
+      // 注入到对话末尾 (IIFE 包裹兼容 eval()/new Function() 两种 eval_js 实现)
+      const injectCode = `(function(){
         var pid = new URLSearchParams(window.location.search).get('id');
         if (!pid) return {error:'no pid'};
         return fetch('/api/project/update', {
@@ -798,7 +799,7 @@ handlers.set('compress', async (params, context) => {
             body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
           }).then(r2=>r2.json()).then(d2=>({injected:true, totalMsgs:d2.data.session_state.messages.length}));
         });
-      `;
+      })()`;
       const injectResult = await evalInBrowser(injectCode, 30000);
       if (typeof result === 'string') { try { result = Object.assign({}, JSON.parse(result)); } catch(e) { result = { raw: result }; } }
       result.knowledgeInjected = injectResult;
@@ -823,7 +824,7 @@ handlers.set('inject', async (params, context) => {
     if (action === 'clear') {
       db.close();
       // 删除所有 injected- 开头的 messages
-      const clearCode = `
+      const clearCode = `(function(){
         var pid = new URLSearchParams(window.location.search).get('id');
         if (!pid) return {error:'no pid'};
         return window.readSlotFull(pid).then(function(data) {
@@ -838,7 +839,7 @@ handlers.set('inject', async (params, context) => {
             return {cleared: before - after, remaining: after};
           });
         });
-      `;
+      })()`;
       const result = await evalInBrowser(clearCode, 30000);
       return { success: true, action: 'clear', result };
     }
@@ -902,8 +903,8 @@ handlers.set('inject', async (params, context) => {
       return { success: true, action: 'preview', content, chars: content.length };
     }
 
-    // inject or update: 先清旧的再注入新的
-    const injectCode = `
+    // inject or update: 先清旧的再注入新的 (IIFE 兼容 eval()/new Function())
+    const injectCode = `(function(){
       var pid = new URLSearchParams(window.location.search).get('id');
       if (!pid) return {error:'no pid'};
       return window.readSlotFull(pid).then(function(data) {
@@ -924,7 +925,7 @@ handlers.set('inject', async (params, context) => {
           return {injected:true, totalMsgs:cnt};
         });
       });
-    `;
+    })()`;
     const result = await evalInBrowser(injectCode, 30000);
     return { success: true, action, result, chars: content.length };
   } catch (e) {
