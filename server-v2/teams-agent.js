@@ -510,7 +510,8 @@ async function poll() {
   try {
     const resp = await fetchMessages();
     const messages = resp.data || resp || [];
-    log(`Poll: got ${Array.isArray(messages) ? messages.length : 0} msgs, lastMsgId=${lastMsgId}`);
+    const _gotN = Array.isArray(messages) ? messages.length : 0;
+    if (_gotN > 0) log(`Poll: got ${_gotN} msgs, lastMsgId=${lastMsgId}`);
     
     if (Array.isArray(messages)) {
       for (const msg of messages) {

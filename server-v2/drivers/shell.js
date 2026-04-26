@@ -140,7 +140,7 @@ export default {
         const cmd0 = (params.command_line || params.command || '').trim().split(/[|;&]/).pop().trim().split(/\s+/)[0].replace(/^.*\//, '');
         const softFail1 = ['grep','egrep','fgrep','diff','head','tail','find','ls'].includes(cmd0);
         const success = code === 0 || (code === 1 && softFail1) || (code === null && output.length > 0);  // null=timeout-killed but output received
-        const historyId = _addToHistory('run_process', params, success, output.slice(0, 200));
+        const historyId = _addToHistory('run_process', params, success, output.slice(0, 200), success ? null : (output || ('exit code ' + code)).slice(0, 500));
         trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
 
         if (ws && id) {
