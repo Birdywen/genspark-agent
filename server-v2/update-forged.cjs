@@ -78,7 +78,13 @@ function buildLessons() {
   return [...seen.values()]
     .map(p => ({ ...p, _score: scoreOf(p) }))
     .sort((a,b) => b._score - a._score)
-    .map(({ key, _score, ...rest }) => rest);  // 输出时移除内部字段
+    .map(({ key, _score, wrong, correct, summary }) => {
+      // 第一人称渲染: wrong/correct 对 → 自述体; summary 类型保留
+      if (wrong && correct) {
+        return { i_learned: `我犯过: ${wrong}\n现在我会: ${correct}\n这条不是规则,是我栽过的坑。` };
+      }
+      return { i_remember: summary };
+    });
 }
 
 // === 动态: penalties (反复错误的强威慑教训) ===
@@ -125,7 +131,7 @@ function buildPenalties() {
       tool: e.tool,
       error: e.err,
       count: e.cnt,
-      message: severity + " " + e.tool + " 已重复犯错 " + e.cnt + " 次。每一次都浪费一轮对话,污染 commands 表,推高你的失败率。下次出现这个 error 立即停止任务,先做这件事: " + fix,
+      message: severity + " 我用 " + e.tool + " 栽过 " + e.cnt + " 次。每一次都是同一个动作伸手就错,每一次都浪费一轮对话,污染 commands 表。我现在记住了: " + fix + " 别再来第 " + (e.cnt+1) + " 次。",
       fix
     };
   };
@@ -143,7 +149,7 @@ function buildPenalties() {
       const m = merged.get(k);
       m.count += p.count;
       m.error = m.error + ' / ' + p.error;
-      m.message = (m.level === 'CRITICAL' ? '⛔' : '⚠️') + ' ' + m.tool + ' 已重复犯错 ' + m.count + ' 次。每一次都浪费一轮对话,污染 commands 表。下次立即停止任务,先做这件事: ' + m.fix;
+      m.message = (m.level === 'CRITICAL' ? '⛔' : '⚠️') + ' 我用 ' + m.tool + ' 栽过 ' + m.count + ' 次,反复同一个坑。每次都浪费一轮对话,污染 commands 表。我现在记住了: ' + m.fix + ' 别再来第 ' + (m.count+1) + ' 次。';
     } else {
       merged.set(k, { ...p });
     }
