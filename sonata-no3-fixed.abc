@@ -1,0 +1,34 @@
+X:1
+C:Johann Sebastian Bach
+L:1/16
+Q:1/4=136
+M:3/4
+I:linebreak 
+K:C
+V:1 treble nm="SONATA NO. 3 FOR VIOLIN SOLO"
+V:1
+"^Allegro"!f!"^NC." cdef g2c2 dcBA | GABc defa gfed | cdef g2c2 dcBA | %3
+ GABd cBAG FEFD | EcBc dcBc gcBc | Ecgc ac_bc acgc | FcBc dcBc acBc | Fcac FcEc FcDc | %8
+!p! EcBc d2(3cBc g2(3cBc | Ecgc ac_bc acgc | FcBc dcBc a2(3cBc | Fcac FcEc FcDc | %12
+!f! E2(3cBc gcBc AcBc | Dc/B/c/ fcBc Gc/Bc | CDEF Gcde fedc | dcBA G2d2 F2(3EFD | %16
+ EGAB c2g2 _BABG | A=B^c_b gfed =cBAG | FEDE F2d2 AGFE | DCB,C DAFE DCB,A, | %20
+ G,FE/D G,ED2C/ G,GFE | DB,A,G, FB,A,G, DCB,A,!p! G,2F2ED G,ED2C G,GFE | DB,A,G, GB,A,G, DCB,A, | %23
+!f! G,/FEF BFE2F dFEF/ | G,EdE cEBE cEG,E | A,G^FG ^cGFG eGFG | A,^FeF2 dF^cF dFA, | %27
+ D=cBc dcBc acBc | Dcac Baca BaAa | DBAB cBAB a2(3BAB | DBgB Agdg ^cgdg | D^cBc dcBc gcBc | %32
+ D^cgc egcg Agcg | Ddge ^fdge fdge | ^fede fgab c'bc'a | dc'_ba dbag dd'c'b | %36
+ a^fed c'fed agfe | dc_BA dBAG _edcB | A^F=ED2 cFED ^f2 d | ga_bc' d'2g2 bag^f | %40
+ gdc=B dcBA G4 :: GABc d2G2 AG^FE | D2(3E^FG ABce dcBA | GABc d2G2 AG^FE | %44
+ DE^FA GFED CB,CA, | B,G^FG A"_EONARO PUBLISHING CORPORATION"GFG dGFG | B,GdG eG=fG eGdG | %47
+ CG^FG AGFG eGFG | CGeG CGB,G CGA,G |!p! B,G^FG2 AGFG dGFG | B,GdG eG=fG eGdG | %51
+ CG^FG AGFG eGFG | CGeG CGDG EGDG |!f! ^CA^GA BAGA e2(3AGA | ^CAeA fA=gA fAeA | %55
+ DA^GA BAGA fAGA | DAfA DA^CA DAB,A |!p! ^CA^GA BAGA eAGA | ^CAeA fA=gA fAeA | DA^GA BAGA fAGA | %60
+ DAfA DAEA FADA |!f! GA_Bc d2_b2 FEFD | E2(3GA=B cdef ga_bg | agfe f2a2 EDEC | DFGA _Bcde fgaf | %65
+ gfed ^cdeA GFGE | AGFE DEF=C _B,2(3A,B,G, | A,GFE A,FED A,2(3AGF | E^CB,A, GCB,A, EDCB, | %69
+!p! A,GFE A,FED A,AGF | E^CB,A, ACB,A, EDCB, |!f! A,G^FG ^cGFG eGFG | A,=FeF dF^cF dFA,F | %73
+ ^G,F/E/F2 BFEF dFEF | ^G,FdF G,EDE C2(3EB,E | A,E^F^G ABcA cBAG | AcBA edcB AGFE | %77
+ FAB^c defd fed=c | gdcB dcBA GFED | EGAB cdef gedc | ac_BA cBAG FEDC | DFGA =Bcde fedc | %82
+ bfed cBAG FEFD | EGDG EGcG eGcG | BdAd Bdgd bdgd | e/g2d2g2 c/gBg A/gag/ | %86
+ ^fede2 fgab c'd'e'^f' | g'd'bd' gd'ad' bd'gd' | =f'd'bd' gd'ad' bd'gd' | %89
+ e'c'bc' gc'e'c' g'c'e'c' | d'/bab gbd'b g'b/d'b2 | Agc'b ac'gc' ^fc'ec' | Dcag ^faea daca | %93
+ Bdg^f gdec dBcA | BG/cA2 BGcA BGd2B | G=f=ed Gedc Ggfe | dBAG fBAG dcBA | %97
+ GF_ED GEDC _AGFE | DB,A,G, FB,A,G, BGAB | cd=ef g2c2 edcB | cGFE GFED C4 :| %101

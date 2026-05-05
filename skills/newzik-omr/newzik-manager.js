@@ -357,6 +357,29 @@ async function cmdStatus() {
   }
 }
 
+async function cmdList(format = 'url') {
+  const pieces = await getServerPieces();
+  pieces.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  const rows = [];
+  for (const piece of pieces) {
+    const detail = await getPieceDetail(piece.uuid);
+    const versions = (detail && detail.versions) || [];
+    const partUuid = versions[0] && versions[0].uuid;
+    const url = partUuid
+      ? `https://web.newzik.com/pieces/${piece.uuid}/parts/${partUuid}`
+      : `https://web.newzik.com/pieces/${piece.uuid}`;
+    rows.push({ title: piece.title || '(no title)', composer: piece.composer || '', url });
+  }
+  if (format === 'url') {
+    for (const r of rows) console.log(r.url);
+  } else if (format === 'tsv') {
+    console.log('title\tcomposer\turl');
+    for (const r of rows) console.log(`${r.title}\t${r.composer}\t${r.url}`);
+  } else {
+    console.log(JSON.stringify(rows, null, 2));
+  }
+}
+
 async function cmdUpload(dirPath) {
   if (!fs.existsSync(dirPath)) {
     console.log(`\n目录不存在: ${dirPath}`);
@@ -733,6 +756,7 @@ async function main() {
       case 'trash': await cmdTrash(); break;
       case 'purge': await cmdPurge(); break;
       case 'auto': await cmdAuto(args[1] || './songs'); break;
+      case 'list': await cmdList(args[1] || 'url'); break;
       default:
         console.log(`未知命令: ${cmd}`);
         showHelp();

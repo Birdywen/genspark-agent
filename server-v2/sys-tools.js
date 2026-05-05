@@ -395,12 +395,99 @@ handlers.set('aidrive', async (params) => {
   }
 });
 
+// ask_ai: dual backend - APIPod (paid, OpenAI-compatible) + vear WSS (free, may break)
+// APIPOD: prefix model with 'apipod:' OR use any name in APIPOD_MODELS map
+// VEAR:   default for legacy short names (opus/sonnet/gemini/...)
+const APIPOD_MODELS = {
+  'gemini-3.1-pro-preview': 'gemini-3.1-pro-preview',
+  'gemini-3.1-pro':         'gemini-3.1-pro-preview',
+  'gpt-4o':                 'gpt-4o',
+  'gpt-4.1':                'gpt-4.1',
+};
+const APIPOD_KEY = 'sk-1f56c0aa134c1f3ce9dbb5a9df53c600291bcd617a2b116a340252b8c8579cad';
+
+async function askApipod(params, modelName) {
+  const messages = [];
+  if (params.system) messages.push({ role: 'system', content: params.system });
+  if (Array.isArray(params.messages) && params.messages.length) {
+    for (const m of params.messages) messages.push(m);
+  } else if (params.prompt) {
+    messages.push({ role: 'user', content: params.prompt });
+  } else {
+    return { success: false, error: 'prompt or messages required' };
+  }
+  const body = {
+    model: modelName,
+    messages,
+    temperature: params.temperature ?? 0.3,
+    top_p: params.top_p ?? 0.95,
+    stream: true,
+  };
+  if (params.reasoningEffort) body.reasoning_effort = params.reasoningEffort;
+  if (params.maxTokens) body.max_tokens = params.maxTokens;
+
+  const timeout = params.timeout || 300000;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const resp = await fetch('https://api.apipod.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + APIPOD_KEY,
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      return { success: false, error: 'APIPod HTTP ' + resp.status + ': ' + errText.slice(0, 500), model: modelName };
+    }
+    let text = '', usage = null, finishReason = null;
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const ln of lines) {
+        if (!ln.startsWith('data: ')) continue;
+        const payload = ln.slice(6).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const d = JSON.parse(payload);
+          const ch = (d.choices && d.choices[0]) || {};
+          const delta = ch.delta && ch.delta.content;
+          if (delta) text += delta;
+          if (ch.finish_reason) finishReason = ch.finish_reason;
+          if (d.usage) usage = d.usage;
+        } catch (e) {}
+      }
+    }
+    return { success: true, result: text.trim(), model: modelName, backend: 'apipod', usage, finishReason };
+  } catch (e) {
+    return { success: false, error: 'APIPod ' + (e.name === 'AbortError' ? 'timeout ' + timeout + 'ms' : e.message), model: modelName };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ask_ai: direct WebSocket to vear (free multi-model gateway)
 handlers.set('ask_ai', async (params) => {
+  // Route to APIPod if model name matches
+  const reqModel = params.model || 'sonnet';
+  if (reqModel.startsWith('apipod:')) return askApipod(params, reqModel.slice(7));
+  if (APIPOD_MODELS[reqModel]) return askApipod(params, APIPOD_MODELS[reqModel]);
+
+  // Otherwise legacy vear WSS path
   let prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
   if (params.system) prompt = '[System Instructions]\n' + params.system + '\n\n' + prompt;
   if (!prompt) return { success: false, error: 'prompt or messages required' };
-  const model = params.model || 'sonnet';
+  const model = reqModel;
   const timeout = params.timeout || 60000;
 
   const cfgPath = process.env.HOME + '/.config/genspark/config.json';

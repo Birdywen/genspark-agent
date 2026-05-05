@@ -1,8 +1,18 @@
 // Filesystem Driver - 文件操作 + 写保护 + 编辑保护
 // Tools: read_file, write_file, edit_file, list_dir, find_text, get_symbols
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import path from 'path';
+
+const MIME_MAP = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml', '.pdf': 'application/pdf',
+  '.mp4': 'video/mp4', '.webm': 'video/webm',
+  '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+  '.ico': 'image/x-icon', '.tiff': 'image/tiff', '.tif': 'image/tiff'
+};
+const MAX_MEDIA_BYTES = 50 * 1024 * 1024; // 50MB limit
 
 let _hub = null;
 let _logger = null;
@@ -15,6 +25,24 @@ async function init(deps) {
 
 async function handle(tool, params, context) {
   const { trace, callOptions } = context;
+
+  // ── read_media_file ──
+  if (tool === 'read_media_file') {
+    const fp = params.path;
+    if (!fp) return { ok: false, error: 'path is required' };
+    const absPath = fp.startsWith('/') ? fp : path.resolve(fp);
+    if (!existsSync(absPath)) return { ok: false, error: 'File not found: ' + absPath };
+    try {
+      const buf = readFileSync(absPath);
+      if (buf.length > MAX_MEDIA_BYTES) return { ok: false, error: `File too large: ${buf.length} bytes (max ${MAX_MEDIA_BYTES})` };
+      const ext = path.extname(absPath).toLowerCase();
+      const mimeType = MIME_MAP[ext] || 'application/octet-stream';
+      const base64 = buf.toString('base64');
+      return { ok: true, mimeType, base64, size: buf.length };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
 
   // ── write_file 保护: 检测内容截断 ──
   if (tool === 'write_file' && params.content !== undefined) {
@@ -84,7 +112,7 @@ async function handle(tool, params, context) {
 
 export default {
   name: 'filesystem',
-  tools: ['read_file', 'write_file', 'edit_file', 'list_dir', 'find_text', 'get_symbols'],
+  tools: ['read_file', 'write_file', 'edit_file', 'list_dir', 'find_text', 'get_symbols', 'read_media_file'],
   init,
   handle
 };

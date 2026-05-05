@@ -64,18 +64,12 @@ export default {
   async _handleRunCommand(params, trace, ws, id, message) {
     trace.span('shell', { action: 'run_command_start', command: params.command });
 
-    // 智能路由: 长命令/sleep → bg_run
-    const cmd = (params.command || '').toLowerCase();
-    const longPatterns = [
-      /\bpip3?\s+install\b/, /\bnpm\s+install\b/, /\bnpm\s+ci\b/,
-      /\byarn\s+(install|add)\b/, /\bbrew\s+install\b/, /\bcargo\s+build\b/,
-      /\bgit\s+clone\b/, /\bdocker\s+(build|pull)\b/, /\bdemucs\b/,
-      /\bwhisper\b/, /\bnohup\b/, /\bscp\s+-/, /\brsync\b/
-    ];
-    const isLong = longPatterns.some(p => p.test(cmd));
-
-    if (isLong && !params._noAutoRoute && !params.no_bg) {
-      trace.span('shell', { action: 'auto_route_to_bg_run', reason: 'long_command' });
+    // 路由策略 (2026-04-26 反转): 默认前台执行,只有显式 bg:true 才走后台
+    // 旧版隐式路由 pip/npm/git clone 等长命令到 bg_run 是 footgun,
+    // 导致 stdout 被吞、看不到错误、调试困难。已删除。
+    // 长命令请显式: { command:..., bg:true } 或调高 timeout。
+    if (params.bg === true && !params._noAutoRoute) {
+      trace.span('shell', { action: 'explicit_route_to_bg_run' });
       params._noAutoRoute = true;
       const bgDriver = (await import('./bg.js')).default;
       return bgDriver.handle('bg_run', params, { trace, ws, message });
