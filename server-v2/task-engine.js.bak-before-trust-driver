@@ -703,11 +703,10 @@ class TaskEngine {
       }
 
       // 从工具返回值中检测真实的 success 状态
-      // 信任 driver 的 success 判定 — driver 自己有 softFail 智慧 (grep/diff/find 等退出 1 不算失败)。
-      // 不再二次审判 exitCode,避免 driver 判 success:true / TaskEngine 翻盘成 false 的撕裂。
       let toolSuccess = true;
       if (result && typeof result === 'object') {
         if ('success' in result && result.success === false) toolSuccess = false;
+        if ('exitCode' in result && result.exitCode !== 0) toolSuccess = false;
       }
       const stepError = toolSuccess ? undefined : (result?.error || result?.stderr || (typeof resultStr === 'string' && resultStr.length > 0 ? resultStr.slice(0, 500) : '执行失败(无详情)'));
 
