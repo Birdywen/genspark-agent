@@ -1,5 +1,19 @@
 // Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
+// === MV3 keep-alive: chrome.alarms 每 24s 戳一次防止 service worker 休眠 ===
+try {
+  chrome.alarms.create('vear_keepalive', { periodInMinutes: 0.4 });
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'vear_keepalive') {
+      // 触发 alarm 本身就唤醒 worker; 顺带检查 socket
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        console.log('[BG] keepalive: socket 不在线, 重连');
+        connectWebSocket();
+      }
+    }
+  });
+} catch(e) { console.warn('[BG] alarms init fail:', e.message); }
+
 let socket = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;

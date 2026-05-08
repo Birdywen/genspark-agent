@@ -7,9 +7,11 @@
     "activeTab",
     "tabs",
     "storage",
-    "scripting"
+    "scripting",
+    "alarms"
   ],
   "host_permissions": [
+    "<all_urls>",
     "https://vear.com/*",
     "https://www.vear.com/*",
     "https://www.genspark.ai/*",

@@ -237,7 +237,12 @@
   function safeChromeMessage(msg) {
     try {
       if (chrome.runtime && chrome.runtime.id) {
-        chrome.runtime.sendMessage(msg);
+        // 带 callback 强制唤醒休眠的 service worker (MV3 修复)
+        chrome.runtime.sendMessage(msg, (resp) => {
+          if (chrome.runtime.lastError) {
+            console.warn('[VearAgent] BG unreachable:', chrome.runtime.lastError.message);
+          }
+        });
         return true;
       }
     } catch(e) {
@@ -254,7 +259,10 @@
     if (fallbackWs && fallbackWs.readyState === 1) return fallbackWs;
     try {
       fallbackWs = new WebSocket('ws://localhost:8765');
-      fallbackWs.onopen = () => console.log('[VearAgent] Fallback WS connected');
+      fallbackWs.onopen = () => {
+        console.log('[VearAgent] Fallback WS connected');
+        fallbackWs.send(JSON.stringify({ type: 'identify', role: 'browser', source: 'vear-content' }));
+      };
       fallbackWs.onmessage = (evt) => {
         try {
           const data = JSON.parse(evt.data);

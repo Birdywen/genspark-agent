@@ -708,10 +708,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             world: world,
             func: async (code) => {
               try {
-                // 自动加 return：如果代码不含 return/var/let/const/if/for/while/throw/class/function 等语句关键字
-                const needsReturn = !/^\s*(return|var |let |const |if[ (]|for[ (]|while[ (]|throw |class |function |switch[ (]|try[ {])/.test(code) && !/;.*\S/.test(code);
-                const fn = new Function(needsReturn ? 'return (' + code + ')' : code);
-                let result = fn();
+                // 策略: 只要代码不以语句关键字开头, 就当表达式包 return 处理
+                // (IIFE/对象字面量/链式调用内部的分号不影响外层 return 包装的合法性)
+                const isStatement = /^\s*(return|var |let |const |if[ (]|for[ (]|while[ (]|throw |class |function |switch[ (]|try[ {]|do[ {]|;)/.test(code);
+                let result;
+                if (isStatement) {
+                  result = (new Function(code))();
+                } else {
+                  // 先按表达式 (return 包装), 失败再当语句块
+                  try {
+                    result = (new Function('return (' + code + ')'))();
+                  } catch (eExpr) {
+                    result = (new Function(code))();
+                  }
+                }
                 if (result && typeof result.then === 'function') {
                   result = await result;
                 }
@@ -1113,11 +1123,11 @@ async function handleBrowserToolCall(data) {
       target: { tabId },
       func: async (c) => {
         try {
-          const needsReturn = !/^\s*(return|var |let |const |if[ (]|for[ (]|while[ (]|throw |class |function |switch[ (]|try[ {])/.test(c) && !/;.*\S/.test(c);
-          const fn = new Function(needsReturn ? 'return (' + c + ')' : c);
-          let result = fn();
+          let result = eval(c);
           if (result && typeof result.then === 'function') result = await result;
-          return (typeof result === 'object') ? JSON.stringify(result, null, 2) : String(result === undefined ? '(undefined)' : result);
+          if (result === undefined) return '(undefined)';
+          if (result === null) return '(null)';
+          return (typeof result === 'object') ? JSON.stringify(result, null, 2) : String(result);
         } catch(e) { return 'Error: ' + e.message; }
       },
       args: [code],
