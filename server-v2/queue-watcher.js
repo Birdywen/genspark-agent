@@ -16,6 +16,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getSysHandler, isSysTool } from './sys-tools.js';
+import { parseCommand, PARSER_VERSION } from './command-parser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'data', 'agent.db');
@@ -115,6 +116,7 @@ async function executeTask(row) {
 async function tick() {
   if (stopped) return;
   try {
+    parserTick();
     while (!stopped) {
       const row = claimNextTask();
       if (!row) break;
@@ -129,6 +131,38 @@ async function tick() {
     console.error('[queue-watcher] tick error:', e.message);
   }
   if (!stopped) pollTimer = setTimeout(tick, POLL_INTERVAL_MS);
+}
+
+// 扫 content 非空但 parsed_command 还没解析的行
+function parserTick() {
+  const rows = db.prepare(`
+    SELECT id, content FROM commands
+    WHERE content IS NOT NULL AND parsed_command IS NULL AND parser_version IS NULL
+    LIMIT 20
+  `).all();
+  if (rows.length === 0) return 0;
+  let parsed = 0, failed = 0;
+  for (const row of rows) {
+    const cmd = parseCommand(row.content);
+    if (cmd) {
+      db.prepare(`
+        UPDATE commands
+        SET parsed_command=?, parser_version=?, tool=?, status='pending'
+        WHERE id=? AND parsed_command IS NULL
+      `).run(JSON.stringify(cmd), PARSER_VERSION, cmd.tool, row.id);
+      parsed++;
+    } else {
+      // 不是命令,只标记 parser_version 防重扫,不污染 error/success
+      db.prepare(`
+        UPDATE commands
+        SET parser_version=?
+        WHERE id=? AND parsed_command IS NULL
+      `).run(PARSER_VERSION + '-no-match', row.id);
+      failed++;
+    }
+  }
+  if (parsed > 0 || failed > 0) console.log(`[queue-watcher] parser: ${parsed} parsed, ${failed} no-match`);
+  return parsed;
 }
 
 function recoverOrphans() {
