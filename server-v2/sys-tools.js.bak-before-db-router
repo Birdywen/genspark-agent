@@ -11,21 +11,13 @@ const handlers = new Map();
 
 // ===== db_query =====
 handlers.set('db_query', async (params) => {
-  // db_query smart router (2026-05-08): SELECT/PRAGMA → .all() readonly; DDL/DML → .run() writable
   const { sql } = params;
   if (!sql) return { success: false, error: 'sql is required' };
   const dbPath = path.join(__dirname, 'data', 'agent.db');
-  const firstWord = sql.trim().replace(/^\(+/, '').split(/\s+/)[0].toUpperCase();
-  const isRead = ['SELECT', 'PRAGMA', 'WITH', 'EXPLAIN'].includes(firstWord);
-  const db = new Database(dbPath, { readonly: isRead });
+  const db = new Database(dbPath, { readonly: true });
   try {
-    if (isRead) {
-      const rows = db.prepare(sql).all();
-      return { success: true, result: rows.length > 200 ? rows.slice(0, 200) : rows, count: rows.length };
-    } else {
-      const info = db.prepare(sql).run();
-      return { success: true, result: { changes: info.changes, lastInsertRowid: Number(info.lastInsertRowid) }, mode: 'write' };
-    }
+    const rows = db.prepare(sql).all();
+    return { success: true, result: rows.length > 200 ? rows.slice(0, 200) : rows, count: rows.length };
   } catch (e) {
     return { success: false, error: e.message };
   } finally {

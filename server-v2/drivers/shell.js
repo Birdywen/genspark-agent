@@ -107,7 +107,8 @@ export default {
       const opts = {
         cwd: params.cwd || '/Users/yay/workspace',
         shell: true,
-        timeout: timeoutMs
+        timeout: timeoutMs,
+        env: params.env ? { ...process.env, ...params.env } : process.env
       };
 
       const proc = spawn(spawnCmd, args, opts);
