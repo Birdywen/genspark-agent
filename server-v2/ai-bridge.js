@@ -11,9 +11,11 @@ function parseOmegaCode(text) {
   while (searchFrom < text.length) {
     const idx = text.indexOf(OC_START, searchFrom);
     if (idx === -1) break;
-    if (idx === 0 || text[idx - 1] === '\n') {
+    // 放宽: ΩCODE 前允许行首/换行/空白; ΩCODE 后允许 { / \n / 空格 / 制表符
+    const before = idx === 0 ? '\n' : text[idx - 1];
+    if (before === '\n' || before === ' ' || before === '\t' || before === '\r') {
       const after = text[idx + OC_START.length];
-      if (after === '\n' || after === '{') { startIdx = idx; break; }
+      if (after === '\n' || after === '{' || after === ' ' || after === '\t' || after === '\r' || after === undefined) { startIdx = idx; break; }
     }
     searchFrom = idx + OC_START.length;
   }
@@ -115,7 +117,7 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
       if (cmd.steps && Array.isArray(cmd.steps)) {
         if (!taskEngine) {
           // 降级到旧循环（无控制流）
-          logger.warn('[AiBridge] taskEngine missing, fallback to legacy loop (no saveAs/when/template)');
+          logger.warning('[AiBridge] taskEngine missing, fallback to legacy loop (no saveAs/when/template)');
           const results = [];
           for (const step of cmd.steps) {
             const result = await callTool(ws, step.tool, step.params);
@@ -178,15 +180,26 @@ function createAiBridge({ handleToolCall, taskEngine, logger }) {
   // === Main handler for ai_text ===
   async function onAiText(ws, msg) {
     const { text, source, cid } = msg;
-    if (!text) return;
+    if (!text) {
+      logger.warning(`[AiBridge][${source||'?'}] ai_text 收到空 text, cid=${cid}`);
+      return;
+    }
 
     const hash = text.length + ':' + text.slice(-80);
-    if (processed.has(hash)) return;
+    if (processed.has(hash)) {
+      logger.warning(`[AiBridge][${source||'?'}] dedup 命中, 跳过 cid=${cid} hash=${hash.slice(0,40)}...`);
+      return;
+    }
     processed.add(hash);
     setTimeout(() => processed.delete(hash), 30000);
 
+    logger.info(`[AiBridge][${source||'?'}] ai_text 进入解析, cid=${cid} len=${text.length}`);
+
     const parsed = parseOmegaCode(text);
-    if (!parsed) return;
+    if (!parsed) {
+      logger.warning(`[AiBridge][${source||'?'}] 文本中未找到 ΩCODE, 跳过 cid=${cid}`);
+      return;
+    }
     if (parsed.error) {
       logger.error(`[AiBridge][${source}] ${parsed.error}`);
       ws.send(JSON.stringify({ type: 'inject_result', cid, text: `**[ΩCODE 解析错误]** ${parsed.error}` }));

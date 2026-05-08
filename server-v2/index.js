@@ -81,7 +81,7 @@ import history from "./core/history.js";
 import dbApi from './core/db.js';
 import agents from './core/agents.js';
 import { createHandlers } from './core/ws-handlers.js';
-import teamsAgent from './teams-agent.js';
+//import teamsAgent from './teams-agent.js';
 // 命令历史管理已提取到 core/history.js
 
 // ==================== Agents 注册表 ====================
