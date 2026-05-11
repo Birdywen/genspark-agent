@@ -46,6 +46,23 @@ const SERVERS = {
 let currentServer = 'local';  // 默认云端
 const WS_URL = SERVERS[currentServer];
 
+function safeSend(payload) {
+  // 包裹 socket.send：断了立即重连而不是丢消息
+  try {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(typeof payload === 'string' ? payload : JSON.stringify(payload));
+      return true;
+    }
+    console.warn('[BG:safeSend] socket not OPEN (state=' + (socket && socket.readyState) + '), triggering reconnect');
+    if (!reconnectTimer) connectWebSocket();
+    return false;
+  } catch(e) {
+    console.error('[BG:safeSend] send failed:', e);
+    if (!reconnectTimer) connectWebSocket();
+    return false;
+  }
+}
+
 function connectWebSocket() {
   if (socket && socket.readyState === WebSocket.OPEN) {
     return;
@@ -350,6 +367,16 @@ const SEND_COOLDOWN_MS = 10000; // 10 seconds
 // 发送跨 Tab 消息
 // 获取所有已注册的 Agent
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 对话流转发: content.js → server-v2.dialogues
+  if (message && message.type === 'dialogue_snapshot') {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+      sendResponse({ ok: true });
+    } else {
+      sendResponse({ ok: false, error: 'ws not open' });
+    }
+    return true;
+  }
 
   console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
 
@@ -1119,7 +1146,11 @@ async function handleBrowserToolCall(data) {
       tabId = activeTab?.id;
     }
     if (!tabId) throw new Error('No target tab found');
-    const results = await chrome.scripting.executeScript({
+    // === eval_js timeout race (2026-05-11 patch) ===
+    // chrome.scripting.executeScript 没有 timeout，目标 tab 里 eval 死循环/卡 microtask 会让 onmessage 永不 resolve，
+    // 进而 socket 无回复，server 端 60s 超时，下次 eval_js 又卡死。这里加 45s 兜底主动失败。
+    const EVAL_TIMEOUT_MS = 45000;
+    const execPromise = chrome.scripting.executeScript({
       target: { tabId },
       func: async (c) => {
         try {
@@ -1133,6 +1164,10 @@ async function handleBrowserToolCall(data) {
       args: [code],
       world: 'MAIN'
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('eval_js timeout ' + EVAL_TIMEOUT_MS + 'ms (extension-side guard)')), EVAL_TIMEOUT_MS)
+    );
+    const results = await Promise.race([execPromise, timeoutPromise]);
     return results?.[0]?.result;
   }
 
