@@ -891,7 +891,7 @@ handlers.set('compress', async (params, context) => {
   const headN = params.headN || 3;
   const tailN = params.tailN || 30;
   const dryRun = params.dryRun || false;
-  const useNLP = params.useNLP !== false; // default true
+  const useNLP = false; // NLP路径已禁用 — 外网Diffbot调用慢(8s/请求×多批), 200K对话撑不过120s超时
   // 清除缓存确保加载最新脚本，然后调用 __shortcuts.compress
   // IIFE 包裹: 兼容 eval()/new Function() 两种 eval_js 实现 (extension-vear/abacus/chatgpt 用 eval(), 顶层 return 非法)
   const code = `(function(){
