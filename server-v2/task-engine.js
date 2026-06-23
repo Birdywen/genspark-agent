@@ -84,7 +84,9 @@ class TaskEngine {
     const groups = this._groupSteps(steps);
 
     for (const group of groups) {
-      if (!success && options.stopOnError !== false) break;
+      // 失败时: 组内全部步骤都无 when 才按 stopOnError 中止; 有 when 的步骤让条件评估决定(支持失败分流)
+      const groupHasWhen = group.some(st => st.when);
+      if (!success && options.stopOnError !== false && !groupHasWhen) break;
 
       if (group.length > 1 && group[0].parallel) {
         // 并行执行 (v3: 支持 maxConcurrency)
@@ -107,7 +109,8 @@ class TaskEngine {
         // 顺序执行 (v3: 支持 pipe)
         let prevResult = null;
         for (const step of group) {
-          if (!success && options.stopOnError !== false) break;
+          // 失败时: 无 when 的步骤按 stopOnError 中止; 有 when 的步骤让条件评估决定(支持失败分流, 见 rules.daily 'when 管结果分流')
+          if (!success && options.stopOnError !== false && !step.when) break;
 
           // v3: pipe - 前步 result 注入当前步 params
           if (step.pipe && prevResult && step.params) {
@@ -617,6 +620,8 @@ class TaskEngine {
       error: stepResult?.error,
       errorType: stepResult?.errorType,
       // v4 标准化字段
+      // v4.2 (2026-06-23): output 改用 topResult (剥掉工具 handled/success 包裹后的真值),
+      // 之前用 parsed 导致 s.output 是整个外层对象, when 条件 's.output includes X' 对 run_process 永远 false
       meta: {
         success: stepResult?.success === true,
         handled: stepResult?.handled === true,
@@ -629,7 +634,7 @@ class TaskEngine {
         attempt: stepResult?.attempt,
         tool: stepResult?.tool
       },
-      output: parsed,
+      output: topResult,
       raw: stepResult
     };
   }
