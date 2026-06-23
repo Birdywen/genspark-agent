@@ -647,44 +647,6 @@ async function main() {
       res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
       res.end();
       return;
-    } else if (url.pathname === '/chat-archive' && req.method === 'POST') {
-      let body = '';
-      req.on('data', c => body += c);
-      req.on('end', async () => {
-        try {
-          const data = JSON.parse(body);
-          const convId = data.conversation_id || '';
-          const msgs = Array.isArray(data.messages) ? data.messages : [];
-          if (!msgs.length) {
-            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-            res.end(JSON.stringify({error:'messages array required'}));
-            return;
-          }
-          const archivedAt = new Date().toISOString();
-          const stripB64 = (s) => {
-            if (typeof s !== 'string') s = JSON.stringify(s);
-            return s.replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+\/=]+/g, (m) => '[image removed: ' + Math.round(m.length/1024) + 'KB]');
-          };
-          const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
-          const Database = (await import('better-sqlite3')).default;
-          const db = new Database(dbPath);
-          const stmt = db.prepare('INSERT INTO chat_archive (archived_at, conversation_id, msg_index, role, content) VALUES (?, ?, ?, ?, ?)');
-          const tx = db.transaction((rows) => { for (const r of rows) stmt.run(r.archived_at, r.conversation_id, r.msg_index, r.role, r.content); });
-          const rows = msgs.map((m, i) => ({ archived_at: archivedAt, conversation_id: convId, msg_index: (typeof m.index === 'number' ? m.index : i), role: m.role || '', content: stripB64(m.content) }));
-          tx(rows);
-          db.pragma("wal_checkpoint(TRUNCATE)"); db.close();
-          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-          res.end(JSON.stringify({ok:true, archived: rows.length, archived_at: archivedAt}));
-        } catch(e) {
-          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-          res.end(JSON.stringify({error:e.message}));
-        }
-      });
-      return;
-    } else if (url.pathname === '/chat-archive' && req.method === 'OPTIONS') {
-      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
-      res.end();
-      return;
     } else if (url.pathname === '/local/read' && req.method === 'GET') {
       const slot = url.searchParams.get('slot') || '';
       const key = url.searchParams.get('key') || '';
@@ -707,44 +669,6 @@ async function main() {
         res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
         res.end(JSON.stringify({error:e.message}));
       }
-      return;
-    } else if (url.pathname === '/snapshot-oracle' && req.method === 'POST') {
-      let body = '';
-      req.on('data', c => body += c);
-      req.on('end', async () => {
-        try {
-          const data = JSON.parse(body);
-          const convId = (data.conversation_id || 'unknown').substring(0, 8);
-          const b64 = data.b64 || '';
-          if (!b64) {
-            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-            res.end(JSON.stringify({error:'b64 required'}));
-            return;
-          }
-          const now = new Date();
-          const pad = (n) => String(n).padStart(2, '0');
-          const ts = '' + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + '_' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-          const fname = 'chat_' + ts + '_' + convId + '.html';
-          const os = await import('os');
-          const fsp = await import('fs');
-          const cp = await import('child_process');
-          const tmpPath = os.tmpdir() + '/' + fname + '.b64';
-          fsp.writeFileSync(tmpPath, b64);
-          const remotePath = '~/chat_snapshots/' + fname;
-          cp.execSync('ssh oracle "base64 -d > ' + remotePath + '" < ' + tmpPath, { timeout: 60000 });
-          fsp.unlinkSync(tmpPath);
-          const sz = cp.execSync('ssh oracle "wc -c ' + remotePath + '"', { encoding: 'utf8', timeout: 30000 }).trim();
-          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-          res.end(JSON.stringify({ok:true, file: fname, remote: remotePath, size: sz}));
-        } catch(e) {
-          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
-          res.end(JSON.stringify({error:e.message}));
-        }
-      });
-      return;
-    } else if (url.pathname === '/snapshot-oracle' && req.method === 'OPTIONS') {
-      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
-      res.end();
       return;
     } else if (url.pathname === '/tool' && req.method === 'POST') {
       let body = '';
@@ -975,36 +899,6 @@ async function main() {
           case 'confirm_result':
             safety.handleConfirmation(msg.id, msg.approved);
             break;
-
-          case 'dialogue_snapshot': {
-            // 对话快照入库 — items 批量,事务原子,触发于 compress 按钮
-            try {
-              const Database = (await import('better-sqlite3')).default;
-              const path = await import('path');
-              const dbPath = path.join(__dirname, 'data', 'agent.db');
-              const _db = new Database(dbPath);
-              const sessionId = msg.sessionId || 'unknown';
-              const items = Array.isArray(msg.items) ? msg.items : [];
-              const stmt = _db.prepare('INSERT OR IGNORE INTO dialogues (session_id, turn_index, content, content_length) VALUES (?, ?, ?, ?)');
-              const insertMany = _db.transaction((rows) => {
-                let n = 0;
-                for (const it of rows) {
-                  const r = stmt.run(sessionId, it.turn_index, it.content || '', (it.content || '').length);
-                  if (r.changes > 0) n++;
-                }
-                return n;
-              });
-              const inserted = insertMany(items);
-              _db.close();
-              logger.info(`[Dialogue] 快照入库 session=${sessionId} 收到=${items.length} 新增=${inserted}`);
-              if (ws && ws.readyState === 1) {
-                ws.send(JSON.stringify({ type: 'dialogue_snapshot_ack', sessionId, received: items.length, inserted }));
-              }
-            } catch(e) {
-              logger.error('[Dialogue] 快照入库失败', { error: e.message });
-            }
-            break;
-          }
 
           case 'browser_eval':
             forwardToBrowser(ws, clients, browserToolPending, logger, { msg, resultType: 'browser_eval_result', tool: 'eval_js', params: { code: msg.code, tabId: msg.tabId || null, allFrames: msg.allFrames || false }, timeout: msg.timeout || 90000 });

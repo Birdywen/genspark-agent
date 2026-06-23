@@ -43,10 +43,11 @@ function buildSysTools() {
 
 // === 动态: lessons (去重 + 按近期相关错误排序) ===
 function buildLessons() {
+  // 统一标准: 两源都只收 key 以 lesson- 开头的; kb-/lesson-kb- 前缀 或 [KB]标记 = 专项知识, 不进 forged
   const all = [
     ...db.prepare("SELECT key,content FROM memory WHERE slot='forged' AND key LIKE 'lesson-%'").all(),
-    ...db.prepare("SELECT key,content FROM memory WHERE slot='omega-lessons'").all()
-  ];
+    ...db.prepare("SELECT key,content FROM memory WHERE slot='omega-lessons' AND key LIKE 'lesson-%'").all()
+  ].filter(l => !l.key.includes('kb-') && !String(l.content).includes('[KB]'));
   // 解析
   const parsed = all.map(l => {
     const c = l.content.trim();
@@ -192,6 +193,7 @@ const forgedJson = {
   lessons: buildLessons(),
   errors_7d: buildErrors(),
   context: buildContext(),
+  recall_map: getSchema('schema-recall_map'),
   params: getSchema('schema-params'),
   infra: getSchema('schema-infra')
 };

@@ -1,27 +1,5 @@
 // Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
-// === Service Worker 保活 (chrome.alarms) ===
-// MV3 service worker 空闲30秒会被挂起，用 alarms 定期唤醒
-chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 }); // 每24秒
-chrome.alarms.create("wsCheck", { periodInMinutes: 1 }); // 每分钟检查连接
-
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "keepAlive") {
-    // 仅唤醒 service worker，保持活跃
-    console.log('[BG] ⏰ keepAlive alarm fired');
-  }
-  if (alarm.name === "wsCheck") {
-    console.log('[BG] ⏰ wsCheck alarm fired');
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.log('[BG] WebSocket 断开，尝试重连');
-      connectWebSocket();
-    } else {
-      socket.send(JSON.stringify({ type: 'ping' }));
-    }
-  }
-});
-// === End 保活 ===
-
 let socket = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
@@ -43,7 +21,7 @@ const tabAgents = new Map(); // tabId -> agentId
 // 服务器地址配置（可切换本地/云端）
 const SERVERS = {
   local: 'ws://localhost:8765',
-  cloud: 'ws://150.136.51.61:8765?token=ys8765'
+  cloud: 'ws://157.151.227.157:8765'
 };
 let currentServer = 'local';  // 默认云端
 const WS_URL = SERVERS[currentServer];
@@ -77,8 +55,6 @@ function connectWebSocket() {
     }
     broadcastToAllTabs({ type: 'WS_STATUS', connected: true });
     startPing();
-    // 重连后发送队列中暂存的 tool_call
-    setTimeout(() => flushPendingQueue(), 500);
   };
 
   socket.onmessage = (event) => {
@@ -217,8 +193,8 @@ function connectWebSocket() {
           pendingCallsByTab.delete(data.id);
         } else {
           // 找不到对应 Tab，不广播，只记录警告
-          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- fallback 广播');
-          broadcastToAllTabs(data);
+          console.warn('[BG] 未找到 Tab 映射，callId:', data.id, '- 丢弃结果，不广播');
+          // 禁用广播，避免结果发到错误的 tab
         }
       } else {
         // 其他消息（非 tool_result）广播给所有 Tab
@@ -267,10 +243,10 @@ function sendToTab(tabId, message) {
   });
 }
 
-// 广播给所有 Genspark Tab
+// 广播给所有 Agent Tab (Overchat)
 function broadcastToAllTabs(message) {
   console.log('[BG] 广播:', message.type);
-  chrome.tabs.query({ url: 'https://www.genspark.ai/*' }, (tabs) => {
+  chrome.tabs.query({ url: ['https://overchat.ai/*'] }, (tabs) => {
     console.log('[BG] 找到 tabs:', tabs.length);
     tabs.forEach((tab) => {
       chrome.tabs.sendMessage(tab.id, message).catch((e) => {
@@ -280,56 +256,25 @@ function broadcastToAllTabs(message) {
   });
 }
 
-// 待发送队列：WS 断开时暂存，重连后自动发送
-const pendingQueue = [];
-const PENDING_QUEUE_MAX = 20;
-const PENDING_QUEUE_TTL = 30000; // 30秒过期
-
 function sendToServer(message, tabId) {
-  // 记录这个调用来自哪个 Tab（包括 retry）
-  if ((message.type === 'tool_call' || message.type === 'retry' || message.type === 'tool_batch') && message.id && tabId) {
-    pendingCallsByTab.set(message.id, tabId);
-    console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
-    setTimeout(() => { pendingCallsByTab.delete(message.id); }, 120000);
-  }
-
   if (socket && socket.readyState === WebSocket.OPEN) {
+    // 记录这个调用来自哪个 Tab（包括 retry）
+    if ((message.type === 'tool_call' || message.type === 'retry') && message.id && tabId) {
+      pendingCallsByTab.set(message.id, tabId);
+      console.log('[BG] 记录调用:', message.id, '-> Tab:', tabId);
+      
+      // 30秒后清理，防止内存泄漏
+      setTimeout(() => {
+        pendingCallsByTab.delete(message.id);
+      }, 120000);  // 延长到120秒
+    }
+    
     socket.send(JSON.stringify(message));
     console.log('[BG] 发送到服务器:', message.type);
     return true;
   }
-  
-  // WS 未连接：加入队列等待重连
-  if (message.type === 'tool_call' || message.type === 'tool_batch') {
-    if (pendingQueue.length < PENDING_QUEUE_MAX) {
-      pendingQueue.push({ message, tabId, timestamp: Date.now() });
-      console.log('[BG] WS 断开，加入队列:', message.type, '队列长度:', pendingQueue.length);
-    } else {
-      console.warn('[BG] 队列已满，丢弃:', message.type);
-    }
-    return false;
-  }
-  
-  console.warn('[BG] 未连接，丢弃:', message.type);
+  console.warn('[BG] 未连接');
   return false;
-}
-
-function flushPendingQueue() {
-  const now = Date.now();
-  while (pendingQueue.length > 0) {
-    const item = pendingQueue.shift();
-    if (now - item.timestamp > PENDING_QUEUE_TTL) {
-      console.log('[BG] 队列消息过期，丢弃:', item.message.type);
-      continue;
-    }
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(item.message));
-      console.log('[BG] 队列重发:', item.message.type);
-    } else {
-      pendingQueue.unshift(item); // 放回队首
-      break;
-    }
-  }
 }
 
 // ============== 跨 Tab 通信 ==============
@@ -412,7 +357,6 @@ function getRegisteredAgents() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-
   console.log('[BG] 收到请求:', message.type, 'from Tab:', sender.tab?.id);
 
   switch (message.type) {
@@ -466,251 +410,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
       break;
     
-
-    // =====================================================
-    // TUTORIAL RECORD ENGINE — 教程录制引擎
-    // =====================================================
-    case 'TUTORIAL_RECORD': {
-      const senderTabId = sender.tab?.id;
-      if (!senderTabId) { sendResponse({ success: false, error: 'No tab id' }); break; }
-      
-      const { steps, tabId: targetTabId, outputDir } = message;
-      const target = targetTabId || null;
-      
-      if (!steps || !Array.isArray(steps)) {
-        sendResponse({ success: false, error: 'steps array required' });
-        break;
-      }
-      
-      sendResponse({ success: true, status: 'started', totalSteps: steps.length });
-      
-      // Spotlight 模版
-      const SPOTLIGHT_STYLES = {
-        blue: { color: '#4285f4', borderWidth: 3 },
-        green: { color: '#34a853', borderWidth: 3 },
-        red: { color: '#ea4335', borderWidth: 3 },
-        yellow: { color: '#fbbc05', borderWidth: 3 },
-        pulse: { color: '#4285f4', borderWidth: 3, animate: true }
-      };
-      
-      // 生成 spotlight overlay 代码
-      function makeSpotlightCode(selector, style, label, padding) {
-        const s = SPOTLIGHT_STYLES[style] || SPOTLIGHT_STYLES.blue;
-        const pad = padding || 8;
-        const animate = s.animate ? `
-          var style = document.createElement('style');
-          style.textContent = '@keyframes tut-pulse{0%,100%{stroke-opacity:1;stroke-width:${s.borderWidth}}50%{stroke-opacity:0.5;stroke-width:${s.borderWidth+2}}}';
-          document.head.appendChild(style);
-        ` : '';
-        const animAttr = s.animate ? ' style="animation:tut-pulse 1.5s infinite"' : '';
-        
-        return `
-          var old=document.getElementById('tutorial-overlay');if(old)old.remove();
-          var el=document.querySelector('${selector.replace(/'/g, "\\'")}');
-          if(!el) return JSON.stringify({success:false,error:'not found: ${selector.replace(/'/g, "\\'")}'});
-          ${animate}
-          var rect=el.getBoundingClientRect();
-          var x=rect.x-${pad},y=rect.y-${pad},w=rect.width+${pad*2},h=rect.height+${pad*2};
-          var ov=document.createElement('div');ov.id='tutorial-overlay';
-          ov.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:999999;pointer-events:none;';
-          var lbl=${label ? `'<text x="'+(x+w/2)+'" y="'+(y-14)+'" text-anchor="middle" fill="white" font-size="16" font-family="Arial,sans-serif" font-weight="bold" filter="url(#shadow)">${label.replace(/'/g, "\\'")}</text><defs><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.5"/></filter></defs>'` : "''"};
-          ov.innerHTML='<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><mask id="tut-hole"><rect width="100%" height="100%" fill="white"/><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="12" fill="black"/></mask></defs><rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#tut-hole)"/><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="12" fill="none" stroke="${s.color}" stroke-width="${s.borderWidth}"${animAttr}/>'+lbl+'</svg>';
-          document.body.appendChild(ov);
-          return JSON.stringify({success:true,bounds:{x:x,y:y,w:w,h:h}});
-        `;
-      }
-      
-      // 执行 JS 代码在目标 tab
-      function execInTab(tabId, code) {
-        return chrome.scripting.executeScript({
-          target: { tabId },
-          world: 'MAIN',
-          func: (c) => {
-            try {
-              const fn = new Function(c);
-              let r = fn();
-              return typeof r === 'object' ? JSON.stringify(r) : String(r === undefined ? '' : r);
-            } catch(e) { return JSON.stringify({error: e.message}); }
-          },
-          args: [code]
-        }).then(r => r?.[0]?.result || '');
-      }
-      
-      // 截图（captureVisibleTab）
-      function captureTab(tabId) {
-        return new Promise((resolve) => {
-          // 先激活目标 tab
-          chrome.tabs.update(tabId, { active: true }, () => {
-            setTimeout(() => {
-              chrome.tabs.get(tabId, (tab) => {
-                chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (dataUrl) => {
-                  if (chrome.runtime.lastError) {
-                    resolve({ error: chrome.runtime.lastError.message });
-                  } else {
-                    resolve({ dataUrl });
-                  }
-                });
-              });
-            }, 300); // 等渲染完成
-          });
-        });
-      }
-      
-      // 延时
-      function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-      
-      // 主执行循环
-      (async () => {
-        const results = [];
-        const screenshots = [];
-        
-        // 确定目标 tab
-        let tTab = target;
-        if (!tTab) {
-          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          tTab = tabs[0]?.id;
-        }
-        
-        for (let i = 0; i < steps.length; i++) {
-          const step = steps[i];
-          const action = step.action || 'spotlight';
-          let result = { step: i, action };
-          
-          try {
-            switch(action) {
-              case 'spotlight': {
-                const code = makeSpotlightCode(
-                  step.selector, 
-                  step.style || 'blue', 
-                  step.label || '', 
-                  step.padding || 8
-                );
-                result.eval = await execInTab(tTab, code);
-                await delay(step.duration ? step.duration * 1000 : 1500);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'type': {
-                const typeCode = `
-                  var old=document.getElementById('tutorial-overlay');if(old)old.remove();
-                  var el=document.querySelector('${(step.selector||'').replace(/'/g,"\\'")}');
-                  if(!el) return 'not found';
-                  el.focus();el.value='${(step.text||'').replace(/'/g,"\\'")}';
-                  el.dispatchEvent(new Event('input',{bubbles:true}));
-                  return 'typed';
-                `;
-                result.eval = await execInTab(tTab, typeCode);
-                await delay(step.duration ? step.duration * 1000 : 1000);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'click': {
-                const clickCode = `
-                  var old=document.getElementById('tutorial-overlay');if(old)old.remove();
-                  var el=document.querySelector('${(step.selector||'').replace(/'/g,"\\'")}');
-                  if(!el) return 'not found';
-                  el.click();
-                  return 'clicked';
-                `;
-                result.eval = await execInTab(tTab, clickCode);
-                if (step.wait) {
-                  // 等待新元素出现
-                  const waitCode = `
-                    var start=Date.now();
-                    while(Date.now()-start<${step.waitTimeout||5000}){
-                      if(document.querySelector('${(step.wait||'').replace(/'/g,"\\'")}')) return 'found';
-                      await new Promise(r=>setTimeout(r,200));
-                    }
-                    return 'timeout';
-                  `;
-                  await delay(2000);
-                }
-                await delay(step.duration ? step.duration * 1000 : 2000);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'submit': {
-                const submitCode = `
-                  var old=document.getElementById('tutorial-overlay');if(old)old.remove();
-                  var form=document.querySelector('${(step.selector||'form').replace(/'/g,"\\'")}');
-                  if(form&&form.submit){form.submit();return 'submitted';}
-                  return 'no form';
-                `;
-                result.eval = await execInTab(tTab, submitCode);
-                await delay(step.duration ? step.duration * 1000 : 3000);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'goto': {
-                const gotoCode = `window.location.href='${(step.url||'').replace(/'/g,"\\'")}';return 'navigating';`;
-                result.eval = await execInTab(tTab, gotoCode);
-                await delay(step.duration ? step.duration * 1000 : 3000);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'scroll': {
-                const scrollCode = step.selector 
-                  ? `var el=document.querySelector('${(step.selector||'').replace(/'/g,"\\'")}');if(el){el.scrollIntoView({behavior:'smooth',block:'center'});return 'scrolled';}return 'not found';`
-                  : `window.scrollBy({top:${step.amount||400},behavior:'smooth'});return 'scrolled';`;
-                result.eval = await execInTab(tTab, scrollCode);
-                await delay(step.duration ? step.duration * 1000 : 1500);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'wait': {
-                await delay(step.duration ? step.duration * 1000 : 2000);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              case 'cleanup': {
-                await execInTab(tTab, `var old=document.getElementById('tutorial-overlay');if(old)old.remove();return 'cleaned';`);
-                await delay(500);
-                const cap = await captureTab(tTab);
-                if (cap.dataUrl) screenshots.push({ step: i, dataUrl: cap.dataUrl });
-                result.screenshot = !!cap.dataUrl;
-                break;
-              }
-              default:
-                result.skipped = true;
-            }
-          } catch(e) {
-            result.error = e.message;
-          }
-          
-          results.push(result);
-        }
-        
-        // 清理最终的 overlay
-        await execInTab(tTab, `var old=document.getElementById('tutorial-overlay');if(old)old.remove();`);
-        
-        // 发回结果（截图作为 base64 数组）
-        chrome.tabs.sendMessage(senderTabId, {
-          type: 'TUTORIAL_RECORD_RESULT',
-          callId: message.callId,
-          success: true,
-          results,
-          screenshotCount: screenshots.length,
-          // 发回截图 dataUrl 列表（content.js 会保存到本地）
-          screenshots: screenshots.map(s => ({ step: s.step, dataUrl: s.dataUrl }))
-        });
-      })();
-      
-      break;
-    }
     case 'LIST_TABS':
       chrome.tabs.query({}, (tabs) => {
         const tabList = tabs.map(t => ({ id: t.id, title: t.title, url: t.url, active: t.active, windowId: t.windowId }));
@@ -719,59 +418,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
-    case 'CAPTURE_TAB': {
-      // 截图指定 tab（用 captureVisibleTab）
-      const capTabId = message.tabId;
-      const capCallId = message.callId;
-      const senderForCap = sender.tab.id;
-      
-      const doCapture = (windowId) => {
-        chrome.tabs.captureVisibleTab(windowId, { format: 'png' }, (dataUrl) => {
-          if (chrome.runtime.lastError) {
-            chrome.tabs.sendMessage(senderForCap, { type: 'CAPTURE_TAB_RESULT', callId: capCallId, success: false, error: chrome.runtime.lastError.message });
-          } else {
-            chrome.tabs.sendMessage(senderForCap, { type: 'CAPTURE_TAB_RESULT', callId: capCallId, success: true, dataUrl });
-          }
-        });
-      };
-      
-      if (!capTabId) {
-        doCapture(null);
-      } else {
-        chrome.tabs.get(capTabId, (tab) => {
-          if (chrome.runtime.lastError) {
-            chrome.tabs.sendMessage(senderForCap, { type: 'CAPTURE_TAB_RESULT', callId: capCallId, success: false, error: chrome.runtime.lastError.message });
-            return;
-          }
-          // 激活目标 tab（不 focus 窗口），然后截图
-          chrome.tabs.update(capTabId, { active: true }, () => {
-            setTimeout(() => doCapture(tab.windowId), 300);
-          });
-        });
-      }
-      sendResponse({ success: true });
-      break;
-    }
-
     case 'EVAL_JS':
       if (sender.tab?.id) {
         const senderTabId = sender.tab.id;
         const targetTab = message.targetTabId || senderTabId;
         const codeToRun = message.code || '';
-        const useAllFrames = message.allFrames === true;
         
         // 先尝试 MAIN world（能访问页面全局变量），CSP 失败则 fallback 到 ISOLATED world
         const tryExecute = async (world) => {
-          const target = useAllFrames
-            ? { tabId: targetTab, allFrames: true }
-            : { tabId: targetTab };
           return chrome.scripting.executeScript({
-            target: target,
+            target: { tabId: targetTab },
             world: world,
             func: async (code) => {
               try {
-                const fn = new Function(code);
-                let result = fn();
+                let result = eval(code);
                 if (result && typeof result.then === 'function') {
                   result = await result;
                 }
@@ -788,20 +448,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         };
         
         tryExecute('MAIN').then(results => {
-          // allFrames 模式：合并所有 frame 的成功结果
-          let res;
-          if (useAllFrames && results && results.length > 1) {
-            const frameResults = results
-              .map((r, idx) => ({ frameIndex: idx, ...(r?.result || { success: false }) }))
-              .filter(r => r.success && r.result && r.result !== '(undefined)');
-            if (frameResults.length > 0) {
-              res = { success: true, result: JSON.stringify(frameResults.map(r => r.result)), allFrames: true };
-            } else {
-              res = results?.[0]?.result || { success: false, error: 'No result from any frame' };
-            }
-          } else {
-            res = results?.[0]?.result || { success: false, error: 'No result' };
-          }
+          const res = results?.[0]?.result || { success: false, error: 'No result' };
           if (res.isCSP) {
             // MAIN world CSP 拦截，fallback: 用页面 nonce 注入 script 标签
             console.log('[BG] MAIN world CSP blocked, trying nonce script injection...');
@@ -1089,8 +736,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             target: { tabId: targetTab.id },
             func: async (codeStr) => {
               try {
-                const fn = new Function(codeStr);
-                const result = fn();
+                let result = eval(codeStr);
                 // If result is a Promise, await it
                 if (result && typeof result.then === 'function') {
                   return await result;
@@ -1119,7 +765,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         currentServer = target;
         console.log('[Agent] 切换服务器:', target, SERVERS[target]);
         if (socket) socket.close();
-        setTimeout(connectWebSocket, 500);
+        setTimeout(connect, 500);
         sendResponse({ success: true, server: target, url: SERVERS[target] });
       } else {
         sendResponse({ success: false, error: 'Unknown server: ' + target });
@@ -1128,10 +774,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'GET_SERVER_INFO':
       sendResponse({ current: currentServer, servers: SERVERS });
-      break;
-
-    case 'RELOAD_EXTENSION':
-      chrome.runtime.reload();
       break;
 
     case 'GET_REGISTERED_AGENTS':
@@ -1149,49 +791,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: true });
       }
       break;
-
-    case 'UPLOAD_PAYLOAD': {
-      const url = 'http://localhost:8766/upload-payload';
-      const body = message.body || '';
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: body
-      })
-      .then(r => r.json())
-      .then(result => {
-        console.log('[BG] UPLOAD_PAYLOAD success:', result.path, result.size, 'bytes');
-        sendResponse(result);
-      })
-      .catch(e => {
-        console.log('[BG] UPLOAD_PAYLOAD failed:', e.message);
-        sendResponse({ success: false, error: e.message });
-      });
-      break;
-    }
-
-    case 'VFS_BACKUP_REGISTRY': {
-      const data = message.data;
-      chrome.storage.local.set({ vfs_registry: data, vfs_registry_ts: Date.now() }, () => {
-        console.log('[BG] VFS registry backed up to chrome.storage.local, len:', data.length);
-        sendResponse({ ok: true, length: data.length });
-      });
-      break;
-    }
-
-    case 'VFS_RECOVER_REGISTRY': {
-      chrome.storage.local.get(['vfs_registry', 'vfs_registry_ts'], (result) => {
-        if (result.vfs_registry) {
-          console.log('[BG] VFS registry recovered from chrome.storage.local, len:', result.vfs_registry.length, 'ts:', result.vfs_registry_ts);
-          sendResponse({ ok: true, data: result.vfs_registry, timestamp: result.vfs_registry_ts });
-        } else {
-          console.log('[BG] VFS registry not found in chrome.storage.local');
-          sendResponse({ ok: false, error: 'no_backup' });
-        }
-      });
-      break;
-    }
-
   }
 
   return true;

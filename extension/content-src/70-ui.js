@@ -1075,6 +1075,29 @@
         // 自动提取对话内容，调用 AI 生成摘要
         addLog('🤖 autoCompress: 提取对话内容...', 'info');
         
+        // 对话快照入库 — 在 compress 总结之前,把全部 AI 消息以 raw 形态存到 agent.db.dialogues
+        // 过滤: 1) 跳过 user 消息  2) 跳过 forged 引导(JSON 注入 + rules 已加载应答)  3) 跳过过短消息(Thinking 等中间态)
+        try {
+          const _snapMsgs = document.querySelectorAll('.conversation-statement');
+          const _sessionId = new URLSearchParams(location.search).get('id') || 'unknown';
+          const _items = [];
+          for (const _m of _snapMsgs) {
+            if (_m.classList.contains('user')) continue;
+            const _el = _m.querySelector('.markdown-viewer') || _m.querySelector('.bubble .content') || _m.querySelector('.bubble');
+            const _text = (_el ? _el.innerText : _m.innerText) || '';
+            // forged 引导识别
+            if (_text.includes('"meta"') && _text.includes('"format"') && _text.includes('"modules"')) continue;
+            if (/^rules.{0,5}已加载/.test(_text.trim())) continue;
+            _items.push({ turn_index: _items.length, content: _text });
+          }
+          if (_items.length > 0) {
+            chrome.runtime.sendMessage({ type: 'dialogue_snapshot', sessionId: _sessionId, items: _items });
+            addLog(`📸 对话快照: ${_items.length} 条 AI 消息已发送入库`, 'info');
+          }
+        } catch(_e) {
+          addLog('快照失败: ' + _e.message, 'warn');
+        }
+        
         const msgs = document.querySelectorAll('.conversation-statement');
         const lines = [];
         let totalLen = 0;
@@ -1284,6 +1307,25 @@ ${conversationText}
         const midCount = allMsgs.length - TAIL_KEEP;
         const midSize = Math.round(allMsgs.slice(0, midCount).reduce((s,m) => s + (typeof m.content === 'string' ? m.content.length : 0), 0)/1024);
 
+        // ── 归档：丢弃前把中间段存入 agent.db chat_archive (过滤 base64) ──
+        if (!dryRun && midCount > 0) {
+          try {
+            const midMsgs = allMsgs.slice(0, midCount).map((m, i) => ({
+              index: i,
+              role: m.role,
+              content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+            }));
+            const arResp = await fetch('http://127.0.0.1:8766/chat-archive', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ conversation_id: convId, messages: midMsgs })
+            });
+            const arData = await arResp.json();
+            addLog('💾 归档: ' + (arData.archived || 0) + ' 条中间消息 → chat_archive', 'success');
+          } catch(e) {
+            addLog('⚠️ 归档失败: ' + e.message, 'error');
+          }
+        }
         const newMsgs = [];
 
         // ── Section 1+2: Forged Prompt (从 agent.db 加载) ──

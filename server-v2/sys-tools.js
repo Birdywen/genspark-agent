@@ -701,6 +701,75 @@ handlers.set('playbook', async (params) => {
   }
 });
 
+// ===== db_expert: Yao 平台的数据库专家 agent (db-expert) =====
+// 调用 http://127.0.0.1:3000/api/chat 的 SSE 流,累积 text_delta 直到 message_stop
+handlers.set('db_expert', async (params) => {
+  const { question, timeout: timeoutMs } = params;
+  if (!question || typeof question !== 'string') {
+    return { success: false, error: 'question is required (string)' };
+  }
+  const url = 'http://127.0.0.1:3000/api/chat';
+  const body = {
+    messages: [{ role: 'user', content: question }],
+    agentId: 'db-expert',
+    stream: true
+  };
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs || 180000);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    });
+    if (!r.ok) return { success: false, error: 'HTTP ' + r.status };
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    let stopped = false;
+    const processLine = (line) => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) return;
+      const payload = trimmed.slice(5).trim();
+      if (!payload) return;
+      try {
+        const evt = JSON.parse(payload);
+        if (evt.type === 'content_block_delta' && evt.delta && evt.delta.text) {
+          fullText += evt.delta.text;
+        } else if (evt.type === 'message_stop') {
+          stopped = true;
+        } else if (evt.type === 'error') {
+          throw new Error(evt.error && evt.error.message ? evt.error.message : 'stream error');
+        }
+      } catch (e) { /* JSON parse skip */ }
+    };
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        if (buffer) buffer.split('\n').forEach(processLine);
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      lines.forEach(processLine);
+      if (stopped) break;
+    }
+    return {
+      success: true,
+      result: fullText,
+      length: fullText.length,
+      stopped
+    };
+  } catch (e) {
+    return { success: false, error: e.name === 'AbortError' ? 'timeout' : e.message };
+  } finally {
+    clearTimeout(t);
+  }
+});
+
 // ===== mine: DB 挖掘快捷查询 =====
 handlers.set('mine', async (params) => {
   const { action, keyword, n } = params;
