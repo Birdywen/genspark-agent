@@ -521,9 +521,15 @@ class TaskEngine {
       // 失败 → 分类错误并决定策略
       const errorType = lastResult.errorType || this.errorClassifier.classify(lastResult.error || '').type || 'UNKNOWN';
       lastResult.errorType = errorType;
-      const action = (onErrorConfig.match && onErrorConfig.match[errorType]) || onErrorConfig.default || (attempt < maxRetries ? 'retry' : 'abort');
+      // v3.1 修正: onError.match 命中 retry 时也要检查 maxRetries 边界, 不能绕过
+      let action = (onErrorConfig.match && onErrorConfig.match[errorType]) || onErrorConfig.default || (attempt < maxRetries ? 'retry' : 'abort');
+      // match/default 显式要求 retry, 但重试预算耗尽 -> 降级 abort
+      if (action === 'retry' && attempt >= maxRetries) {
+        action = 'abort';
+        this.logger.warning(`[TaskEngine] 步骤 ${stepIndex} onError.match 命中 retry 但重试预算耗尽 (attempt=${attempt}/${maxRetries}), 降级 abort`);
+      }
 
-      this.logger.info(`[TaskEngine] 步骤 ${stepIndex} 失败: ${errorType}, 策略: ${action}, attempt: ${attempt}/${maxRetries}`);
+      this.logger.info(`[TaskEngine] 步骤 ${stepIndex} 失败: ${errorType}, 策略: ${action}, 执行# ${attempt+1}/${maxRetries+1} (重试 ${attempt}/${maxRetries})`);
 
       if (action === 'skip') {
         lastResult.skipped = true;
