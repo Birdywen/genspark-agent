@@ -3517,6 +3517,21 @@ ${conversationText}
             addLog('⚠️ 归档失败: ' + e.message, 'error');
           }
         }
+        // ── Oracle HTML 快照：全量对话生成干净HTML推送到 Oracle (过滤 base64) ──
+        if (!dryRun) {
+          try {
+            const escH = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const stripH = (s) => { if (typeof s !== 'string') s = JSON.stringify(s); return s.replace(/data:[\w.+-]+\/[\w.+-]+;base64,[A-Za-z0-9+\/=]+/g, (m) => '[image removed: ' + Math.round(m.length/1024) + 'KB]'); };
+            const rowsH = allMsgs.map((m, i) => '<div class="msg ' + m.role + '"><div class="role">[' + i + '] ' + escH(m.role) + '</div><div class="content">' + escH(stripH(typeof m.content === 'string' ? m.content : JSON.stringify(m.content))) + '</div></div>').join('\n');
+            const htmlSnap = '<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><title>Chat ' + convId + '</title><style>body{font-family:-apple-system,sans-serif;max-width:860px;margin:0 auto;padding:20px;background:#f7f7f8;color:#222}.msg{margin:14px 0;padding:12px 16px;border-radius:10px;white-space:pre-wrap;word-break:break-word}.user{background:#e7f0ff}.assistant{background:#fff;border:1px solid #e3e3e3}.role{font-size:11px;color:#888;margin-bottom:6px;font-weight:600}h1{font-size:16px;color:#555}</style></head><body><h1>' + convId + ' · ' + allMsgs.length + ' msgs · ' + new Date().toLocaleString('zh-CN') + '</h1>\n' + rowsH + '\n</body></html>';
+            const b64Snap = btoa(unescape(encodeURIComponent(htmlSnap)));
+            const snResp = await fetch('http://127.0.0.1:8766/snapshot-oracle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversation_id: convId, b64: b64Snap }) });
+            const snData = await snResp.json();
+            addLog('📸 Oracle快照: ' + (snData.file || snData.error || 'fail'), snData.ok ? 'success' : 'error');
+          } catch(e) {
+            addLog('⚠️ Oracle快照失败: ' + e.message, 'error');
+          }
+        }
         const newMsgs = [];
 
         // ── Section 1+2: Forged Prompt (从 agent.db 加载) ──
