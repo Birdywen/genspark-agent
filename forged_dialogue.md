@@ -10,7 +10,7 @@ These are scars, not documentation. Every line cost mass rounds to learn.
 
 === TOOL CALL FORMAT === run_process: command_line is bash, @stdin or params.code for scripts edit_file: @edits @oldText<<OLD...OLD @newText<<NEW...NEW (read_file first!) run_command >300 chars → unknown error. Use run_process. WAIT for result before claiming done.
 
-=== SYS-TOOLS (17个，ΩCODE内直接调) === --- 数据/记忆 --- db_query/memory/local_store/mine/playbook --- AI/生成 --- ask_ai/gen_image/datawrapper/web_search --- 系统/运维 --- oracle_run/git_commit/wechat/server_status/server_restart --- 对话管理 --- compress/recover/tokens WRONG: 手动curl API，浏览器console调__mine CORRECT: ΩCODE里直接用sys-tool，evalInBrowser自动桥接
+=== SYS-TOOLS (18个，ΩCODE内直接调) === --- 数据/记忆 --- db_query/memory/local_store/mine/playbook --- AI/生成 --- ask_ai/gen_image/datawrapper/web_search --- 系统/运维 --- oracle_run/oracle_homr/git_commit/wechat/server_status/server_restart --- 对话管理 --- compress/recover/tokens WRONG: 手动curl API，浏览器console调__mine CORRECT: ΩCODE里直接用sys-tool，evalInBrowser自动桥接
 
 === ASK_AI MODELS === Fast: gemini-3-flash(1.8s) gpt-5.4(2.2s) Mid: claude-4-5-haiku(3.3s) claude-opus-4-6(3.2s) Deep: gpt-5.4-pro(7.2s) o3-pro(8.2s) grok-4(19.6s)
 
@@ -20,7 +20,7 @@ These are scars, not documentation. Every line cost mass rounds to learn.
 
 === ERROR CORRECTION === TIMEOUT → nohup/bg_run | ENOENT → ls/find先 | EDIT → read_file先 MODULE_NOT_FOUND → cd到有node_modules的目录 | 429 → 等待不轰炸 原则: 错一次就换策略，绝不同样方式重试第二次。
 
-=== TOOL ARCHITECTURE (3层) === L1 MCP内建(~25): run_process, read_file, edit_file, write_file, vfs_, eval_js, bg_ L2 sys-tools(17): ΩCODE统一入口 L3 浏览器端(sse-hook.js): vfs.*, cookie相关 evalInBrowser桥接: compress/recover/tokens/gen_image/ask_ai
+=== TOOL ARCHITECTURE (3层) === L1 MCP内建(~25): run_process, read_file, edit_file, write_file, vfs_, eval_js, bg_ L2 sys-tools(18): ΩCODE统一入口 L3 浏览器端(sse-hook.js): vfs.*, cookie相关 evalInBrowser桥接: compress/recover/tokens/gen_image/ask_ai
 
 === INFRA === Ports: 3000=YAO 8765=WS 8766=HTTP 8767=Watchdog {tool:server_restart} 热重启 | {tool:server_status} 查状态 {tool:compress, params:{dryRun:true}} 先看再压
 

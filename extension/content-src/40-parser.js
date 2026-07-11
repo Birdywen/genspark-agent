@@ -156,7 +156,7 @@
             const hdrEnd = text.indexOf(String.fromCharCode(10), ocStart);
             let ocBody = (hdrEnd !== -1 && hdrEnd < ocEndIdx) ? text.substring(hdrEnd + 1, ocEndIdx).trim() : text.substring(ocStart + ocPrefix.length, ocEndIdx).trim();
             ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
-            const ocObj = safeJsonParse(ocBody);
+            const ocObj = parseOmegaPayload(ocBody);
             if (ocObj && (ocObj.tool || ocObj.steps)) {
               if (ocObj.steps && Array.isArray(ocObj.steps)) {
                 return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];

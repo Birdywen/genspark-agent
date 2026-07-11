@@ -229,7 +229,17 @@ async function handle(tool, params, ctx) {
     // === vfs_local tools (added 2026-03-16) ===
     case 'vfs_local_write': {
       if (!params.path) { result = { isError: true, error: 'vfs_local_write needs @path' }; break; }
-      if (!params.content && params.content !== '') { result = { isError: true, error: 'vfs_local_write needs @content' }; break; }
+      // b64 channel: payload passes base64 to dodge JSON raw newline/quote hell, decoded internally
+      if (params.content_b64) {
+        try { params.content = Buffer.from(params.content_b64, 'base64').toString('utf-8'); }
+        catch(e) { result = { isError: true, error: 'content_b64 decode failed: ' + e.message }; break; }
+      }
+      // file channel: read content from existing file (dodge JSON escaping entirely)
+      if (params.content_file) {
+        try { params.content = readFileSync(params.content_file, 'utf-8'); }
+        catch(e) { result = { isError: true, error: 'content_file read failed: ' + e.message }; break; }
+      }
+      if (!params.content && params.content !== '') { result = { isError: true, error: 'vfs_local_write needs @content or @content_b64 or @content_file' }; break; }
       try {
         mkdirSync(dirname(params.path), { recursive: true });
         writeFileSync(params.path, params.content, 'utf-8');

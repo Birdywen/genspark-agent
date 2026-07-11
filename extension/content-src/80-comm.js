@@ -74,7 +74,12 @@
             stepIndex: msg.stepIndex,
             tool: msg.tool,
             success: true,
-            result: msg.result
+            result: msg.result,
+            truncated: !!msg.truncated,
+            fullOutputRef: msg.fullOutputRef || null,
+            outputStats: msg.outputStats || null,
+            outputMode: msg.outputMode || 'auto',
+            artifact: msg.artifact || null
           });
           // 更新进度条
           if (window.PanelEnhancer) {
@@ -127,8 +132,8 @@
           detailedResults = state.batchResults.map((r, i) => {
             if (r.success) {
               let content = r.result || '';
-              if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
-              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
+              const artifactNote = r.fullOutputRef ? `\n\n📎 Full output: \`${r.fullOutputRef}\`` + (r.outputStats ? ` (${r.outputStats.chars} chars, ${r.outputStats.lines} lines)` : '') : '';
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\`${artifactNote}`;
             } else {
               return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error || "未知错误"}`;
             }

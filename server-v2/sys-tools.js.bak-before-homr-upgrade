@@ -89,23 +89,22 @@ handlers.set('oracle_run', async (params) => {
   }
 });
 
-// ===== oracle_homr (新版, 替换 92-200 行的两个旧实现) =====
+// ===== oracle_homr =====
 // homr OMR 服务 (Oracle 150.136.51.61:8000, 本地隧道 8800)
-// 输入: {image, tunnel_port?: 8800, timeout?: 180, save?, verbose?: false}
-// 默认返回 bbox_summary (轻量): staffs 边界 + bar_lines x 坐标
-// verbose=true 返回完整 bbox (含每个音符 cx/cy)
-// result_file 始终指向完整 JSON 文件兜底
+// 输入: {image: "/path/to/page.png", tunnel_port?: 8800, timeout?: 180, save?: "/path/to/save.json"}
+// 自动建/复用 ssh 隧道, curl 传图, 返回 homr JSON 或关键字段
 handlers.set('oracle_homr', async (params) => {
-  const { image, tunnel_port = 8800, timeout = 180, save, verbose = false } = params;
+  const { image, tunnel_port = 8800, timeout = 180, save } = params;
   if (!image) return { success: false, error: 'image path is required' };
   try {
-    // 1. 检测隧道
+    // 1. 检测隧道是否在, 不在建
     let tunnelCheck;
     try {
       tunnelCheck = execSync(`lsof -i :${tunnel_port} 2>/dev/null | grep LISTEN | head -1`, { encoding: 'utf8', timeout: 5000 });
     } catch (e) { tunnelCheck = ''; }
     if (!tunnelCheck || !tunnelCheck.trim()) {
       execSync(`ssh -f -N -L ${tunnel_port}:localhost:8000 oracle`, { encoding: 'utf8', timeout: 15000 });
+      // 等隧道建立
       await new Promise(r => setTimeout(r, 2000));
     }
     // 2. health 检查
@@ -119,46 +118,79 @@ handlers.set('oracle_homr', async (params) => {
     const t0 = Date.now();
     execSync(`curl -s --max-time ${timeout} -F image=@${image} http://localhost:${tunnel_port}/homr -o ${outFile}`, { encoding: 'utf8', timeout: (timeout + 10) * 1000, maxBuffer: 50 * 1024 * 1024 });
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-    // 4. 读结果
+    // 4. 读结果提取关键字段
     const raw = readFileSync(outFile, 'utf8');
     let parsed;
     try { parsed = JSON.parse(raw); } catch (e) { return { success: false, error: 'result JSON parse failed: ' + e.message.substring(0, 200), raw_size: raw.length }; }
-    // 5. 构造 bbox_summary (轻量, 默认返回)
-    const bbox = parsed.bbox || {};
-    const staffs = bbox.staffs || [];
-    const barLines = bbox.bar_lines || [];
-    const bboxSummary = {
-      staffs_count: staffs.length,
-      bar_lines_count: barLines.length,
-      staffs: staffs.map(s => ({
-        min_y: s.min_y,
-        max_y: s.max_y,
-        sub: (s.sub || []).map(sub => ({
-          min_x: sub.min_x,
-          max_x: sub.max_x,
-          min_y: sub.min_y,
-          max_y: sub.max_y,
-          notes_count: (sub.notes || []).length
-        }))
-      })),
-      bar_lines_x: barLines.map(b => b.cx ?? b.x ?? null)
+    const summary = {
+      success: true,
+      result: {
+        filename: parsed.filename,
+        scale: parsed.scale,
+        notes: parsed.notes,
+        xml_notes: parsed.xml_notes,
+        measures: parsed.measures,
+        bbox_staffs: parsed.bbox ? parsed.bbox.staffs.length : 0,
+        has_musicxml: !!parsed.musicxml,
+        result_file: outFile,
+        elapsed_sec: elapsed
+      }
     };
-    const result = {
-      filename: parsed.filename,
-      scale: parsed.scale,
-      notes: parsed.notes,
-      xml_notes: parsed.xml_notes,
-      measures: parsed.measures,
-      bbox_summary: bboxSummary,
-      has_musicxml: !!parsed.musicxml,
-      result_file: outFile,
-      elapsed_sec: elapsed
-    };
-    // verbose: true 时追加完整 bbox (含音符坐标)
-    if (verbose) {
-      result.bbox = bbox;
+    return summary;
+  } catch (e) {
+    return { success: false, error: e.message.substring(0, 500) };
+  }
+});
+
+
+// ===== oracle_homr =====
+// homr OMR 服务 (Oracle 150.136.51.61:8000, 本地隧道 8800)
+// 输入: {image: "/path/to/page.png", tunnel_port?: 8800, timeout?: 180, save?: "/path/to/save.json"}
+// 自动建/复用 ssh 隧道, curl 传图, 返回 homr JSON 或关键字段
+handlers.set('oracle_homr', async (params) => {
+  const { image, tunnel_port = 8800, timeout = 180, save } = params;
+  if (!image) return { success: false, error: 'image path is required' };
+  try {
+    // 1. 检测隧道是否在, 不在建
+    let tunnelCheck;
+    try {
+      tunnelCheck = execSync(`lsof -i :${tunnel_port} 2>/dev/null | grep LISTEN | head -1`, { encoding: 'utf8', timeout: 5000 });
+    } catch (e) { tunnelCheck = ''; }
+    if (!tunnelCheck || !tunnelCheck.trim()) {
+      execSync(`ssh -f -N -L ${tunnel_port}:localhost:8000 oracle`, { encoding: 'utf8', timeout: 15000 });
+      // 等隧道建立
+      await new Promise(r => setTimeout(r, 2000));
     }
-    return { success: true, result };
+    // 2. health 检查
+    let health;
+    try {
+      health = execSync(`curl -s --max-time 10 http://localhost:${tunnel_port}/health`, { encoding: 'utf8', timeout: 15000 });
+    } catch (e) { return { success: false, error: 'tunnel up but health check failed: ' + e.message.substring(0, 200) }; }
+    if (!health.includes('ok')) return { success: false, error: 'homr service not ready: ' + health.substring(0, 200) };
+    // 3. curl 传图
+    let outFile = save || '/tmp/homr_last_result.json';
+    const t0 = Date.now();
+    execSync(`curl -s --max-time ${timeout} -F image=@${image} http://localhost:${tunnel_port}/homr -o ${outFile}`, { encoding: 'utf8', timeout: (timeout + 10) * 1000, maxBuffer: 50 * 1024 * 1024 });
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    // 4. 读结果提取关键字段
+    const raw = readFileSync(outFile, 'utf8');
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch (e) { return { success: false, error: 'result JSON parse failed: ' + e.message.substring(0, 200), raw_size: raw.length }; }
+    const summary = {
+      success: true,
+      result: {
+        filename: parsed.filename,
+        scale: parsed.scale,
+        notes: parsed.notes,
+        xml_notes: parsed.xml_notes,
+        measures: parsed.measures,
+        bbox_staffs: parsed.bbox ? parsed.bbox.staffs.length : 0,
+        has_musicxml: !!parsed.musicxml,
+        result_file: outFile,
+        elapsed_sec: elapsed
+      }
+    };
+    return summary;
   } catch (e) {
     return { success: false, error: e.message.substring(0, 500) };
   }

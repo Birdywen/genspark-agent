@@ -5,10 +5,29 @@
 import { spawn } from 'child_process';
 import { writeFileSync, readFileSync } from 'fs';
 import dbApi from '../core/db.js';
+import artifactStore from '../core/artifact-store.js';
 
 let _processManager = null;
 let _logger = null;
 let _addToHistory = null;
+
+function parseDuration(value, fallback = 30000, legacySmallSeconds = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  let number;
+  let unit = '';
+  if (typeof value === 'number') number = value;
+  else if (typeof value === 'string') {
+    const match = value.trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h)?$/);
+    if (!match) throw new Error('Invalid timeout: ' + value);
+    number = Number(match[1]);
+    unit = match[2] || '';
+  } else throw new Error('Invalid timeout type: ' + typeof value);
+  if (!Number.isFinite(number) || number < 0) throw new Error('Invalid timeout: ' + value);
+  const factors = { ms: 1, s: 1000, m: 60000, h: 3600000 };
+  if (unit) return Math.round(number * factors[unit]);
+  if (legacySmallSeconds && number > 0 && number < 1000) return Math.round(number * 1000);
+  return Math.round(number);
+}
 
 function _getRecentSuccess(tool, limit, failedParams) {
   try {
@@ -44,7 +63,7 @@ export default {
     const { trace, ws, message } = context;
     // 兼容 alias 转换: run_command{command,stdin} → run_process{command_line,mode,stdin}
     if (params.command_line && !params.command) params.command = params.command_line;
-    if (params.timeout_ms && !params.timeout) params.timeout = params.timeout_ms;
+    // timeout_ms 始终按毫秒；timeout 支持显式单位并兼容旧式小整数秒。
     trace.span('shell', { action: 'start', tool, command: params.command });
 
     // BATCH 模式下 message/ws 可能不存在
@@ -55,7 +74,7 @@ export default {
       r = await this._handleRunCommand(params, trace, ws, id, message);
     }
 
-    if (r) return { handled: true, ...r };
+    if (r) { r.handled = true; return r; }
 
     trace.error('shell', new Error('Unknown shell tool: ' + tool));
     return { success: false, error: 'Unknown tool: ' + tool };
@@ -101,19 +120,37 @@ export default {
       // 兼容: content.js 解析器把 freeLines 放到 params.code，转为 stdin
       if (params.code && !params.stdin) { params.stdin = params.code; }
       const args = [];
-      // timeout 单位修正: <1000 视为秒，自动转毫秒
-      let timeoutMs = params.timeout || 30000;
-      if (timeoutMs > 0 && timeoutMs < 1000) timeoutMs = timeoutMs * 1000;
+      const timeoutMs = params.timeout_ms !== undefined
+        ? parseDuration(params.timeout_ms, 30000, false)
+        : parseDuration(params.timeout, 30000, true);
       const opts = {
         cwd: params.cwd || '/Users/yay/workspace',
         shell: true,
-        timeout: timeoutMs,
+        detached: process.platform !== 'win32',
         env: params.env ? { ...process.env, ...params.env } : process.env
       };
 
       const proc = spawn(spawnCmd, args, opts);
       let stdout = '';
       let stderr = '';
+      let timedOut = false;
+      let forceKillTimer = null;
+      const killTree = signal => {
+        try {
+          if (opts.detached && proc.pid) process.kill(-proc.pid, signal);
+          else proc.kill(signal);
+        } catch (e) {
+          try { proc.kill(signal); } catch (_) { /* already exited */ }
+        }
+      };
+      const timeoutTimer = timeoutMs > 0 ? setTimeout(() => {
+        timedOut = true;
+        killTree('SIGTERM');
+        forceKillTimer = setTimeout(() => {
+          if (proc.exitCode === null && proc.signalCode === null) killTree('SIGKILL');
+        }, 1000);
+        forceKillTimer.unref();
+      }, timeoutMs) : null;
 
       if (params.stdin) proc.stdin.write(params.stdin);
       if (params.stdinFile) {
@@ -129,15 +166,22 @@ export default {
       proc.stdout.on('data', d => { stdout += d; });
       proc.stderr.on('data', d => { stderr += d; });
 
-      proc.on('close', code => {
-        const output = (stdout + stderr).trim();
+      proc.on('close', (code, signal) => {
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        if (forceKillTimer) clearTimeout(forceKillTimer);
+        const fullOutput = (stdout + stderr).trim();
+        const formatted = artifactStore.formatOutput(stdout, stderr, params.output || params.outputPolicy || {});
+        const output = formatted.display;
         // exit code 1 for grep/diff/head/tail = no match, not error
         const cmd0 = (params.command_line || params.command || '').trim().split(/[|;&]/).pop().trim().split(/\s+/)[0].replace(/^.*\//, '');
         const softFail1 = ['grep','egrep','fgrep','diff','head','tail','find','ls'].includes(cmd0);
-        const success = code === 0 || (code === 1 && softFail1) || (code === null && output.length > 0);  // null=timeout-killed but output received
-        const errMsg = success ? null : (stderr.trim() || output || ('exit code ' + code)).slice(0, 500);
-        const historyId = _addToHistory('run_process', params, success, output.slice(0, 200), errMsg);
-        trace.span('shell', { action: 'run_command_done', exitCode: code, outputLen: output.length });
+        const success = !timedOut && (code === 0 || (code === 1 && softFail1));
+        const errMsg = success ? null : (timedOut ? `TIMEOUT after ${timeoutMs}ms` : (stderr.trim() || fullOutput || ('exit code ' + code))).slice(0, 500);
+        const historyId = _addToHistory('run_process', params, success, output, errMsg);
+        if (formatted.artifact) {
+          try { dbApi.raw.prepare('UPDATE commands SET content=? WHERE id=?').run(JSON.stringify({ artifact: formatted.artifact, outputPolicy: formatted.policy }), historyId); } catch (_) {}
+        }
+        trace.span('shell', { action: 'run_command_done', exitCode: code, signal, timedOut, timeoutMs, outputLen: fullOutput.length, displayedLen: output.length, truncated: formatted.truncated });
 
         if (ws && id) {
           const historyHint = !success ? _getRecentSuccess('run_process', 3, params) : '';
@@ -154,12 +198,32 @@ export default {
             }));
           }
         }
-        resolve({ success, result: output, exitCode: code, error: success ? undefined : output || 'exit code ' + code });
+        const response = {
+          success, result: output, historyId,
+          stdout: formatted.truncated ? artifactStore.previewText(stdout.trim(), formatted.policy) : stdout.trim(),
+          stderr: formatted.truncated ? artifactStore.previewText(stderr.trim(), formatted.policy) : stderr.trim(),
+          exitCode: code, signal, timedOut, timeoutMs,
+          truncated: formatted.truncated,
+          outputMode: formatted.policy.mode,
+          outputStats: formatted.stats,
+          fullOutputRef: formatted.fullOutputRef,
+          artifact: formatted.artifact || undefined,
+          error: success ? undefined : (timedOut ? `TIMEOUT after ${timeoutMs}ms` : fullOutput || 'exit code ' + code)
+        };
+        Object.defineProperties(response, {
+          _fullOutput: { value: fullOutput, enumerable: false },
+          _fullStdout: { value: stdout.trim(), enumerable: false },
+          _fullStderr: { value: stderr.trim(), enumerable: false }
+        });
+        resolve(response);
       });
 
       proc.on('error', e => {
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        if (forceKillTimer) clearTimeout(forceKillTimer);
         trace.error('shell', e);
         const historyId = _addToHistory('run_process', params, false, null, e.message);
+        e.historyId = historyId;
         if (ws && id) {
           ws.send(JSON.stringify({
             type: 'tool_result', id, historyId, tool: 'run_process',

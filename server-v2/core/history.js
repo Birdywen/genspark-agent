@@ -90,6 +90,7 @@ function add(tool, params, success, resultPreview, error = null) {
     id: historyIdCounter++,
     timestamp: new Date().toISOString(),
     tool, params, success,
+    status: success ? 'success' : 'failed',
     resultPreview: (resultPreview || '').substring(0, 500),
     error: error || null
   };
@@ -113,8 +114,12 @@ function getRaw() { return commandHistory; }
 
 function updateById(id, updates) {
   const entry = commandHistory.find(h => h.id === id);
-  if (entry) Object.assign(entry, updates);
-  save();
+  if (entry) {
+    Object.assign(entry, updates);
+    save();
+  }
+  // SQLite is the metrics source of truth. Older code only updated command-history.json.
+  try { dbApi.updateCommand(id, updates); } catch (e) { logger.warning('同步命令状态失败: ' + e.message); }
   return entry;
 }
 

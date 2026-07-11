@@ -282,7 +282,7 @@
       log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
       // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
       try {
-        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = JSON.parse(cleanOw);
+        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = parseOmegaPayload(cleanOw);
         if (owParsed && (owParsed.tool || owParsed.steps)) {
           addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
           sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);

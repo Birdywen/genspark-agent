@@ -28,14 +28,14 @@ function buildSysTools() {
     db_query:'查询',memory:'记忆存取',local_store:'本地存储',mine:'知识挖掘',playbook:'流程剧本',
     ask_ai:'AI对话(10-20cr)',gen_image:'生图',web_search:'搜索(1cr)',
     crawler:'Diffbot结构化/GSK/KG/NER',odin:'Odin(search/translate/code,免费)',aidrive:'AI Drive云存储(免费)',
-    oracle_run:'Oracle SSH',git_commit:'Git提交',wechat:'微信',server_status:'状态',server_restart:'重启',
+    oracle_run:'Oracle SSH',oracle_homr:'homr OMR(传图返bbox+musicxml)',git_commit:'Git提交',wechat:'微信',server_status:'状态',server_restart:'重启',
     compress:'压缩',recover:'恢复',tokens:'查token',datawrapper:'图表'
   };
   const cats = {
     '数据':['db_query','memory','local_store','mine','playbook'],
     'AI':['ask_ai','gen_image','web_search'],
     '外部':['crawler','odin','aidrive'],
-    '运维':['oracle_run','git_commit','wechat','server_status','server_restart'],
+    '运维':['oracle_run','oracle_homr','git_commit','wechat','server_status','server_restart'],
     '对话':['compress','recover','tokens']
   };
   return { count: names.length, list: names, categories: cats, descriptions: desc };
@@ -51,8 +51,8 @@ function buildLessons() {
   // 解析
   const parsed = all.map(l => {
     const c = l.content.trim();
-    const wm = c.match(/WRONG:\s*(.+?)(?:\n|CORRECT)/s);
-    const cm = c.match(/CORRECT:\s*(.+?)(?:\n|CONTEXT|$)/s);
+    const wm = c.match(/WRONG:\s*([\s\S]+?)(?:\n|CORRECT)/);
+    const cm = c.match(/CORRECT:\s*([\s\S]+?)(?:\n|CONTEXT|$)/);
     return wm && cm
       ? { key: l.key, wrong: wm[1].trim(), correct: cm[1].trim() }
       : { key: l.key, summary: c.split('\n')[0].substring(0,500) };
@@ -214,7 +214,7 @@ if (dryRun) {
     {role:'assistant',content},
     {role:'user',content:'rules已加载。ΩCODE-first, vfs_local_write写文件, sys-tools统一入口, 错一次换策略, compress后dream.cjs bump, 操作分级+先说再做+不多做.'}
   ];
-  db.prepare("UPDATE memory SET content=? WHERE slot='toolkit' AND key='_forged:experience-dialogues'").run(JSON.stringify(dialogues));
+  db.prepare("UPDATE memory SET content=?, updated_at=datetime('now') WHERE slot='toolkit' AND key='_forged:experience-dialogues'").run(JSON.stringify(dialogues));
   console.log('Updated forged dialogue!');
 
   // 同时生成 inject-knowledge（供 compress 弹窗使用）
@@ -273,7 +273,7 @@ if (dryRun) {
   db2 = new Database(dbPath);
   const existsKJ = db2.prepare("SELECT 1 FROM local_store WHERE slot='inject-knowledge'").get();
   if (existsKJ) {
-    db2.prepare("UPDATE local_store SET content=? WHERE slot='inject-knowledge'").run(knowledgeContent);
+    db2.prepare("UPDATE local_store SET content=?, updated_at=datetime('now') WHERE slot='inject-knowledge'").run(knowledgeContent);
   } else {
     db2.prepare("INSERT INTO local_store(slot,key,content) VALUES('inject-knowledge','default',?)").run(knowledgeContent);
   }

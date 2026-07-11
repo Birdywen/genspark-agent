@@ -25,6 +25,14 @@ fix.js
 # Trash
 _trash/
 test/
+
+# Core server regression tests required by server-v2/package.json
+!server-v2/test/
+!server-v2/test/trace.test.js
+!server-v2/test/alias.test.js
+!server-v2/test/router.test.js
+!server-v2/test/omega-hardening.test.js
+!server-v2/test/smart-output.test.js
 server-v2/command-history.json
 ssh-key-*.key
 oracle-cloud.key
@@ -85,3 +93,6 @@ agent.db-journal
 *.db.bak*
 server-v2/data/agent.db*
 
+
+# Omega v4.4 runtime output artifacts
+server-v2/data/artifacts/

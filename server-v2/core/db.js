@@ -46,8 +46,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
 `);
 
+
+// commands was extended by several releases. Fresh workspaces must reach the live schema before statements are prepared.
+const commandColumnDefs = {
+  reusable: 'INTEGER DEFAULT 0',
+  tags: 'TEXT',
+  parsed_command: 'TEXT',
+  status: 'TEXT',
+  worker_id: 'TEXT',
+  scheduled_at: 'TEXT',
+  depends_on: 'INTEGER',
+  priority: 'INTEGER DEFAULT 0',
+  parser_version: 'TEXT',
+  content: 'TEXT'
+};
+const commandColumns = new Set(db.prepare('PRAGMA table_info(commands)').all().map(row => row.name));
+for (const [name, definition] of Object.entries(commandColumnDefs)) {
+  if (!commandColumns.has(name)) db.exec(`ALTER TABLE commands ADD COLUMN ${name} ${definition}`);
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_commands_status ON commands(status)');
+
 const stmts = {
-  insertCommand: db.prepare('INSERT OR IGNORE INTO commands (id, timestamp, tool, params, success, result_preview, error, duration_ms, session_id) VALUES (@id, @timestamp, @tool, @params, @success, @result_preview, @error, @duration_ms, @session_id)'),
+  insertCommand: db.prepare('INSERT INTO commands (id, timestamp, tool, params, success, result_preview, error, duration_ms, session_id, status, tags) VALUES (@id, @timestamp, @tool, @params, @success, @result_preview, @error, @duration_ms, @session_id, @status, @tags)'),
   insertLog: db.prepare('INSERT INTO logs (timestamp, level, message, data) VALUES (@timestamp, @level, @message, @data)'),
   getRecentCommands: db.prepare('SELECT * FROM commands ORDER BY id DESC LIMIT ?'),
   getCommandById: db.prepare('SELECT * FROM commands WHERE id = ?'),
@@ -65,15 +85,9 @@ const stmts = {
 
 const dbApi = {
   addCommand(entry) {
-    // Dedup: skip if same tool+params within 2s
-    const dedupKey = entry.tool + ':' + (typeof entry.params === 'string' ? entry.params : JSON.stringify(entry.params)).substring(0,200);
-    const now = Date.now();
-    if (!dbApi._lastCmd) dbApi._lastCmd = {};
-    if (dbApi._lastCmd.key === dedupKey && (now - dbApi._lastCmd.time) < 2000) {
-      return dbApi._lastCmd.id; // return previous id
-    }
-    dbApi._lastCmd = { key: dedupKey, time: now, id: entry.id };
-    return stmts.insertCommand.run({
+    // Preserve one SQLite row per actual invocation. Time-based dedup used to desynchronise JSON and SQLite ids.
+    const status = entry.status || (entry.success ? 'success' : 'failed');
+    stmts.insertCommand.run({
       id: entry.id,
       timestamp: entry.timestamp || new Date().toISOString(),
       tool: entry.tool,
@@ -82,8 +96,32 @@ const dbApi = {
       result_preview: (entry.resultPreview || '').substring(0, 500),
       error: entry.error || null,
       duration_ms: entry.duration_ms || null,
-      session_id: entry.session_id || null
+      session_id: entry.session_id || null,
+      status,
+      tags: entry.tags || null
     });
+    return entry.id;
+  },
+  updateCommand(id, updates = {}) {
+    const columns = {
+      success: 'success',
+      resultPreview: 'result_preview',
+      error: 'error',
+      duration_ms: 'duration_ms',
+      session_id: 'session_id',
+      status: 'status',
+      tags: 'tags',
+      content: 'content'
+    };
+    const sets = [];
+    const values = [];
+    for (const [key, column] of Object.entries(columns)) {
+      if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+      sets.push(`${column}=?`);
+      values.push(key === 'success' ? (updates[key] ? 1 : 0) : updates[key]);
+    }
+    if (sets.length === 0) return { changes: 0 };
+    return db.prepare(`UPDATE commands SET ${sets.join(', ')} WHERE id=?`).run(...values, id);
   },
   getRecent(count) { return stmts.getRecentCommands.all(count || 20); },
   getById(id) { return stmts.getCommandById.get(id); },

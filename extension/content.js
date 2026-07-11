@@ -223,6 +223,11 @@
     }
   }
 
+  // Omega payload parser: strict JSON, deterministic control-char repair, and lossless raw blocks.
+  function omegaJsonError(error, text) { const match = String(error && error.message || error).match(/position ([0-9]+)/i); if (!match) return error; const pos = Number(match[1]); const before = text.slice(0, pos); const lf = String.fromCharCode(10); const line = before.split(lf).length; const last = before.lastIndexOf(lf); const column = pos - last; const context = text.slice(Math.max(0, pos - 60), Math.min(text.length, pos + 60)).split(lf).join('↵'); return new SyntaxError(String(error.message) + ' | line ' + line + ', column ' + column + ' | near: ' + context); }
+  function omegaRepairJsonControlChars(text) { let out = '', inString = false, escaped = false; for (let i = 0; i < text.length; i++) { const ch = text[i]; const code = ch.charCodeAt(0); if (escaped) { out += ch; escaped = false; continue; } if (code === 92) { out += ch; escaped = true; continue; } if (code === 34) { inString = !inString; out += ch; continue; } if (inString && code < 32) { const slash = String.fromCharCode(92); if (code === 10) out += slash + 'n'; else if (code === 13) out += slash + 'r'; else if (code === 9) out += slash + 't'; else out += slash + 'u' + code.toString(16).padStart(4, '0'); continue; } out += ch; } return out; }
+  function omegaHydrateRaw(value, blocks) { if (Array.isArray(value)) return value.map(function(item) { return omegaHydrateRaw(item, blocks); }); if (!value || typeof value !== 'object') return value; const keys = Object.keys(value); if (keys.length === 1 && keys[0] === '$raw') { const id = value.$raw; if (typeof id !== 'string' || !Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Omega raw block not found: ' + id); return blocks[id]; } const result = {}; for (const key of keys) result[key] = omegaHydrateRaw(value[key], blocks); return result; }
+  function parseOmegaPayload(raw) { const lf = String.fromCharCode(10); const lines = String(raw || '').trim().split(lf); const payloadLines = []; const blocks = Object.create(null); for (let i = 0; i < lines.length; i++) { const line = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i]; if (!line.startsWith('ΩRAW ')) { payloadLines.push(line); continue; } const id = line.slice(5).trim(); if (!id || !/^[A-Za-z0-9_.-]+$/.test(id)) throw new Error('Invalid Omega raw block id: ' + id); if (Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Duplicate Omega raw block: ' + id); const body = []; let closed = false; for (i = i + 1; i < lines.length; i++) { const rawLine = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i]; if (rawLine === 'ΩRAWEND' || rawLine === 'ΩRAWEND ' + id) { closed = true; break; } body.push(rawLine); } if (!closed) throw new Error('Unclosed Omega raw block: ' + id); blocks[id] = body.join(lf); } let payload = payloadLines.join(lf).trim(); if (payload.startsWith('```')) { const firstLf = payload.indexOf(lf); if (firstLf !== -1) payload = payload.slice(firstLf + 1); } if (payload.endsWith('```')) payload = payload.slice(0, -3).trim(); let parsed; try { parsed = JSON.parse(payload); } catch (firstError) { const repaired = omegaRepairJsonControlChars(payload); if (repaired === payload) throw omegaJsonError(firstError, payload); try { parsed = JSON.parse(repaired); } catch (secondError) { throw omegaJsonError(secondError, repaired); } } return omegaHydrateRaw(parsed, blocks); }
 function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
   }
@@ -801,7 +806,7 @@ function processMessageQueue() {
             const hdrEnd = text.indexOf(String.fromCharCode(10), ocStart);
             let ocBody = (hdrEnd !== -1 && hdrEnd < ocEndIdx) ? text.substring(hdrEnd + 1, ocEndIdx).trim() : text.substring(ocStart + ocPrefix.length, ocEndIdx).trim();
             ocBody = ocBody.replace(/^`+[\w]*\n?/, "").replace(/\n?`+$/, "").trim();
-            const ocObj = safeJsonParse(ocBody);
+            const ocObj = parseOmegaPayload(ocBody);
             if (ocObj && (ocObj.tool || ocObj.steps)) {
               if (ocObj.steps && Array.isArray(ocObj.steps)) {
                 return [{ name: "__BATCH__", params: ocObj, raw: text.substring(ocStart, ocEndIdx + 8), start: ocStart, end: ocEndIdx + 8, isBatch: true }];
@@ -3297,8 +3302,10 @@ ${tip}${contextInfo}
           const isUser = msg.classList.contains('user');
           const el = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
           let text = (el ? el.innerText : msg.innerText) || '';
-          text = text.replace(/\[执行结果\][\s\S]{300,}/g, m => m.substring(0, 300) + '...(截断)');
-          if (text.length > 2000) text = text.substring(0, 2000) + '...(截断)';
+          const artifactRefs = Array.from(new Set(text.match(/artifact:\/\/[0-9A-Za-z-]+\/(?:stdout|stderr|combined)/g) || []));
+          text = text.replace(/\[执行结果\][\s\S]{300,}/g, m => m.substring(0, 300) + '...(display compressed; full output preserved)');
+          if (text.length > 2000) text = text.substring(0, 2000) + '...(display compressed)';
+          if (artifactRefs.length) text += '\nFull output refs: ' + artifactRefs.join(', ');
           lines.push((isUser ? '【用户】' : '【AI】') + text);
           totalLen += text.length;
         }
@@ -4291,7 +4298,12 @@ ${conversationText}
             stepIndex: msg.stepIndex,
             tool: msg.tool,
             success: true,
-            result: msg.result
+            result: msg.result,
+            truncated: !!msg.truncated,
+            fullOutputRef: msg.fullOutputRef || null,
+            outputStats: msg.outputStats || null,
+            outputMode: msg.outputMode || 'auto',
+            artifact: msg.artifact || null
           });
           // 更新进度条
           if (window.PanelEnhancer) {
@@ -4344,8 +4356,8 @@ ${conversationText}
           detailedResults = state.batchResults.map((r, i) => {
             if (r.success) {
               let content = r.result || '';
-              if (content.length > 2000) content = content.slice(0, 2000) + '...(截断)';
-              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\``;
+              const artifactNote = r.fullOutputRef ? `\n\n📎 Full output: \`${r.fullOutputRef}\`` + (r.outputStats ? ` (${r.outputStats.chars} chars, ${r.outputStats.lines} lines)` : '') : '';
+              return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\`${artifactNote}`;
             } else {
               return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✗ ${r.error || "未知错误"}`;
             }
@@ -5163,7 +5175,7 @@ ${conversationText}
       log("SSE " + owp.label + " captured:", owContent.length, "chars," + modStr);
       // === OMEGA TOOL CALL: JSON with tool/steps -> execute as tool call ===
       try {
-        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = JSON.parse(cleanOw);
+        var cleanOw = owContent.trim().replace(/^`+[\w]*\n?/, '').replace(/\n?`+$/, '').trim(); var owParsed = parseOmegaPayload(cleanOw);
         if (owParsed && (owParsed.tool || owParsed.steps)) {
           addLog('\u26A1 ' + owp.label + ' TOOL CALL detected', 'tool');
           sseState.processedCommands.add('sse:omegawrite:OMEGADATA:' + owStartIdx);

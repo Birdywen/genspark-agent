@@ -1106,8 +1106,10 @@
           const isUser = msg.classList.contains('user');
           const el = msg.querySelector('.markdown-viewer') || msg.querySelector('.bubble .content') || msg.querySelector('.bubble');
           let text = (el ? el.innerText : msg.innerText) || '';
-          text = text.replace(/\[执行结果\][\s\S]{300,}/g, m => m.substring(0, 300) + '...(截断)');
-          if (text.length > 2000) text = text.substring(0, 2000) + '...(截断)';
+          const artifactRefs = Array.from(new Set(text.match(/artifact:\/\/[0-9A-Za-z-]+\/(?:stdout|stderr|combined)/g) || []));
+          text = text.replace(/\[执行结果\][\s\S]{300,}/g, m => m.substring(0, 300) + '...(display compressed; full output preserved)');
+          if (text.length > 2000) text = text.substring(0, 2000) + '...(display compressed)';
+          if (artifactRefs.length) text += '\nFull output refs: ' + artifactRefs.join(', ');
           lines.push((isUser ? '【用户】' : '【AI】') + text);
           totalLen += text.length;
         }

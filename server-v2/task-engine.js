@@ -4,6 +4,7 @@
 
 import StateManager, { TaskState } from './state-manager.js';
 import { sshFix } from './core/pipeline.js';
+import history from './core/history.js';
 
 class TaskEngine {
   constructor(logger, hub, safety, errorClassifier, router) {
@@ -450,9 +451,11 @@ class TaskEngine {
    * 或随机: { type:"delay", min:1000, max:3000 }
    */
   async _executeDelay(batchId, step, stepIndex, onStepComplete) {
-    let ms = step.ms || 0;
+    let ms = this._parseDuration(step.ms ?? step.duration, 0, false);
     if (step.min !== undefined && step.max !== undefined) {
-      ms = step.min + Math.floor(Math.random() * (step.max - step.min));
+      const min = this._parseDuration(step.min, 0, false);
+      const max = this._parseDuration(step.max, min, false);
+      ms = min + Math.floor(Math.random() * (max - min));
     }
     this.logger.info(`[TaskEngine] DELAY ${ms}ms @ step ${stepIndex}`);
     await new Promise(r => setTimeout(r, ms));
@@ -466,7 +469,7 @@ class TaskEngine {
    * 格式: { type:"timeout", ms:10000, steps:[steps], onTimeout:[fallbackSteps] }
    */
   async _executeTimeout(batchId, step, stepIndex, options, onStepComplete, depth) {
-    const ms = step.ms || 30000;
+    const ms = this._parseDuration(step.ms ?? step.timeout ?? step.duration, 30000, false);
     this.logger.info(`[TaskEngine] TIMEOUT wrapper ${ms}ms @ step ${stepIndex}, ${(step.steps || []).length} 子步骤`);
     const results = [];
 
@@ -632,11 +635,79 @@ class TaskEngine {
         errorType: stepResult?.errorType,
         originalError: stepResult?.originalError,
         attempt: stepResult?.attempt,
-        tool: stepResult?.tool
+        tool: stepResult?.tool,
+        exitCode: stepResult?.exitCode,
+        timedOut: stepResult?.timedOut,
+        acceptance: stepResult?.acceptance,
+        truncated: stepResult?.truncated,
+        outputMode: stepResult?.outputMode,
+        fullOutputRef: stepResult?.fullOutputRef,
+        outputStats: stepResult?.outputStats,
+        artifact: stepResult?.artifact
       },
       output: topResult,
       raw: stepResult
     };
+  }
+
+  /**
+   * v4.3: 统一时长解析。
+   * 支持数字毫秒及 "250ms" / "30s" / "5m" / "1h"。
+   * legacySmallSeconds=true 时，小于1000的无单位值按秒解释，兼容旧 run_process/step.timeout。
+   */
+  _parseDuration(value, fallback = 0, legacySmallSeconds = false) {
+    if (value === undefined || value === null || value === '') return fallback;
+    let number;
+    let unit = '';
+    if (typeof value === 'number') {
+      number = value;
+    } else if (typeof value === 'string') {
+      const match = value.trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h)?$/);
+      if (!match) throw new Error(`Invalid duration: ${value}`);
+      number = Number(match[1]);
+      unit = match[2] || '';
+    } else {
+      throw new Error(`Invalid duration type: ${typeof value}`);
+    }
+    if (!Number.isFinite(number) || number < 0) throw new Error(`Invalid duration: ${value}`);
+    const factors = { ms: 1, s: 1000, m: 60000, h: 3600000 };
+    if (unit) return Math.round(number * factors[unit]);
+    if (legacySmallSeconds && number > 0 && number < 1000) return Math.round(number * 1000);
+    return Math.round(number);
+  }
+
+  /** v4.3: 工具步骤语义验收，避免“进程成功但任务失败”。 */
+  _evaluateExpect(expect, output, rawResult) {
+    if (!expect) return { passed: true, failures: [] };
+    if (typeof expect !== 'object' || Array.isArray(expect)) {
+      return { passed: false, failures: ['expect must be an object'] };
+    }
+    const text = typeof output === 'string' ? output : JSON.stringify(output);
+    const failures = [];
+    const list = value => Array.isArray(value) ? value : [value];
+    if (expect.contains !== undefined) {
+      for (const needle of list(expect.contains)) if (!text.includes(String(needle))) failures.push(`missing: ${needle}`);
+    }
+    if (expect.notContains !== undefined) {
+      for (const needle of list(expect.notContains)) if (text.includes(String(needle))) failures.push(`forbidden text: ${needle}`);
+    }
+    if (expect.regex !== undefined) {
+      for (const pattern of list(expect.regex)) {
+        try { if (!new RegExp(pattern).test(text)) failures.push(`regex not matched: ${pattern}`); }
+        catch (e) { failures.push(`invalid regex: ${pattern}`); }
+      }
+    }
+    if (expect.notRegex !== undefined) {
+      for (const pattern of list(expect.notRegex)) {
+        try { if (new RegExp(pattern).test(text)) failures.push(`forbidden regex matched: ${pattern}`); }
+        catch (e) { failures.push(`invalid regex: ${pattern}`); }
+      }
+    }
+    if (expect.equals !== undefined && text !== String(expect.equals)) failures.push('output did not equal expected value');
+    if (expect.exitCode !== undefined && rawResult?.exitCode !== expect.exitCode) failures.push(`exitCode ${rawResult?.exitCode} != ${expect.exitCode}`);
+    if (expect.timedOut !== undefined && Boolean(rawResult?.timedOut) !== Boolean(expect.timedOut)) failures.push(`timedOut ${Boolean(rawResult?.timedOut)} != ${Boolean(expect.timedOut)}`);
+    if (expect.success !== undefined && Boolean(rawResult?.success) !== Boolean(expect.success)) failures.push(`tool success ${Boolean(rawResult?.success)} != ${Boolean(expect.success)}`);
+    return { passed: failures.length === 0, failures };
   }
 
   _parseMaybeJson(val) {
@@ -653,8 +724,17 @@ class TaskEngine {
    * v3: 单次工具调用（纯执行，无重试逻辑）
    */
   async _callToolOnce(batchId, step, stepIndex, options, stepTimeout) {
+    const normalizedStepTimeout = this._parseDuration(stepTimeout, 0, true);
     let resolvedParams = this.stateManager.resolveTemplate(batchId, step.params);
-    if (step.tool === "run_process" || step.tool === "run_command") { resolvedParams = sshFix(step.tool, resolvedParams, this.logger); }
+    if (step.tool === "run_process" || step.tool === "run_command") {
+      resolvedParams = sshFix(step.tool, resolvedParams, this.logger);
+      if (normalizedStepTimeout && resolvedParams.timeout === undefined && resolvedParams.timeout_ms === undefined) {
+        resolvedParams.timeout_ms = normalizedStepTimeout;
+      }
+      if (step.output !== undefined && resolvedParams.output === undefined) {
+        resolvedParams.output = this.stateManager.resolveTemplate(batchId, step.output);
+      }
+    }
 
     const safetyCheck = await this.safety.checkOperation(step.tool, resolvedParams);
     if (!safetyCheck.allowed) {
@@ -680,17 +760,26 @@ class TaskEngine {
           const driver = this.router.handlers.get(resolved.tool);
           toolPromise = driver.handle(resolved.tool, resolved.params, { trace: { span(){}, error(){}, flush(){}, duration: 0 } });
         } else {
-          toolPromise = this.hub.callTool(resolved.tool, resolved.params);
+          toolPromise = this.hub.call(resolved.tool, resolved.params);
         }
       }
 
-      // v3: 步骤级超时
+      // run_process owns process-group timeout and must return historyId/timedOut.
+      // Racing it here loses that metadata and leaves the command recorded as a generic failure.
+      const driverOwnsTimeout = resolved.tool === 'run_process';
       let result;
-      if (stepTimeout) {
-        result = await Promise.race([
-          toolPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error(`Step timeout after ${stepTimeout}ms`)), stepTimeout))
-        ]);
+      if (normalizedStepTimeout && !driverOwnsTimeout) {
+        let timeoutTimer;
+        try {
+          result = await Promise.race([
+            toolPromise,
+            new Promise((_, reject) => {
+              timeoutTimer = setTimeout(() => reject(new Error(`Step timeout after ${normalizedStepTimeout}ms`)), normalizedStepTimeout);
+            })
+          ]);
+        } finally {
+          if (timeoutTimer) clearTimeout(timeoutTimer);
+        }
       } else {
         result = await toolPromise;
       }
@@ -713,25 +802,62 @@ class TaskEngine {
         }
       }
 
-      // 从工具返回值中检测真实的 success 状态
-      // 信任 driver 的 success 判定 — driver 自己有 softFail 智慧 (grep/diff/find 等退出 1 不算失败)。
-      // 不再二次审判 exitCode,避免 driver 判 success:true / TaskEngine 翻盘成 false 的撕裂。
-      let toolSuccess = true;
-      if (result && typeof result === 'object') {
-        if ('success' in result && result.success === false) toolSuccess = false;
+      // 从工具返回值中检测真实的 success 状态，再执行步骤级语义验收。
+      let toolSuccess = !(result && typeof result === 'object' && result.success === false);
+      const acceptanceSource = result && typeof result === 'object' && typeof result._fullOutput === 'string' ? result._fullOutput : resultStr;
+      const acceptance = this._evaluateExpect(step.expect, acceptanceSource, result);
+      let errorType;
+      let stepError;
+      if (toolSuccess && !acceptance.passed) {
+        toolSuccess = false;
+        errorType = 'EXPECTATION_FAILED';
+        stepError = `Expectation failed: ${acceptance.failures.join('; ')}`;
+      } else if (!toolSuccess) {
+        stepError = result?.error || result?.stderr || (typeof resultStr === 'string' && resultStr.length > 0 ? resultStr.slice(0, 500) : '执行失败(无详情)');
       }
-      const stepError = toolSuccess ? undefined : (result?.error || result?.stderr || (typeof resultStr === 'string' && resultStr.length > 0 ? resultStr.slice(0, 500) : '执行失败(无详情)'));
+
+      const historyId = result && typeof result === 'object' ? result.historyId : null;
+      const commandStatus = toolSuccess ? 'success'
+        : (step.expectedFailure === true ? 'expected_failure'
+          : (errorType === 'EXPECTATION_FAILED' ? 'acceptance_failed' : 'failed'));
+      if (!toolSuccess && historyId !== null && historyId !== undefined) {
+        history.updateById(historyId, {
+          success: false,
+          status: commandStatus,
+          error: stepError || null,
+          tags: commandStatus === 'expected_failure' ? 'expected-failure' : null
+        });
+      }
 
       return {
-        stepIndex, tool: step.tool, success: toolSuccess,
+        stepIndex, tool: step.tool, success: toolSuccess, commandStatus, historyId,
         result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr),
+        ...(result && typeof result === 'object' && 'exitCode' in result ? { exitCode: result.exitCode } : {}),
+        ...(result && typeof result === 'object' && 'timedOut' in result ? { timedOut: result.timedOut } : {}),
+        ...(result && typeof result === 'object' && result.truncated !== undefined ? { truncated: result.truncated } : {}),
+        ...(result && typeof result === 'object' && result.outputMode ? { outputMode: result.outputMode } : {}),
+        ...(result && typeof result === 'object' && result.fullOutputRef ? { fullOutputRef: result.fullOutputRef } : {}),
+        ...(result && typeof result === 'object' && result.outputStats ? { outputStats: result.outputStats } : {}),
+        ...(result && typeof result === 'object' && result.artifact ? { artifact: result.artifact } : {}),
+        ...(step.expect ? { acceptance } : {}),
+        ...(errorType ? { errorType } : {}),
         ...(stepError ? { error: stepError } : {})
       };
 
     } catch (e) {
       const classified = this.errorClassifier.wrapError(e, step.tool);
+      const historyId = e && e.historyId !== undefined ? e.historyId : null;
+      const commandStatus = step.expectedFailure === true ? 'expected_failure' : 'failed';
+      if (historyId !== null) {
+        history.updateById(historyId, {
+          success: false,
+          status: commandStatus,
+          error: e.message,
+          tags: commandStatus === 'expected_failure' ? 'expected-failure' : null
+        });
+      }
       return {
-        stepIndex, tool: step.tool, success: false,
+        stepIndex, tool: step.tool, success: false, commandStatus, historyId,
         error: e.message, errorType: classified.errorType,
         recoverable: classified.recoverable, suggestion: classified.suggestion
       };
