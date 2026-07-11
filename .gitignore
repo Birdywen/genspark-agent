@@ -96,3 +96,6 @@ server-v2/data/agent.db*
 
 # Omega v4.4 runtime output artifacts
 server-v2/data/artifacts/
+
+# Backup files with descriptive suffixes
+*.bak-*
