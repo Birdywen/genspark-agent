@@ -1,5 +1,6 @@
 // core/history.js — 命令历史管理（从 index.js 提取）
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { AsyncLocalStorage } from 'async_hooks';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dbApi from './db.js';
@@ -14,6 +15,21 @@ const ARCHIVE_THRESHOLD = 400;
 let commandHistory = [];
 let historyIdCounter = 1;
 let logger = { info: console.log, warning: console.warn };
+const sessionStore = new AsyncLocalStorage();
+
+function runWithSession(sessionId, fn) {
+  return sessionStore.run(sessionId || null, fn);
+}
+
+function getSessionId() {
+  return sessionStore.getStore() || null;
+}
+
+function setSessionId(sessionId) {
+  // 兼容非 ALS 场景；优先仍走 runWithSession
+  return sessionId || null;
+}
+
 
 function init(loggerInstance) {
   logger = loggerInstance;
@@ -85,14 +101,16 @@ function archiveOld() {
   }
 }
 
-function add(tool, params, success, resultPreview, error = null) {
+function add(tool, params, success, resultPreview, error = null, sessionId = null) {
+  const resolvedSession = sessionId || getSessionId() || null;
   const entry = {
     id: historyIdCounter++,
     timestamp: new Date().toISOString(),
     tool, params, success,
     status: success ? 'success' : 'failed',
     resultPreview: (resultPreview || '').substring(0, 500),
-    error: error || null
+    error: error || null,
+    session_id: resolvedSession
   };
   commandHistory.push(entry);
   if (commandHistory.length > MAX_HISTORY) archiveOld();
@@ -123,4 +141,4 @@ function updateById(id, updates) {
   return entry;
 }
 
-export default { init, add, get, getById, getRaw, updateById };
+export default { init, add, get, getById, getRaw, updateById, runWithSession, getSessionId, setSessionId };

@@ -5,6 +5,63 @@ const OMEGA = '\u03A9';
 const OC_START = OMEGA + 'CODE';
 const OC_END = OMEGA + 'CODEEND';
 
+// brace_diag.js — ΩCODE JSON 花括号失衡诊断 (独立测试版)
+// 输入: 出错的 body 字符串 + V8 错误位置
+// 输出: 人类可读诊断, 指出多了/少了花括号、位置、上下文
+
+function diagBraces(body, v8msg) {
+  // 1. 提取 V8 报错位置
+  let errPos = -1;
+  const m = v8msg.match(/position (\d+)/);
+  if (m) errPos = parseInt(m[1], 10);
+
+  // 2. 扫描花括号配对, 记录每个 } 的匹配 { 位置
+  const stack = [];      // 存 { 的位置
+  const pairs = [];      // [{open, close}]
+  const extraCloses = []; // 多余的 } 位置
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c === '{') stack.push(i);
+    else if (c === '}') {
+      if (stack.length === 0) extraCloses.push(i);
+      else pairs.push({ open: stack.pop(), close: i });
+    }
+  }
+  const unclosed = stack.slice(); // 没闭合的 {
+
+  // 3. 上下文片段
+  const ctx = (pos, radius=30) => {
+    const s = Math.max(0, pos - radius);
+    const e = Math.min(body.length, pos + radius);
+    return body.substring(s, e).replace(/\s+/g, ' ').trim();
+  };
+
+  // 4. 判断类型
+  let kind = 'unknown';
+  let detail = '';
+  if (extraCloses.length > 0 && unclosed.length === 0) {
+    kind = 'extra_close';
+    const p = extraCloses[0];
+    detail = `多了一个 } 在位置 ${p} (V8 报错 ${errPos}). 上下文: ...${ctx(p)}...`;
+  } else if (unclosed.length > 0 && extraCloses.length === 0) {
+    kind = 'unclosed';
+    const p = unclosed[0];
+    detail = `有一个 { 没闭合, 开始于位置 ${p}. 上下文: ...${ctx(p)}...`;
+  } else if (extraCloses.length > 0 && unclosed.length > 0) {
+    kind = 'mixed';
+    detail = `同时有 ${extraCloses.length} 个多余 } 和 ${unclosed.length} 个未闭合 {. 多余 } 最早在位置 ${extraCloses[0]}.`;
+  } else {
+    kind = 'balanced_but_other';
+    detail = `花括号数量平衡 (${pairs.length} 对), 错误可能是引号/逗号/其他. V8 位置 ${errPos}, 上下文: ...${ctx(errPos>=0?errPos:0)}...`;
+  }
+
+  return {
+    kind,
+    detail,
+    stats: { openCount: pairs.length + unclosed.length, closeCount: pairs.length + extraCloses.length, pairs: pairs.length, extraCloses: extraCloses.length, unclosed: unclosed.length }
+  };
+}
+
 function parseOmegaCode(text) {
   let startIdx = -1;
   let searchFrom = 0;
@@ -31,7 +88,8 @@ function parseOmegaCode(text) {
     const obj = JSON.parse(body);
     if (obj.tool || obj.steps) return { parsed: obj, startIdx, endIdx: endIdx + OC_END.length };
   } catch (e) {
-    return { error: 'JSON parse: ' + e.message, preview: body.substring(0, 200) };
+    const diag = diagBraces(body, e.message);
+    return { error: 'JSON parse: ' + e.message + ' | 花括号诊断: ' + diag.detail, preview: body.substring(0, 200), diag };
   }
   return null;
 }

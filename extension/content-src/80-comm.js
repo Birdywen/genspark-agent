@@ -131,7 +131,12 @@
         if (state.batchResults && state.batchResults.length > 0) {
           detailedResults = state.batchResults.map((r, i) => {
             if (r.success) {
-              let content = r.result || '';
+              let content = String(r.result || '');
+              const frontendLimit = 4000;
+              if (content.length > frontendLimit) {
+                const half = Math.floor((frontendLimit - 120) / 2);
+                content = content.slice(0, half) + `\n\n[... ${content.length - half * 2} chars omitted by frontend guard ...]\n\n` + content.slice(-half);
+              }
               const artifactNote = r.fullOutputRef ? `\n\n📎 Full output: \`${r.fullOutputRef}\`` + (r.outputStats ? ` (${r.outputStats.chars} chars, ${r.outputStats.lines} lines)` : '') : '';
               return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\`${artifactNote}`;
             } else {

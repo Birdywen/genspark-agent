@@ -1,0 +1,98 @@
+{
+  "success": true,
+  "ts": "20260715T191311Z",
+  "model": "qwen3.6:35b-a3b",
+  "url": "http://127.0.0.1:11434/api/chat",
+  "passed": 0,
+  "total": 6,
+  "score": "0/6",
+  "pass_rate": 0.0,
+  "probe": {
+    "ok": true,
+    "models": [
+      "qwen3.6:35b-a3b"
+    ],
+    "wanted": "qwen3.6:35b-a3b",
+    "present": true
+  },
+  "results": [
+    {
+      "id": "H1",
+      "title": "六约束逻辑排序",
+      "ok": false,
+      "expected": "B A C E D",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    },
+    {
+      "id": "H2",
+      "title": "认知反射 CRT 球棒球",
+      "ok": false,
+      "expected": "0.05",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    },
+    {
+      "id": "H3",
+      "title": "多阶段水池速率",
+      "ok": false,
+      "expected": "8.5",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    },
+    {
+      "id": "H4",
+      "title": "周二男孩条件概率",
+      "ok": false,
+      "expected": "13/27",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    },
+    {
+      "id": "H5",
+      "title": "严格JSON综合四问",
+      "ok": false,
+      "expected": "q1=no;q2=2;q3<=18hanzi;q4=206",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    },
+    {
+      "id": "H6",
+      "title": "Python kth_smallest bug审查",
+      "ok": false,
+      "expected": "sort_none + off_by_one",
+      "got": "",
+      "raw_content": "",
+      "raw_thinking_tail": "",
+      "latency_ms": 0,
+      "done_reason": "error",
+      "eval_count": null,
+      "notes": "exception: Remote end closed connection without response"
+    }
+  ]
+}

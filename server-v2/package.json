@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test:omega": "node test/omega-hardening.test.js",
-    "test": "node test/trace.test.js && node test/alias.test.js && node test/router.test.js && node test/omega-hardening.test.js && node test/smart-output.test.js"
+    "test:omega": "node test/omega-hardening.test.js && node test/omega-json-repair.test.js",
+    "test": "node test/trace.test.js && node test/alias.test.js && node test/router.test.js && node test/omega-hardening.test.js && node test/omega-json-repair.test.js && node test/smart-output.test.js && node test/semantic-compressor.test.js && node test/context-hot-reload.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",

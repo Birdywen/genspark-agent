@@ -5,8 +5,8 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const BASE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data', 'artifacts');
-const DEFAULT_INLINE = Number(process.env.OMEGA_OUTPUT_INLINE_LIMIT || 20000);
-const HARD_INLINE = Number(process.env.OMEGA_OUTPUT_HARD_LIMIT || 200000);
+const DEFAULT_INLINE = Number(process.env.OMEGA_OUTPUT_INLINE_LIMIT || 4000);
+const HARD_INLINE = Number(process.env.OMEGA_OUTPUT_HARD_LIMIT || 12000);
 
 function ensureDir() {
   mkdirSync(BASE_DIR, { recursive: true, mode: 0o700 });
@@ -28,16 +28,20 @@ function normalizePolicy(raw = {}) {
 
 function previewText(text, policy) {
   if (!text) return '';
+  const budget = Math.max(1000, Number(policy.inlineLimit) || DEFAULT_INLINE);
+  if (text.length <= budget) return text;
   const lines = text.split('\n');
   const head = lines.slice(0, policy.headLines).join('\n');
   const tail = lines.slice(-policy.tailLines).join('\n');
-  const omitted = Math.max(0, lines.length - policy.headLines - policy.tailLines);
-  let preview = head + `\n\n[... ${omitted} lines omitted; full output preserved ...]\n\n` + tail;
-  if (preview.length > policy.inlineLimit) {
-    const half = Math.max(400, Math.floor((policy.inlineLimit - 160) / 2));
-    preview = text.slice(0, half) + `\n\n[... ${text.length - half * 2} chars omitted; full output preserved ...]\n\n` + text.slice(-half);
+  const omittedLines = Math.max(0, lines.length - policy.headLines - policy.tailLines);
+  let preview = head + `\n\n[... ${omittedLines} lines omitted; full output preserved ...]\n\n` + tail;
+  if (preview.length > budget || lines.length === 1) {
+    const markerReserve = 180;
+    const half = Math.max(1, Math.floor((budget - markerReserve) / 2));
+    const omittedChars = Math.max(0, text.length - half * 2);
+    preview = text.slice(0, half) + `\n\n[... ${omittedChars} chars omitted; full output preserved ...]\n\n` + text.slice(-half);
   }
-  return preview;
+  return preview.length <= budget ? preview : preview.slice(0, budget);
 }
 
 function buildId(combined) {
@@ -101,7 +105,7 @@ function read(ref, options = {}) {
     return { content: lines.slice(start, start + count).join('\n'), startLine: start, lineCount: Math.min(count, Math.max(0, lines.length - start)), totalLines: lines.length, complete: start + count >= lines.length };
   }
   const offset = Math.max(0, Number(options.offset) || 0);
-  const requested = options.full === true ? text.length : Number(options.limit) || 20000;
+  const requested = options.full === true ? text.length : Number(options.limit) || 4000;
   const limit = Math.min(200000, Math.max(1, requested));
   return { content: text.slice(offset, offset + limit), offset, chars: Math.min(limit, Math.max(0, text.length - offset)), totalChars: text.length, complete: offset + limit >= text.length, nextOffset: offset + limit < text.length ? offset + limit : null };
 }
@@ -114,15 +118,27 @@ function search(ref, options = {}) {
   if (!pattern) throw new Error('artifact_search requires regex or query');
   const flags = String(options.flags || 'gi').replace(/[^gimsuy]/g, '');
   const re = new RegExp(pattern, flags.includes('g') ? flags : flags + 'g');
-  const context = Math.min(2000, Math.max(0, Number(options.contextChars) || 200));
-  const maxMatches = Math.min(200, Math.max(1, Number(options.maxMatches) || 50));
+  const context = Math.min(500, Math.max(0, Number(options.contextChars) || 120));
+  const maxMatches = Math.min(20, Math.max(1, Number(options.maxMatches) || 10));
+  const outputLimit = Math.min(12000, Math.max(1000, Number(options.outputLimit) || 4000));
   const matches = [];
+  let used = 0;
+  let limited = false;
   let m;
   while ((m = re.exec(text)) && matches.length < maxMatches) {
-    matches.push({ index: m.index, match: m[0], context: text.slice(Math.max(0, m.index - context), Math.min(text.length, m.index + m[0].length + context)) });
+    const contextText = text.slice(Math.max(0, m.index - context), Math.min(text.length, m.index + m[0].length + context));
+    const estimated = contextText.length + m[0].length + 80;
+    if (matches.length > 0 && used + estimated > outputLimit) {
+      limited = true;
+      break;
+    }
+    const remaining = Math.max(0, outputLimit - used - m[0].length - 80);
+    matches.push({ index: m.index, match: m[0], context: contextText.slice(0, remaining) });
+    used += estimated;
     if (m[0] === '') re.lastIndex++;
   }
-  return { ref, pattern, matches, count: matches.length, limited: matches.length >= maxMatches };
+  if (matches.length >= maxMatches) limited = true;
+  return { ref, pattern, matches, count: matches.length, limited, outputLimit };
 }
 
 function formatOutput(stdout, stderr, rawPolicy) {

@@ -45,6 +45,7 @@ import Router from "./core/router.js";
 import Metrics from "./core/metrics.js";
 import { resolvePayloadFiles, decodeBase64Fields, parseParams, autoScript, sshFix, resolveTimeout, parseResult, sendSuccess, sendError } from './core/pipeline.js';
 import { resolve as resolveAlias } from "./core/alias.js";
+import { semanticizeCandidates } from "./core/semantic-compressor.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -140,7 +141,19 @@ const processManager = new ProcessManager();
 // ==================== 工具调用处理（含历史记录）====================
 // 工具别名映射 → 已迁移到 core/alias.js
 
+function resolveMessageSessionId(message = {}) {
+  return message.session_id || message.sessionId || message.conversation_id || message.conversationId || null;
+}
+
 async function handleToolCall(ws, message, isRetry = false, originalId = null) {
+  const _sessionId = resolveMessageSessionId(message);
+  if (history && typeof history.runWithSession === 'function') {
+    return history.runWithSession(_sessionId, () => handleToolCallInner(ws, message, isRetry, originalId));
+  }
+  return handleToolCallInner(ws, message, isRetry, originalId);
+}
+
+async function handleToolCallInner(ws, message, isRetry = false, originalId = null) {
   let { tool, params, id } = message;
 
   // Store for retry (skip retry calls themselves to avoid loop)
@@ -645,6 +658,172 @@ async function main() {
       return;
     } else if (url.pathname === '/memory' && req.method === 'OPTIONS') {
       res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
+      return;
+    } else if (url.pathname === '/compress/semanticize' && req.method === 'POST') {
+      let body = '';
+      let tooLarge = false;
+      req.on('data', chunk => {
+        if (tooLarge) return;
+        body += chunk;
+        if (body.length > 2_000_000) {
+          tooLarge = true;
+          res.writeHead(413, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error:'payload too large'}));
+          req.destroy();
+        }
+      });
+      req.on('end', async () => {
+        if (tooLarge) return;
+        let db;
+        try {
+          const data = JSON.parse(body || '{}');
+          const candidates = Array.isArray(data.candidates) ? data.candidates.slice(0, 500) : [];
+          const ids = [...new Set(candidates.flatMap(item => Array.isArray(item.commandIds) ? item.commandIds : [])
+            .map(Number).filter(Number.isFinite))].slice(0, 1000);
+          let rows = [];
+          if (ids.length) {
+            const Database = (await import('better-sqlite3')).default;
+            const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
+            db = new Database(dbPath, { readonly: true });
+            const placeholders = ids.map(() => '?').join(',');
+            rows = db.prepare(`SELECT id,tool,params,success,status,result_preview,error,content FROM commands WHERE id IN (${placeholders})`).all(...ids);
+          }
+          const replacements = semanticizeCandidates(candidates, rows);
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ok:true, replacements, candidates:candidates.length, commands:rows.length}));
+        } catch(e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error:e.message}));
+        } finally {
+          if (db) db.close();
+        }
+      });
+      return;
+    } else if (url.pathname === '/compress/semanticize' && req.method === 'OPTIONS') {
+      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
+      res.end();
+      return;
+    } else if (url.pathname === '/conversation-ref' && req.method === 'POST') {
+      let body = '';
+      let tooLarge = false;
+      req.on('data', chunk => {
+        if (tooLarge) return;
+        body += chunk;
+        if (body.length > 2_000_000) {
+          tooLarge = true;
+          res.writeHead(413, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({error:'payload too large'}));
+          req.destroy();
+        }
+      });
+      req.on('end', async () => {
+        if (tooLarge) return;
+        let db;
+        try {
+          const data = JSON.parse(body || '{}');
+          const conversation_id = data.conversation_id || data.conversationId || '';
+          const ref_type = data.ref_type || data.refType || '';
+          if (!conversation_id || !ref_type) {
+            res.writeHead(400, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+            res.end(JSON.stringify({error:'conversation_id and ref_type required'}));
+            return;
+          }
+          const snapshot_id = data.snapshot_id || data.snapshotId || null;
+          const message_id = data.message_id || data.messageId || null;
+          const rawCmd = data.command_id ?? data.commandId;
+          const command_id = rawCmd == null || rawCmd === '' ? null : Number(rawCmd);
+          const source = data.source || 'ui';
+          const meta = data.meta == null ? null : (typeof data.meta === 'string' ? data.meta : JSON.stringify(data.meta));
+          const force = !!data.force;
+          const HEAD_THRESHOLD = 2;
+          const MSG_THRESHOLD = 3;
+          const Database = (await import('better-sqlite3')).default;
+          const dbPath = new URL('../server-v2/data/agent.db', import.meta.url).pathname;
+          db = new Database(dbPath);
+          const info = db.prepare(`INSERT INTO conversation_refs
+            (conversation_id, snapshot_id, message_id, command_id, ref_type, source, meta)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+              conversation_id, snapshot_id, message_id,
+              Number.isFinite(command_id) ? command_id : null,
+              ref_type, source, meta
+            );
+          let refCount = 0;
+          if (snapshot_id) {
+            refCount = db.prepare('SELECT COUNT(*) AS n FROM conversation_refs WHERE snapshot_id = ?').get(snapshot_id).n;
+            db.prepare('UPDATE conversation_snapshots SET ref_count = ? WHERE snapshot_id = ?').run(refCount, snapshot_id);
+          } else {
+            refCount = db.prepare('SELECT COUNT(*) AS n FROM conversation_refs WHERE conversation_id = ?').get(conversation_id).n;
+          }
+          let promote = { promoted: false, refCount, need: HEAD_THRESHOLD };
+          if (snapshot_id && (force || refCount >= HEAD_THRESHOLD)) {
+            const now = new Date().toISOString();
+            const existing = db.prepare('SELECT * FROM conversation_snapshots WHERE snapshot_id = ?').get(snapshot_id);
+            db.prepare(`INSERT INTO conversation_snapshots (
+              snapshot_id, conversation_id, saved_at, title, message_count, ref_count,
+              promoted_at, promote_reason, content_hash, source, head_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(snapshot_id) DO UPDATE SET
+              ref_count=excluded.ref_count,
+              title=COALESCE(excluded.title, conversation_snapshots.title),
+              message_count=COALESCE(excluded.message_count, conversation_snapshots.message_count),
+              head_json=COALESCE(excluded.head_json, conversation_snapshots.head_json),
+              promoted_at=COALESCE(conversation_snapshots.promoted_at, excluded.promoted_at),
+              promote_reason=COALESCE(conversation_snapshots.promote_reason, excluded.promote_reason)
+            `).run(
+              snapshot_id, conversation_id,
+              data.saved_at || data.savedAt || now,
+              data.title || null,
+              data.message_count == null && data.messageCount == null ? null : Number(data.message_count ?? data.messageCount),
+              refCount,
+              existing?.promoted_at || now,
+              existing?.promote_reason || (force ? 'force_event' : 'threshold'),
+              data.content_hash || data.contentHash || null,
+              data.snapshot_source || 'idb',
+              data.head_json ? (typeof data.head_json === 'string' ? data.head_json : JSON.stringify(data.head_json)) : null
+            );
+            let messagesInserted = 0;
+            const messages = Array.isArray(data.messages) ? data.messages : null;
+            if (messages && (force || refCount >= MSG_THRESHOLD)) {
+              const upsert = db.prepare(`INSERT INTO conversation_messages (
+                snapshot_id, message_id, role, content, command_ids, artifact_refs, importance
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(snapshot_id, message_id) DO UPDATE SET
+                role=excluded.role, content=excluded.content,
+                command_ids=excluded.command_ids, artifact_refs=excluded.artifact_refs,
+                importance=excluded.importance`);
+              const tx = db.transaction((rows) => {
+                for (const m of rows) {
+                  const ids = m.commandIds || m.command_ids || (m.meta && m.meta.commandIds) || [];
+                  const refs = m.artifactRefs || m.artifact_refs || (m.meta && m.meta.artifactRefs) || [];
+                  upsert.run(
+                    snapshot_id,
+                    String(m.id || m.message_id),
+                    m.role || null,
+                    m.content || null,
+                    ids && ids.length ? JSON.stringify(ids) : null,
+                    refs && refs.length ? JSON.stringify(refs) : null,
+                    m.importance == null ? null : Number(m.importance)
+                  );
+                  messagesInserted++;
+                }
+              });
+              tx(messages);
+            }
+            promote = { promoted: true, refCount, level: messagesInserted ? 'messages' : 'head', messagesInserted };
+          }
+          res.writeHead(200, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ ok:true, refId: info.lastInsertRowid, refCount, snapshot_id, conversation_id, promote }));
+        } catch (e) {
+          res.writeHead(500, {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'});
+          res.end(JSON.stringify({ error: e.message }));
+        } finally {
+          try { db && db.close(); } catch {}
+        }
+      });
+      return;
+    } else if (url.pathname === '/conversation-ref' && req.method === 'OPTIONS') {
+      res.writeHead(204, {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type'});
       res.end();
       return;
     } else if (url.pathname === '/chat-archive' && req.method === 'POST') {
@@ -1197,7 +1376,8 @@ async function main() {
               const { id: batchId, steps, options } = msg;
               logger.info(`[WS] 收到批量任务: ${batchId}, ${steps?.length || 0} 步`);
               
-              const result = await taskEngine.executeBatch(
+              const _batchSessionId = resolveMessageSessionId(msg);
+              const _runBatch = () => taskEngine.executeBatch(
                 batchId || `batch-${Date.now()}`,
                 steps || [],
                 options || {},
@@ -1210,6 +1390,9 @@ async function main() {
                   }));
                 }
               );
+              const result = await (history && typeof history.runWithSession === 'function'
+                ? history.runWithSession(_batchSessionId, _runBatch)
+                : _runBatch());
               
               ws.send(JSON.stringify({
                 type: 'batch_complete',

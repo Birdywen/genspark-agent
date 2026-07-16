@@ -5,6 +5,7 @@
 import StateManager, { TaskState } from './state-manager.js';
 import { sshFix } from './core/pipeline.js';
 import history from './core/history.js';
+import { formatOutput } from './core/artifact-store.js';
 
 class TaskEngine {
   constructor(logger, hub, safety, errorClassifier, router) {
@@ -606,10 +607,12 @@ class TaskEngine {
    * 向后兼容: success/result/error 仍可直接访问
    */
   _buildSavedBinding(stepResult) {
-    const parsed = this._parseMaybeJson(stepResult?.result);
+    // v4.5: display may be truncated, but saveAs must bind the complete tool value.
+    const sourceResult = stepResult?._fullResult ?? stepResult?.result;
+    const parsed = this._parseMaybeJson(sourceResult);
     // v4.1 (2026-04-25): 顶层 result 保持工具的原始 result（向后兼容 {{x.result|trim}}）
     // 解析后的对象放到 output / parsed，保留两条访问路径
-    let topResult = stepResult?.result;
+    let topResult = sourceResult;
     // 工具返回的 result 常常是 JSON 字符串包裹的 {handled,success,result,...}，
     // 这种情况下取里层的 result 作为顶层（一般是用户真正想要的字符串/对象）
     if (parsed && typeof parsed === 'object' && parsed.handled !== undefined && 'result' in parsed) {
@@ -788,6 +791,9 @@ class TaskEngine {
       let resultStr = result;
       if (result && result.content) {
         resultStr = result.content.map(c => c.text || c).join('\n');
+      } else if (result && typeof result === 'object' && Object.prototype.hasOwnProperty.call(result, 'result')) {
+        // v4.5: display the tool's semantic value, not its transport envelope.
+        resultStr = result.result;
       }
 
       // run_command/run_process: 分离退出码和实际输出
@@ -829,20 +835,33 @@ class TaskEngine {
         });
       }
 
-      return {
+      const completeResult = typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr);
+      const fullResult = result && typeof result === 'object' && typeof result._fullOutput === 'string'
+        ? result._fullOutput
+        : (result && typeof result === 'object' && typeof result._fullResult === 'string' ? result._fullResult : completeResult);
+      const genericPolicy = step.output !== undefined
+        ? this.stateManager.resolveTemplate(batchId, step.output)
+        : { mode: 'auto', inlineLimit: Number(process.env.OMEGA_CHAT_INLINE_LIMIT || 4000), hardLimit: 12000, headLines: 20, tailLines: 30 };
+      // v4.5: every tool crosses the same chat budget, including tools with native output metadata.
+      const generic = formatOutput(completeResult, '', genericPolicy);
+      const stepResponse = {
         stepIndex, tool: step.tool, success: toolSuccess, commandStatus, historyId,
-        result: typeof resultStr === 'string' ? resultStr : JSON.stringify(resultStr),
+        result: generic ? generic.display : completeResult,
         ...(result && typeof result === 'object' && 'exitCode' in result ? { exitCode: result.exitCode } : {}),
         ...(result && typeof result === 'object' && 'timedOut' in result ? { timedOut: result.timedOut } : {}),
-        ...(result && typeof result === 'object' && result.truncated !== undefined ? { truncated: result.truncated } : {}),
-        ...(result && typeof result === 'object' && result.outputMode ? { outputMode: result.outputMode } : {}),
-        ...(result && typeof result === 'object' && result.fullOutputRef ? { fullOutputRef: result.fullOutputRef } : {}),
-        ...(result && typeof result === 'object' && result.outputStats ? { outputStats: result.outputStats } : {}),
-        ...(result && typeof result === 'object' && result.artifact ? { artifact: result.artifact } : {}),
+        truncated: generic.truncated || Boolean(result && typeof result === 'object' && result.truncated),
+        outputMode: generic.policy.mode,
+        fullOutputRef: generic.fullOutputRef || (result && typeof result === 'object' ? result.fullOutputRef : null) || null,
+        outputStats: generic.truncated ? generic.stats : ((result && typeof result === 'object' && result.outputStats) || generic.stats),
+        artifact: generic.artifact || (result && typeof result === 'object' ? result.artifact : null) || null,
         ...(step.expect ? { acceptance } : {}),
         ...(errorType ? { errorType } : {}),
         ...(stepError ? { error: stepError } : {})
       };
+      if (generic?.truncated || fullResult !== completeResult) {
+        Object.defineProperty(stepResponse, '_fullResult', { value: fullResult, enumerable: false });
+      }
+      return stepResponse;
 
     } catch (e) {
       const classified = this.errorClassifier.wrapError(e, step.tool);

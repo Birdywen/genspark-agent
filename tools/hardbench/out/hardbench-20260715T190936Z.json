@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "error": "probe failed: Remote end closed connection without response",
+  "url": "http://127.0.0.1:11434/api/chat",
+  "model": "qwen3.6:35b-a3b",
+  "ts": "20260715T190936Z"
+}

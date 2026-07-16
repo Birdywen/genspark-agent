@@ -46,4 +46,76 @@ assert.equal(accepted.success, true, 'expect must inspect hidden full output, no
 const artifactMode = artifactStore.formatOutput('FULL DATA', '', { mode: 'artifact' });
 assert.equal(artifactMode.truncated, true);
 assert(artifactMode.display.includes('artifact://'));
+
+const singleLine = JSON.stringify({ rows: Array.from({ length: 400 }, (_, i) => ({ id: i, value: 'X'.repeat(80) })) });
+const singlePreview = artifactStore.formatOutput(singleLine, '', { mode: 'auto', inlineLimit: 4000 });
+assert.equal(singlePreview.truncated, true, 'single-line JSON must be truncated');
+assert(singlePreview.display.length <= 4000, 'single-line preview must obey the character budget');
+assert(singlePreview.fullOutputRef?.startsWith('artifact://'), 'single-line JSON must be recoverable');
+
+const noisyArtifact = artifactStore.createArtifact({
+  stdout: Array.from({ length: 200 }, (_, i) => `match-${i} ${'C'.repeat(300)}`).join('\n')
+});
+const boundedSearch = artifactStore.search(noisyArtifact.streams.combined.ref, {
+  regex: 'match-[0-9]+',
+  contextChars: 500,
+  maxMatches: 200,
+  outputLimit: 4000
+});
+assert.equal(boundedSearch.limited, true, 'search must report budget limiting');
+assert(boundedSearch.count <= 20, 'search must cap match count');
+assert(JSON.stringify(boundedSearch).length <= 5000, 'search response must remain near its output budget');
+
+const nativePayload = JSON.stringify({ data: 'N'.repeat(16000), marker: 'NATIVE_END' });
+router.handlers.set('native_budget_fake', {
+  async handle() {
+    return {
+      success: true,
+      result: nativePayload,
+      truncated: true,
+      fullOutputRef: noisyArtifact.streams.combined.ref,
+      outputStats: { chars: nativePayload.length, lines: 1 }
+    };
+  }
+});
+const nativeBounded = await engine._callToolOnce(
+  'smart-output-test',
+  { tool: 'native_budget_fake', params: {} },
+  1,
+  {},
+  '2s'
+);
+assert.equal(nativeBounded.success, true);
+assert.equal(nativeBounded.truncated, true);
+assert(String(nativeBounded.result).length <= 4000, 'native output metadata must not bypass chat budget');
+assert(nativeBounded.fullOutputRef?.startsWith('artifact://'));
+console.log('✓ Smart output: single-line/search-budget/native-bypass regression');
+
+
+assert.equal(accepted.result, 'preview only', 'transport envelope must not enter chat result');
+const acceptedBinding = engine._buildSavedBinding(accepted);
+assert(String(acceptedBinding.output).includes('SECRET_MIDDLE'), 'saveAs must bind hidden full output');
+
+const envelopeDriver = {
+  async handle() {
+    const response = {
+      success: true,
+      result: 'VISIBLE_VALUE',
+      stdout: 'DUPLICATE_STDOUT_SHOULD_NOT_APPEAR',
+      stderr: '',
+      exitCode: 0,
+      truncated: false,
+      outputStats: { chars: 13, lines: 1 }
+    };
+    Object.defineProperty(response, '_fullOutput', { value: 'VISIBLE_VALUE FULL_ONLY_MARKER', enumerable: false });
+    return response;
+  }
+};
+router.handlers.set('envelope_fake', envelopeDriver);
+const unwrapped = await engine._callToolOnce('smart-output-test', { tool: 'envelope_fake', params: {} }, 2, {}, '2s');
+assert.equal(unwrapped.result, 'VISIBLE_VALUE');
+assert.equal(String(unwrapped.result).includes('DUPLICATE_STDOUT_SHOULD_NOT_APPEAR'), false);
+assert(String(engine._buildSavedBinding(unwrapped).output).includes('FULL_ONLY_MARKER'));
+console.log('✓ Smart output: object-envelope unwrap/saveAs regression');
+
 console.log('✓ Smart output: lossless artifact, preview, full expect, read/search');

@@ -1,5 +1,7 @@
 // Genspark Agent Bridge - Background Service Worker v5 (跨 Tab 通信)
 
+importScripts('conversation-cache-core.js', 'conversation-cache-store.js');
+
 // === Service Worker 保活 (chrome.alarms) ===
 // MV3 service worker 空闲30秒会被挂起，用 alarms 定期唤醒
 chrome.alarms.create("keepAlive", { periodInMinutes: 0.4 }); // 每24秒
@@ -367,6 +369,17 @@ const SEND_COOLDOWN_MS = 10000; // 10 seconds
 // 发送跨 Tab 消息
 // 获取所有已注册的 Agent
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Conversation Cache v1: read-only snapshot/search/handoff channel
+  if (message && typeof message.type === 'string' && message.type.indexOf('CONV_CACHE_') === 0) {
+    OmegaConversationCacheStore.handle(message)
+      .then(sendResponse)
+      .catch(function(error) {
+        console.error('[ConversationCache] request failed:', error);
+        sendResponse({ ok: false, error: error.message });
+      });
+    return true;
+  }
+
   // 对话流转发: content.js → server-v2.dialogues
   if (message && message.type === 'dialogue_snapshot') {
     if (socket && socket.readyState === WebSocket.OPEN) {

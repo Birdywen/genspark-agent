@@ -1,6 +1,7 @@
 // sys-tools.js — 自定义工具，不走 MCP
 import { execSync, exec as _exec, execFile as _execFile, spawn } from 'child_process';
 import { readFileSync } from 'fs';
+import { applyContextHotReload } from './core/context-hot-reload.js';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -12,18 +13,20 @@ const handlers = new Map();
 // ===== db_query =====
 handlers.set('db_query', async (params) => {
   // db_query smart router (2026-05-08): SELECT/PRAGMA → .all() readonly; DDL/DML → .run() writable
-  const { sql } = params;
-  if (!sql) return { success: false, error: 'sql is required' };
+  // v4.5 (2026-07-15): sql_b64 (layer-between decode) + bind (layer-within param binding)
+  const { sql, sql_b64, bind } = params;
+  const finalSql = sql_b64 ? Buffer.from(sql_b64, 'base64').toString('utf8') : sql;
+  if (!finalSql) return { success: false, error: 'sql (or sql_b64) is required' };
   const dbPath = path.join(__dirname, 'data', 'agent.db');
-  const firstWord = sql.trim().replace(/^\(+/, '').split(/\s+/)[0].toUpperCase();
+  const firstWord = finalSql.trim().replace(/^\(+/, '').split(/\s+/)[0].toUpperCase();
   const isRead = ['SELECT', 'PRAGMA', 'WITH', 'EXPLAIN'].includes(firstWord);
   const db = new Database(dbPath, { readonly: isRead });
   try {
     if (isRead) {
-      const rows = db.prepare(sql).all();
+      const rows = bind ? db.prepare(finalSql).all(...bind) : db.prepare(finalSql).all();
       return { success: true, result: rows.length > 200 ? rows.slice(0, 200) : rows, count: rows.length };
     } else {
-      const info = db.prepare(sql).run();
+      const info = bind ? db.prepare(finalSql).run(...bind) : db.prepare(finalSql).run();
       return { success: true, result: { changes: info.changes, lastInsertRowid: Number(info.lastInsertRowid) }, mode: 'write' };
     }
   } catch (e) {
@@ -482,18 +485,11 @@ handlers.set('aidrive', async (params) => {
   }
 });
 
-// ask_ai: dual backend - APIPod (paid, OpenAI-compatible) + vear WSS (free, may break)
-// APIPOD: prefix model with 'apipod:' OR use any name in APIPOD_MODELS map
-// VEAR:   default for legacy short names (opus/sonnet/gemini/...)
-const APIPOD_MODELS = {
-  'gemini-3.1-pro-preview': 'gemini-3.1-pro-preview',
-  'gemini-3.1-pro':         'gemini-3.1-pro-preview',
-  'gpt-4o':                 'gpt-4o',
-  'gpt-4.1':                'gpt-4.1',
-};
-const APIPOD_KEY = 'sk-1f56c0aa134c1f3ce9dbb5a9df53c600291bcd617a2b116a340252b8c8579cad';
+// ask_ai: local-qwen backend via SSH tunnel to 5090 ollama (default, 0 cost, ~2.3s)
+const LOCAL_QWEN_URL = 'http://127.0.0.1:11434/api/chat';
+const LOCAL_QWEN_MODEL = 'qwen3.6:35b-a3b';
 
-async function askApipod(params, modelName) {
+async function askLocalQwen(params) {
   const messages = [];
   if (params.system) messages.push({ role: 'system', content: params.system });
   if (Array.isArray(params.messages) && params.messages.length) {
@@ -504,135 +500,51 @@ async function askApipod(params, modelName) {
     return { success: false, error: 'prompt or messages required' };
   }
   const body = {
-    model: modelName,
+    model: LOCAL_QWEN_MODEL,
     messages,
-    temperature: params.temperature ?? 0.3,
-    top_p: params.top_p ?? 0.95,
-    stream: true,
+    stream: false,
+    options: {
+      temperature: params.temperature ?? 0.3,
+      top_p: params.top_p ?? 0.95,
+    }
   };
-  if (params.reasoningEffort) body.reasoning_effort = params.reasoningEffort;
-  if (params.maxTokens) body.max_tokens = params.maxTokens;
-
-  const timeout = params.timeout || 300000;
+  if (params.maxTokens) body.options.num_predict = params.maxTokens;
+  const timeout = params.timeout || 120000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
-    const resp = await fetch('https://api.apipod.ai/v1/chat/completions', {
+    const resp = await fetch(LOCAL_QWEN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + APIPOD_KEY,
-        'Accept': 'text/event-stream',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: ctrl.signal,
+      signal: ctrl.signal
     });
-    if (!resp.ok) {
-      const errText = await resp.text();
-      return { success: false, error: 'APIPod HTTP ' + resp.status + ': ' + errText.slice(0, 500), model: modelName };
-    }
-    let text = '', usage = null, finishReason = null;
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop() || '';
-      for (const ln of lines) {
-        if (!ln.startsWith('data: ')) continue;
-        const payload = ln.slice(6).trim();
-        if (!payload || payload === '[DONE]') continue;
-        try {
-          const d = JSON.parse(payload);
-          const ch = (d.choices && d.choices[0]) || {};
-          const delta = ch.delta && ch.delta.content;
-          if (delta) text += delta;
-          if (ch.finish_reason) finishReason = ch.finish_reason;
-          if (d.usage) usage = d.usage;
-        } catch (e) {}
+    if (!resp.ok) return { success: false, error: 'local-qwen HTTP ' + resp.status + ': ' + (await resp.text()).substring(0, 500) };
+    const data = await resp.json();
+    const msg = data.message || {};
+    return {
+      success: true,
+      result: msg.content || '',
+      model: data.model,
+      thinking: msg.thinking || '',
+      tool_calls: msg.tool_calls || null,
+      usage: {
+        prompt_eval_count: data.prompt_eval_count,
+        eval_count: data.eval_count,
+        total_duration_ms: Math.round((data.total_duration || 0) / 1e6)
       }
-    }
-    return { success: true, result: text.trim(), model: modelName, backend: 'apipod', usage, finishReason };
+    };
   } catch (e) {
-    return { success: false, error: 'APIPod ' + (e.name === 'AbortError' ? 'timeout ' + timeout + 'ms' : e.message), model: modelName };
+    const isTimeout = e.name === 'AbortError';
+    return { success: false, error: (isTimeout ? 'local-qwen timeout ' + timeout + 'ms' : 'local-qwen: ' + e.message) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-// ask_ai: direct WebSocket to vear (free multi-model gateway)
+// ask_ai: local-qwen only (APIPod and vear removed 2026-07-14)
 handlers.set('ask_ai', async (params) => {
-  // Route to APIPod if model name matches
-  const reqModel = params.model || 'sonnet';
-  if (reqModel.startsWith('apipod:')) return askApipod(params, reqModel.slice(7));
-  if (APIPOD_MODELS[reqModel]) return askApipod(params, APIPOD_MODELS[reqModel]);
-
-  // Otherwise legacy vear WSS path
-  let prompt = params.prompt || (params.messages && params.messages[params.messages.length - 1]?.content) || '';
-  if (params.system) prompt = '[System Instructions]\n' + params.system + '\n\n' + prompt;
-  if (!prompt) return { success: false, error: 'prompt or messages required' };
-  const model = reqModel;
-  const timeout = params.timeout || 60000;
-
-  const cfgPath = process.env.HOME + '/.config/genspark/config.json';
-  let cfg;
-  try { cfg = JSON.parse(readFileSync(cfgPath, 'utf8')); }
-  catch(e) { return { success: false, error: 'config not found: ' + cfgPath }; }
-
-  const models = {
-    'opus': {md:11,mds:11}, 'sonnet': {md:11,mds:10}, 'haiku': {md:11,mds:7},
-    'opus-4.5': {md:11,mds:9}, 'sonnet-4.5': {md:11,mds:8},
-    'gpt5': {md:12,mds:19}, 'gpt-5-nano': {md:12,mds:15}, 'gpt-5-mini': {md:12,mds:14},
-    'gemini': {md:13,mds:6}, 'gemini-3.0': {md:13,mds:5},
-    'grok': {md:14,mds:6}, 'grok-4': {md:14,mds:5},
-    'deepseek-v3': {md:16,mds:1}, 'deepseek-r1': {md:16,mds:2}
-  };
-  const m = models[model] || models['sonnet'];
-  const ts = String(Date.now());
-  const rand = Array.from({length:11}, () => Math.floor(Math.random()*10)).join('');
-  const mid = 'udpxpnmk' + ts.slice(-8) + rand + ts.slice(-3);
-
-  const WebSocket = (await import('ws')).default;
-  return new Promise((resolve) => {
-    let result = '', resolved = false, cid = null;
-    const done = (val) => { if (!resolved) { resolved = true; clearTimeout(timer); try { ws.close(); } catch(e) {} resolve(val); } };
-    const timer = setTimeout(() => done({ success: false, error: 'timeout ' + timeout + 'ms' }), timeout);
-
-    const ws = new WebSocket(cfg.ws_url || 'wss://vear.com/conversation/go', {
-      headers: {
-        Cookie: cfg.cookies,
-        Origin: 'https://vear.com',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-      }
-    });
-
-    ws.on('open', () => {
-      ws.send(JSON.stringify({ uid: cfg.uid, mid, q: prompt, m: m.md, ms: m.mds, t: 'm' }));
-    });
-
-    ws.on('message', (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        if (msg.cid && !cid) cid = msg.cid;
-        if (msg.t === 'm' && msg.c) result += msg.c;
-        if (msg.t === 'n') {
-          done({ success: true, result: result.trim(), model, cid });
-        }
-        if (msg.t === 'b') {
-          done({ success: false, error: 'RATE_LIMIT: ' + (msg.c || 'blocked') + ' — switch VPN node and retry', model });
-        }
-        if (msg.t === 'e' || msg.t === 'err') {
-          done({ success: false, error: msg.c || 'server error', model });
-        }
-      } catch(e) {}
-    });
-
-    ws.on('error', (e) => done({ success: false, error: e.message }));
-    ws.on('close', () => done(result ? { success: true, result: result.trim(), model, cid } : { success: false, error: 'ws closed without response' }));
-  });
+  return askLocalQwen(params);
 });
 
 // datawrapper custom tool handler
@@ -963,53 +875,64 @@ handlers.set('local_store', async (params) => {
   }
 });
 
-// ===== compress: 压缩当前对话 (NLP-aware v4) =====
+// ===== compress: 语义压缩当前对话 (command-status aware v5) =====
 handlers.set('compress', async (params, context) => {
   const { evalInBrowser } = context;
   if (!evalInBrowser) return { success: false, error: 'evalInBrowser not available' };
   const headN = params.headN || 3;
   const tailN = params.tailN || 30;
   const dryRun = params.dryRun || false;
-  const useNLP = false; // NLP路径已禁用 — 外网Diffbot调用慢(8s/请求×多批), 200K对话撑不过120s超时
-  // 清除缓存确保加载最新脚本，然后调用 __shortcuts.compress
-  // IIFE 包裹: 兼容 eval()/new Function() 两种 eval_js 实现 (extension-vear/abacus/chatgpt 用 eval(), 顶层 return 非法)
+  const useNLP = false;
+
+  let forgedRefresh = 'dry-run';
+  if (!dryRun) {
+    try {
+      await new Promise((resolve, reject) => {
+        _execFile(process.execPath, [path.join(__dirname, 'update-forged.cjs')], { timeout: 60000 }, (error) => {
+          if (error) reject(error); else resolve();
+        });
+      });
+      forgedRefresh = 'updated';
+    } catch (e) {
+      forgedRefresh = 'failed: ' + e.message.slice(0, 120);
+    }
+  }
+
   const code = `(function(){
     if (window.__shortcuts) { window.__shortcuts._cache = {}; }
     return window.__shortcuts ? window.__shortcuts.compress({headN:${headN},tailN:${tailN},dryRun:${dryRun},useNLP:${useNLP}}) : 'error: __shortcuts not loaded';
   })()`;
+
   try {
     let result = await evalInBrowser(code, params.timeout || 300000);
-    if (dryRun || !result || result.error) return { success: true, result };
+    if (dryRun || !result || result.error) {
+      if (result && typeof result === 'object') result.forgedRefresh = forgedRefresh;
+      return { success: true, result };
+    }
 
-    // === 压缩成功后，注入知识 ===
     const db = new Database(path.join(__dirname, 'data', 'agent.db'));
+    let restorePrompt;
     try {
       const tplRow = db.prepare("SELECT content FROM local_store WHERE slot='guide' AND key='compress-restore-prompt'").get();
-      let restorePrompt = tplRow ? tplRow.content : 'Context restored. Compressed.';
+      restorePrompt = tplRow ? tplRow.content : 'Context restored. Compressed.';
       const midCount = result.compressed || 0;
       restorePrompt = restorePrompt.replace('{{midCount}}', midCount).replace('{{tailKeep}}', tailN);
 
-      // Meta-index: teach HOW to query, not WHAT was queried (forged has rules/stats)
-      // 1. DB schema map
       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
       const schemaMap = tables.map(t => {
         const cols = db.prepare('PRAGMA table_info(' + t.name + ')').all();
         const cnt = db.prepare('SELECT COUNT(*) as c FROM ' + t.name).get();
         return t.name + '(' + cnt.c + '): ' + cols.map(c => c.name).join(',');
       });
-      // 2. Memory slot index
       const slots = db.prepare("SELECT slot, COUNT(*) as cnt FROM memory GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
-      // 3. Local_store slot index
       const lsSlots = db.prepare("SELECT slot, COUNT(*) as cnt FROM local_store GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
-      // 4. Last 5 git commits (what did we ship recently?)
       const gitLog = db.prepare("SELECT substr(result_preview,1,150) as r FROM commands WHERE tool='git_commit' AND success=1 ORDER BY id DESC LIMIT 5").all();
-      // 5. Last task context (what were we doing?)
-      const lastOps = db.prepare("SELECT tool, substr(params,1,120) as p FROM commands WHERE success=1 ORDER BY id DESC LIMIT 10").all();
+      const lastOps = db.prepare("SELECT tool, substr(params,1,120) as p,status FROM commands ORDER BY id DESC LIMIT 10").all();
 
-      const lines = ['\n---\n## 元数据索引 (compress恢复 — 知道怎么查比记住内容重要)'];
+      const lines = ['\n---\n## 元数据索引 (compress v5 — 原始证据在 chat_archive/commands)'];
       lines.push('\n### DB表结构');
       schemaMap.forEach(s => lines.push('- ' + s));
-      lines.push('\n### Memory索引 (slot: count)');
+      lines.push('\n### Memory索引');
       slots.forEach(s => lines.push('- ' + s.slot + ': ' + s.cnt));
       lines.push('\n### LocalStore索引');
       lsSlots.forEach(s => lines.push('- ' + s.slot + ': ' + s.cnt));
@@ -1017,46 +940,50 @@ handlers.set('compress', async (params, context) => {
         lines.push('\n### 最近提交');
         gitLog.forEach(g => lines.push('- ' + (g.r || '').replace(/\n/g,' ').slice(0,120)));
       }
-      lines.push('\n### 最近操作(10条)');
-      lastOps.forEach(op => lines.push('- ' + op.tool + ': ' + (op.p || '').slice(0,100)));
-      lines.push('\n### 常用查询');
-      lines.push('- 表结构: PRAGMA table_info(表名)');
-      lines.push('- 经验教训: SELECT key,substr(content,1,100) FROM memory WHERE slot=\'forged\' AND key LIKE \'lesson-%\'');
-      lines.push('- 可用脚本: node dbfile.cjs list local_store script');
-      lines.push('- 操作历史: SELECT * FROM commands WHERE tool=\'xxx\' ORDER BY id DESC LIMIT 10');
-      lines.push('- Memory查: SELECT slot,key,substr(content,1,80) FROM memory WHERE key LIKE \'%keyword%\'');
+      lines.push('\n### 最近操作');
+      lastOps.forEach(op => lines.push('- ' + op.tool + ' [' + (op.status || 'legacy') + ']: ' + (op.p || '').slice(0,100)));
       restorePrompt += lines.join('\n');
-
-      // 注入到对话末尾 (IIFE 包裹兼容 eval()/new Function() 两种 eval_js 实现)
-      const injectCode = `(function(){
-        var pid = new URLSearchParams(window.location.search).get('id');
-        if (!pid) return {error:'no pid'};
-        return fetch('/api/project/update', {
-          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-          body: JSON.stringify({id:pid, request_not_update_permission:true})
-        }).then(r=>r.json()).then(d=>{
-          var ss = d.data.session_state;
-          ss.messages.push({ id:'compress-inject-'+Date.now(), role:'user', content:${JSON.stringify(restorePrompt)} });
-          return fetch('/api/project/update', {
-            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-            body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
-          }).then(r2=>r2.json()).then(d2=>({injected:true, totalMsgs:d2.data.session_state.messages.length}));
-        });
-      })()`;
-      const injectResult = await evalInBrowser(injectCode, 30000);
-      if (typeof result === 'string') { try { result = Object.assign({}, JSON.parse(result)); } catch(e) { result = { raw: result }; } }
-      result.knowledgeInjected = injectResult;
-    } finally { db.close(); }
-
-    // === 后台异步刷新 forged dialogue (不阻塞返回,下次新对话生效) ===
-    try {
-      const child = spawn('node', [path.join(__dirname, 'update-forged.cjs')], { detached: true, stdio: 'ignore' });
-      child.unref();
-      result.forgedRefresh = 'spawned';
-    } catch(e) {
-      result.forgedRefresh = 'failed: ' + e.message.slice(0, 80);
+    } finally {
+      db.close();
     }
 
+    const updateCode = `(function(){
+      var pid = new URLSearchParams(window.location.search).get('id');
+      if (!pid) return {error:'no pid'};
+      return Promise.all([
+        fetch('/api/project/update', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({id:pid, request_not_update_permission:true})
+        }).then(function(r){ return r.json(); }),
+        fetch('http://127.0.0.1:8766/memory?slot=toolkit&key=_forged%3Aexperience-dialogues')
+          .then(function(r){ return r.json(); })
+      ]).then(function(values){
+        var project = values[0];
+        var forgedRows = values[1];
+        var ss = project.data.session_state;
+        var latest = JSON.parse(forgedRows[0].content || '[]');
+        var projection = (${applyContextHotReload.toString()})(ss.messages, latest, ${JSON.stringify(restorePrompt)});
+        ss.messages = projection.messages;
+        return fetch('/api/project/update', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({id:pid, session_state:ss, request_not_update_permission:true})
+        }).then(function(r){ return r.json(); }).then(function(saved){
+          projection.injected = true;
+          projection.persistedTotalMsgs = saved.data.session_state.messages.length;
+          delete projection.messages;
+          return projection;
+        });
+      });
+    })()`;
+
+    const contextUpdate = await evalInBrowser(updateCode, 30000);
+    if (typeof result === 'string') {
+      try { result = Object.assign({}, JSON.parse(result)); }
+      catch { result = { raw: result }; }
+    }
+    result.knowledgeInjected = contextUpdate;
+    result.forgedRefresh = forgedRefresh;
+    result.semanticVersion = result.semanticVersion || 5;
     return { success: true, result };
   } catch (e) {
     return { success: false, error: e.message };

@@ -85,6 +85,14 @@
     }, CONFIG.TIMEOUT_MS);
   }
 
+  function currentConversationId() {
+    try {
+      return new URLSearchParams(location.search).get('id') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
     const dKey = 'agent_disabled_' + location.href.split('?')[1];
@@ -129,7 +137,9 @@
         type: 'tool_batch',
         id: batchId,
         steps: batch.steps,
-        options: batch.options || { stopOnError: true }
+        options: batch.options || { stopOnError: true },
+        session_id: currentConversationId() || undefined,
+        conversationId: currentConversationId() || undefined
       }
     }, (response) => {
       if (chrome.runtime.lastError) {
@@ -855,7 +865,9 @@
             type: 'tool_call', 
             tool: tool.name, 
             params: finalParams, 
-            id: callId 
+            id: callId,
+            session_id: currentConversationId() || undefined,
+            conversationId: currentConversationId() || undefined
           }
         }, (response) => {
         if (chrome.runtime.lastError) {

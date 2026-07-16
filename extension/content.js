@@ -223,12 +223,349 @@
     }
   }
 
-  // Omega payload parser: strict JSON, deterministic control-char repair, and lossless raw blocks.
-  function omegaJsonError(error, text) { const match = String(error && error.message || error).match(/position ([0-9]+)/i); if (!match) return error; const pos = Number(match[1]); const before = text.slice(0, pos); const lf = String.fromCharCode(10); const line = before.split(lf).length; const last = before.lastIndexOf(lf); const column = pos - last; const context = text.slice(Math.max(0, pos - 60), Math.min(text.length, pos + 60)).split(lf).join('↵'); return new SyntaxError(String(error.message) + ' | line ' + line + ', column ' + column + ' | near: ' + context); }
-  function omegaRepairJsonControlChars(text) { let out = '', inString = false, escaped = false; for (let i = 0; i < text.length; i++) { const ch = text[i]; const code = ch.charCodeAt(0); if (escaped) { out += ch; escaped = false; continue; } if (code === 92) { out += ch; escaped = true; continue; } if (code === 34) { inString = !inString; out += ch; continue; } if (inString && code < 32) { const slash = String.fromCharCode(92); if (code === 10) out += slash + 'n'; else if (code === 13) out += slash + 'r'; else if (code === 9) out += slash + 't'; else out += slash + 'u' + code.toString(16).padStart(4, '0'); continue; } out += ch; } return out; }
-  function omegaHydrateRaw(value, blocks) { if (Array.isArray(value)) return value.map(function(item) { return omegaHydrateRaw(item, blocks); }); if (!value || typeof value !== 'object') return value; const keys = Object.keys(value); if (keys.length === 1 && keys[0] === '$raw') { const id = value.$raw; if (typeof id !== 'string' || !Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Omega raw block not found: ' + id); return blocks[id]; } const result = {}; for (const key of keys) result[key] = omegaHydrateRaw(value[key], blocks); return result; }
-  function parseOmegaPayload(raw) { const lf = String.fromCharCode(10); const lines = String(raw || '').trim().split(lf); const payloadLines = []; const blocks = Object.create(null); for (let i = 0; i < lines.length; i++) { const line = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i]; if (!line.startsWith('ΩRAW ')) { payloadLines.push(line); continue; } const id = line.slice(5).trim(); if (!id || !/^[A-Za-z0-9_.-]+$/.test(id)) throw new Error('Invalid Omega raw block id: ' + id); if (Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Duplicate Omega raw block: ' + id); const body = []; let closed = false; for (i = i + 1; i < lines.length; i++) { const rawLine = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i]; if (rawLine === 'ΩRAWEND' || rawLine === 'ΩRAWEND ' + id) { closed = true; break; } body.push(rawLine); } if (!closed) throw new Error('Unclosed Omega raw block: ' + id); blocks[id] = body.join(lf); } let payload = payloadLines.join(lf).trim(); if (payload.startsWith('```')) { const firstLf = payload.indexOf(lf); if (firstLf !== -1) payload = payload.slice(firstLf + 1); } if (payload.endsWith('```')) payload = payload.slice(0, -3).trim(); let parsed; try { parsed = JSON.parse(payload); } catch (firstError) { const repaired = omegaRepairJsonControlChars(payload); if (repaired === payload) throw omegaJsonError(firstError, payload); try { parsed = JSON.parse(repaired); } catch (secondError) { throw omegaJsonError(secondError, repaired); } } return omegaHydrateRaw(parsed, blocks); }
-function log(...args) {
+  // Omega payload parser: strict JSON, deterministic repair, and lossless raw blocks.
+  function omegaJsonError(error, text) {
+    const match = String(error && error.message || error).match(/position ([0-9]+)/i);
+    if (!match) return error;
+    const pos = Number(match[1]);
+    const before = text.slice(0, pos);
+    const lf = String.fromCharCode(10);
+    const line = before.split(lf).length;
+    const last = before.lastIndexOf(lf);
+    const column = pos - last;
+    const context = text.slice(Math.max(0, pos - 60), Math.min(text.length, pos + 60)).split(lf).join('↵');
+    return new SyntaxError(String(error.message) + ' | line ' + line + ', column ' + column + ' | near: ' + context);
+  }
+
+  function omegaRepairJsonControlChars(text) {
+    let out = '', inString = false, escaped = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      const code = ch.charCodeAt(0);
+      if (escaped) { out += ch; escaped = false; continue; }
+      if (code === 92) { out += ch; escaped = true; continue; }
+      if (code === 34) { inString = !inString; out += ch; continue; }
+      if (inString && code < 32) {
+        const slash = String.fromCharCode(92);
+        if (code === 10) out += slash + 'n';
+        else if (code === 13) out += slash + 'r';
+        else if (code === 9) out += slash + 't';
+        else out += slash + 'u' + code.toString(16).padStart(4, '0');
+        continue;
+      }
+      out += ch;
+    }
+    return out;
+  }
+
+  function omegaRepairJsonBrackets(text) {
+    const stack = [];
+    const extra = [];
+    let inString = false;
+    let escaped = false;
+    let mismatch = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) { escaped = false; continue; }
+      if (inString && ch === String.fromCharCode(92)) { escaped = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+
+      if (ch === '{' || ch === '[') {
+        stack.push({ ch: ch, index: i });
+        continue;
+      }
+      if (ch !== '}' && ch !== ']') continue;
+
+      const expected = ch === '}' ? '{' : '[';
+      if (stack.length && stack[stack.length - 1].ch === expected) {
+        stack.pop();
+      } else if (!stack.length) {
+        extra.push(i);
+      } else {
+        mismatch = true;
+        break;
+      }
+    }
+
+    if (inString || mismatch) return { text: text, actions: [] };
+
+    if (extra.length) {
+      const first = extra[0];
+      if (!/^[\s}\]]*$/.test(text.slice(first))) return { text: text, actions: [] };
+      const remove = new Set(extra);
+      let repaired = '';
+      for (let i = 0; i < text.length; i++) if (!remove.has(i)) repaired += text[i];
+      return {
+        text: repaired,
+        actions: [{ type: 'remove_trailing_extra_brackets', count: extra.length, positions: extra.slice() }]
+      };
+    }
+
+    if (stack.length) {
+      let suffix = '';
+      const missing = [];
+      for (let i = stack.length - 1; i >= 0; i--) {
+        const close = stack[i].ch === '{' ? '}' : ']';
+        suffix += close;
+        missing.push(close);
+      }
+      return {
+        text: text + suffix,
+        actions: [{ type: 'append_missing_brackets', value: suffix, count: missing.length }]
+      };
+    }
+
+    return { text: text, actions: [] };
+  }
+
+  function omegaRepairJsonTrailingCommas(text) {
+    // Remove trailing commas before } or ] outside strings. Deterministic, safe.
+    let out = '';
+    let inString = false;
+    let escaped = false;
+    let removed = 0;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) { out += ch; escaped = false; continue; }
+      if (inString && ch === String.fromCharCode(92)) { out += ch; escaped = true; continue; }
+      if (ch === '"') { inString = !inString; out += ch; continue; }
+      if (!inString && ch === ',') {
+        let j = i + 1;
+        while (j < text.length && /[ \t\r\n]/.test(text[j])) j++;
+        if (j < text.length && (text[j] === '}' || text[j] === ']')) {
+          removed++;
+          continue; // drop comma
+        }
+      }
+      out += ch;
+    }
+    if (!removed) return { text: text, actions: [] };
+    return {
+      text: out,
+      actions: [{ type: 'remove_trailing_commas', count: removed }]
+    };
+  }
+
+  function omegaRepairJsonMissingCommas(text) {
+    // Insert missing commas between adjacent JSON values outside strings.
+    // Lesson cases: }{  ]{  }[  ][  "a" "b"  1 "k"  true "k"  } "k".
+    // Insert immediately after previous non-ws token so we never emit ", ".
+    let out = '';
+    let inString = false;
+    let escaped = false;
+    let inserted = 0;
+    const isWS = (c) => c === ' ' || c === '\t' || c === '\n' || c === '\r';
+
+    function prevNonWsIndex() {
+      for (let k = out.length - 1; k >= 0; k--) {
+        if (!isWS(out[k])) return k;
+      }
+      return -1;
+    }
+
+    function endsWithLiteral(idx) {
+      if (idx < 0) return false;
+      const tail = out.slice(Math.max(0, idx - 4), idx + 1);
+      return /(?:true|false|null)$/.test(tail);
+    }
+
+    function needsCommaBeforeValue(prevIdx) {
+      if (prevIdx < 0) return false;
+      const pc = out[prevIdx];
+      if (pc === '"' || pc === '}' || pc === ']') return true;
+      if (/[0-9]/.test(pc)) return true;
+      if ((pc === 'e' || pc === 'l') && endsWithLiteral(prevIdx)) return true;
+      return false;
+    }
+
+    function insertCommaAfter(prevIdx) {
+      // keep any whitespace after prev token; place comma right after token
+      out = out.slice(0, prevIdx + 1) + ',' + out.slice(prevIdx + 1);
+      inserted++;
+    }
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (escaped) { out += ch; escaped = false; continue; }
+      if (inString && ch === String.fromCharCode(92)) { out += ch; escaped = true; continue; }
+      if (ch === '"') {
+        if (!inString) {
+          const prevIdx = prevNonWsIndex();
+          if (needsCommaBeforeValue(prevIdx)) insertCommaAfter(prevIdx);
+        }
+        inString = !inString;
+        out += ch;
+        continue;
+      }
+      if (inString) { out += ch; continue; }
+
+      if (ch === '{' || ch === '[') {
+        const prevIdx = prevNonWsIndex();
+        if (needsCommaBeforeValue(prevIdx)) insertCommaAfter(prevIdx);
+        out += ch;
+        continue;
+      }
+
+      out += ch;
+    }
+
+    if (!inserted) return { text: text, actions: [] };
+    return {
+      text: out,
+      actions: [{ type: 'insert_missing_commas', count: inserted }]
+    };
+  }
+
+  function omegaAttachRepairMeta(parsed, actions, originalError) {
+    if (!parsed || (typeof parsed !== 'object' && !Array.isArray(parsed))) return parsed;
+    const meta = {
+      repaired: true,
+      actions: actions,
+      originalError: String(originalError && originalError.message || originalError).slice(0, 300)
+    };
+    try {
+      Object.defineProperty(parsed, '__omegaRepair', {
+        value: meta,
+        enumerable: false,
+        configurable: false,
+        writable: false
+      });
+    } catch (_) {}
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[OmegaJSON] payload repaired:', actions);
+    }
+    return parsed;
+  }
+
+  function omegaHydrateRaw(value, blocks) {
+    if (Array.isArray(value)) return value.map(function(item) { return omegaHydrateRaw(item, blocks); });
+    if (!value || typeof value !== 'object') return value;
+    const keys = Object.keys(value);
+    if (keys.length === 1 && keys[0] === '$raw') {
+      const id = value.$raw;
+      if (typeof id !== 'string' || !Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Omega raw block not found: ' + id);
+      return blocks[id];
+    }
+    const result = {};
+    for (const key of keys) result[key] = omegaHydrateRaw(value[key], blocks);
+    return result;
+  }
+
+  function parseOmegaPayload(raw) {
+    const lf = String.fromCharCode(10);
+    const lines = String(raw || '').trim().split(lf);
+    const payloadLines = [];
+    const blocks = Object.create(null);
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i];
+      if (!line.startsWith('ΩRAW ')) { payloadLines.push(line); continue; }
+      const id = line.slice(5).trim();
+      if (!id || !/^[A-Za-z0-9_.-]+$/.test(id)) throw new Error('Invalid Omega raw block id: ' + id);
+      if (Object.prototype.hasOwnProperty.call(blocks, id)) throw new Error('Duplicate Omega raw block: ' + id);
+      const body = [];
+      let closed = false;
+      for (i = i + 1; i < lines.length; i++) {
+        const rawLine = lines[i].endsWith(String.fromCharCode(13)) ? lines[i].slice(0, -1) : lines[i];
+        if (rawLine === 'ΩRAWEND' || rawLine === 'ΩRAWEND ' + id) { closed = true; break; }
+        body.push(rawLine);
+      }
+      if (!closed) throw new Error('Unclosed Omega raw block: ' + id);
+      blocks[id] = body.join(lf);
+    }
+
+    let payload = payloadLines.join(lf).trim();
+    if (payload.startsWith('```')) {
+      const firstLf = payload.indexOf(lf);
+      if (firstLf !== -1) payload = payload.slice(firstLf + 1);
+    }
+    if (payload.endsWith('```')) payload = payload.slice(0, -3).trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(payload);
+    } catch (firstError) {
+      const actions = [];
+      let repaired = omegaRepairJsonControlChars(payload);
+      if (repaired !== payload) actions.push({ type: 'escape_control_characters' });
+
+      // Deterministic structural repairs before giving up.
+      // Order: trailing commas -> missing commas -> brackets (append/remove).
+      const applyRepair = (fn, input) => {
+        const r = fn(input);
+        if (r.text !== input && r.actions && r.actions.length) {
+          actions.push.apply(actions, r.actions);
+          return r.text;
+        }
+        return input;
+      };
+
+      try {
+        parsed = JSON.parse(repaired);
+      } catch (controlError) {
+        repaired = applyRepair(omegaRepairJsonTrailingCommas, repaired);
+        try {
+          parsed = JSON.parse(repaired);
+        } catch (commaErr1) {
+          repaired = applyRepair(omegaRepairJsonMissingCommas, repaired);
+          try {
+            parsed = JSON.parse(repaired);
+          } catch (commaErr2) {
+            const beforeBrackets = repaired;
+            const bracketRepair = omegaRepairJsonBrackets(repaired);
+            if (bracketRepair.text !== repaired) {
+              repaired = bracketRepair.text;
+              actions.push.apply(actions, bracketRepair.actions);
+            }
+            try {
+              parsed = JSON.parse(repaired);
+            } catch (bracketError) {
+              // One more pass: commas after bracket fix (rare), then brackets again.
+              let again = applyRepair(omegaRepairJsonTrailingCommas, repaired);
+              again = applyRepair(omegaRepairJsonMissingCommas, again);
+              if (again !== repaired) {
+                repaired = again;
+                try {
+                  parsed = JSON.parse(repaired);
+                } catch (e3) {
+                  const br2 = omegaRepairJsonBrackets(repaired);
+                  if (br2.text !== repaired) {
+                    repaired = br2.text;
+                    actions.push.apply(actions, br2.actions);
+                  }
+                  try {
+                    parsed = JSON.parse(repaired);
+                  } catch (finalErr) {
+                    throw omegaJsonError(finalErr, repaired);
+                  }
+                }
+              } else if (bracketRepair.text === beforeBrackets) {
+                throw omegaJsonError(commaErr2, repaired);
+              } else {
+                throw omegaJsonError(bracketError, repaired);
+              }
+            }
+          }
+        }
+      }
+      parsed = omegaAttachRepairMeta(parsed, actions, firstError);
+    }
+
+    const hydrated = omegaHydrateRaw(parsed, blocks);
+    if (parsed && parsed.__omegaRepair && hydrated && typeof hydrated === 'object') {
+      try {
+        Object.defineProperty(hydrated, '__omegaRepair', {
+          value: parsed.__omegaRepair,
+          enumerable: false,
+          configurable: false,
+          writable: false
+        });
+      } catch (_) {}
+    }
+    return hydrated;
+  }function log(...args) {
     if (CONFIG.DEBUG) console.log('[Agent]', ...args);
   }
 
@@ -973,6 +1310,14 @@ function processMessageQueue() {
     }, CONFIG.TIMEOUT_MS);
   }
 
+  function currentConversationId() {
+    try {
+      return new URLSearchParams(location.search).get('id') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // 执行批量工具调用
   function executeBatchCall(batch, callHash) {
     const dKey = 'agent_disabled_' + location.href.split('?')[1];
@@ -1017,7 +1362,9 @@ function processMessageQueue() {
         type: 'tool_batch',
         id: batchId,
         steps: batch.steps,
-        options: batch.options || { stopOnError: true }
+        options: batch.options || { stopOnError: true },
+        session_id: currentConversationId() || undefined,
+        conversationId: currentConversationId() || undefined
       }
     }, (response) => {
       if (chrome.runtime.lastError) {
@@ -1743,7 +2090,9 @@ function processMessageQueue() {
             type: 'tool_call', 
             tool: tool.name, 
             params: finalParams, 
-            id: callId 
+            id: callId,
+            session_id: currentConversationId() || undefined,
+            conversationId: currentConversationId() || undefined
           }
         }, (response) => {
         if (chrome.runtime.lastError) {
@@ -4222,7 +4571,608 @@ ${conversationText}
     }
   }
 
-  // ============== 消息监听 ==============
+  // ============== Conversation Cache v1 (read-only shadow cache) ==============
+
+  (function initConversationCache() {
+    if (window.conversationCache) return;
+
+    var currentId = null;
+    var lastCaptureAt = 0;
+    var capturePending = null;
+    var AUTO_CAPTURE_MS = 60000;
+
+    function conversationIdFromUrl() {
+      try {
+        var url = new URL(window.location.href);
+        return url.searchParams.get('id') || '';
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function send(message) {
+      return new Promise(function(resolve, reject) {
+        try {
+          chrome.runtime.sendMessage(message, function(response) {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            if (!response) {
+              reject(new Error('Empty response from conversation cache'));
+              return;
+            }
+            if (response.ok === false) {
+              reject(new Error(response.error || 'Conversation cache request failed'));
+              return;
+            }
+            resolve(response);
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+
+    async function readConversation(conversationId) {
+      conversationId = conversationId || conversationIdFromUrl();
+      if (!conversationId) throw new Error('No conversation id in current URL');
+      var response = await fetch('/api/project/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: conversationId,
+          request_not_update_permission: true
+        })
+      });
+      if (!response.ok) throw new Error('Conversation API returned HTTP ' + response.status);
+      var payload = await response.json();
+      if (!payload || !payload.data) throw new Error('Conversation API returned no data');
+      return payload.data;
+    }
+
+    async function capture(reason, options) {
+      options = options || {};
+      var conversationId = options.conversationId || conversationIdFromUrl();
+      if (!conversationId) return { ok: false, skipped: true, reason: 'no_conversation_id' };
+      var now = Date.now();
+      if (!options.force && capturePending) return capturePending;
+      if (!options.force && now - lastCaptureAt < 3000) {
+        return { ok: true, skipped: true, reason: 'debounced' };
+      }
+
+      capturePending = (async function() {
+        var data = await readConversation(conversationId);
+        var response = await send({
+          type: 'CONV_CACHE_SAVE',
+          conversationId: conversationId,
+          data: data,
+          options: {
+            reason: reason || 'manual',
+            savedAt: new Date().toISOString()
+          }
+        });
+        lastCaptureAt = Date.now();
+        return response;
+      })();
+
+      try {
+        return await capturePending;
+      } finally {
+        capturePending = null;
+      }
+    }
+
+    async function list(options) {
+      var response = await send({
+        type: 'CONV_CACHE_LIST',
+        options: options || {}
+      });
+      return response.result || [];
+    }
+
+    async function latest(conversationId) {
+      var response = await send({
+        type: 'CONV_CACHE_LATEST',
+        conversationId: conversationId || conversationIdFromUrl()
+      });
+      return response.result || null;
+    }
+
+    async function get(snapshotId) {
+      var response = await send({
+        type: 'CONV_CACHE_GET',
+        snapshotId: snapshotId
+      });
+      return response.result || null;
+    }
+
+    async function diff(options) {
+      options = options || {};
+      if (!options.conversationId && !options.olderSnapshotId) {
+        options.conversationId = conversationIdFromUrl();
+      }
+      var response = await send({
+        type: 'CONV_CACHE_DIFF',
+        options: options
+      });
+      return response.result;
+    }
+
+    async function search(query, options) {
+      if (!String(query || '').trim()) return [];
+      var response = await send({
+        type: 'CONV_CACHE_SEARCH',
+        query: String(query),
+        options: options || {}
+      });
+      return response.result || [];
+    }
+
+    async function handoff(options) {
+      options = options || {};
+      if (!options.snapshotId && !options.conversationId) {
+        options.conversationId = conversationIdFromUrl();
+      }
+      var response = await send({
+        type: 'CONV_CACHE_HANDOFF',
+        options: options
+      });
+      return response.result;
+    }
+
+    async function stats() {
+      var response = await send({ type: 'CONV_CACHE_STATS' });
+      return response.result;
+    }
+
+    async function copyHandoff(options) {
+      var result = await handoff(options || {});
+      await navigator.clipboard.writeText(result.text);
+      return result;
+    }
+
+    async function captureAndDiff(reason) {
+      var conversationId = conversationIdFromUrl();
+      var before = await list({ conversationId: conversationId, limit: 1 });
+      var saved = await capture(reason || 'manual', { force: true });
+      var after = await list({ conversationId: conversationId, limit: 1 });
+      if (!before.length || !after.length || before[0].snapshotId === after[0].snapshotId) {
+        return { saved: saved, diff: null };
+      }
+      return {
+        saved: saved,
+        diff: await diff({
+          olderSnapshotId: before[0].snapshotId,
+          newerSnapshotId: after[0].snapshotId
+        })
+      };
+    }
+
+    async function recordArchaeologyRef(payload) {
+      payload = payload || {};
+      try {
+        var conversationId = payload.conversation_id || payload.conversationId || conversationIdFromUrl();
+        if (!conversationId || !payload.ref_type) return { ok: false, skipped: true, reason: 'missing_ids' };
+        var body = {
+          conversation_id: conversationId,
+          snapshot_id: payload.snapshot_id || payload.snapshotId || null,
+          message_id: payload.message_id || payload.messageId || null,
+          command_id: payload.command_id || payload.commandId || null,
+          ref_type: payload.ref_type,
+          source: payload.source || 'ui',
+          meta: payload.meta || null,
+          title: payload.title || null,
+          message_count: payload.message_count || payload.messageCount || null,
+          force: !!payload.force,
+          messages: payload.messages || null,
+          head_json: payload.head_json || null
+        };
+        var response = await fetch('http://127.0.0.1:8766/conversation-ref', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+          var errText = await response.text();
+          throw new Error('conversation-ref HTTP ' + response.status + ' ' + String(errText).slice(0, 200));
+        }
+        return await response.json();
+      } catch (error) {
+        console.warn('[ConversationCache] recordArchaeologyRef failed:', error);
+        return { ok: false, error: error && error.message ? error.message : String(error) };
+      }
+    }
+
+    window.conversationCache = {
+      version: 1,
+      currentId: conversationIdFromUrl,
+      readConversation: readConversation,
+      capture: capture,
+      captureAndDiff: captureAndDiff,
+      list: list,
+      latest: latest,
+      get: get,
+      diff: diff,
+      search: search,
+      handoff: handoff,
+      copyHandoff: copyHandoff,
+      stats: stats,
+      recordRef: recordArchaeologyRef
+    };
+
+    function safeAutoCapture(reason) {
+      capture(reason).then(function(result) {
+        if (result && !result.skipped && typeof addLog === 'function') {
+          var suffix = result.deduplicated ? '（无变化）' : '（新快照）';
+          addLog('🧠 对话缓存已保存 ' + suffix, 'success');
+        }
+      }).catch(function(error) {
+        console.warn('[ConversationCache] auto capture failed:', error);
+      });
+    }
+
+    function detectConversationChange() {
+      var id = conversationIdFromUrl();
+      if (!id || id === currentId) return;
+      currentId = id;
+      setTimeout(function() { safeAutoCapture('conversation-open'); }, 1500);
+    }
+
+    currentId = conversationIdFromUrl();
+    if (currentId) setTimeout(function() { safeAutoCapture('extension-load'); }, 2500);
+
+    setInterval(function() {
+      detectConversationChange();
+      if (conversationIdFromUrl()) safeAutoCapture('interval');
+    }, AUTO_CAPTURE_MS);
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'hidden' && conversationIdFromUrl()) {
+        safeAutoCapture('visibility-hidden');
+      } else if (document.visibilityState === 'visible') {
+        detectConversationChange();
+      }
+    });
+
+    console.log('[ConversationCache] v1 client ready');
+  })();  // ============== Conversation Cache v1 UI ==============
+
+  (function initConversationCacheUI() {
+    if (window.conversationCacheUI) return;
+
+    var overlayId = 'conversation-cache-overlay';
+
+    async function recordUiRef(payload) {
+      try {
+        if (!window.conversationCache || !window.conversationCache.recordRef) return null;
+        return await window.conversationCache.recordRef(payload || {});
+      } catch (error) {
+        console.warn('[ConversationCacheUI] recordUiRef failed:', error);
+        return null;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatTime(value) {
+      if (!value) return 'unknown';
+      try { return new Date(value).toLocaleString(); }
+      catch (error) { return String(value); }
+    }
+
+    function getElements() {
+      return {
+        overlay: document.getElementById(overlayId),
+        status: document.getElementById('conversation-cache-status'),
+        results: document.getElementById('conversation-cache-results'),
+        query: document.getElementById('conversation-cache-query')
+      };
+    }
+
+    function setStatus(message, kind) {
+      var element = getElements().status;
+      if (!element) return;
+      element.textContent = message;
+      element.dataset.kind = kind || 'info';
+    }
+
+    function renderEmpty(message) {
+      var results = getElements().results;
+      if (!results) return;
+      results.innerHTML = '<div class="cc-empty">' + escapeHtml(message) + '</div>';
+    }
+
+    function renderSnapshots(rows) {
+      var results = getElements().results;
+      if (!results) return;
+      if (!rows.length) {
+        renderEmpty('当前对话还没有缓存快照。');
+        return;
+      }
+      results.innerHTML = rows.map(function(row) {
+        return '<div class="cc-card">' +
+          '<div class="cc-card-title">' + escapeHtml(row.title || row.conversationId) + '</div>' +
+          '<div class="cc-meta">' + escapeHtml(formatTime(row.savedAt)) +
+          ' · ' + escapeHtml(row.reason) +
+          ' · ' + row.messageCount + ' 条消息</div>' +
+          '<div class="cc-hash">' + escapeHtml(row.snapshotHash) + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderSearch(rows) {
+      var results = getElements().results;
+      if (!results) return;
+      if (!rows.length) {
+        renderEmpty('没有找到匹配的历史内容。');
+        return;
+      }
+      results.innerHTML = rows.map(function(row) {
+        return '<div class="cc-card">' +
+          '<div class="cc-card-title">' + escapeHtml(row.title || row.conversationId) + '</div>' +
+          '<div class="cc-meta">' + escapeHtml(formatTime(row.savedAt)) +
+          ' · ' + escapeHtml(row.role) +
+          ' · message ' + escapeHtml(row.messageId) + '</div>' +
+          '<div class="cc-preview">' + escapeHtml(row.preview) + '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderDiff(diff) {
+      var results = getElements().results;
+      if (!results) return;
+      if (!diff) {
+        renderEmpty('只有一个快照，暂时无法比较。');
+        return;
+      }
+      var sections = [
+        { name: '新增', rows: diff.added || [], color: '#34d399' },
+        { name: '删除', rows: diff.removed || [], color: '#f87171' },
+        { name: '修改', rows: diff.changed || [], color: '#fbbf24' }
+      ];
+      var html = '<div class="cc-summary">消息数 ' + diff.oldCount + ' → ' + diff.newCount +
+        '；新增 ' + diff.added.length +
+        '，删除 ' + diff.removed.length +
+        '，修改 ' + diff.changed.length + '</div>';
+      sections.forEach(function(section) {
+        if (!section.rows.length) return;
+        html += '<div class="cc-section-title" style="color:' + section.color + '">' +
+          section.name + '（' + section.rows.length + '）</div>';
+        section.rows.slice(0, 20).forEach(function(row) {
+          var body = row.after || row.preview || '';
+          html += '<div class="cc-card"><div class="cc-meta">' +
+            escapeHtml(row.role || '') + ' · ' + escapeHtml(row.id) +
+            '</div><div class="cc-preview">' + escapeHtml(body) + '</div></div>';
+        });
+      });
+      if (diff.identical) html += '<div class="cc-empty">两个快照内容完全一致。</div>';
+      results.innerHTML = html;
+    }
+
+    async function loadCurrentSnapshots() {
+      var cache = window.conversationCache;
+      var conversationId = cache.currentId();
+      if (!conversationId) {
+        renderEmpty('当前 URL 没有 conversation id。');
+        return;
+      }
+      setStatus('正在读取最近快照…');
+      var rows = await cache.list({ conversationId: conversationId, limit: 20 });
+      renderSnapshots(rows);
+      setStatus('当前对话共有 ' + rows.length + ' 个保留快照', 'success');
+    }
+
+    async function captureNow() {
+      setStatus('正在从网页 API 读取完整会话并保存…');
+      var result = await window.conversationCache.capture('manual-ui', { force: true });
+      try {
+        var snapId = result && (result.snapshotId || (result.saved && result.saved.snapshotId) || result.snapshot_id);
+        if (!snapId && result && result.result && result.result.snapshotId) snapId = result.result.snapshotId;
+        if (snapId) {
+          await recordUiRef({
+            ref_type: 'manual',
+            source: 'ui',
+            snapshot_id: snapId,
+            force: true,
+            title: result.title || (result.saved && result.saved.title) || null,
+            message_count: result.messageCount || (result.saved && result.saved.messageCount) || null,
+            meta: { reason: 'manual-capture' }
+          });
+        }
+      } catch (e) { console.warn('[ConversationCacheUI] capture ref failed', e); }
+      var note = result.deduplicated ? '内容无变化，已去重' : '已创建新快照';
+      setStatus(note + ' · ' + result.messageCount + ' 条消息', 'success');
+      await loadCurrentSnapshots();
+    }
+
+    async function searchNow() {
+      var query = getElements().query.value.trim();
+      if (!query) {
+        setStatus('请输入关键词', 'error');
+        return;
+      }
+      setStatus('正在搜索最多 200 个历史快照…');
+      var rows = await window.conversationCache.search(query, {
+        maxSnapshots: 200,
+        limit: 30
+      });
+      renderSearch(rows);
+      try {
+        var top = rows && rows[0];
+        await recordUiRef({
+          ref_type: 'search',
+          source: 'ui',
+          snapshot_id: top && top.snapshotId || null,
+          message_id: top && top.messageId || null,
+          meta: { query: query, hits: rows.length }
+        });
+      } catch (e) {}
+      setStatus('找到 ' + rows.length + ' 条候选结果', 'success');
+    }
+
+    async function diffLatest() {
+      var conversationId = window.conversationCache.currentId();
+      setStatus('正在比较最近两个快照…');
+      var rows = await window.conversationCache.list({
+        conversationId: conversationId,
+        limit: 2
+      });
+      if (rows.length < 2) {
+        renderDiff(null);
+        setStatus('至少需要两个不同快照', 'error');
+        return;
+      }
+      var diff = await window.conversationCache.diff({
+        olderSnapshotId: rows[1].snapshotId,
+        newerSnapshotId: rows[0].snapshotId
+      });
+      try { await recordUiRef({ ref_type: 'diff', source: 'ui', snapshot_id: (rows[0] && rows[0].snapshotId) || null, meta: { action: 'diff-latest' } }); } catch (e) {}
+      renderDiff(diff);
+      setStatus(diff.identical ? '两个快照完全一致' : '差异计算完成', 'success');
+    }
+
+    async function copyHandoff() {
+      setStatus('正在筛选有价值内容并生成接力包…');
+      var result = await window.conversationCache.copyHandoff({ maxMessages: 18 });
+      try { await recordUiRef({ ref_type: 'handoff', source: 'ui', force: true, meta: { action: 'handoff' } }); } catch (e) {}
+      setStatus('接力包已复制：筛选 ' + result.selectedCount + ' 条消息', 'success');
+      var results = getElements().results;
+      results.innerHTML = '<pre class="cc-handoff">' + escapeHtml(result.text) + '</pre>';
+    }
+
+    async function loadStats() {
+      var stats = await window.conversationCache.stats();
+      setStatus('IndexedDB：' + stats.conversations + ' 个对话，' +
+        stats.snapshots + ' 个快照；每对话最多保留 ' +
+        stats.retentionPerConversation + ' 个', 'success');
+    }
+
+    function close() {
+      var overlay = document.getElementById(overlayId);
+      if (overlay) overlay.remove();
+    }
+
+    function open() {
+      close();
+      var overlay = document.createElement('div');
+      overlay.id = overlayId;
+      overlay.innerHTML =
+        '<div id="conversation-cache-modal">' +
+          '<div class="cc-header">' +
+            '<div><strong>🧠 Omega Conversation Cache</strong>' +
+            '<div class="cc-subtitle">只读影子缓存 · 不回写网页对话</div></div>' +
+            '<button id="conversation-cache-close">×</button>' +
+          '</div>' +
+          '<div class="cc-toolbar">' +
+            '<button id="cc-capture">保存快照</button>' +
+            '<button id="cc-list">最近快照</button>' +
+            '<button id="cc-diff">比较最近两版</button>' +
+            '<button id="cc-handoff">复制接力包</button>' +
+            '<button id="cc-stats">统计</button>' +
+          '</div>' +
+          '<div class="cc-search">' +
+            '<input id="conversation-cache-query" placeholder="搜索一周前的结论、路径、错误或关键词">' +
+            '<button id="cc-search">搜索全部历史</button>' +
+          '</div>' +
+          '<div id="conversation-cache-status">准备就绪</div>' +
+          '<div id="conversation-cache-results"></div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+
+      document.getElementById('conversation-cache-close').onclick = close;
+      overlay.addEventListener('click', function(event) {
+        if (event.target === overlay) close();
+      });
+      document.getElementById('cc-capture').onclick = function() {
+        captureNow().catch(showError);
+      };
+      document.getElementById('cc-list').onclick = function() {
+        loadCurrentSnapshots().catch(showError);
+      };
+      document.getElementById('cc-diff').onclick = function() {
+        diffLatest().catch(showError);
+      };
+      document.getElementById('cc-handoff').onclick = function() {
+        copyHandoff().catch(showError);
+      };
+      document.getElementById('cc-stats').onclick = function() {
+        loadStats().catch(showError);
+      };
+      document.getElementById('cc-search').onclick = function() {
+        searchNow().catch(showError);
+      };
+      document.getElementById('conversation-cache-query').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') searchNow().catch(showError);
+      });
+
+      loadCurrentSnapshots().catch(showError);
+    }
+
+    function showError(error) {
+      console.error('[ConversationCacheUI]', error);
+      setStatus(error.message || String(error), 'error');
+    }
+
+    function installButton() {
+      var actions = document.getElementById('agent-actions');
+      if (!actions || document.getElementById('agent-conversation-cache')) return false;
+      var button = document.createElement('button');
+      button.id = 'agent-conversation-cache';
+      button.textContent = '🧠 缓存';
+      button.title = '对话快照、历史搜索、差异比较与接力包';
+      button.style.background = '#065f46';
+      button.onclick = open;
+      var minimize = document.getElementById('agent-minimize');
+      actions.insertBefore(button, minimize || null);
+      return true;
+    }
+
+    function installStyles() {
+      if (document.getElementById('conversation-cache-styles')) return;
+      var style = document.createElement('style');
+      style.id = 'conversation-cache-styles';
+      style.textContent =
+        '#' + overlayId + '{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:2147483647;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif}' +
+        '#conversation-cache-modal{width:min(900px,92vw);height:min(720px,88vh);background:#111827;color:#e5e7eb;border:1px solid #374151;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden}' +
+        '.cc-header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #374151;background:#0f172a}.cc-subtitle{font-size:11px;color:#9ca3af;margin-top:3px}' +
+        '#conversation-cache-close{background:none;border:0;color:#9ca3af;font-size:28px;cursor:pointer}' +
+        '.cc-toolbar,.cc-search{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid #253047;flex-wrap:wrap}' +
+        '.cc-toolbar button,.cc-search button{background:#374151;color:#e5e7eb;border:0;border-radius:6px;padding:7px 10px;cursor:pointer}.cc-toolbar button:hover,.cc-search button:hover{background:#4b5563}' +
+        '.cc-search input{flex:1;min-width:260px;background:#0b1220;color:#e5e7eb;border:1px solid #374151;border-radius:6px;padding:8px 10px}' +
+        '#conversation-cache-status{padding:9px 14px;color:#93c5fd;background:#101827;border-bottom:1px solid #253047;font-size:12px}' +
+        '#conversation-cache-status[data-kind=\"success\"]{color:#6ee7b7}#conversation-cache-status[data-kind=\"error\"]{color:#fca5a5}' +
+        '#conversation-cache-results{padding:14px;overflow:auto;flex:1}.cc-card{background:#182235;border:1px solid #2d3a50;border-radius:8px;padding:10px 12px;margin-bottom:8px}' +
+        '.cc-card-title{font-weight:600;color:#bfdbfe}.cc-meta,.cc-hash{font-size:11px;color:#94a3b8;margin-top:4px}.cc-hash{font-family:monospace}.cc-preview{margin-top:7px;line-height:1.5;white-space:pre-wrap;word-break:break-word}' +
+        '.cc-empty{padding:28px;text-align:center;color:#94a3b8}.cc-summary{padding:10px;background:#1e293b;border-radius:8px;margin-bottom:12px}.cc-section-title{font-weight:700;margin:14px 0 7px}' +
+        '.cc-handoff{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;margin:0}';
+      document.head.appendChild(style);
+    }
+
+    installStyles();
+    var attempts = 0;
+    var timer = setInterval(function() {
+      attempts++;
+      if (installButton() || attempts > 60) clearInterval(timer);
+    }, 500);
+
+    window.conversationCacheUI = {
+      open: open,
+      close: close,
+      capture: captureNow,
+      search: searchNow,
+      diffLatest: diffLatest,
+      copyHandoff: copyHandoff
+    };
+  })();  // ============== 消息监听 ==============
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     log('收到消息:', msg.type, msg);
@@ -4355,7 +5305,12 @@ ${conversationText}
         if (state.batchResults && state.batchResults.length > 0) {
           detailedResults = state.batchResults.map((r, i) => {
             if (r.success) {
-              let content = r.result || '';
+              let content = String(r.result || '');
+              const frontendLimit = 4000;
+              if (content.length > frontendLimit) {
+                const half = Math.floor((frontendLimit - 120) / 2);
+                content = content.slice(0, half) + `\n\n[... ${content.length - half * 2} chars omitted by frontend guard ...]\n\n` + content.slice(-half);
+              }
               const artifactNote = r.fullOutputRef ? `\n\n📎 Full output: \`${r.fullOutputRef}\`` + (r.outputStats ? ` (${r.outputStats.chars} chars, ${r.outputStats.lines} lines)` : '') : '';
               return `**[步骤${r.stepIndex}]** \`${r.tool}\` ✓\n\`\`\`\n${content}\n\`\`\`${artifactNote}`;
             } else {
