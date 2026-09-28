@@ -1,0 +1,4 @@
+# runtime state, never commit
+server-v2/data/
+*.log
+/tmp/
