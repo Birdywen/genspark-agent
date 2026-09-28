@@ -3,17 +3,74 @@
 // Runs against the real modules with a temp scratch dir; touches no real file
 // and no real database row.
 //
-// Run: node mcp/tools-ext.test.js
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+// Run: node mcp/tools-ext.test.mjs
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, statSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { inspectCommand } from './batch-guard.mjs';
-import { omegaEdit, omegaUndo, omegaGrep, EXTRA_TOOLS } from './tools-ext.mjs';
+import {
+  vfsLocalWrite, omegaBatch, omegaBatchStatus, omegaBatchCancel,
+  omegaEdit, omegaUndo, omegaRead, omegaGrep, EXTRA_TOOLS,
+} from './tools-ext.mjs';
 
 let pass = 0;
 const failures = [];
 const ok = (cond, label) => { if (cond) pass++; else failures.push(label); };
 const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
+
+// ---- omega_batch: structured status, failure classes, and cancellation ----
+{
+  const started = await omegaBatch({ steps: [
+    { label: 'accepted', command_line: 'unused', expect: { contains: ['TOKEN'] } },
+  ] }, async () => ({ isError: false, text: 'TOKEN\n' }));
+  const id = /batch started: (job-[a-z0-9-]+)/.exec(started.text)?.[1];
+  const status = await omegaBatchStatus({ id, waitMs: 1000, format: 'json' });
+  const parsed = JSON.parse(status.text);
+  ok(!status.isError && parsed.state === 'success', 'omega_batch JSON status must report success');
+  ok(parsed.results[0].status === 'passed' && parsed.results[0].failureType === null, 'omega_batch JSON status must expose structured step fields');
+
+  const partialStart = await omegaBatch({ stopOnError: false, steps: [
+    { label: 'bad assertion', command_line: 'unused', expect: { contains: ['MISSING_TOKEN'] } },
+    { label: 'continues', command_line: 'unused' },
+  ] }, async () => ({ isError: false, text: 'ordinary output' }));
+  const partialId = /batch started: (job-[a-z0-9-]+)/.exec(partialStart.text)?.[1];
+  const partialStatus = await omegaBatchStatus({ id: partialId, waitMs: 1000, format: 'json' });
+  const partial = JSON.parse(partialStatus.text);
+  ok(partialStatus.isError && partial.state === 'partial', 'a continued batch with a failed step must still return isError');
+  ok(partial.results[0].failureType === 'expectation' && partial.results[1].status === 'passed', 'omega_batch must classify expectations and continue when requested');
+
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const cancelStart = await omegaBatch({ steps: [
+    { label: 'active', command_line: 'unused' },
+    { label: 'must not start', command_line: 'unused' },
+  ] }, async () => gate);
+  const cancelId = /batch started: (job-[a-z0-9-]+)/.exec(cancelStart.text)?.[1];
+  const cancel = omegaBatchCancel({ id: cancelId });
+  release({ isError: false, text: 'active finished' });
+  const cancelledStatus = await omegaBatchStatus({ id: cancelId, waitMs: 1000, format: 'json' });
+  const cancelled = JSON.parse(cancelledStatus.text);
+  ok(!cancel.isError && cancelled.state === 'cancelled', 'omega_batch_cancel must move a running job to cancelled after the active step');
+  ok(cancelled.done === 1 && cancelled.results.some((r) => r.failureType === 'cancelled'), 'omega_batch_cancel must prevent later steps from starting');
+}
+
+// ---- vfs_local_write: byte safety, atomic replacement, and preconditions ----
+{
+  const binary = path.join(scratch, 'binary.bin');
+  const bytes = Buffer.from([0, 255, 1, 128, 10]);
+  const r = vfsLocalWrite({ path: binary, content_b64: bytes.toString('base64'), requireMissing: true });
+  ok(!r.isError && readFileSync(binary).equals(bytes), 'vfs content_b64 must remain byte-exact: ' + r.text);
+  const ambiguous = vfsLocalWrite({ path: binary, content: 'x', content_b64: 'eA==' });
+  ok(ambiguous.isError, 'vfs must reject multiple content sources');
+  const collision = vfsLocalWrite({ path: binary, content: 'replace', requireMissing: true });
+  ok(collision.isError && readFileSync(binary).equals(bytes), 'vfs requireMissing must preserve an existing target');
+  const wrongHash = vfsLocalWrite({ path: binary, content: 'replace', expectedSha256: '0'.repeat(64) });
+  ok(wrongHash.isError && readFileSync(binary).equals(bytes), 'vfs expectedSha256 mismatch must preserve the target');
+  const correctHash = createHash('sha256').update(bytes).digest('hex');
+  const replaced = vfsLocalWrite({ path: binary, content: 'text', expectedSha256: correctHash });
+  ok(!replaced.isError && readFileSync(binary, 'utf8') === 'text', 'vfs matching expectedSha256 must replace atomically');
+}
 
 // ---- omega_edit: same-file chaining (the 2026-09-28 correctness fix) ----
 // Each oldString must stay unique ACROSS the whole file, including the text an
@@ -30,6 +87,88 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
   ok(readFileSync(f, 'utf8') === 'ONE\nTWO-CHAINED\nthree\n',
     'both edits must survive, later one seeing the earlier: got ' + JSON.stringify(readFileSync(f, 'utf8')));
   ok(/@@ lines/.test(r.text), 'result must carry a hunk diff');
+}
+
+// ---- omega_edit: encoding, line endings, mode, regex and final assertions ----
+{
+  const invalidUtf8 = path.join(scratch, 'invalid-utf8.txt');
+  const invalidBytes = Buffer.from([0xff, 0xfe, 0x41]);
+  writeFileSync(invalidUtf8, invalidBytes);
+  const invalid = omegaEdit({ edits: [{ path: invalidUtf8, oldString: 'A', newString: 'B' }] });
+  ok(invalid.isError && readFileSync(invalidUtf8).equals(invalidBytes), 'omega_edit must reject invalid UTF-8 without byte corruption');
+
+  const bom = path.join(scratch, 'bom.txt');
+  writeFileSync(bom, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('hello\n')]));
+  chmodSync(bom, 0o750);
+  const bomEdit = omegaEdit({ edits: [{ path: bom, oldString: 'hello', newString: 'world' }] });
+  const bomBytes = readFileSync(bom);
+  ok(!bomEdit.isError && bomBytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])), 'omega_edit must preserve UTF-8 BOM');
+  ok((statSync(bom).mode & 0o777) === 0o750, 'omega_edit atomic replacement must preserve file mode');
+
+  const crlf = path.join(scratch, 'crlf.txt');
+  writeFileSync(crlf, 'a\r\nb\r\n');
+  const crlfEdit = omegaEdit({ edits: [{ path: crlf, oldString: 'b', newString: 'b\nc' }] });
+  ok(!crlfEdit.isError && readFileSync(crlf, 'utf8') === 'a\r\nb\r\nc\r\n', 'omega_edit must normalize replacement newlines to CRLF');
+
+  const assertions = path.join(scratch, 'final-assertions.txt');
+  writeFileSync(assertions, 'foo\n');
+  const undoneAssertion = omegaEdit({ edits: [
+    { path: assertions, oldString: 'foo', newString: 'bar', mustContain: ['bar'], mustMatch: ['^bar$'] },
+    { path: assertions, oldString: 'bar', newString: 'baz' },
+  ] });
+  ok(undoneAssertion.isError && readFileSync(assertions, 'utf8') === 'foo\n', 'later chained edits must not invalidate earlier final assertions');
+  const regexBan = omegaEdit({ edits: [{ path: assertions, oldString: 'foo', newString: 'secret=1', mustNotMatch: ['secret\\s*='] }] });
+  ok(regexBan.isError && readFileSync(assertions, 'utf8') === 'foo\n', 'mustNotMatch must reject matching final text');
+}
+
+// ---- omega_edit: stale-file and caller hash protection ----
+{
+  const safe = path.join(scratch, 'stale-safe.txt');
+  const stale = path.join(scratch, 'stale-target.txt');
+  writeFileSync(safe, 'safe\n');
+  writeFileSync(stale, 'original\n');
+  const racingEdit = { path: stale, oldString: 'original', newString: 'planned' };
+  Object.defineProperty(racingEdit, 'mustContain', {
+    get() {
+      writeFileSync(stale, 'external change\n');
+      return ['planned'];
+    },
+  });
+  const r = omegaEdit({ edits: [
+    { path: safe, oldString: 'safe', newString: 'unsafe' },
+    racingEdit,
+  ] });
+  ok(r.isError && r.text.includes('stale-file protection'), 'a file changed after planning must abort the batch: ' + r.text);
+  ok(readFileSync(safe, 'utf8') === 'safe\n', 'stale rejection must leave every other file untouched');
+  ok(readFileSync(stale, 'utf8') === 'external change\n', 'stale rejection must preserve the external writer content');
+
+  const hash = createHash('sha256').update('safe\n').digest('hex');
+  const hashOk = omegaEdit({ dryRun: true, edits: [
+    { path: safe, oldString: 'safe', newString: 'SAFE', expectedSha256: hash },
+  ] });
+  ok(!hashOk.isError && readFileSync(safe, 'utf8') === 'safe\n', 'matching expectedSha256 dry run must verify without writing');
+  const hashBad = omegaEdit({ edits: [
+    { path: safe, oldString: 'safe', newString: 'SAFE', expectedSha256: '0'.repeat(64) },
+  ] });
+  ok(hashBad.isError && readFileSync(safe, 'utf8') === 'safe\n', 'mismatched expectedSha256 must reject without writing');
+
+  const appeared = path.join(scratch, 'appeared-during-plan.txt');
+  const createRace = { path: appeared, oldString: '', newString: 'ours\n' };
+  Object.defineProperty(createRace, 'mustContain', {
+    get() {
+      writeFileSync(appeared, 'external\n');
+      return ['ours'];
+    },
+  });
+  const appearedResult = omegaEdit({ createIfMissing: true, edits: [createRace] });
+  ok(appearedResult.isError && appearedResult.text.includes('appeared after planning'), 'a newly appeared file must abort createIfMissing');
+  ok(readFileSync(appeared, 'utf8') === 'external\n', 'createIfMissing race must preserve the external file');
+
+  const neverCreated = path.join(scratch, 'hash-new.txt');
+  const newWithHash = omegaEdit({ createIfMissing: true, edits: [
+    { path: neverCreated, oldString: '', newString: 'x', expectedSha256: hash },
+  ] });
+  ok(newWithHash.isError && !existsSync(neverCreated), 'expectedSha256 on a missing file must reject without creating it');
 }
 
 // ---- omega_edit: one failure voids the whole batch ----
@@ -88,13 +227,52 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
   }
 }
 
-// ---- omega_grep: refuses near-miss parameter names ----
+// ---- omega_read: bounded context around pattern matches ----
+{
+  const f = path.join(scratch, 'read-context.js');
+  writeFileSync(f, 'const before = 1;\nfunction target() {\n  return before;\n}\nconst after = 2;\n');
+  const plain = omegaRead({ files: [{ path: f, pattern: 'function target' }] });
+  ok(!plain.isError && plain.text.includes('2: function target() {'), 'omega_read plain pattern mode must retain numbered matches');
+  ok(!plain.text.includes('1: const before'), 'omega_read must not add context unless requested');
+  const contextual = omegaRead({ files: [{ path: f, pattern: 'function target', contextBefore: 1, contextAfter: 2 }] });
+  ok(!contextual.isError && contextual.text.includes('1: const before = 1;'), 'omega_read contextBefore must include preceding code');
+  ok(contextual.text.includes('4: }') && contextual.text.includes('context=-1/+2'), 'omega_read contextAfter and summary must be explicit');
+  const merged = omegaRead({ files: [{ path: f, pattern: 'const|function', contextAfter: 1 }] });
+  ok((merged.text.match(/2: function target/g) || []).length === 1, 'overlapping omega_read contexts must merge without duplicate lines');
+  const outline = omegaRead({ files: [{ path: f, outline: true }] });
+  ok(!outline.isError && outline.text.includes('2: function target'), 'omega_read outline must identify JavaScript declarations: ' + outline.text);
+  ok(outline.text.includes('heuristic outline'), 'omega_read must label outlines as heuristic');
+  const symbol = omegaRead({ files: [{ path: f, symbol: 'target' }] });
+  ok(!symbol.isError && symbol.text.includes('function target'), 'omega_read symbol mode must filter exact declaration names');
+  const conflicting = omegaRead({ files: [{ path: f, symbol: 'target', pattern: 'target' }] });
+  ok(conflicting.isError && conflicting.text.includes('INVALID SPEC'), 'omega_read must reject ambiguous pattern plus symbol mode');
+}
+
+// ---- omega_grep: boundaries, context, and subprocess errors ----
 {
   const wrong = await omegaGrep({ pattern: 'x', path: scratch });
   ok(wrong.isError, 'omega_grep must reject the `path` parameter instead of silently ignoring it');
   ok(wrong.text.includes('"path" -> use "dir"'), 'omega_grep must name the correct parameter: ' + wrong.text);
   const right = await omegaGrep({ pattern: 'TWO-CHAINED', dir: scratch });
   ok(!right.isError && right.text.includes('chain.txt'), 'omega_grep must still find matches with dir: ' + right.text);
+  const source = path.join(scratch, 'grep-context.txt');
+  writeFileSync(source, 'before\nneedle\nafter\n');
+  const context = await omegaGrep({ pattern: 'needle', dir: scratch, include: 'grep-context.txt', contextBefore: 1, contextAfter: 1 });
+  ok(!context.isError && context.text.includes('before') && context.text.includes('after'), 'omega_grep must return requested source context: ' + context.text);
+  ok(context.text.includes('context -B1 -A1'), 'omega_grep summary must state requested context: ' + context.text);
+  const exactLimit = await omegaGrep({ pattern: 'needle', dir: scratch, include: 'grep-context.txt', maxMatches: 1 });
+  ok(!exactLimit.text.includes('(truncated'), 'omega_grep must not claim truncation when matches exactly equal maxMatches');
+  const invalid = await omegaGrep({ pattern: '[', dir: scratch });
+  ok(invalid.isError, 'omega_grep must report invalid regex subprocess failures as errors: ' + invalid.text);
+  writeFileSync(path.join(scratch, 'literal.txt'), 'value[one]\nneedleish needle\n');
+  const literalFound = await omegaGrep({ pattern: '[', dir: scratch, include: 'literal.txt', literal: true });
+  ok(!literalFound.isError && literalFound.text.includes('value[one]'), 'omega_grep literal mode must accept regex metacharacters');
+  const word = await omegaGrep({ pattern: 'needle', dir: scratch, include: 'literal.txt', literal: true, word: true });
+  ok(!word.isError && word.text.includes('needleish needle'), 'omega_grep word mode must find a whole-word occurrence');
+  const excludedFile = path.join(scratch, 'excluded.txt');
+  writeFileSync(excludedFile, 'EXCLUDE_MARKER\n');
+  const excluded = await omegaGrep({ pattern: 'EXCLUDE_MARKER', dir: scratch, exclude: ['excluded.txt'] });
+  ok(!excluded.isError && excluded.text.includes('(no matches)'), 'omega_grep exclude globs must suppress matching files: ' + excluded.text);
 }
 
 // ---- tool registry sanity ----
@@ -105,7 +283,7 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
 // file can guard both hosts instead of forking.
 {
   const names = EXTRA_TOOLS.map((t) => t.name);
-  for (const n of ['omega_undo', 'db_query', 'omega_edit', 'omega_batch_status', 'omega_grep']) {
+  for (const n of ['omega_undo', 'db_query', 'omega_edit', 'omega_batch_status', 'omega_batch_cancel', 'omega_grep']) {
     ok(names.includes(n), `EXTRA_TOOLS must advertise ${n}`);
   }
   const dbDef = EXTRA_TOOLS.find((t) => t.name === 'db_query');
@@ -121,8 +299,23 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
   }
   for (const t of EXTRA_TOOLS) {
     if (t.name === 'omega_undo') ok(t.inputSchema.required.includes('batchId'), 'omega_undo must require batchId');
-    if (t.name === 'omega_edit') ok(t.inputSchema.properties.createIfMissing, 'omega_edit must expose createIfMissing');
+    if (t.name === 'omega_edit') {
+      ok(t.inputSchema.properties.createIfMissing, 'omega_edit must expose createIfMissing');
+      ok(t.inputSchema.properties.edits.items.properties.expectedSha256, 'omega_edit must expose expectedSha256');
+      ok(t.inputSchema.properties.edits.items.properties.mustMatch, 'omega_edit must expose mustMatch');
+    }
+    if (t.name === 'vfs_local_write') ok(t.inputSchema.properties.requireMissing, 'vfs_local_write must expose requireMissing');
     if (t.name === 'omega_batch_status') ok(t.inputSchema.properties.waitMs, 'omega_batch_status must expose waitMs');
+    if (t.name === 'omega_batch_status') ok(t.inputSchema.properties.format, 'omega_batch_status must expose format');
+    if (t.name === 'omega_batch_cancel') ok(t.inputSchema.required.includes('id'), 'omega_batch_cancel must require id');
+    if (t.name === 'omega_read') {
+      ok(t.inputSchema.properties.files.items.properties.contextBefore, 'omega_read must expose contextBefore');
+      ok(t.inputSchema.properties.files.items.properties.outline, 'omega_read must expose outline');
+    }
+    if (t.name === 'omega_grep') {
+      ok(t.inputSchema.properties.contextAfter, 'omega_grep must expose contextAfter');
+      ok(t.inputSchema.properties.literal && t.inputSchema.properties.exclude, 'omega_grep must expose literal and exclude');
+    }
     ok(typeof t.description === 'string' && t.description.length > 0, `${t.name} must carry a non-empty description`);
   }
   console.log(`  (db_query build on this host: ${writeEnabled ? 'write-enabled' : 'read-only'})`);

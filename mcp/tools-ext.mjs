@@ -2,7 +2,7 @@
 // and an async omega_batch runner. Kept in a separate module so server.mjs stays
 // readable; imported dynamically so a failure here cannot stop run_process.
 
-import { writeFileSync, mkdirSync, readFileSync, existsSync, statSync, copyFileSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync, statSync, copyFileSync, rmSync, renameSync, chmodSync, linkSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +44,10 @@ function snapshotMissing(abs, batchId) {
 
 // Restoring a file that never existed means deleting what we created, not
 // writing an empty file over it -- otherwise "undo" leaves litter behind.
+function describe(entry) {
+  return entry.existed ? `restored ${entry.path}` : `removed ${entry.path} (did not exist before)`;
+}
+
 function restoreOne(entry) {
   if (entry.existed) {
     mkdirSync(path.dirname(entry.path), { recursive: true });
@@ -72,7 +76,10 @@ export function omegaUndo(args) {
     list = list.filter((e) => want.has(e.path));
     if (!list.length) return { isError: true, text: 'no snapshot entries match the given paths' };
   }
-  const lines = list.map((e) => (dry ? `[dry] ${restoreOne(e)}` : restoreOne(e)));
+  const lines = list.map((e) => {
+    if (dry) return `[dry] ${describe(e)}`;
+    return restoreOne(e);
+  });
   return {
     isError: false,
     text: `undo ${batchId}: ${list.length} file(s) ${dry ? 'WOULD BE RESTORED (DRY-RUN)' : 'restored'}\n${lines.join('\n')}`,
@@ -83,21 +90,93 @@ export function omegaUndo(args) {
 // Exists so content with quotes, $, newlines or CJK never has to survive a shell
 // quoting layer: write the file, then run it.
 export function vfsLocalWrite(args) {
-  const p = args.path;
-  if (!p) return { isError: true, text: 'path is required' };
-  let body;
-  if (args.content_b64 !== undefined) {
-    body = Buffer.from(args.content_b64, 'base64').toString('utf8');
-  } else if (args.content_file !== undefined) {
-    body = readFileSync(args.content_file, 'utf8');
-  } else if (args.content !== undefined) {
-    body = String(args.content);
-  } else {
-    return { isError: true, text: 'one of content / content_b64 / content_file is required' };
+  if (!args.path) return { isError: true, text: 'path is required' };
+  const sources = ['content', 'content_b64', 'content_file'].filter((key) => args[key] !== undefined);
+  if (sources.length !== 1) {
+    return { isError: true, text: `exactly one of content / content_b64 / content_file is required (received ${sources.length})` };
   }
-  mkdirSync(path.dirname(p), { recursive: true });
-  writeFileSync(p, body, { encoding: 'utf8', flag: args.append ? 'a' : 'w' });
-  return { isError: false, text: `written: ${p} (${body.length} chars)` };
+  const abs = path.resolve(args.path);
+  let body;
+  try {
+    if (sources[0] === 'content_b64') {
+      const encoded = String(args.content_b64).replace(/\s/g, '');
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+        return { isError: true, text: 'content_b64 is not valid canonical base64' };
+      }
+      body = Buffer.from(encoded, 'base64');
+    } else if (sources[0] === 'content_file') {
+      body = readFileSync(path.resolve(args.content_file));
+    } else {
+      body = Buffer.from(String(args.content), 'utf8');
+    }
+  } catch (err) {
+    return { isError: true, text: `content read failed: ${err.message}` };
+  }
+
+  const existed = existsSync(abs);
+  if (args.requireMissing && existed) {
+    return { isError: true, text: `refused: target already exists: ${abs}` };
+  }
+  let initial = null;
+  if (existed) {
+    try {
+      const st = statSync(abs);
+      if (!st.isFile()) return { isError: true, text: `target is not a file: ${abs}` };
+      initial = {
+        hash: createHash('sha256').update(readFileSync(abs)).digest('hex'),
+        dev: st.dev,
+        ino: st.ino,
+        mode: st.mode & 0o777,
+      };
+    } catch (err) {
+      return { isError: true, text: `target inspection failed: ${err.message}` };
+    }
+  }
+  if (args.expectedSha256 !== undefined) {
+    const expected = String(args.expectedSha256).toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(expected)) return { isError: true, text: 'expectedSha256 must be a 64-character hexadecimal digest' };
+    if (!initial || initial.hash !== expected) {
+      return { isError: true, text: `expectedSha256 mismatch: expected ${expected}, found ${initial ? initial.hash : '(missing file)'}` };
+    }
+  }
+
+  mkdirSync(path.dirname(abs), { recursive: true });
+  if (args.append) {
+    // Retain append(2) semantics rather than pretending a read-concatenate-rename
+    // cycle is safe in the presence of other appenders.
+    try {
+      writeFileSync(abs, body, { flag: args.requireMissing ? 'ax' : 'a' });
+      return { isError: false, text: `appended: ${abs} (${body.length} bytes)` };
+    } catch (err) {
+      return { isError: true, text: `append failed: ${err.message}` };
+    }
+  }
+
+  const temp = path.join(path.dirname(abs), `.${path.basename(abs)}.omega-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(temp, body, initial ? { mode: initial.mode } : undefined);
+    if (initial) chmodSync(temp, initial.mode);
+    if (args.requireMissing && existsSync(abs)) throw new Error('target appeared while content was staged');
+    if (initial && args.expectedSha256 !== undefined) {
+      const st = statSync(abs);
+      const hash = createHash('sha256').update(readFileSync(abs)).digest('hex');
+      if (st.dev !== initial.dev || st.ino !== initial.ino || hash !== initial.hash) {
+        throw new Error('target changed while content was staged');
+      }
+    }
+    if (args.requireMissing) {
+      // link(2) fails atomically with EEXIST, unlike rename which replaces.
+      linkSync(temp, abs);
+      rmSync(temp, { force: true });
+    } else {
+      renameSync(temp, abs);
+    }
+    const writtenHash = createHash('sha256').update(body).digest('hex');
+    return { isError: false, text: `written atomically: ${abs} (${body.length} bytes, sha256 ${writtenHash})` };
+  } catch (err) {
+    try { rmSync(temp, { force: true }); } catch {}
+    return { isError: true, text: `write failed, target not replaced: ${err.message}` };
+  }
 }
 
 // ---------- db_query (read-only) ----------
@@ -155,14 +234,24 @@ export function omegaBatch(args, runProcess) {
   const job = {
     id, total: steps.length, done: 0, started: new Date().toISOString(),
     state: 'running', results: [], stopOnError: args.stopOnError !== false,
+    cancelRequested: false,
   };
   jobs.set(id, job);
   mkdirSync(JOB_DIR, { recursive: true });
 
   (async () => {
     for (let i = 0; i < steps.length; i++) {
+      if (job.cancelRequested) {
+        job.state = 'cancelled';
+        job.results.push({
+          i: i + 1, label: '(cancelled)', ok: false, status: 'skipped',
+          failureType: 'cancelled', note: 'cancel requested before this step', text: '', durationMs: 0,
+        });
+        break;
+      }
       const step = steps[i];
       const label = step.label || step.command_line?.slice(0, 60) || `step${i + 1}`;
+      const stepStarted = Date.now();
       try {
         const r = await runProcess({
           command_line: step.command_line,
@@ -172,30 +261,57 @@ export function omegaBatch(args, runProcess) {
         });
         let ok = !r.isError;
         let note = '';
+        let failureType = ok ? null : 'process';
         // Semantic acceptance: a zero exit code does not mean the task succeeded.
         if (ok && step.expect) {
           const e = step.expect;
           const has = (s) => r.text.includes(s);
           const list = (v) => (Array.isArray(v) ? v : [v]);
           if (e.contains && !list(e.contains).every(has)) {
-            ok = false; note = `expect.contains failed: ${list(e.contains).filter((s) => !has(s)).join(', ')}`;
+            ok = false; failureType = 'expectation'; note = `expect.contains failed: ${list(e.contains).filter((s) => !has(s)).join(', ')}`;
           }
           if (ok && e.notContains && list(e.notContains).some(has)) {
-            ok = false; note = `expect.notContains hit: ${list(e.notContains).filter(has).join(', ')}`;
+            ok = false; failureType = 'expectation'; note = `expect.notContains hit: ${list(e.notContains).filter(has).join(', ')}`;
           }
-          if (ok && e.regex && !new RegExp(e.regex, 'm').test(r.text)) {
-            ok = false; note = `expect.regex failed: ${e.regex}`;
+          if (ok && e.regex) {
+            try {
+              if (!new RegExp(e.regex, 'm').test(r.text)) {
+                ok = false; failureType = 'expectation'; note = `expect.regex failed: ${e.regex}`;
+              }
+            } catch (err) {
+              ok = false; failureType = 'configuration'; note = `expect.regex invalid: ${err.message}`;
+            }
           }
         }
-        job.results.push({ i: i + 1, label, ok, note, text: r.text.slice(0, 4000) });
+        job.results.push({
+          i: i + 1,
+          label,
+          ok,
+          status: ok ? 'passed' : 'failed',
+          failureType,
+          note,
+          text: r.text.slice(0, 4000),
+          durationMs: Date.now() - stepStarted,
+          exitCode: r.exitCode ?? r.code ?? null,
+          signal: r.signal ?? null,
+          timedOut: r.timedOut === true,
+        });
         job.done = i + 1;
         if (!ok && job.stopOnError) {
           job.state = 'failed';
-          job.results.push({ i: i + 2, label: '(halted)', ok: false, note: 'stopOnError', text: '' });
+          if (i + 1 < steps.length) {
+            job.results.push({
+              i: i + 2, label: '(halted)', ok: false, status: 'skipped',
+              failureType: 'halted', note: 'stopOnError', text: '', durationMs: 0,
+            });
+          }
           break;
         }
       } catch (e) {
-        job.results.push({ i: i + 1, label, ok: false, note: String(e.message), text: '' });
+        job.results.push({
+          i: i + 1, label, ok: false, status: 'failed', failureType: 'internal',
+          note: String(e.message), text: '', durationMs: Date.now() - stepStarted,
+        });
         job.done = i + 1;
         if (job.stopOnError) { job.state = 'failed'; break; }
       }
@@ -224,9 +340,15 @@ export function omegaBatchStatus(args) {
   const waitMs = Math.min(50000, Math.max(0, Number(args.waitMs) || 0));
   const render = (job) => {
     if (!job) return null;
+    if (args.format === 'json') {
+      return {
+        isError: job.state === 'failed' || job.state === 'partial',
+        text: JSON.stringify(job, null, 2),
+      };
+    }
     const lines = [`batch ${job.id}: ${job.state} ${job.done}/${job.total}`];
     for (const r of job.results) {
-      lines.push(`  [${r.ok ? 'ok' : 'FAIL'}] ${r.i}. ${r.label}${r.note ? ` -- ${r.note}` : ''}`);
+      lines.push(`  [${r.ok ? 'ok' : 'FAIL'}] ${r.i}. ${r.label}${r.failureType ? ` (${r.failureType})` : ''}${r.note ? ` -- ${r.note}` : ''}`);
       if (!r.ok && r.text) lines.push(`      ${r.text.split('\n').slice(0, 6).join('\n      ').slice(0, 700)}`);
     }
     if (args.verbose) {
@@ -234,7 +356,7 @@ export function omegaBatchStatus(args) {
         lines.push(`--- step ${r.i} ${r.label} ---`, r.text.slice(0, 3000));
       }
     }
-    return { isError: job.state === 'failed', text: lines.join('\n') };
+    return { isError: job.state === 'failed' || job.state === 'partial', text: lines.join('\n') };
   };
   if (waitMs) {
     const started = Date.now();
@@ -259,17 +381,32 @@ export function omegaBatchStatus(args) {
     if (existsSync(f)) job = JSON.parse(readFileSync(f, 'utf8'));
   }
   if (!job) return { isError: true, text: `no such batch: ${id}` };
-  const lines = [`batch ${job.id}: ${job.state} ${job.done}/${job.total}`];
-  for (const r of job.results) {
-    lines.push(`  [${r.ok ? 'ok' : 'FAIL'}] ${r.i}. ${r.label}${r.note ? ` -- ${r.note}` : ''}`);
-    if (!r.ok && r.text) lines.push(`      ${r.text.split('\n').slice(0, 6).join('\n      ').slice(0, 700)}`);
-  }
-  if (args.verbose) {
-    for (const r of job.results) {
-      lines.push(`--- step ${r.i} ${r.label} ---`, r.text.slice(0, 3000));
+  return render(job);
+}
+
+export function omegaBatchCancel(args) {
+  const id = args.id;
+  if (!id) return { isError: true, text: 'id is required' };
+  const job = jobs.get(id);
+  if (!job) {
+    const f = path.join(JOB_DIR, `${id}.json`);
+    if (existsSync(f)) {
+      const saved = JSON.parse(readFileSync(f, 'utf8'));
+      return { isError: true, text: `batch ${id} is already ${saved.state}; only a running in-memory job can be cancelled` };
     }
+    return { isError: true, text: `no such batch: ${id}` };
   }
-  return { isError: job.state === 'failed', text: lines.join('\n') };
+  if (job.state !== 'running') return { isError: true, text: `batch ${id} is already ${job.state}` };
+  job.cancelRequested = true;
+  job.cancelRequestedAt = new Date().toISOString();
+  try {
+    mkdirSync(JOB_DIR, { recursive: true });
+    writeFileSync(path.join(JOB_DIR, `${id}.json`), JSON.stringify(job, null, 1));
+  } catch { /* best effort */ }
+  return {
+    isError: false,
+    text: `cancellation requested for ${id}; the active step is not killed, and no later step will start`,
+  };
 }
 
 // ---------- omega_read (many files, one call) ----------
@@ -281,11 +418,77 @@ const READ_MAX_LINES = 500;
 const READ_DEFAULT_MATCHES = 30;
 const READ_TOTAL_CAP = 20000;
 
+function boundedInt(value, fallback, min, max) {
+  const n = Number.isFinite(Number(value)) ? Math.trunc(Number(value)) : fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+// A dependency-free declaration outline, deliberately narrower than an AST.
+// It reports only high-confidence, single-line declarations and labels the
+// result heuristic so callers do not mistake it for semantic language data.
+function sourceOutline(file, lines, max, symbol) {
+  const ext = path.extname(file).toLowerCase();
+  const common = [
+    ['class', /^\s*(?:(?:export|public|private|protected|abstract|sealed|final|static)\s+)*(?:class|record)\s+([A-Za-z_$][\w$]*)/],
+    ['interface', /^\s*(?:(?:export|public|private|protected)\s+)*interface\s+([A-Za-z_$][\w$]*)/],
+    ['enum', /^\s*(?:(?:export|public|private|protected)\s+)*enum\s+([A-Za-z_$][\w$]*)/],
+  ];
+  let patterns = common;
+  if (['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx'].includes(ext)) {
+    patterns = [
+      ['function', /^\s*(?:export\s+(?:default\s+)?)?(?:declare\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/],
+      ['type', /^\s*(?:export\s+)?type\s+([A-Za-z_$][\w$]*)\s*[=<]/],
+      ['namespace', /^\s*(?:export\s+)?(?:namespace|module)\s+([A-Za-z_$][\w$]*)/],
+      ['function', /^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/],
+      ...common,
+    ];
+  } else if (ext === '.py') {
+    patterns = [
+      ['function', /^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/],
+      ['class', /^\s*class\s+([A-Za-z_]\w*)/],
+    ];
+  } else if (ext === '.go') {
+    patterns = [
+      ['function', /^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*\(/],
+      ['type', /^\s*type\s+([A-Za-z_]\w*)\s+(?:struct|interface)\b/],
+    ];
+  } else if (ext === '.rs') {
+    patterns = [
+      ['function', /^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z_]\w*)/],
+      ['struct', /^\s*(?:pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_]\w*)/],
+      ['enum', /^\s*(?:pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_]\w*)/],
+      ['trait', /^\s*(?:pub(?:\([^)]*\))?\s+)?trait\s+([A-Za-z_]\w*)/],
+    ];
+  } else if (ext === '.rb') {
+    patterns = [
+      ['function', /^\s*def\s+(?:self\.)?([A-Za-z_]\w*[!?=]?)/],
+      ['class', /^\s*class\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/],
+      ['module', /^\s*module\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)/],
+    ];
+  } else if (ext === '.php') {
+    patterns = [
+      ['function', /^\s*(?:(?:public|private|protected|static|final|abstract)\s+)*function\s+([A-Za-z_]\w*)/],
+      ['trait', /^\s*(?:final\s+|abstract\s+)?trait\s+([A-Za-z_]\w*)/],
+      ...common,
+    ];
+  }
+  const found = [];
+  for (let i = 0; i < lines.length && found.length < max; i++) {
+    for (const [kind, re] of patterns) {
+      const match = re.exec(lines[i]);
+      if (!match || (symbol && match[1] !== symbol)) continue;
+      found.push({ line: i + 1, kind, name: match[1], source: lines[i].trim() });
+      break;
+    }
+  }
+  return found;
+}
+
 export function omegaRead(args) {
   const list = Array.isArray(args.files) ? args.files
     : (args.path ? [{ path: args.path }] : null);
   if (!list || !list.length) {
-    return { isError: true, text: 'files must be a non-empty array of {path, startLine?, lineCount?, pattern?, maxMatches?} (a plain path string also works)' };
+    return { isError: true, text: 'files must be a non-empty array of {path, startLine?, lineCount?, pattern?, maxMatches?, contextBefore?, contextAfter?} (a plain path string also works)' };
   }
   // Relative paths resolve against baseDir, NOT the MCP server's own cwd: the
   // server is launched once with a fixed cwd while sessions come and go, so a
@@ -320,15 +523,47 @@ export function omegaRead(args) {
     const lines = text.split('\n');
     const remain = READ_TOTAL_CAP - total;
     let chunk;
-    if (spec.pattern) {
+    if ((spec.outline || spec.symbol) && spec.pattern) {
+      out.push(`--- ${p} INVALID SPEC: pattern cannot be combined with outline/symbol ---`);
+      continue;
+    }
+    if (spec.outline || spec.symbol) {
+      const max = boundedInt(spec.maxSymbols, 100, 1, 300);
+      const maxLineLength = boundedInt(spec.maxLineLength, 500, 1, 2000);
+      const symbols = sourceOutline(p, lines, max, spec.symbol);
+      const body = symbols.map((s) => `${s.line}: ${s.kind} ${s.name} | ${s.source.slice(0, maxLineLength)}`).join('\n');
+      chunk = `=== ${p} heuristic outline${spec.symbol ? ` symbol=${spec.symbol}` : ''}: ${symbols.length} declaration(s) of ${lines.length} lines ===\n${body || '(no declarations found)'}`;
+    } else if (spec.pattern) {
       let re;
       try { re = new RegExp(spec.pattern, 'im'); } catch (e) { out.push(`--- ${p} BAD PATTERN: ${e.message} ---`); continue; }
-      const max = Math.min(spec.maxMatches || READ_DEFAULT_MATCHES, 100);
-      const hits = [];
-      for (let i = 0; i < lines.length && hits.length < max; i++) {
-        if (re.test(lines[i])) hits.push(`${i + 1}: ${lines[i]}`.slice(0, 500));
+      const max = boundedInt(spec.maxMatches, READ_DEFAULT_MATCHES, 1, 100);
+      const before = boundedInt(spec.contextBefore, 0, 0, 20);
+      const after = boundedInt(spec.contextAfter, 0, 0, 20);
+      const maxLineLength = boundedInt(spec.maxLineLength, 500, 1, 2000);
+      const hitLines = [];
+      for (let i = 0; i < lines.length && hitLines.length < max; i++) {
+        if (re.test(lines[i])) hitLines.push(i);
       }
-      chunk = `=== ${p} pattern=/${spec.pattern}/ ${hits.length} match(es) of ${lines.length} lines ===\n${hits.join('\n')}`;
+      let body;
+      if (!before && !after) {
+        body = hitLines.map((i) => `${i + 1}: ${lines[i].slice(0, maxLineLength)}`).join('\n');
+      } else {
+        const ranges = [];
+        for (const i of hitLines) {
+          const start = Math.max(0, i - before);
+          const end = Math.min(lines.length - 1, i + after);
+          const last = ranges[ranges.length - 1];
+          if (last && start <= last.end + 1) last.end = Math.max(last.end, end);
+          else ranges.push({ start, end });
+        }
+        body = ranges.map(({ start, end }) => {
+          const numbered = [];
+          for (let i = start; i <= end; i++) numbered.push(`${i + 1}: ${lines[i].slice(0, maxLineLength)}`);
+          return `--- lines ${start + 1}..${end + 1} ---\n${numbered.join('\n')}`;
+        }).join('\n--\n');
+      }
+      const context = before || after ? ` context=-${before}/+${after}` : '';
+      chunk = `=== ${p} pattern=/${spec.pattern}/ ${hitLines.length} match(es) of ${lines.length} lines${context} ===\n${body}`;
     } else {
       const start = Math.max((spec.startLine || 1) - 1, 0);
       const count = Math.min(spec.lineCount || READ_DEFAULT_LINES, READ_MAX_LINES);
@@ -375,6 +610,7 @@ export function omegaGuardCheck(args) {
 // ripgrep when present, grep -rn fallback (Oracle has no rg). Read-only.
 const GREP_MAX_MATCHES = 100;
 const GREP_TOTAL_CAP = 8000;
+const GREP_CAPTURE_CAP = 250000;
 
 // `dir` and `include` are the parameter names, but callers reach for the builtin
 // grep/read names instead -- passing `path` here used to be silently ignored, so
@@ -401,8 +637,13 @@ export function omegaGrep(args) {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
     return Promise.resolve({ isError: true, text: `dir not found or not a directory: ${dir} (baseDir ${baseDir})` });
   }
-  const max = Math.min(args.maxMatches || 30, GREP_MAX_MATCHES);
-  const include = args.include;
+  const max = boundedInt(args.maxMatches, 30, 1, GREP_MAX_MATCHES);
+  const before = boundedInt(args.contextBefore, 0, 0, 5);
+  const after = boundedInt(args.contextAfter, 0, 0, 5);
+  const maxLineLength = boundedInt(args.maxLineLength, 500, 1, 2000);
+  const asList = (value) => value === undefined ? [] : (Array.isArray(value) ? value : [value]);
+  const includes = asList(args.include).filter((v) => typeof v === 'string' && v);
+  const excludes = asList(args.exclude).filter((v) => typeof v === 'string' && v);
   return new Promise((resolve) => {
     let useRg = false;
     try { execFileSync('rg', ['--version'], { stdio: 'ignore' }); useRg = true; } catch { /* fallback */ }
@@ -410,32 +651,83 @@ export function omegaGrep(args) {
     if (useRg) {
       cmdArgs = ['--line-number', '--no-heading', '--color=never', '-e', pattern];
       if (args.ignoreCase) cmdArgs.push('--ignore-case');
-      if (include) cmdArgs.push('--glob', include);
+      if (args.literal) cmdArgs.push('--fixed-strings');
+      if (args.word) cmdArgs.push('--word-regexp');
+      if (before) cmdArgs.push('-B', String(before));
+      if (after) cmdArgs.push('-A', String(after));
+      for (const include of includes) cmdArgs.push('--glob', include);
+      for (const exclude of excludes) cmdArgs.push('--glob', `!${exclude}`);
       cmdArgs.push('--', dir);
       cmd = 'rg';
     } else {
       cmdArgs = ['-rn', '-I'];
       if (args.ignoreCase) cmdArgs.push('-i');
-      if (include) cmdArgs.push(`--include=${include}`);
+      if (args.literal) cmdArgs.push('-F');
+      if (args.word) cmdArgs.push('-w');
+      if (before) cmdArgs.push('-B', String(before));
+      if (after) cmdArgs.push('-A', String(after));
+      for (const include of includes) cmdArgs.push(`--include=${include}`);
+      for (const exclude of excludes) {
+        cmdArgs.push(`--exclude=${exclude}`);
+        const dirPattern = exclude.replace(/\/\*\*.*$/, '').split('/').filter(Boolean).pop();
+        if (dirPattern) cmdArgs.push(`--exclude-dir=${dirPattern}`);
+      }
       cmdArgs.push('-e', pattern, '--', dir);
       cmd = 'grep';
     }
     const child = spawn(cmd, cmdArgs, { cwd: baseDir });
     let out = '';
     let err = '';
-    child.stdout.on('data', (d) => { out += d.toString(); });
-    child.stderr.on('data', (d) => { err += d.toString(); });
-    const t = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 30000);
-    child.on('close', () => {
-      clearTimeout(t);
-      const all = out.split('\n').filter((l) => l.trim());
-      const lines = all.slice(0, max);
-      const text = lines.map((l) => l.slice(0, 500)).join('\n').slice(0, GREP_TOTAL_CAP);
-      const summary = `omega_grep: ${lines.length} match(es)${all.length > lines.length ? ' (truncated, narrow pattern/dir)' : ''} via ${cmd} in ${dir}`;
-      // exit 1 = no matches, not an error.
-      resolve({ isError: false, text: `${summary}\n\n${text || '(no matches)' + (err ? `\nstderr: ${err.slice(0, 300)}` : '')}` });
+    let captureTruncated = false;
+    let timedOut = false;
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+    child.stdout.on('data', (d) => {
+      const next = d.toString();
+      const room = GREP_CAPTURE_CAP - out.length;
+      if (room > 0) out += next.slice(0, room);
+      if (next.length > room) captureTruncated = true;
     });
-    child.on('error', (e) => { clearTimeout(t); resolve({ isError: true, text: e.message }); });
+    child.stderr.on('data', (d) => { err += d.toString(); });
+    const t = setTimeout(() => {
+      timedOut = true;
+      try { child.kill('SIGKILL'); } catch {}
+    }, 30000);
+    child.on('close', (code, signal) => {
+      clearTimeout(t);
+      if (timedOut) {
+        finish({ isError: true, text: `omega_grep timed out after 30000ms via ${cmd} in ${dir}` });
+        return;
+      }
+      // Both rg and grep use 1 for a clean no-match result and 2+ for errors.
+      if (code !== 0 && code !== 1) {
+        finish({
+          isError: true,
+          text: `omega_grep failed via ${cmd} (exit ${code}${signal ? `, signal ${signal}` : ''}) in ${dir}\n${err.slice(0, 1000) || '(no stderr)'}`,
+        });
+        return;
+      }
+      const all = out.split('\n').filter((l) => l.trim());
+      const lines = [];
+      let matches = 0;
+      const availableMatches = all.filter((line) => /:\d+:/.test(line)).length;
+      for (const line of all) {
+        const isMatch = /:\d+:/.test(line);
+        if (isMatch && matches >= max) break;
+        if (isMatch) matches++;
+        lines.push(line);
+      }
+      const text = lines.map((l) => l.slice(0, maxLineLength)).join('\n').slice(0, GREP_TOTAL_CAP);
+      const truncated = captureTruncated || availableMatches > max || text.length >= GREP_TOTAL_CAP;
+      const context = before || after ? `, context -B${before} -A${after}` : '';
+      const summary = `omega_grep: ${matches} match(es)${truncated ? ' (truncated, narrow pattern/dir)' : ''}${context} via ${cmd} in ${dir}`;
+      finish({ isError: false, text: `${summary}\n\n${text || '(no matches)'}` });
+    });
+    child.on('error', (e) => { clearTimeout(t); finish({ isError: true, text: e.message }); });
   });
 }
 
@@ -563,6 +855,40 @@ const EDIT_MAX_FILE = 500000;
 const EDIT_DIFF_CAP = 3000;
 const EDIT_TOTAL_CAP = 20000;
 
+function editHash(text) {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+function readUtf8Strict(abs) {
+  const bytes = readFileSync(abs);
+  const bom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+  const payload = bom ? bytes.subarray(3) : bytes;
+  let text;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(payload);
+  } catch {
+    throw new Error('file is not valid UTF-8; byte-preserving edit refused');
+  }
+  return { bytes, text, bom };
+}
+
+function encodeUtf8(text, bom) {
+  const payload = Buffer.from(text, 'utf8');
+  return bom ? Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), payload]) : payload;
+}
+
+function dominantLineEnding(text) {
+  const crlf = (text.match(/\r\n/g) || []).length;
+  const lf = (text.match(/(^|[^\r])\n/g) || []).length;
+  if (crlf && !lf) return '\r\n';
+  if (lf && !crlf) return '\n';
+  return null;
+}
+
+function normalizeLineEndings(text, eol) {
+  return eol ? text.replace(/\r\n|\r|\n/g, eol) : text;
+}
+
 function miniDiff(oldText, newText, ctx = 3) {
   const a = oldText.split('\n');
   const b = newText.split('\n');
@@ -675,6 +1001,9 @@ export function omegaEdit(args) {
     let entry = pending.get(abs);
     if (!entry) {
       let disk;
+      let bom = false;
+      let originalBytes = null;
+      let originalIdentity = null;
       const isNew = !fileExists;
       if (isNew) {
         if (e.oldString !== '') {
@@ -687,14 +1016,43 @@ export function omegaEdit(args) {
           const st = statSync(abs);
           if (!st.isFile()) { fail('not a file'); continue; }
           if (st.size > EDIT_MAX_FILE) { fail(`file too large (${st.size} bytes, cap ${EDIT_MAX_FILE})`); continue; }
-          disk = readFileSync(abs, 'utf8');
+          const decoded = readUtf8Strict(abs);
+          disk = decoded.text;
+          bom = decoded.bom;
+          originalBytes = decoded.bytes;
+          originalIdentity = { dev: st.dev, ino: st.ino };
         } catch (err) { fail(`read failed: ${err.message}`); continue; }
         if (disk.includes('\0')) { fail('binary file, refused'); continue; }
       }
-      entry = { path: e.path, abs, orig: disk, text: disk, isNew };
+      entry = {
+        path: e.path,
+        abs,
+        orig: disk,
+        text: disk,
+        isNew,
+        bom,
+        eol: dominantLineEnding(disk),
+        originalHash: isNew ? null : editHash(originalBytes),
+        originalIdentity,
+        originalMode: isNew ? null : statSync(abs).mode & 0o777,
+        finalChecks: [],
+      };
       pending.set(abs, entry);
     }
+    if (e.expectedSha256 !== undefined) {
+      if (!/^[a-f0-9]{64}$/i.test(e.expectedSha256)) {
+        fail('expectedSha256 must be a 64-character hexadecimal SHA-256 digest'); continue;
+      }
+      if (entry.isNew) {
+        fail('expectedSha256 cannot be used for a file that does not exist'); continue;
+      }
+      if (entry.originalHash !== e.expectedSha256.toLowerCase()) {
+        fail(`expectedSha256 mismatch: expected ${e.expectedSha256.toLowerCase()}, found ${entry.originalHash}`); continue;
+      }
+    }
     const text = entry.text;
+    const newString = args.preserveLineEndings === false ? e.newString : normalizeLineEndings(e.newString, entry.eol);
+    if (e.oldString === newString) { fail('oldString and normalized newString are identical (no-op)'); continue; }
     const hits = text.split(e.oldString).length - 1;
     if (hits === 0) { fail('oldString not found (0 matches)'); continue; }
     if (hits > 1 && !e.replaceAll) { fail(`oldString matches ${hits} times, refusing to guess (pass replaceAll:true to replace every occurrence)`); continue; }
@@ -708,17 +1066,34 @@ export function omegaEdit(args) {
     if (overlapped.length && !e.allowOverlap) {
       report.push(`[warn] ${tag} ${e.path}: oldString overlaps region written by ${overlapped.map((s) => s.tag).join(', ')} — chained anyway, verify intent (pass allowOverlap:true to silence)`);
     }
-    const next = e.replaceAll ? text.split(e.oldString).join(e.newString)
-      : text.slice(0, at) + e.newString + text.slice(at + e.oldString.length);
+    const next = e.replaceAll ? text.split(e.oldString).join(newString)
+      : text.slice(0, at) + newString + text.slice(at + e.oldString.length);
     const need = (v) => (Array.isArray(v) ? v : [v]);
     const missContain = e.mustContain !== undefined ? need(e.mustContain).filter((x) => !next.includes(x)) : [];
     if (missContain.length) { fail(`mustContain miss: ${missContain.join(', ')}`); continue; }
     const hitBan = e.mustNotContain !== undefined ? need(e.mustNotContain).filter((x) => next.includes(x)) : [];
     if (hitBan.length) { fail(`mustNotContain hit: ${hitBan.join(', ')}`); continue; }
+    let mustMatch = [];
+    let mustNotMatch = [];
+    try {
+      mustMatch = e.mustMatch !== undefined ? need(e.mustMatch).map((x) => new RegExp(x, 'm')) : [];
+      mustNotMatch = e.mustNotMatch !== undefined ? need(e.mustNotMatch).map((x) => new RegExp(x, 'm')) : [];
+    } catch (err) { fail(`invalid assertion regex: ${err.message}`); continue; }
+    const missMatch = mustMatch.filter((re) => !re.test(next));
+    if (missMatch.length) { fail(`mustMatch miss: ${missMatch.map(String).join(', ')}`); continue; }
+    const hitMatch = mustNotMatch.filter((re) => re.test(next));
+    if (hitMatch.length) { fail(`mustNotMatch hit: ${hitMatch.map(String).join(', ')}`); continue; }
     entry.text = next;
+    entry.finalChecks.push({
+      tag,
+      mustContain: e.mustContain !== undefined ? need(e.mustContain) : [],
+      mustNotContain: e.mustNotContain !== undefined ? need(e.mustNotContain) : [],
+      mustMatch,
+      mustNotMatch,
+    });
     // Map pre-existing spans through this replacement (points ascending);
     // drop spans overlapping a replaced region. New spans carry both sides for hunk diffs.
-    const oldLen = e.oldString.length, newLen = e.newString.length;
+    const oldLen = e.oldString.length, newLen = newString.length;
     let points;
     if (e.replaceAll) {
       points = [];
@@ -740,13 +1115,37 @@ export function omegaEdit(args) {
       let npos = 0;
       for (let k = 0; k < parts.length - 1; k++) {
         npos += parts[k].length;
-        kept.push({ at: npos, len: newLen, oldStr: e.oldString, newStr: e.newString, tag });
+        kept.push({ at: npos, len: newLen, oldStr: e.oldString, newStr: newString, tag });
         npos += newLen;
       }
-    } else kept.push({ at, len: newLen, oldStr: e.oldString, newStr: e.newString, tag });
+    } else kept.push({ at, len: newLen, oldStr: e.oldString, newStr: newString, tag });
     entry.spans = kept;
     applied++;
     report.push(`[ok] ${tag} ${e.path} (${e.replaceAll ? `${hits} replacements` : '1 replacement'})`);
+  }
+  // Re-run every assertion against the final chained text. A later edit cannot
+  // silently invalidate a guarantee established by an earlier edit.
+  for (const entry of pending.values()) {
+    for (const check of entry.finalChecks) {
+      const reasons = [];
+      const missing = check.mustContain.filter((x) => !entry.text.includes(x));
+      const banned = check.mustNotContain.filter((x) => entry.text.includes(x));
+      const missingRe = check.mustMatch.filter((re) => !re.test(entry.text));
+      const bannedRe = check.mustNotMatch.filter((re) => re.test(entry.text));
+      if (missing.length) reasons.push(`mustContain miss: ${missing.join(', ')}`);
+      if (banned.length) reasons.push(`mustNotContain hit: ${banned.join(', ')}`);
+      if (missingRe.length) reasons.push(`mustMatch miss: ${missingRe.map(String).join(', ')}`);
+      if (bannedRe.length) reasons.push(`mustNotMatch hit: ${bannedRe.map(String).join(', ')}`);
+      if (reasons.length) {
+        failed++;
+        report.push(`[FAIL] ${check.tag} ${entry.path}: final assertion failed after chained edits: ${reasons.join('; ')}`);
+      }
+    }
+    const outputBytes = encodeUtf8(entry.text, entry.bom).length;
+    if (outputBytes > EDIT_MAX_FILE) {
+      failed++;
+      report.push(`[FAIL] ${entry.path}: output too large (${outputBytes} bytes, cap ${EDIT_MAX_FILE})`);
+    }
   }
   if (failed) {
     // The per-edit [ok] lines below are VOID: two-phase commit means the whole
@@ -758,18 +1157,86 @@ export function omegaEdit(args) {
   }
   const dry = args.dryRun === true;
   if (!dry) {
-    // Snapshot BEFORE the first byte lands, so omega_undo has a real pre-image
-    // for every touched file (including files this call creates from nothing).
-    const snaps = [];
+    // Re-read every target immediately before the first write. The edit planning
+    // phase is synchronous but another process can still replace a file between
+    // the initial read and commit; in that case the whole batch must fail closed.
+    const stale = [];
     for (const entry of pending.values()) {
-      if (entry.isNew) snapshotMissing(entry.abs, batchId);
-      else snapshotFile(entry.abs, batchId);
-      mkdirSync(path.dirname(entry.abs), { recursive: true });
-      writeFileSync(entry.abs, entry.text, 'utf8');
-      snaps.push(entry.path);
+      if (entry.isNew) {
+        if (existsSync(entry.abs)) stale.push(`${entry.path}: appeared after planning`);
+        continue;
+      }
+      try {
+        const currentStat = statSync(entry.abs);
+        if (!currentStat.isFile()
+          || currentStat.dev !== entry.originalIdentity.dev
+          || currentStat.ino !== entry.originalIdentity.ino) {
+          stale.push(`${entry.path}: file identity changed after planning`);
+          continue;
+        }
+        const current = readFileSync(entry.abs);
+        const currentHash = editHash(current);
+        if (currentHash !== entry.originalHash) {
+          stale.push(`${entry.path}: changed after planning (expected sha256 ${entry.originalHash}, found ${currentHash})`);
+        }
+      } catch (err) {
+        stale.push(`${entry.path}: unavailable after planning (${err.message})`);
+      }
     }
-    persistSnapManifest(batchId, snapStats.get(batchId) || []);
-    report.push(`undo point: ${batchId} (omega_undo {"batchId":"${batchId}"} to roll back ${snaps.length} file(s))`);
+    if (stale.length) {
+      const voided = report.map((r) => r.replace(/^\[ok\]/, '[void]'));
+      const failures = stale.map((s) => `[FAIL] ${s}`);
+      return {
+        isError: true,
+        text: `edit: FAILED ${applied}/${list.length}, NOTHING WRITTEN (stale-file protection) -- every [void] line below was NOT applied\n${[...voided, ...failures].join('\n')}`,
+      };
+    }
+    // Stage every output before touching originals. rename is atomic per file;
+    // the manifest is durable before the first rename so crashes remain undoable.
+    const staged = [];
+    try {
+      for (const entry of pending.values()) {
+        const bytes = encodeUtf8(entry.text, entry.bom);
+        if (bytes.length > EDIT_MAX_FILE) throw new Error(`${entry.path}: output too large (${bytes.length} bytes, cap ${EDIT_MAX_FILE})`);
+        mkdirSync(path.dirname(entry.abs), { recursive: true });
+        const temp = path.join(path.dirname(entry.abs), `.${path.basename(entry.abs)}.omega-${batchId}-${staged.length}.tmp`);
+        writeFileSync(temp, bytes, entry.originalMode === null ? undefined : { mode: entry.originalMode });
+        if (entry.originalMode !== null) chmodSync(temp, entry.originalMode);
+        staged.push({ entry, temp });
+      }
+    } catch (err) {
+      for (const item of staged) try { rmSync(item.temp, { force: true }); } catch {}
+      return { isError: true, text: `edit: FAILED ${applied}/${list.length}, NOTHING WRITTEN (staging failed): ${err.message}` };
+    }
+    try {
+      for (const { entry } of staged) {
+        if (entry.isNew) snapshotMissing(entry.abs, batchId);
+        else snapshotFile(entry.abs, batchId);
+      }
+      persistSnapManifest(batchId, snapStats.get(batchId) || []);
+    } catch (err) {
+      for (const item of staged) try { rmSync(item.temp, { force: true }); } catch {}
+      snapStats.delete(batchId);
+      return { isError: true, text: `edit: FAILED ${applied}/${list.length}, NOTHING WRITTEN (snapshot failed): ${err.message}` };
+    }
+    const landed = [];
+    try {
+      for (const item of staged) {
+        renameSync(item.temp, item.entry.abs);
+        landed.push(item.entry.path);
+      }
+    } catch (err) {
+      const rollbackErrors = [];
+      for (const snap of (snapStats.get(batchId) || []).slice(0, landed.length)) {
+        try { restoreOne(snap); } catch (rollbackErr) { rollbackErrors.push(`${snap.path}: ${rollbackErr.message}`); }
+      }
+      for (const item of staged) try { rmSync(item.temp, { force: true }); } catch {}
+      return {
+        isError: true,
+        text: `edit: COMMIT FAILED after ${landed.length}/${staged.length} file(s); snapshots restored${rollbackErrors.length ? `; rollback errors: ${rollbackErrors.join('; ')}` : ''}: ${err.message}`,
+      };
+    }
+    report.push(`undo point: ${batchId} (omega_undo {"batchId":"${batchId}"} to roll back ${landed.length} file(s))`);
   }
   const diffs = [...pending.values()].map((s) => `--- ${s.path} ---\n${s.spans && s.spans.length ? spanDiff(s.text, s.spans, dctx) : miniDiff(s.orig, s.text, dctx)}`);
   return { isError: false, text: `edit: ${applied}/${list.length} ${dry ? 'verified (DRY-RUN, NOTHING WRITTEN)' : 'applied (two-phase commit)'}\n${report.join('\n')}\n\n${diffs.join('\n\n')}`.slice(0, EDIT_TOTAL_CAP) };
@@ -779,8 +1246,8 @@ export const EXTRA_TOOLS = [
   {
     name: 'omega_read',
     description: 'Read MANY files in ONE call. Each entry takes path plus an optional '
-      + 'startLine/lineCount slice and/or a pattern regex filter (returns numbered '
-      + 'matches). Packs recon that would cost 9 separate Read calls into one; output '
+       + 'startLine/lineCount slice and/or a pattern regex filter (returns numbered '
+       + 'matches with optional bounded context), or a heuristic declaration outline/symbol lookup. Packs recon that would cost 9 separate Read calls into one; output '
       + 'capped at 20000 chars with per-file headers showing line ranges. '
       + 'Prefer absolute paths, or set baseDir: relative paths resolve against the server '
       + 'cwd, not the session directory.',
@@ -789,7 +1256,7 @@ export const EXTRA_TOOLS = [
       properties: {
         files: {
           type: 'array',
-          description: 'list of {path, startLine? (1-indexed), lineCount? (max 500), pattern? (regex), maxMatches?}; a plain path string also works',
+          description: 'list of {path, startLine? (1-indexed), lineCount? (max 500), pattern? (regex), maxMatches?, contextBefore?, contextAfter?}; a plain path string also works',
           items: {
             type: 'object',
             properties: {
@@ -798,6 +1265,12 @@ export const EXTRA_TOOLS = [
               lineCount: { type: 'integer' },
               pattern: { type: 'string' },
               maxMatches: { type: 'integer' },
+              contextBefore: { type: 'integer', description: 'lines before each pattern match (default 0, max 20)' },
+              contextAfter: { type: 'integer', description: 'lines after each pattern match (default 0, max 20)' },
+              maxLineLength: { type: 'integer', description: 'maximum characters emitted per line (default 500, max 2000)' },
+              outline: { type: 'boolean', description: 'return a heuristic declaration outline instead of a line slice; cannot be combined with pattern' },
+              symbol: { type: 'string', description: 'return heuristic declaration entries with this exact symbol name; implies outline mode' },
+              maxSymbols: { type: 'integer', description: 'maximum outline declarations (default 100, max 300)' },
             },
           },
         },
@@ -808,9 +1281,7 @@ export const EXTRA_TOOLS = [
   },
   {
     name: 'vfs_local_write',
-    description: 'Write a file directly, with no shell quoting involved. Use this for any '
-      + 'content containing quotes, $, newlines or non-ASCII text, then run the file. '
-      + 'Accepts content, content_b64 or content_file.',
+    description: 'Write a file directly without shell quoting. Exactly one of content, content_b64, or content_file is accepted; base64 and file sources remain byte-exact. Non-append writes use a same-directory temporary file and atomic rename. expectedSha256 and requireMissing protect against unintended overwrite.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -819,6 +1290,8 @@ export const EXTRA_TOOLS = [
         content_b64: { type: 'string' },
         content_file: { type: 'string' },
         append: { type: 'boolean' },
+        expectedSha256: { type: 'string', description: 'require an existing target with this SHA-256 before writing' },
+        requireMissing: { type: 'boolean', description: 'refuse if the target already exists; rechecked immediately before replacement' },
       },
       required: ['path'],
     },
@@ -902,7 +1375,19 @@ export const EXTRA_TOOLS = [
               + 'that cuts the call at 60s would lose the reply entirely.',
           },
           verbose: { type: 'boolean', description: 'include full stdout/stderr of every step instead of just the pass/fail lines' },
+          format: { type: 'string', enum: ['text', 'json'], description: 'response format (default text); json returns structured job and per-step fields' },
         },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'omega_batch_cancel',
+    description: 'Request cancellation of a running omega_batch job. The currently active process is allowed to finish; no later step will start. This is cooperative cancellation, not process termination.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'running job id returned by omega_batch' },
+      },
       required: ['id'],
     },
   },
@@ -919,16 +1404,22 @@ export const EXTRA_TOOLS = [
   },
   {
     name: 'omega_grep',
-    description: 'Server-side code search returning capped path:line matches in one call. ripgrep when available, grep -rn fallback. Read-only; use to locate code before omega_read.',
+    description: 'Server-side code search returning capped path:line matches with optional bounded context. Supports regex or literal/whole-word matching plus include/exclude globs. ripgrep when available, grep -rn fallback. Read-only; use to locate code before omega_read.',
     inputSchema: {
       type: 'object',
       properties: {
         pattern: { type: 'string', description: 'regex (rg) / pattern (grep fallback)' },
         dir: { type: 'string', description: 'where to search; relative paths resolve against baseDir' },
         baseDir: { type: 'string', description: 'directory that relative paths resolve against' },
-        include: { type: 'string', description: 'glob filter, e.g. "*.mjs"' },
+        include: { description: 'glob filter or array of globs, e.g. "*.mjs"', oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+        exclude: { description: 'glob or array of globs to exclude', oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
         ignoreCase: { type: 'boolean' },
+        literal: { type: 'boolean', description: 'treat pattern as a fixed string rather than a regular expression' },
+        word: { type: 'boolean', description: 'match whole words only' },
         maxMatches: { type: 'integer', description: 'default 30, max 100' },
+        contextBefore: { type: 'integer', description: 'context lines before each match (default 0, max 5)' },
+        contextAfter: { type: 'integer', description: 'context lines after each match (default 0, max 5)' },
+        maxLineLength: { type: 'integer', description: 'maximum characters emitted per result line (default 500, max 2000)' },
       },
       required: ['pattern'],
     },
@@ -959,7 +1450,7 @@ export const EXTRA_TOOLS = [
   },
   {
     name: 'omega_edit',
-    description: "Batch file edits with a two-phase commit: N edits are computed in memory, every assertion verified, and only then ALL files are written. Same-file edits chain in order; overlapping matches emit a [warn] (pass allowOverlap:true to silence). One failure (missing oldString, ambiguous multi-match, mustContain miss) aborts everything with NOTHING WRITTEN. Returns a per-file diff. Pass dryRun:true to verify + preview diffs without writing. Primary model only; subagents never touch files.",
+    description: "Batch UTF-8 file edits with a two-phase commit: N edits are computed in memory, final string/regex assertions verified, target identity/content rechecked, all outputs staged, and only then atomically replaced per file. UTF-8 BOM, consistent line endings, and existing file modes are preserved. Same-file edits chain in order; overlapping matches emit a [warn] (pass allowOverlap:true to silence). One failure aborts everything with NOTHING WRITTEN. Returns a per-file diff. Pass dryRun:true to verify + preview diffs without writing. Primary model only; subagents never touch files.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -975,12 +1466,16 @@ export const EXTRA_TOOLS = [
               replaceAll: { type: 'boolean' },
               mustContain: { type: 'array', items: { type: 'string' } },
               mustNotContain: { type: 'array', items: { type: 'string' } },
+              mustMatch: { type: 'array', items: { type: 'string' }, description: 'regular expressions that must match after this edit and in the final file' },
+              mustNotMatch: { type: 'array', items: { type: 'string' }, description: 'regular expressions that must not match after this edit or in the final file' },
               allowOverlap: { type: 'boolean', description: 'silence the overlap warning for this edit' },
+              expectedSha256: { type: 'string', description: 'optional SHA-256 precondition for the original target content' },
             },
             required: ['path', 'oldString', 'newString'],
           },
         },
         dryRun: { type: 'boolean', description: 'verify all edits and return diffs without writing anything' },
+        preserveLineEndings: { type: 'boolean', description: 'normalize replacement newlines to a consistently CRLF/LF target (default true)' },
         diffCtx: { type: 'number', description: 'context lines around each change hunk in returned diffs (default 3, max 15)' },
         createIfMissing: {
           type: 'boolean',

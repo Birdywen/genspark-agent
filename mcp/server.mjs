@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import {
-  vfsLocalWrite, dbQuery, omegaBatch, omegaBatchStatus, omegaRead,
+  vfsLocalWrite, dbQuery, omegaBatch, omegaBatchStatus, omegaBatchCancel, omegaRead,
   omegaGuardCheck, omegaGrep, omegaQuota, omegaHealth, omegaSqlite, omegaEdit, omegaUndo, EXTRA_TOOLS,
 } from './tools-ext.mjs';
 
@@ -181,7 +181,7 @@ const TOOLS = [
 // approving them is a conscious act under their own names, and the
 // primary-only rule for writes lives in the prompts, not in code.
 // To take one back, remove its name from this set rather than restoring code.
-const OMEGA_ADVERTISE = new Set(["omega_batch", "omega_batch_status", "omega_read", "artifact_read", "artifact_search", "db_query", "omega_guard_check", "omega_grep", "omega_quota", "omega_health", "vfs_local_write", "omega_sqlite", "omega_edit", "omega_undo"]);
+const OMEGA_ADVERTISE = new Set(["omega_batch", "omega_batch_status", "omega_batch_cancel", "omega_read", "artifact_read", "artifact_search", "db_query", "omega_guard_check", "omega_grep", "omega_quota", "omega_health", "vfs_local_write", "omega_sqlite", "omega_edit", "omega_undo"]);
 const ALL_TOOLS = [...TOOLS, ...EXTRA_TOOLS].filter((t) => OMEGA_ADVERTISE.has(t.name));
 
 async function callTool(name, args) {
@@ -191,6 +191,7 @@ async function callTool(name, args) {
   if (name === 'db_query') return dbQuery(args || {});
   if (name === 'omega_batch') return omegaBatch(args || {}, runProcess);
   if (name === 'omega_batch_status') return omegaBatchStatus(args || {});
+  if (name === 'omega_batch_cancel') return omegaBatchCancel(args || {});
   if (name === 'omega_read') return omegaRead(args || {});
   if (name === 'omega_guard_check') return omegaGuardCheck(args || {});
   if (name === 'omega_grep') return omegaGrep(args || {});
@@ -258,7 +259,7 @@ rl.on('line', async (line) => {
         result: {
           protocolVersion: params?.protocolVersion || '2024-11-05',
           capabilities: { tools: {} },
-          serverInfo: { name: 'forge-bridge', version: '0.6.0' },
+        serverInfo: { name: 'forge-bridge', version: '0.8.0' },
         },
       });
     } else if (method === 'notifications/initialized' || method === 'initialized') {
