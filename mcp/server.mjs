@@ -91,12 +91,24 @@ function runProcess(args) {
       }
       const status = `exit=${code} signal=${signal || 'none'} timedOut=${timedOut} `
         + `chars=${combined.length}\n`;
-      resolve({ isError: !ok, text: banner + status + body });
+      resolve({
+        isError: !ok,
+        text: banner + status + body,
+        exitCode: code,
+        signal: signal || null,
+        timedOut,
+      });
     });
 
     child.on('error', (e) => {
       clearTimeout(timer);
-      resolve({ isError: true, text: `spawn failed: ${e.message}` });
+      resolve({
+        isError: true,
+        text: `spawn failed: ${e.message}`,
+        exitCode: null,
+        signal: null,
+        timedOut: false,
+      });
     });
   });
 }
@@ -259,7 +271,7 @@ rl.on('line', async (line) => {
         result: {
           protocolVersion: params?.protocolVersion || '2024-11-05',
           capabilities: { tools: {} },
-        serverInfo: { name: 'forge-bridge', version: '0.8.0' },
+          serverInfo: { name: 'forge-bridge', version: '0.8.1' },
         },
       });
     } else if (method === 'notifications/initialized' || method === 'initialized') {
