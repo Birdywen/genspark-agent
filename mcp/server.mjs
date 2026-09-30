@@ -16,6 +16,7 @@ import {
   vfsLocalWrite, dbQuery, omegaBatch, omegaBatchStatus, omegaBatchCancel, omegaRead,
   omegaGuardCheck, omegaGrep, omegaQuota, omegaHealth, omegaSqlite, omegaEdit, omegaUndo, EXTRA_TOOLS,
 } from './tools-ext.mjs';
+import { createFlowRuntime, FLOW_TOOL } from './omega-flow.mjs';
 
 const ART_DIR = process.env.OMEGA_ARTIFACT_DIR
   || path.join(homedir(), 'workspace/genspark-agent/server-v2/data/artifacts');
@@ -46,6 +47,18 @@ function resolveRef(ref) {
   return file;
 }
 
+// Batch shells inherit a minimal PATH from the host (GenCode launches this
+// server without Homebrew dirs), so bare \`node\`/\`python3\` died with 127 --
+// found 2026-09-30 when a config-parse step failed \`node: command not found\`.
+// Prepend well-known tool dirs; a caller-supplied PATH still wins via spread.
+function withToolPath(env) {
+  const sep = process.platform === 'win32' ? ';' : ':';
+  const extra = ['/opt/homebrew/bin', '/usr/local/bin']
+    .filter((p) => !(env.PATH || '').split(sep).includes(p));
+  if (!extra.length) return env;
+  return { ...env, PATH: [...extra, env.PATH || ''].filter(Boolean).join(sep) };
+}
+
 function runProcess(args) {
   const cmd = args.command_line || args.command;
   if (!cmd) return Promise.resolve({ isError: true, text: 'command_line is required' });
@@ -55,7 +68,7 @@ function runProcess(args) {
   return new Promise((resolve) => {
     const child = spawn('bash', ['-c', cmd], {
       cwd,
-      env: { ...process.env, ...(args.environment || {}) },
+      env: withToolPath({ ...process.env, ...(args.environment || {}) }),
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
     });
@@ -194,9 +207,12 @@ const TOOLS = [
 // primary-only rule for writes lives in the prompts, not in code.
 // To take one back, remove its name from this set rather than restoring code.
 const OMEGA_ADVERTISE = new Set(["omega_batch", "omega_batch_status", "omega_batch_cancel", "omega_read", "artifact_read", "artifact_search", "db_query", "omega_guard_check", "omega_grep", "omega_quota", "omega_health", "vfs_local_write", "omega_sqlite", "omega_edit", "omega_undo"]);
-const ALL_TOOLS = [...TOOLS, ...EXTRA_TOOLS].filter((t) => OMEGA_ADVERTISE.has(t.name));
+OMEGA_ADVERTISE.add('omega_flow');
+const ALL_TOOLS = [...TOOLS, ...EXTRA_TOOLS, FLOW_TOOL].filter((t) => OMEGA_ADVERTISE.has(t.name));
+const omegaFlow = createFlowRuntime(callTool, { allowEffects: process.env.OMEGA_FLOW_ALLOW_EFFECTS === '1' });
 
 async function callTool(name, args) {
+  if (name === 'omega_flow') return omegaFlow(args || {});
   if (name === 'run_process') return runProcess(args || {});
 
   if (name === 'vfs_local_write') return vfsLocalWrite(args || {});

@@ -1,7 +1,7 @@
-# omega_flow — JSON 微运行时 v1
+# omega_flow — JSON 微运行时 v2
 
 新增一个 MCP 工具，组合调用已有 omega 实现；旧工具名称、参数和文本响应保持不变。
-新增 `omega-flow.mjs`，注册于 `server.mjs`。无需 npm 依赖。
+运行时 `omega-flow.mjs`，等待器 `omega-flow-wait.mjs`，注册于 `server.mjs`。无需 npm 依赖。
 
 ## 最小示例：输入 → 读取 → 验收 → 输出
 
@@ -19,11 +19,14 @@
 
 返回 JSON：`id/state/done/total/results/outputs`。`state` 是 `running/success/failed/cancelled`；
 参数错误在执行前返回 `rejected`。`done` 为已尝试执行的步骤数量，不包括条件跳过或停止后的步骤。
+计数新增 `passed/failed/skipped/pending` 与 `skippedByReason:{condition,halted,cancelled}`：
+`done = passed + failed`，`total = passed + failed + skipped + pending`；pending 包含正在执行的步骤。
+例如两步通过、一步条件跳过：`done:2,total:3,passed:2,skipped:1`，不是三步都已执行。
 `success` 只证明所写的步骤/断言通过；发起 batch 并不证明 batch 已完成。
 
 ## 数据和控制流
 
-- 每步必须有唯一 `id`，且恰好选择一种：`tool + args`、`set`、`assert`。
+- 每步必须有唯一 `id`，且恰好选择一种：`tool + args`、`set`、`assert`、`awaitBatch`。
 - `vars` 是只读输入；`set` 把 JSON 值存为 `steps.<id>.data`，不隐式覆盖其它变量。
 - `{"$ref":"vars.foo"}` 与 `{"$ref":"steps.read.text"}` 保留数值/布尔/数组/对象类型。
   路径使用点分隔，可用数组索引；不支持包含点的键。缺失引用是错误，不插入空字符串。
@@ -37,7 +40,43 @@
 - 全计划先做结构、工具白名单与前向引用检查。工具具体参数由原工具校验；
   后续运行时失败不会撤销前面已经完成的操作。
 
-## batch → 状态 → 断言
+### set 与 when：只写步骤结果，不回写 vars
+
+```json
+{
+  "vars": { "mykey": false },
+  "steps": [
+    { "id": "s", "set": { "mykey": true } },
+    { "id": "next", "set": "ran", "when": {
+      "left": { "$ref": "steps.s.data.mykey" }, "op": "eq", "right": true
+    } }
+  ],
+  "outputs": { "original": { "$ref": "vars.mykey" }, "computed": { "$ref": "steps.s.data.mykey" } }
+}
+```
+
+结果为 `{"original":false,"computed":true}`。`vars.mykey` 始终是原输入，`set` 不合并回 vars。
+若 vars 原本没有 mykey，引用 `{"$ref":"vars.mykey"}` 会在执行前拒绝，并提示 set 的存储位置。
+若 vars 原本是 false，用它判断仍是 false，因此会 condition skipped。裸字符串 `"vars.mykey"`
+也是普通字面量，**必须使用 `$ref` 对象才能读取变量**。
+
+### 缺失引用与 outputs 契约
+
+缺失引用返回 `missing_ref`，附 `details.availableKeys`（出错父对象的可用字段）及
+`stepKeys/dataKeys/handleKeys`。例如 `steps.g.data` 不存在但有 text 时，会直接建议 `steps.g.text`。
+字段列表有界、只列名称，不回显值。失败发生在 outputs 时，详情位于 `failure.details`。
+效果工具保留的 ID 同时可通过 `steps.<id>.handles.jobId/batchId` 引用。
+
+`outputs` 的 JSON Schema 现在要求顶层为对象，接受三种形式：
+- 命名投影：`{"answer":{"$ref":"steps.s.data"}}`
+- 直接引用：`{"$ref":"steps.s.data"}`，返回值仍可以是任意 JSON 类型
+- 显式字面量：`{"$literal":[1,2]}`，也可包装字符串、数值、布尔值、null
+
+**兼容性变化：**裸字符串、数值、布尔值、null、数组不再作为 outputs 输入接受；需用 `$literal`
+包装。错误类型或畸形 `$ref/$literal` 在执行任何步骤前返回 `rejected/invalid_request`。
+普通命名对象保持可用；其内部表达式仍执行引用格式校验，不把字符串猜成引用。
+
+## batch → 有界等待终态
 
 需先由管理员在 MCP 进程环境显式设置 `OMEGA_FLOW_ALLOW_EFFECTS=1`，然后重启。
 
@@ -46,19 +85,42 @@
   "allowEffects": ["omega_batch"],
   "steps": [
     { "id": "launch", "tool": "omega_batch", "args": { "steps": [
-      { "label": "syntax", "command_line": "node --check server.mjs", "cwd": "/absolute/mcp", "timeout": "30s" }
+      { "label": "syntax", "command_line": "node --check server.mjs && python3 -c 'print(\"SYNTAX_OK\")'", "cwd": "/absolute/mcp", "timeout": "30s", "expect": { "contains": ["SYNTAX_OK"] } }
     ] } },
-    { "id": "wait", "tool": "omega_batch_status", "args": {
-      "id": { "$ref": "steps.launch.data.jobId" }, "waitMs": 20000, "format": "json"
-    }, "parseJson": true },
+    { "id": "wait", "awaitBatch": {
+      "id": { "$ref": "steps.launch.data.jobId" }, "timeoutMs": 120000
+    } },
     { "id": "accept", "assert": { "left": { "$ref": "steps.wait.data.state" }, "op": "eq", "right": "success" } }
   ],
   "outputs": { "batchId": { "$ref": "steps.launch.data.jobId" } }
 }
 ```
 
-如果 batch 仍 running，上述显式验收将失败，不会伪报通过。用 flow 的 `verbose:true` 查询取得
-原 batch ID 后继续查询原 batch，不要重新提交命令。flow 取消不取消已发起的 batch。
+`awaitBatch` 只查询同一个现有 batch，不重新启动命令。默认总期限 120 秒，允许 1..600000 毫秒；
+一次内部状态等待最多 5 秒。如果状态立即返回 running，仍至少间隔约 1 秒才再次查询。
+只有 `success` 通过；`failed/partial/cancelled` 均失败。超时返回 `batch_timeout` 并保留原 jobId。
+等待器是只读操作，查询已有 job 不需要开启效果权限；上例的 **launch** 才需要双开。
+
+`waitMs` 控制本次 RPC 等待返回多久，`awaitBatch.timeoutMs` 控制该步骤的总等待期限，二者独立。
+当 RPC 返回 running 时，使用 `action:status` 查询原 flow ID。超时后查询原 batch ID，勿重新提交命令。
+取消 flow 会在当前状态查询返回后停止继续查询（通常不超过约 5 秒）；底层 batch 继续运行。
+取消优先于同时返回的成功状态；截止时间之后才收到的成功仍算本次等待超时，并在诊断中保留
+已观察到的 state。**flow 等待超时或取消不等于底层 batch 失败**，应通过保留的 jobId 查询。
+旧版 `omega_batch_status + parseJson + assert` 写法仍兼容；它只进行一次状态查询。
+
+## 失败诊断和可继续查询的 ID
+
+- 默认响应新增 `handles:{"launch":{"jobId":"job-..."},"edit":{"batchId":"edit-..."}}`。
+  后续失败、输出超限或取消时仍保留，不需要 `verbose:true`；dry-run 无实际撤销点。
+- `active` 表示当前执行步骤，等待时包含 jobId，并在取得状态后包含 polls/state。
+- `failure:{stepId,code,error}` 指向首个失败；每个失败步骤仍保留自身诊断。
+  输出表达式失败没有 stepId。`outputs` 仍只在成功时生成。
+- 常见 code：`assertion_failed`、`condition_type`、`resolve`、`parse_json`、`tool_error`、
+  `tool_exception`、`invalid_tool_result`、`result_limit`、`batch_timeout`、`batch_failed`。
+  非法请求返回 `rejected/invalid_request`；原字符串 `error` 字段继续保留。
+- 断言失败含有界的左右值类型/JSON 预览；解析失败保留工具名与原文前 240 字符。
+  预览可能截断，只作诊断，不能代替完整证据。batch 失败时由原 jobId 查询其详细报告。
+- `status/cancel` 拒绝未知字段；`args/parseJson` 仅用于 tool 步骤，避免静默忽略拼写错误。
 
 ## 编辑与撤销
 
@@ -73,7 +135,11 @@
 
 默认仅允许 read/grep/guard_check/health/quota/sqlite、batch_status、artifact_read/search。
 编辑、撤销、batch 和 batch_cancel 必须同时满足服务端环境开关和请求 allowEffects 清单。
-`db_query`、`vfs_local_write`、`run_process` 不在 v1 白名单内。
+拒绝消息会给出实际 `server.mjs` 入口路径、`mcp.<name>.environment` 配置位置和请求示例，
+并在 details 中区分服务端开关与请求清单的状态。例如为该入口的 MCP 配置增加
+`"environment":{"OMEGA_FLOW_ALLOW_EFFECTS":"1"}` 后重启，再在请求传 `{"allowEffects":["omega_batch"]}`。
+此改动仅改进提示，不自动修改环境或权限。
+`db_query`、`vfs_local_write`、`run_process` 不在白名单内。
 
 **MCP host 只对 `omega_flow` 这个入口授权，不会重新对内部工具逐项授权。**
 这是聚合权限，不是自动继承调用者的 `edit:deny`。如果开启效果工具，必须限制哪些 agent
@@ -86,12 +152,14 @@
 - `{"action":"status","id":"flow-...","waitMs":20000,"verbose":true}` 查询。
 - `{"action":"cancel","id":"flow-..."}` 请求取消，仅阻止后续步骤，不杀当前工具。
 - 默认等待 20 秒、最多 50 秒；到时返回 running 和真实 ID。进程内顺序执行，等待不忙轮询。
-- 每条最多 32 步；输入、保留结果和单次变量展开分别限制 256 KB；JSON 深度最多 24。
+- 每条最多 32 步；输入、正常保留数据和单次变量展开预算分别为 256 KB，另含有界诊断元数据；JSON 深度最多 24。
   超限可能发生在底层操作完成后，应查看实际文件或 batch，不能当作自动撤销。
 - 最多保留 16 条 flow，完成后 30 分钟过期。结果仅在 MCP 进程内存；重启后无法恢复。
   默认返回摘要；`verbose:true` 返回保留的完整步骤结果。工具自己截断的文本不会被恢复。
 - 修改已在磁盘，**重启 OpenCode/MCP 后才会出现工具**。先确保没有运行中的 flow/batch。
   本轮未默认打开效果权限，也没有自动重启当前 MCP。
 
-验收：`node --test mcp/omega-flow.test.mjs`，并运行原 `node mcp/tools-ext.test.mjs`。
-测试使用临时文件、模拟 batch 执行器及独立 stdio MCP 子进程，不触碰业务数据。
+验收：`node --test mcp/omega-flow.test.mjs mcp/omega-flow-wait.test.mjs mcp/omega-flow.round2.test.mjs mcp/omega-flow-contract.test.mjs`，
+并运行原 `node mcp/tools-ext.test.mjs`。测试使用临时文件、模拟执行器及独立 stdio MCP 子进程；
+第二轮 wire 测试会在隔离子进程显式启用效果权限，执行一个打印固定标记的真实命令并验收 stdout。
+这不改变当前 MCP 的效果权限，也不能证明当前会话已加载新版工具。

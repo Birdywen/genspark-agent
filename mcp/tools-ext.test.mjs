@@ -11,7 +11,7 @@ import path from 'node:path';
 import { inspectCommand } from './batch-guard.mjs';
 import {
   vfsLocalWrite, omegaBatch, omegaBatchStatus, omegaBatchCancel,
-  omegaEdit, omegaUndo, omegaRead, omegaGrep, EXTRA_TOOLS,
+  omegaEdit, omegaUndo, omegaRead, omegaGrep, dbQuery, EXTRA_TOOLS,
 } from './tools-ext.mjs';
 
 let pass = 0;
@@ -273,6 +273,59 @@ const scratch = mkdtempSync(path.join(tmpdir(), 'omega-tools-test-'));
   writeFileSync(excludedFile, 'EXCLUDE_MARKER\n');
   const excluded = await omegaGrep({ pattern: 'EXCLUDE_MARKER', dir: scratch, exclude: ['excluded.txt'] });
   ok(!excluded.isError && excluded.text.includes('(no matches)'), 'omega_grep exclude globs must suppress matching files: ' + excluded.text);
+}
+
+// ---- db_query dryRun must NOT write (write-enabled build only) ----
+// Regression: the first write-enabled build answered dryRun with "NOTHING
+// WRITTEN" while actually calling run(), so the statement executed. The probe
+// below is an UPDATE whose WHERE matches no row, so even a regressed build
+// changes 0 rows -- the test proves dry-run behaviour without dirtying the
+// asset store, and the row count is the assertion that it stayed put.
+// Oracle runs the read-only build, where these writes are refused outright; it
+// asserts the fence instead.
+const dbDefForTests = EXTRA_TOOLS.find((t) => t.name === 'db_query');
+const dbWriteEnabled = !!(dbDefForTests && dbDefForTests.inputSchema.properties.dryRun);
+if (dbWriteEnabled) {
+  const countRows = async () => {
+    const r = await dbQuery({ sql: 'SELECT count(*) FROM memory;' });
+    return (r.text || '').trim();
+  };
+  const before = await countRows();
+  const dry = await dbQuery({
+    sql: "UPDATE memory SET content = 'DRYRUN_PROBE' WHERE key = '__omega_no_such_key__';",
+    dryRun: true,
+  });
+  ok(!dry.isError, 'db_query dryRun on a valid write must not error: ' + dry.text.slice(0, 200));
+  ok(/NOTHING WRITTEN/i.test(dry.text), 'db_query dryRun must label itself NOTHING WRITTEN');
+  ok(!/WRITE ok=/.test(dry.text), 'db_query dryRun must NOT report a write receipt');
+  const after = await countRows();
+  ok(before === after, `db_query dryRun must not change row count (${before} -> ${after})`);
+
+  // The fence itself: a non-whitelisted table is refused with no snapshot taken.
+  const denied = await dbQuery({ sql: 'INSERT INTO sqlite_master_does_not_exist (a) VALUES (1);' });
+  ok(denied.isError, 'db_query must refuse a table outside the whitelist');
+  ok(!/WRITE ok=/.test(denied.text), 'a refused write must not produce a write receipt');
+  // DDL stays refused unconditionally, snapshot or not.
+  const ddl = await dbQuery({ sql: 'DROP TABLE memory;' });
+  ok(ddl.isError, 'db_query must refuse DROP even with a snapshot path available');
+  ok(/never allowed/i.test(ddl.text), 'the DDL refusal must say it is unconditional');
+} else {
+  // Read-only build (Oracle): every write class is refused by the same fence,
+  // and no write receipt may ever appear.
+  for (const [label, sql] of [
+    ['INSERT', "INSERT INTO memory (slot, key, content) VALUES ('x','y','z');"],
+    ['UPDATE', "UPDATE memory SET content = 'probe';"],
+    ['DELETE', 'DELETE FROM memory;'],
+    ['DROP', 'DROP TABLE memory;'],
+    ['PRAGMA assignment', 'PRAGMA journal_mode = WAL;'],
+    ['VACUUM', 'VACUUM;'],
+  ]) {
+    const r = await dbQuery({ sql });
+    ok(r.isError, `read-only db_query must refuse ${label}`);
+    ok(!/WRITE ok=/.test(r.text), `read-only db_query must not emit a write receipt for ${label}`);
+  }
+  const read = await dbQuery({ sql: 'SELECT count(*) FROM memory;' });
+  ok(!read.isError, 'read-only db_query must still allow SELECT');
 }
 
 // ---- tool registry sanity ----
