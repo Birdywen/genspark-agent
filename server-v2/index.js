@@ -37,7 +37,7 @@ import SelfValidator from './self-validator.js';
 import GoalManager from './goal-manager.js';
 import AsyncExecutor from './async-executor.js';
 import AutoHealer from './auto-healer.js';
-import { createAiBridge } from './ai-bridge.js';
+import { createAiBridge, smartCompress } from './ai-bridge.js';
 import http from "http";
 import ProcessManager from './process-manager.js';
 import { existsSync } from 'fs';
@@ -415,7 +415,7 @@ async function handleToolCallInner(ws, message, isRetry = false, originalId = nu
             for (let i = 0; i < images.length; i++) {
               const img = images[i];
               const ext = img.mimeType === 'image/jpeg' ? 'jpg' : 'png';
-              const imgPath = '/private/tmp/media-' + id + '-' + i + '.' + ext;
+              const imgPath = '/tmp/media-' + id + '-' + i + '.' + ext;
               try { writeFileSync(imgPath, Buffer.from(img.data, 'base64')); savedPaths.push(imgPath); } catch(ie) { logger.error('[Router] 图片保存失败: ' + ie.message); }
             }
             if (savedPaths.length > 0) result = (result || '') + '\n图片已保存: ' + savedPaths.join(', ');
@@ -1233,7 +1233,10 @@ async function main() {
                 logger.info(`[BrowserTool] 结果返回: ${msg.callId} result=${resultStr.substring(0,200)}`);
                 // 记录 eval_js 到 commands 表
                 try { const _hid = history.add(pending._tool || 'eval_js', { code: (pending._code || '').substring(0, 500) }, true, resultStr.substring(0, 5000)); logger.info(`[BrowserTool] eval_js 记录到DB: #${_hid} tool=${pending._tool}`); } catch(e) { logger.error(`[BrowserTool] eval_js 记录失败: ${e.message}`); }
-                pending.resolve(msg.result);
+                // 智能压缩浏览器工具返回结果
+                const toolName = pending._tool || "unknown";
+                const compressed = smartCompress(toolName, msg.result, true);
+                pending.resolve(compressed);
               } else {
                 // 多tab竞争：失败结果先不reject，等其他tab可能返回成功
                 pending._failCount = (pending._failCount || 0) + 1;

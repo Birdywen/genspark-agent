@@ -1,1 +1,98 @@
-<html><head><title>弹弹球游戏</title></head><body><canvas id='gameCanvas' width='480' height='320'></canvas></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omega AI Station</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <div class="header-left">
+        <button id="btn-sidebar" class="sidebar-toggle" title="切换侧栏 (⌘B)">☰</button>
+        <h1>YAO</h1>
+        <div id="agent-selector" class="agent-selector">
+          <span id="agent-name" class="agent-badge">default</span>
+          <span class="agent-arrow">▾</span>
+          <div id="agent-dropdown" class="agent-dropdown hidden">
+            <div id="agent-list"></div>
+            <div class="dropdown-divider"></div>
+            <div id="btn-new-agent" class="dropdown-item new-agent">+ 新建 Agent</div>
+          </div>
+        </div>
+      </div>
+      <div class="header-center">
+        <span id="model-badge" class="model-badge">the platform-chat</span>
+      </div>
+      <div class="header-right">
+        <span id="ws-status" class="status-dot connected" title="WS 已连接"></span>
+        <span id="msg-count" class="status-pill">0 msgs</span>
+        <span id="token-count" class="status-pill">0 tokens</span>
+        <button id="btn-compress" class="btn-icon" title="压缩上下文">🗜️</button>
+        <button id="btn-settings" class="btn-icon" title="设置">⚙️</button>
+      </div>
+    </header>
+    <main id="main">
+      <aside id="sidebar">
+        <button id="btn-new-chat" class="btn-primary">+ 新对话</button>
+        <input id="chat-search" type="text" placeholder="搜索对话..." class="chat-search">
+        <div id="chat-list"></div>
+      </aside>
+      <section id="chat-area">
+        <div id="messages"></div>
+        <div id="streaming-indicator" class="hidden">AI 正在思考...</div>
+      </section>
+      <aside id="panel" class="hidden">
+        <div id="panel-header">
+          <div id="panel-tabs">
+            <span class="panel-tab active" data-tab="logs">日志</span>
+            <span class="panel-tab" data-tab="agent">Agent</span>
+          </div>
+          <button id="btn-close-panel" class="btn-icon">✕</button>
+        </div>
+        <div id="panel-logs" class="panel-content active"></div>
+        <div id="panel-agent" class="panel-content">
+          <div class="agent-editor">
+            <div class="field">
+              <label>名称</label>
+              <input id="ae-name" type="text" placeholder="Agent 名称">
+            </div>
+            <div class="field">
+              <label>模型</label>
+              <select id="ae-model">
+                <option value="" disabled>加载中...</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>系统提示词</label>
+              <textarea id="ae-system" rows="8" placeholder="定义 Agent 的人格和行为..."></textarea>
+            </div>
+            <div class="field">
+              <label>Max Tokens</label>
+              <input id="ae-max-tokens" type="number" value="8192" min="256" max="32768">
+            </div>
+            <div class="field">
+              <label>温度</label>
+              <input id="ae-temperature" type="range" min="0" max="2" step="0.1" value="0.7">
+              <span id="ae-temp-value">0.7</span>
+            </div>
+            <div class="agent-editor-actions">
+              <button id="btn-save-agent" class="btn-primary">保存 Agent</button>
+              <button id="btn-delete-agent" class="btn-danger btn-sm">删除</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+    <footer id="input-area">
+      <textarea id="user-input" placeholder="输入消息... (Shift+Enter 换行)"></textarea>
+      <button id="btn-send" class="btn-primary">发送</button>
+    </footer>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+</html>

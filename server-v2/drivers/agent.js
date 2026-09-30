@@ -311,7 +311,7 @@ if (tool === 'agent_run') {
     var pitfalls = resolveParam(spec.pitfalls);
     var evolveScene;
     try {
-      evolveScene = JSON.parse(readFileSync('/Users/yay/workspace/forged-benchmark/evolve-forged-v9.json', 'utf8'));
+      evolveScene = JSON.parse(readFileSync(process.env.OMEGA_EVOLVE_FORGED || new URL('../forged/evolve-forged-v9.json', import.meta.url), 'utf8'));
     } catch(e) {
       return { ok: false, error: 'Cannot read evolve forged: ' + e.message };
     }

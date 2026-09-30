@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTrace } from './trace.js';
+import { smartCompress } from '../ai-bridge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DRIVERS_DIR = path.join(__dirname, '..', 'drivers');
@@ -80,6 +81,10 @@ class Router {
         const result = await driver.handle(tool, params, ctx);
         trace.span('Router', { action: 'complete', success: true, duration: trace.duration });
         trace.flush();
+        // 智能压缩结果
+        if (result && result.success && result.result) {
+          result.result = smartCompress(tool, result.result, true);
+        }
         return result;
       } catch (e) { trace.error('Router', e); trace.flush(); throw e; }
     }

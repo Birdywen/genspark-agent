@@ -26,7 +26,7 @@ async function handle(tool, params, context) {
       bgCommand = (params.command || 'bash') + ' ' + params.stdinFile;
       _logger.info('[bg_run] using stdinFile: ' + params.stdinFile);
     } else if (params.stdin) {
-      const tmpScript = '/private/tmp/bg_run_' + Date.now() + '.sh';
+      const tmpScript = '/tmp/bg_run_' + Date.now() + '.sh';
       writeFileSync(tmpScript, params.stdin, { mode: 0o755 });
       bgCommand = (params.command || 'bash') + ' ' + tmpScript;
       _logger.info('[bg_run] stdin -> tmpScript: ' + tmpScript);

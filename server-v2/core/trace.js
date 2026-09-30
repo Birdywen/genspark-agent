@@ -3,7 +3,7 @@
 
 import fs from 'fs';
 
-const TRACE_LOG = '/private/tmp/omega-trace.log';
+const TRACE_LOG = '/tmp/omega-trace.log';
 const MAX_ENTRIES = 1000;
 
 class TraceContext {

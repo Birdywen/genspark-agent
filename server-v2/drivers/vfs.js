@@ -1,6 +1,19 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
+// Smart truncation: keep head(70%) + tail(20%) when content > maxChars
+function smartTruncate(content, maxChars = 8000) {
+  if (content.length <= maxChars) return content;
+  const headChars = Math.floor(maxChars * 0.7);
+  const tailChars = Math.floor(maxChars * 0.2);
+  const head = content.substring(0, headChars);
+  const tail = content.substring(content.length - tailChars);
+  const omitted = content.length - headChars - tailChars;
+  return head + 
+    `\n\n[... \${omitted} chars omitted; full output preserved ...]\n\n` + 
+    tail;
+}
+
 // VFS Driver - Supabase-backed (migrated from IndexedDB)
 // Tools: vfs_read, vfs_write, vfs_delete, vfs_list, vfs_query, vfs_search, vfs_exec, vfs_backup
 
@@ -253,7 +266,8 @@ async function handle(tool, params, ctx) {
       if (!params.path) { result = { isError: true, error: 'vfs_local_read needs @path' }; break; }
       try {
         const lContent = readFileSync(params.path, 'utf-8');
-        result = lContent;
+        const maxChars = params.max_chars || 8000;
+        result = params.full ? lContent : smartTruncate(lContent, maxChars);
       } catch(e) {
         result = { isError: true, error: 'read failed: ' + e.message };
       }

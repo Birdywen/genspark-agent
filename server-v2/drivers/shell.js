@@ -94,7 +94,7 @@ export default {
       return bgDriver.handle('bg_run', params, { trace, ws, message });
     }
 
-    // 自动修复: node /private/tmp/xxx.js -> cp到cwd (require需要node_modules)
+    // 自动修复: node /tmp/xxx.js -> cp到cwd (require需要node_modules)
     const cmdLine = params.command_line || params.command || '';
     const tmpNodeMatch = cmdLine.match(/\bnode\s+(\/private\/tmp\/[\w._-]+\.(?:js|cjs|mjs))/);
     if (tmpNodeMatch && cmdLine.includes('cd ')) {
@@ -116,7 +116,9 @@ export default {
 
     // 普通执行: spawn
     return new Promise((resolve, reject) => {
-      const spawnCmd = params.command || 'bash';
+      // v4.6: 默认开 pipefail，管道中段失败不再被末段退出码吞掉；OMEGA_PIPEFAIL=0 回退。
+      const pipefail = process.env.OMEGA_PIPEFAIL !== '0';
+      const spawnCmd = (pipefail && params.command) ? 'set -o pipefail; ' + params.command : (params.command || 'bash');
       // 兼容: content.js 解析器把 freeLines 放到 params.code，转为 stdin
       if (params.code && !params.stdin) { params.stdin = params.code; }
       const args = [];
@@ -124,8 +126,8 @@ export default {
         ? parseDuration(params.timeout_ms, 30000, false)
         : parseDuration(params.timeout, 30000, true);
       const opts = {
-        cwd: params.cwd || '/Users/yay/workspace',
-        shell: true,
+        cwd: params.cwd || (process.env.HOME + '/workspace'),
+        shell: '/bin/bash',
         detached: process.platform !== 'win32',
         env: params.env ? { ...process.env, ...params.env } : process.env
       };
@@ -152,6 +154,7 @@ export default {
         forceKillTimer.unref();
       }, timeoutMs) : null;
 
+      if (pipefail && !params.command) proc.stdin.write('set -o pipefail\n');
       if (params.stdin) proc.stdin.write(params.stdin);
       if (params.stdinFile) {
         try {
@@ -173,8 +176,10 @@ export default {
         const formatted = artifactStore.formatOutput(stdout, stderr, params.output || params.outputPolicy || {});
         const output = formatted.display;
         // exit code 1 for grep/diff/head/tail = no match, not error
-        const cmd0 = (params.command_line || params.command || '').trim().split(/[|;&]/).pop().trim().split(/\s+/)[0].replace(/^.*\//, '');
-        const softFail1 = ['grep','egrep','fgrep','diff','head','tail','find','ls'].includes(cmd0);
+        // v4.6: exit 1 只在管道每一段都是文本过滤命令时赦免；旧版只看末段，node --test | head 会被误判成功。
+        const SOFT_FAIL_CMDS = ['grep','egrep','fgrep','rg','diff','head','tail','find','ls','cat','sort','uniq','wc','cut','tr','echo','printf'];
+        const segCmds = (params.command_line || params.command || '').trim().split(/[|;&]+/).map(s => s.trim()).filter(Boolean).map(s => s.split(/\s+/)[0].replace(/^.*\//, ''));
+        const softFail1 = segCmds.length > 0 && segCmds.every(c => SOFT_FAIL_CMDS.includes(c));
         const success = !timedOut && (code === 0 || (code === 1 && softFail1));
         const errMsg = success ? null : (timedOut ? `TIMEOUT after ${timeoutMs}ms` : (stderr.trim() || fullOutput || ('exit code ' + code))).slice(0, 500);
         const historyId = _addToHistory('run_process', params, success, output, errMsg);

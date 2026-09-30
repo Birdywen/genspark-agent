@@ -16,6 +16,8 @@ echo "=== Genspark Agent Startup ==="
 echo "Directory: $SCRIPT_DIR"
 
 # 杀掉现有进程
+mkdir -p logs
+
 echo "Stopping existing processes..."
 pkill -f "node.*watchdog.js" 2>/dev/null
 pkill -f "node.*index.js" 2>/dev/null

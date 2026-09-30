@@ -108,7 +108,7 @@ export function autoScript(tool, params, logger) {
 
   if ((isLong && hasHighRiskChars) || hasNestedQuotes || (isLong && hasPipe)) {
     try {
-      const scriptPath = `/private/tmp/cmd_${Date.now()}.sh`;
+      const scriptPath = `/tmp/cmd_${Date.now()}.sh`;
       writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
       logger.info(`[AutoScript] ${scriptPath} (${cmd.length} chars)`);
       const cmdKey = params.command_line ? 'command_line' : 'command';

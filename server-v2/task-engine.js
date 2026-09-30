@@ -63,7 +63,9 @@ class TaskEngine {
       batchId,
       success,
       stepsCompleted: results.filter(r => r.success).length,
-      stepsFailed: results.filter(r => !r.skipped && !r.success).length,
+      stepsFailed: results.filter(r => !r.skipped && !r.success && r.countsAsFailure !== false).length,
+      stepsExpectedFailure: results.filter(r => r.countsAsFailure === false && !r.success).length,
+      stepsUnverified: results.filter(r => !r.skipped && r.acceptance && r.acceptance.declared === false).length,
       stepsSkipped: results.filter(r => r.skipped).length,
       totalSteps: results.length,
       results
@@ -89,6 +91,7 @@ class TaskEngine {
       // 失败时: 组内全部步骤都无 when 才按 stopOnError 中止; 有 when 的步骤让条件评估决定(支持失败分流)
       const groupHasWhen = group.some(st => st.when);
       if (!success && options.stopOnError !== false && !groupHasWhen) break;
+      // v4.7: expectedFailure 步骤不再打断批次(见 countsAsFailure)
 
       if (group.length > 1 && group[0].parallel) {
         // 并行执行 (v3: 支持 maxConcurrency)
@@ -104,7 +107,7 @@ class TaskEngine {
           );
         }
         results.push(...groupResults);
-        if (groupResults.some(r => !r.skipped && !r.success)) {
+        if (groupResults.some(r => !r.skipped && r.countsAsFailure !== false && !r.success)) {
           success = false;
         }
       } else {
@@ -123,7 +126,7 @@ class TaskEngine {
           results.push(result);
           prevResult = result.result;
 
-          if (!result.skipped && !result.success && options.stopOnError !== false) {
+          if (!result.skipped && !result.success && result.countsAsFailure !== false && options.stopOnError !== false) {
             success = false;
           }
         }
@@ -854,7 +857,8 @@ class TaskEngine {
         fullOutputRef: generic.fullOutputRef || (result && typeof result === 'object' ? result.fullOutputRef : null) || null,
         outputStats: generic.truncated ? generic.stats : ((result && typeof result === 'object' && result.outputStats) || generic.stats),
         artifact: generic.artifact || (result && typeof result === 'object' ? result.artifact : null) || null,
-        ...(step.expect ? { acceptance } : {}),
+        acceptance: step.expect ? { ...acceptance, declared: true } : { passed: null, declared: false, failures: [], note: 'unverified: no expect declared' },
+        countsAsFailure: commandStatus !== 'expected_failure',
         ...(errorType ? { errorType } : {}),
         ...(stepError ? { error: stepError } : {})
       };
@@ -867,6 +871,7 @@ class TaskEngine {
       const classified = this.errorClassifier.wrapError(e, step.tool);
       const historyId = e && e.historyId !== undefined ? e.historyId : null;
       const commandStatus = step.expectedFailure === true ? 'expected_failure' : 'failed';
+      const countsAsFailure = commandStatus !== 'expected_failure';
       if (historyId !== null) {
         history.updateById(historyId, {
           success: false,
@@ -878,6 +883,8 @@ class TaskEngine {
       return {
         stepIndex, tool: step.tool, success: false, commandStatus, historyId,
         error: e.message, errorType: classified.errorType,
+        countsAsFailure,
+        acceptance: step.expect ? { passed: false, declared: true, failures: ['step threw before acceptance'] } : { passed: null, declared: false, failures: [], note: 'unverified: no expect declared' },
         recoverable: classified.recoverable, suggestion: classified.suggestion
       };
     }

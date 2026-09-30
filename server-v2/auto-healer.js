@@ -160,11 +160,11 @@ export default class AutoHealer {
         heal: async (error, tool, params) => {
           const cmd = params.command_line || params.command || '';
           // 如果已经是脚本执行方式，不再重试
-          if (cmd.startsWith('bash ') && cmd.includes('/private/tmp/')) {
+          if (cmd.startsWith('bash ') && cmd.includes('/tmp/')) {
             return { healed: false, suggestion: 'ffmpeg 脚本执行仍失败，请检查参数' };
           }
           try {
-            const scriptPath = `/private/tmp/ff_auto_${Date.now()}.sh`;
+            const scriptPath = `/tmp/ff_auto_${Date.now()}.sh`;
             writeFileSync(scriptPath, `#!/bin/bash\n${cmd}\n`, { mode: 0o755 });
             this.logger?.info(`[AutoHealer] ffmpeg 命令写入脚本: ${scriptPath}`);
             return {
@@ -274,11 +274,11 @@ export default class AutoHealer {
           const filePath = params.path || params.command_line || '';
           return error.includes('Access denied') &&
                  filePath.includes('/tmp/') &&
-                 !filePath.includes('/private/tmp/');
+                 !filePath.includes('/tmp/');
         },
         heal: async (error, tool, params) => {
-          // 自动将 /tmp/ 替换为 /private/tmp/
-          const fixPath = (p) => p.replace(/\/tmp\//g, '/private/tmp/');
+          // 自动将 /tmp/ 替换为 /tmp/
+          const fixPath = (p) => p.replace(/\/tmp\//g, '/tmp/');
           const modifiedParams = { ...params };
           if (modifiedParams.path) {
             modifiedParams.path = fixPath(modifiedParams.path);
@@ -286,10 +286,10 @@ export default class AutoHealer {
           if (modifiedParams.command_line) {
             modifiedParams.command_line = fixPath(modifiedParams.command_line);
           }
-          this.logger?.info(`[AutoHealer] /tmp/ → /private/tmp/`);
+          this.logger?.info(`[AutoHealer] /tmp/ → /tmp/`);
           return {
             healed: true,
-            message: '已将 /tmp/ 修正为 /private/tmp/',
+            message: '已将 /tmp/ 修正为 /tmp/',
             retry: true,
             modifiedParams
           };

@@ -128,7 +128,7 @@ const server = createServer(async (req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       const id = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-      const tmpPath = '/private/tmp/.agent_payload_' + id + '.tmp';
+      const tmpPath = '/tmp/.agent_payload_' + id + '.tmp';
       try {
         writeFileSync(tmpPath, body);
         log('Payload saved: ' + tmpPath + ' (' + body.length + ' bytes)');
