@@ -233,7 +233,7 @@ if (dryRun) {
 
   // 3. Playbook速查（正确/错误方法）
   const playbooks = db3.prepare(
-    "SELECT keyword, correct_method, wrong_method FROM playbook ORDER BY priority DESC, query_count DESC LIMIT 8"
+    "SELECT keyword, correct_method, wrong_method FROM playbook ORDER BY priority ASC, query_count DESC LIMIT 8"
   ).all();
   if (playbooks.length > 0) {
     knowledgeParts.push('\n## Playbook速查');
