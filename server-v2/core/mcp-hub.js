@@ -1,3 +1,5 @@
+import { readFileSync as _rfs } from 'fs';
+import { homedir as _home } from 'os';
 // core/mcp-hub.js — MCP 连接管理 (从 index.js 提取)
 import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
@@ -30,6 +32,9 @@ class MCPConnection {
     this.requestTimeout = options.requestTimeout || 60000;
     this.transport = options.transport || 'stdio';
     this.url = options.url || null;
+    this.headers = options.headers || {};
+    this.bearerTokenFile = options.bearerTokenFile || null;
+    this.sessionId = null;
     this.process = null;
     this.requestId = 0;
     this.pending = new Map();
@@ -42,7 +47,9 @@ class MCPConnection {
   }
 
   async start() {
-    if (this.transport === 'sse') {
+    if (this.transport === 'http') {
+      await this.startHTTP();
+    } else if (this.transport === 'sse') {
       await this.startSSE();
     } else {
       await this.startStdio();
@@ -76,6 +83,56 @@ class MCPConnection {
     this.tools = await this.getTools();
     this.ready = true;
     this._logReady();
+  }
+
+  async startHTTP() {
+    this.logger.info(`[${this.name}] 连接中 (http: ${this.url})...`);
+    if (this.bearerTokenFile) {
+      const f = this.bearerTokenFile.replace(/^~(?=\/)/, _home());
+      let tok = '';
+      try { tok = _rfs(f, 'utf-8').trim(); } catch { throw new Error(`token 文件不可读: ${f}`); }
+      if (!tok) throw new Error(`token 文件为空: ${f}`);
+      this.headers = { ...this.headers, Authorization: `Bearer ${tok}` };
+    }
+    await this.init();
+    this.tools = await this.getTools();
+    this.ready = true;
+    this._logReady();
+  }
+
+  // Streamable HTTP (MCP 2025-03-26+): 每条 JSON-RPC 单独 POST, 响应为 JSON 或 SSE; 会话 id 走 Mcp-Session-Id
+  async _httpSend(msg) {
+    const isNotify = typeof msg.method === 'string' && msg.method.startsWith('notifications/');
+    if (!isNotify) msg.id = ++this.requestId;
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream', ...this.headers };
+    if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), this.requestTimeout);
+    try {
+      const resp = await fetch(this.url, { method: 'POST', headers, body: JSON.stringify(msg), signal: ac.signal });
+      const sid = resp.headers.get('mcp-session-id');
+      if (sid) this.sessionId = sid;
+      const ctype = resp.headers.get('content-type') || '';
+      const text = await resp.text();
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${text.slice(0, 200)}`);
+      if (isNotify) return {};
+      if (ctype.includes('text/event-stream')) {
+        for (const block of text.split(/\r?\n\r?\n/)) {
+          const data = block.split(/\r?\n/).filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).join('\n');
+          if (!data) continue;
+          let m;
+          try { m = JSON.parse(data); } catch { continue; }
+          if (m && m.id === msg.id) return m;
+        }
+        throw new Error(`SSE 响应中没有 id=${msg.id}`);
+      }
+      return text ? JSON.parse(text) : {};
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error(`请求超时 (${this.requestTimeout}ms)`);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async startSSE() {
@@ -182,6 +239,7 @@ class MCPConnection {
 
   async send(msg) {
     msg.jsonrpc = '2.0';
+    if (this.transport === 'http') return this._httpSend(msg);
     msg.id = ++this.requestId;
     
     if (this.transport === 'sse') {
@@ -208,7 +266,7 @@ class MCPConnection {
 
   async init() {
     await this.send({ method: 'initialize', params: { 
-      protocolVersion: '2024-11-05',
+      protocolVersion: this.transport === 'http' ? '2025-06-18' : '2024-11-05',
       capabilities: {},
       clientInfo: { name: 'genspark-agent', version: '2.0' }
     }});
@@ -273,8 +331,10 @@ class MCPHub {
         const options = {
           startupTimeout: cfg.startupTimeout || (isSSE ? 10000 : 5000),
           requestTimeout: cfg.requestTimeout || 60000,
-          transport: isSSE ? 'sse' : 'stdio',
+          transport: cfg.transport || (isSSE ? 'sse' : 'stdio'),
           url: cfg.url || null,
+          headers: cfg.headers || {},
+          bearerTokenFile: cfg.bearerTokenFile || null,
         };
         const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options, this.logger);
         await c.start();
@@ -354,8 +414,10 @@ class MCPHub {
         const options = {
           startupTimeout: cfg.startupTimeout || (isSSE ? 10000 : 5000),
           requestTimeout: cfg.requestTimeout || 60000,
-          transport: isSSE ? 'sse' : 'stdio',
+          transport: cfg.transport || (isSSE ? 'sse' : 'stdio'),
           url: cfg.url || null,
+          headers: cfg.headers || {},
+          bearerTokenFile: cfg.bearerTokenFile || null,
         };
         const c = new MCPConnection(name, cfg.command, cfg.args, cfg.env, options, this.logger);
         await c.start();
