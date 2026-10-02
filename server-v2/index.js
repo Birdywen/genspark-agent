@@ -82,7 +82,6 @@ import history from "./core/history.js";
 import dbApi from './core/db.js';
 import agents from './core/agents.js';
 import { createHandlers } from './core/ws-handlers.js';
-//import teamsAgent from './teams-agent.js';
 // 命令历史管理已提取到 core/history.js
 
 // ==================== Agents 注册表 ====================
@@ -1542,13 +1541,6 @@ async function main() {
 `);
 }
 
-// Teams Agent v3 - 启动 node 端 agent loop
-try {
-  teamsAgent.start({ handleToolCall, logger, clients, browserToolPending, getTaskEngine: () => taskEngine });
-  logger.info("Teams Agent v3 已启动");
-} catch(e) {
-  logger.warning("Teams Agent 启动失败: " + e.message);
-}
 
 // 优雅退出
 process.on('SIGINT', () => {

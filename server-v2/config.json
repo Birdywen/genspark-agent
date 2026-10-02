@@ -12,27 +12,9 @@
                 "/private/tmp"
             ]
         },
-        "shell": {
-            "command": "node",
-            "args": [
-                "/Users/yay/.npm/_npx/d597531c0c0615ae/node_modules/mcp-server-commands/build/index.js"
-            ]
-        },
         "tree-sitter": {
             "command": "/Users/yay/.local/bin/mcp-server-tree-sitter",
             "args": []
-        },
-        "sqlite": {
-            "command": "node",
-            "args": [
-                "/Users/yay/.npm/_npx/3967201a30e40786/node_modules/mcp-sqlite/mcp-sqlite-server.js"
-            ]
-        },
-        "fetch": {
-            "command": "node",
-            "args": [
-                "/Users/yay/.npm/_npx/e5ec6e1360b435a5/node_modules/@kazuph/mcp-fetch/dist/index.js"
-            ]
         },
         "context7": {
             "command": "node",
@@ -70,16 +52,6 @@
             "args": [
                 "/Users/yay/.npm/_npx/15c61037b1978c83/node_modules/chrome-devtools-mcp/build/src/index.js"
             ]
-        },
-        "git": {
-            "command": "npx",
-            "args": [
-                "@cyanheads/git-mcp-server"
-            ],
-            "env": {
-                "MCP_LOG_LEVEL": "info",
-                "GIT_SIGN_COMMITS": "false"
-            }
         }
     },
     "safety": {
