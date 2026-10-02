@@ -927,11 +927,10 @@ handlers.set('compress', async (params, context) => {
       const slots = db.prepare("SELECT slot, COUNT(*) as cnt FROM memory GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
       const lsSlots = db.prepare("SELECT slot, COUNT(*) as cnt FROM local_store GROUP BY slot ORDER BY cnt DESC LIMIT 10").all();
       const gitLog = db.prepare("SELECT substr(result_preview,1,150) as r FROM commands WHERE tool='git_commit' AND success=1 ORDER BY id DESC LIMIT 5").all();
-      const lastOps = db.prepare("SELECT tool, substr(params,1,120) as p,status FROM commands ORDER BY id DESC LIMIT 10").all();
 
       const lines = ['\n---\n## 元数据索引 (compress v5 — 原始证据在 chat_archive/commands)'];
-      lines.push('\n### DB表结构');
-      schemaMap.forEach(s => lines.push('- ' + s));
+      // 表结构压成一行 (表名(行数)); 列名按需 PRAGMA table_info 查
+      lines.push('\n### DB表 (列名按需 PRAGMA table_info): ' + schemaMap.map(s => s.split(':')[0]).join(' '));
       lines.push('\n### Memory索引');
       slots.forEach(s => lines.push('- ' + s.slot + ': ' + s.cnt));
       lines.push('\n### LocalStore索引');
@@ -940,8 +939,7 @@ handlers.set('compress', async (params, context) => {
         lines.push('\n### 最近提交');
         gitLog.forEach(g => lines.push('- ' + (g.r || '').replace(/\n/g,' ').slice(0,120)));
       }
-      lines.push('\n### 最近操作');
-      lastOps.forEach(op => lines.push('- ' + op.tool + ' [' + (op.status || 'legacy') + ']: ' + (op.p || '').slice(0,100)));
+      // 最近操作已移除: 任务状态见摘要 Handoff 节, 考古才查 commands 表
       restorePrompt += lines.join('\n');
     } finally {
       db.close();

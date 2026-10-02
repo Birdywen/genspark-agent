@@ -173,8 +173,9 @@ function buildContext() {
   const scripts = db.prepare(
     "SELECT key FROM local_store WHERE key LIKE 'script/%' ORDER BY key LIMIT 15"
   ).all();
+  // 当前任务 = 最新 handoff; context/session-state 只是上次压缩摘要的备份 (已改名 compress-summary-backup)
   const sessionCtx = db.prepare(
-    "SELECT substr(content,1,1000) as preview FROM memory WHERE slot='context' AND key='session-state'"
+    "SELECT substr(content,1,1000) as preview FROM memory WHERE slot='handoff' ORDER BY updated_at DESC, rowid DESC LIMIT 1"
   ).get();
   return {
     plans: plans.map(p => ({ key: p.key, preview: p.preview })),

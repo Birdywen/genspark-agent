@@ -1406,9 +1406,13 @@ ${conversationText}
               body: JSON.stringify({ tool: mod.source.tool, params: { ...mod.source.params, _timeout: 15000 } })
             });
             const modData = await modResp.json();
-            const modContent = modData.result || modData.raw || JSON.stringify(modData);
+            const modRaw = modData.result || modData.raw || JSON.stringify(modData);
+            // run_process 结果首行是 "[#historyId] exitCode" (drivers/shell.js:193), 不进摘要
+            const modContent = typeof modRaw === 'string' ? modRaw.replace(/^\[#\d+\] [^\n]*\n/, '') : JSON.stringify(modRaw);
+            // 每模块上限: mod.maxChars (compress-modules 配置, 如 Handoff 6000), 默认 3000
+            const modMax = Number(mod.maxChars) > 0 ? Number(mod.maxChars) : 3000;
             if (modContent && modContent.length > 0) {
-              summaryParts.push('## ' + mod.label, modContent.substring(0, 3000), '');
+              summaryParts.push('## ' + mod.label, modContent.substring(0, modMax), '');
               addLog('✅ ' + mod.label + ': ' + modContent.length + ' chars', 'success');
             }
           } catch(e) {
@@ -1426,17 +1430,12 @@ ${conversationText}
           } catch(e) {}
         }
 
-        // 读 session-state 上下文（始终加载）
-        try {
-          const ctxResp = await fetch('http://127.0.0.1:8766/memory?slot=context&key=session-state');
-          const ctxRows = await ctxResp.json();
-          const vfsContext = (ctxRows && ctxRows[0]) ? (ctxRows[0].content || '') : '';
-          if (vfsContext && !vfsContext.startsWith('[Physical Compress')) {
-            summaryParts.push('## Session Context', vfsContext.substring(0, 2000));
-          }
-        } catch(e) {}
+        // 任务状态由 Handoff 模块提供 (memory slot=handoff)。context/session-state 只是上次摘要的备份
+        // (以 [Physical Compress 开头, 读到即跳过, Session Context 恒空), 已改名 compress-summary-backup, 不再读取。
 
         const contextSummary = summaryParts.join('\n');
+        // 摘要消息下标在 push 时记录; 原 newMsgs.length - TAIL_KEEP - 2 在保留消息不足 TAIL_KEEP 条时指向 forged 消息
+        const summaryIdx = newMsgs.length;
         newMsgs.push({ id: crypto.randomUUID(), role: 'assistant', content: contextSummary });
         newMsgs.push({ id: crypto.randomUUID(), role: "user", content: "Context restored. " + midCount + " messages compressed. Recent " + TAIL_KEEP + " messages preserved." });
         addLog('📝 Section 4: Context (' + contextSummary.length + ' chars, modules: ' + compressModules.filter(m=>m.enabled).length + ')', 'success');
@@ -1465,7 +1464,7 @@ ${conversationText}
             lines.push('[' + di + '] ' + newMsgs[di].role + ': ' + (newMsgs[di].content || '').substring(0, 100));
           }
           lines.push('', '--- Context ---');
-          var ctxIdx = forgedCount;
+          var ctxIdx = summaryIdx;
           if (ctxIdx < newMsgs.length) lines.push('[' + ctxIdx + '] ' + newMsgs[ctxIdx].role + ': ' + (newMsgs[ctxIdx].content || '').substring(0, 200));
           lines.push('', '--- 最后 3 条 ---');
           for (var di2 = Math.max(0, newMsgs.length - 3); di2 < newMsgs.length; di2++) {
@@ -1515,19 +1514,17 @@ ${conversationText}
             return;
           }
 
-          // 更新 context summary 到 newMsgs (找到 Section 4 的 assistant 消息)
-          const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2; // context user msg index
-          if (ctxMsgIdx >= 0) newMsgs[ctxMsgIdx].content = confirmed;
+          // 用户确认后的摘要写回摘要消息
+          newMsgs[summaryIdx].content = confirmed;
         }
 
         // ── Step 4: 备份摘要到 agent.db ──
         try {
-          const ctxMsgIdx = newMsgs.length - TAIL_KEEP - 2;
-          const finalCtx = ctxMsgIdx >= 0 ? newMsgs[ctxMsgIdx].content : contextSummary;
+          const finalCtx = newMsgs[summaryIdx].content;
           await fetch('http://127.0.0.1:8766/memory', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slot: 'context', key: 'session-state', content: finalCtx })
+            body: JSON.stringify({ slot: 'context', key: 'compress-summary-backup', content: finalCtx })
           });
           addLog('💾 Context backed up to agent.db', 'success');
         } catch(e) {
