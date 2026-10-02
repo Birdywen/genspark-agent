@@ -294,7 +294,12 @@ class MCPConnection {
     this.requestTimeout = timeout;
     try {
       const r = await this.send({ method: 'tools/call', params: { name: tool, arguments: args } });
-      return r.result || r;
+      const res = r.result || r;
+      // _mergeStructured: 结果在 structuredContent 而 content 只有占位文本时, 追加 JSON 文本块, 否则展示层看不到结果
+      if (res && res.structuredContent && Array.isArray(res.content) && !res.content.some(b => b && b.type === 'text' && String(b.text || '').length > 200)) {
+        res.content = [...res.content, { type: 'text', text: JSON.stringify(res.structuredContent, null, 1) }];
+      }
+      return res;
     } finally {
       this.requestTimeout = oldTimeout;
     }
