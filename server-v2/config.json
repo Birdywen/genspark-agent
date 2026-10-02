@@ -52,6 +52,15 @@
             "args": [
                 "/Users/yay/.npm/_npx/15c61037b1978c83/node_modules/chrome-devtools-mcp/build/src/index.js"
             ]
+        },
+        "giz": {
+            "command": "/opt/homebrew/bin/giz",
+            "args": [
+                "mcp",
+                "serve"
+            ],
+            "prefixTools": true,
+            "requestTimeout": 120000
         }
     },
     "safety": {
