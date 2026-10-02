@@ -216,11 +216,20 @@ class MCPConnection {
   }
 
   async getTools() {
+    // ssh* server 工具名加 server 前缀 (ssh-oracle:exec): 多台 SSH 同名工具 + 与 filesystem 的 read_file/write_file/edit_file 冲突.
+    // 41f1ac4 原设计, 2c7e840 抽取 core/mcp-hub.js 时丢失, 2026-10-02 恢复.
+    const tools = await this._getToolsRaw();
+    if (!this.name.startsWith('ssh')) return tools;
+    return tools.map(t => ({ ...t, name: `${this.name}:${t.name}`, _originalName: t.name }));
+  }
+
+  async _getToolsRaw() {
     const r = await this.send({ method: 'tools/list' });
     return r.result?.tools || [];
   }
 
   async call(tool, args, options = {}) {
+    if (typeof tool === 'string' && tool.startsWith(this.name + ':')) tool = tool.slice(this.name.length + 1);
     const timeout = options.timeout || this.requestTimeout;
     const oldTimeout = this.requestTimeout;
     this.requestTimeout = timeout;
