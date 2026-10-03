@@ -7,7 +7,7 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
-const dbPath = path.join(__dirname, 'data', 'agent.db');
+const dbPath = (process.env.FORGED_DB || path.join(__dirname, 'data', 'agent.db'));
 const db = new Database(dbPath);
 const dryRun = process.argv.includes('--dry-run');
 
@@ -19,7 +19,7 @@ function getSchema(key) {
 
 // === 动态: sys-tools ===
 function buildSysTools() {
-  const code = fs.readFileSync(path.join(__dirname, 'sys-tools.js'), 'utf8');
+  const code = fs.readFileSync(path.join(process.env.FORGED_DIR || __dirname, 'sys-tools.js'), 'utf8');
   const names = []; const re = /handlers\.set\(['"]([^'"]+)['"]/g; let m;
   while ((m = re.exec(code)) !== null) {
     if (!['eval_js','list_tabs','take_screenshot'].includes(m[1])) names.push(m[1]);
@@ -55,7 +55,7 @@ function buildLessons() {
     const cm = c.match(/CORRECT:\s*([\s\S]+?)(?:\n|CONTEXT|$)/);
     return wm && cm
       ? { key: l.key, wrong: wm[1].trim(), correct: cm[1].trim() }
-      : { key: l.key, summary: c.split('\n')[0].substring(0,500) };
+      : { key: l.key, summary: c.replace(/\s*\n\s*/g, ' ').substring(0,400) };
   });
   // 去重: 按 wrong 或 summary 的前 80 字符做 key
   const seen = new Map();
@@ -79,6 +79,7 @@ function buildLessons() {
   return [...seen.values()]
     .map(p => ({ ...p, _score: scoreOf(p) }))
     .sort((a,b) => b._score - a._score)
+    .slice(0, 20)
     .map(({ key, _score, wrong, correct, summary }) => {
       // 第一人称渲染: wrong/correct 对 → 自述体; summary 类型保留
       if (wrong && correct) {
@@ -180,7 +181,7 @@ function buildContext() {
   return {
     plans: plans.map(p => ({ key: p.key, preview: p.preview })),
     scripts: scripts.map(s => s.key.replace('script/','')),
-    session: sessionCtx ? sessionCtx.preview : null
+    session: undefined
   };
 }
 
@@ -189,10 +190,9 @@ const forgedJson = {
   meta: getSchema('schema-meta'),
   philosophy: getSchema('schema-philosophy'),
   rules: getSchema('schema-rules'),
-  sys_tools: buildSysTools(),
+  sys_tools: (({ count, list }) => ({ count, list }))(buildSysTools()),
   penalties: buildPenalties(),
   lessons: buildLessons(),
-  errors_7d: buildErrors(),
   context: buildContext(),
   recall_map: getSchema('schema-recall_map'),
   params: getSchema('schema-params'),
@@ -204,7 +204,7 @@ console.log('Total:', content.length, 'chars');
 console.log('Modules:', Object.keys(forgedJson).join(', '));
 console.log('Sys-tools:', forgedJson.sys_tools.count);
 console.log('Lessons:', forgedJson.lessons.length);
-console.log('Errors:', forgedJson.errors_7d.length);
+
 
 if (dryRun) {
   console.log('\n[DRY RUN] Preview:');
